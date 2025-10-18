@@ -1,0 +1,21 @@
+# Include documentation and license files
+include README.md
+include LICENSE
+include LICENSING.md
+include COMMERCIAL-LICENSE.md
+
+# Include configuration files
+include pyproject.toml
+
+# Include type information
+recursive-include kimsfinance py.typed
+
+# Exclude development files
+exclude .gitignore
+exclude .gitattributes
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
+recursive-exclude tests *
+recursive-exclude benchmarks *
+recursive-exclude .claude *
