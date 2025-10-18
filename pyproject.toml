@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kimsfinance"
 version = "0.1.0"
-description = "High-Performance Financial Charting with GPU Acceleration - 178x faster than baseline"
+description = "Blazing-fast financial charting for quantitative trading - 178x faster with GPU acceleration, WebP optimization, and production-ready quality. Built for hedge funds, algo traders, and quants."
 readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "AGPL-3.0-or-later"}
@@ -15,7 +15,7 @@ authors = [
 maintainers = [
     {name = "Kim Asplund"}
 ]
-keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance"]
+keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
@@ -25,10 +25,14 @@ classifiers = [
     "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Office/Business :: Financial :: Investment",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Natural Language :: English",
+    "Typing :: Typed",
     "Operating System :: OS Independent",
 ]
 
@@ -55,10 +59,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kimasplund/kimsfinance"
+Homepage = "https://asplund.kim"
 Documentation = "https://github.com/kimasplund/kimsfinance#readme"
 Repository = "https://github.com/kimasplund/kimsfinance"
 Issues = "https://github.com/kimasplund/kimsfinance/issues"
+"Commercial License" = "https://github.com/kimasplund/kimsfinance/blob/master/COMMERCIAL-LICENSE.md"
+Funding = "mailto:licensing@asplund.kim"
 
 [tool.setuptools.packages.find]
 where = ["."]
