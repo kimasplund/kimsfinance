@@ -1,6 +1,6 @@
 """
-Exception Hierarchy for mplfinance-polars
-==========================================
+Exception Hierarchy for kimsfinance
+====================================
 
 Custom exceptions for error handling and debugging.
 """
@@ -8,12 +8,12 @@ Custom exceptions for error handling and debugging.
 from __future__ import annotations
 
 
-class MplfinancePolarsError(Exception):
-    """Base exception for all mplfinance-polars errors."""
+class KimsFinanceError(Exception):
+    """Base exception for all kimsfinance errors."""
     pass
 
 
-class GPUNotAvailableError(MplfinancePolarsError):
+class GPUNotAvailableError(KimsFinanceError):
     """
     Raised when GPU engine is explicitly requested but not available.
 
@@ -33,7 +33,7 @@ class GPUNotAvailableError(MplfinancePolarsError):
         super().__init__(message)
 
 
-class DataValidationError(MplfinancePolarsError):
+class DataValidationError(KimsFinanceError):
     """
     Raised when input data fails validation.
 
@@ -46,7 +46,7 @@ class DataValidationError(MplfinancePolarsError):
     pass
 
 
-class EngineError(MplfinancePolarsError):
+class EngineError(KimsFinanceError):
     """
     Raised when an engine-specific operation fails.
 
@@ -55,7 +55,7 @@ class EngineError(MplfinancePolarsError):
     pass
 
 
-class OperationNotSupportedError(MplfinancePolarsError):
+class OperationNotSupportedError(KimsFinanceError):
     """
     Raised when an operation is not supported by the selected engine.
 
@@ -64,7 +64,7 @@ class OperationNotSupportedError(MplfinancePolarsError):
     pass
 
 
-class ConfigurationError(MplfinancePolarsError):
+class ConfigurationError(KimsFinanceError):
     """
     Raised when library configuration is invalid.
 

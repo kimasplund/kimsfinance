@@ -42,7 +42,7 @@ def activate(*,
              strict: bool = False,
              verbose: bool = True) -> None:
     """
-    Activate mplfinance-polars acceleration.
+    Activate kimsfinance acceleration.
 
     This function monkey-patches mplfinance's internal functions to use
     GPU-accelerated Polars operations instead of pandas.
@@ -64,7 +64,7 @@ def activate(*,
 
     if _is_active:
         if verbose:
-            print("⚠ mplfinance-polars already active")
+            print("⚠ kimsfinance already active")
         return
 
     # Update configuration
@@ -91,7 +91,7 @@ def activate(*,
         from ..core.engine import EngineManager
         gpu_available = EngineManager.check_gpu_available()
 
-        print("✓ mplfinance-polars activated!")
+        print("✓ kimsfinance activated!")
         print(f"  Engine: {engine}")
         print(f"  GPU Available: {gpu_available}")
         print(f"  Expected Speedup: 7-10x for typical plots")
@@ -105,7 +105,7 @@ def activate(*,
 
 def deactivate(*, verbose: bool = True) -> None:
     """
-    Deactivate mplfinance-polars acceleration.
+    Deactivate kimsfinance acceleration.
 
     Restores original mplfinance functions.
 
@@ -120,7 +120,7 @@ def deactivate(*, verbose: bool = True) -> None:
 
     if not _is_active:
         if verbose:
-            print("⚠ mplfinance-polars is not active")
+            print("⚠ kimsfinance is not active")
         return
 
     # Remove patches
@@ -130,13 +130,13 @@ def deactivate(*, verbose: bool = True) -> None:
     _is_active = False
 
     if verbose:
-        print("✓ mplfinance-polars deactivated")
+        print("✓ kimsfinance deactivated")
         print("  Original mplfinance functions restored")
 
 
 def is_active() -> bool:
     """
-    Check if mplfinance-polars acceleration is active.
+    Check if kimsfinance acceleration is active.
 
     Returns:
         bool: True if acceleration is active
@@ -152,7 +152,7 @@ def is_active() -> bool:
 
 def configure(**kwargs) -> None:
     """
-    Configure mplfinance-polars behavior.
+    Configure kimsfinance behavior.
 
     Args:
         default_engine: Default engine ("cpu", "gpu", or "auto")

@@ -1,5 +1,5 @@
 """
-Engine Management for mplfinance-polars
+Engine Management for kimsfinance
 ========================================
 
 Intelligent CPU/GPU engine selection with automatic fallback and

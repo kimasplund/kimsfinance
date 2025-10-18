@@ -1,9 +1,9 @@
 """
-mplfinance-polars: GPU-Accelerated Financial Computations
-===========================================================
+kimsfinance: GPU-Accelerated Financial Charting
+================================================
 
-Python 3.13+ library providing 1.1x-80x speedup for mplfinance operations
-using Polars and optional GPU acceleration via RAPIDS cuDF.
+Python 3.13+ library providing 178x speedup for financial charting operations
+using PIL, Polars, and optional GPU acceleration via RAPIDS cuDF.
 
 Quick Start:
     >>> import kimsfinance as mfp
@@ -36,7 +36,7 @@ Engine Selection:
 from __future__ import annotations
 
 __version__ = "0.1.0"
-__author__ = "mplfinance-polars contributors"
+__author__ = "Kim Asplund"
 
 # Core modules
 from .core import (
@@ -54,7 +54,7 @@ from .core import (
     MACDResult,
     EngineConfig,
     # Exceptions
-    MplfinancePolarsError,
+    KimsFinanceError,
     GPUNotAvailableError,
     DataValidationError,
     EngineError,
@@ -206,7 +206,7 @@ def info() -> None:
         >>> mfp.info()
     """
     print("=" * 80)
-    print("mplfinance-polars: GPU-Accelerated Financial Plotting")
+    print("kimsfinance: GPU-Accelerated Financial Charting")
     print("=" * 80)
     print(f"Version: {__version__}")
     print(f"Python: 3.13+ (modern type system)")
@@ -282,7 +282,7 @@ __all__ = [
     "EngineConfig",
 
     # Exceptions
-    "MplfinancePolarsError",
+    "KimsFinanceError",
     "GPUNotAvailableError",
     "DataValidationError",
     "EngineError",

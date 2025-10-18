@@ -1,5 +1,5 @@
 """
-Type System for mplfinance-polars
+Type System for kimsfinance
 ==================================
 
 Python 3.13+ type aliases and protocols for the library.

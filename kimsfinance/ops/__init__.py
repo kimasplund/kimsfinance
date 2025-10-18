@@ -1,4 +1,4 @@
-"""Operations modules for mplfinance-polars."""
+"""Operations modules for kimsfinance."""
 
 from .moving_averages import (
     calculate_sma,

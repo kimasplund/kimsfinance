@@ -1,4 +1,4 @@
-"""Core modules for mplfinance-polars."""
+"""Core modules for kimsfinance."""
 
 from .types import (
     ArrayResult,
@@ -16,7 +16,7 @@ from .types import (
 )
 
 from .exceptions import (
-    MplfinancePolarsError,
+    KimsFinanceError,
     GPUNotAvailableError,
     DataValidationError,
     EngineError,
@@ -50,7 +50,7 @@ __all__ = [
     "MACDResult",
     "EngineConfig",
     # Exceptions
-    "MplfinancePolarsError",
+    "KimsFinanceError",
     "GPUNotAvailableError",
     "DataValidationError",
     "EngineError",

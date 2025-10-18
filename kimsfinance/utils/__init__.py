@@ -1,5 +1,5 @@
 """
-Utility functions for mplfinance-polars.
+Utility functions for kimsfinance.
 
 This module is reserved for future utility functions.
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive Test Suite for mplfinance-polars
+Comprehensive Test Suite for kimsfinance
 ===============================================
 
 Tests all operations to ensure correctness and GPU functionality.
@@ -265,7 +265,7 @@ def test_error_handling():
 def main():
     """Run all tests."""
     print("\n" + "=" * 80)
-    print("  mplfinance-polars: Comprehensive Test Suite")
+    print("  kimsfinance: Comprehensive Test Suite")
     print("=" * 80)
 
     try:

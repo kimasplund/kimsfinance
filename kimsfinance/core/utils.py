@@ -1,4 +1,4 @@
-"""Core utility functions for mplfinance-polars."""
+"""Core utility functions for kimsfinance."""
 
 from __future__ import annotations
 
