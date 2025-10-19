@@ -934,8 +934,8 @@ a fundamentally different architecture optimized for extreme performance.
 
 ## 📧 Contact
 
-- GitHub Issues: [Report a bug](https://github.com/yourusername/kimsfinance/issues)
-- Email: your.email@example.com
+- GitHub Issues: [Report a bug](https://github.com/kimasplund/kimsfinance/issues)
+- Email: hello@asplund.kim
 - Discord: [Join our community](https://discord.gg/...)
 
 ---
