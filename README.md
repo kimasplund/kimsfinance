@@ -1,6 +1,6 @@
 # kimsfinance
 
-**High-Performance Financial Charting Library with GPU Acceleration**
+**High-Performance Financial Charting Library with optional GPU Acceleration**
 
 [![Chart Speed](https://img.shields.io/badge/Chart_Rendering-6,249_img/sec-brightgreen.svg)](https://github.com)
 [![Speedup](https://img.shields.io/badge/Speedup-178x_faster-blue.svg)](https://github.com)
