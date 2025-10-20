@@ -76,13 +76,21 @@ def plot(data,
     activate(engine=engine, verbose=False)
 
     try:
+        # Build kwargs, filtering out None values
+        mpf_kwargs = {}
+        if style is not None:
+            mpf_kwargs['style'] = style
+        if mav is not None:
+            mpf_kwargs['mav'] = mav
+        if ema is not None:
+            mpf_kwargs['ema'] = ema
+
         # Use mplfinance with our accelerated functions
         result = mpf.plot(
             data,
             type=type,
-            style=style,
-            mav=mav,
             volume=volume,
+            **mpf_kwargs,
             **kwargs
         )
 

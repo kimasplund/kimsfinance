@@ -64,7 +64,7 @@ Documentation = "https://github.com/kimasplund/kimsfinance#readme"
 Repository = "https://github.com/kimasplund/kimsfinance"
 Issues = "https://github.com/kimasplund/kimsfinance/issues"
 "Commercial License" = "https://github.com/kimasplund/kimsfinance/blob/master/COMMERCIAL-LICENSE.md"
-Funding = "mailto:licensing@asplund.kim"
+Funding = "https://github.com/kimasplund/kimsfinance#funding"
 
 [tool.setuptools.packages.find]
 where = ["."]
