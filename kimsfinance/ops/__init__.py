@@ -1,8 +1,8 @@
 """Operations modules for kimsfinance."""
 
 from .moving_averages import (
-    calculate_sma,
-    calculate_ema,
+    calculate_sma as calculate_sma_polars,
+    calculate_ema as calculate_ema_polars,
     calculate_multiple_mas,
     from_pandas_series,
 )
@@ -51,6 +51,7 @@ from .stochastic import (
 )
 
 from .indicators import (
+    calculate_aroon,
     calculate_atr,
     calculate_rsi,
     calculate_macd,
@@ -61,6 +62,23 @@ from .indicators import (
     calculate_vwap_anchored,
     calculate_williams_r,
     calculate_cci,
+    calculate_keltner_channels,
+    calculate_fibonacci_retracement,
+    calculate_pivot_points,
+    calculate_cmf,
+    calculate_volume_profile,
+    calculate_sma,
+    calculate_ema,
+    calculate_dema,
+    calculate_tema,
+    calculate_wma,
+    calculate_vwma,
+    calculate_hma,
+    calculate_parabolic_sar,
+    calculate_donchian_channels,
+    calculate_roc,
+    calculate_tsi,
+    calculate_elder_ray,
 )
 
 from .ichimoku import calculate_ichimoku
@@ -68,14 +86,30 @@ from .adx import calculate_adx
 from .mfi import calculate_mfi
 from .supertrend import calculate_supertrend
 from .atr import calculate_atr as calculate_atr_standalone
-from .picks import calculate_picks_momentum_ratio
 from .swing import find_swing_points
+
+# Aggregation functions
+from .aggregations import (
+    ohlc_resample,
+    tick_to_ohlc,
+    volume_to_ohlc,
+    range_to_ohlc,
+    kagi_to_ohlc,
+    three_line_break_to_ohlc,
+    volume_sum,
+    volume_weighted_price,
+)
 
 
 __all__ = [
     # Moving averages
     "calculate_sma",
     "calculate_ema",
+    "calculate_dema",
+    "calculate_tema",
+    "calculate_wma",
+    "calculate_vwma",
+    "calculate_hma",
     "calculate_multiple_mas",
     "from_pandas_series",
     # NaN operations
@@ -113,7 +147,6 @@ __all__ = [
     "calculate_adx",
     "calculate_mfi",
     "calculate_supertrend",
-    "calculate_picks_momentum_ratio",
     "find_swing_points",
     # Consolidated indicators
     "calculate_atr",
@@ -126,4 +159,24 @@ __all__ = [
     "calculate_vwap_anchored",
     "calculate_williams_r",
     "calculate_cci",
+    "calculate_keltner_channels",
+    "calculate_fibonacci_retracement",
+    "calculate_pivot_points",
+    "calculate_parabolic_sar",
+    "calculate_cmf",
+    "calculate_volume_profile",
+    "calculate_donchian_channels",
+    "calculate_aroon",
+    "calculate_roc",
+    "calculate_tsi",
+    "calculate_elder_ray",
+    # Aggregation functions
+    "ohlc_resample",
+    "tick_to_ohlc",
+    "volume_to_ohlc",
+    "range_to_ohlc",
+    "kagi_to_ohlc",
+    "three_line_break_to_ohlc",
+    "volume_sum",
+    "volume_weighted_price",
 ]
