@@ -339,7 +339,7 @@ def calculate_indicators_batch(
     # ========================================================================
 
     # Smart engine selection (GPU beneficial at 15K+ rows for batch)
-    exec_engine = EngineManager.select_engine_smart(
+    exec_engine = EngineManager.select_engine(
         engine,
         operation="batch_indicators",
         data_size=data_size

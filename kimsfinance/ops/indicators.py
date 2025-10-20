@@ -109,7 +109,7 @@ def calculate_atr(
     atr_expr = pl.col("tr").ewm_mean(span=2 * period - 1, adjust=False)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="atr", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="atr", data_size=len(highs_arr))
     result = df.lazy().select(
         atr=atr_expr
     ).collect(engine=exec_engine)
@@ -179,7 +179,7 @@ def calculate_rsi(
     rsi_expr = (100 - (100 / (1 + rs))).alias("rsi")
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="rsi", data_size=len(prices_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="rsi", data_size=len(prices_arr))
     result = df.lazy().select(
         rsi=rsi_expr
     ).collect(engine=exec_engine)
@@ -287,7 +287,7 @@ def calculate_bollinger_bands(
     df = pl.DataFrame({"price": prices_arr})
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="bollinger", data_size=len(prices_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="bollinger", data_size=len(prices_arr))
 
     # Calculate middle band (SMA) and rolling standard deviation in one pass
     result = df.lazy().select(
@@ -363,7 +363,7 @@ def calculate_stochastic_oscillator(
     d_percent = k_percent.rolling_mean(window_size=3)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="stochastic", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="stochastic", data_size=len(highs_arr))
     result = df.lazy().select(
         k=k_percent,
         d=d_percent
@@ -412,7 +412,7 @@ def calculate_obv(
             .alias("obv")
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="obv", data_size=len(closes_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="obv", data_size=len(closes_arr))
     result = df.lazy().select(obv).collect(engine=exec_engine)
 
     return result["obv"].to_numpy()
@@ -458,7 +458,7 @@ def calculate_vwap(
     ).cum_sum() / pl.col("volume").cum_sum()
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="vwap", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="vwap", data_size=len(highs_arr))
     result = df.lazy().select(
         vwap=vwap_expr
     ).collect(engine=exec_engine)
@@ -513,7 +513,7 @@ def calculate_vwap_anchored(
     ).cum_sum().over(session_id) / pl.col("volume").cum_sum().over(session_id)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="vwap_anchored", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="vwap_anchored", data_size=len(highs_arr))
     result = df.lazy().select(
         anchored_vwap=vwap_expr
     ).collect(engine=exec_engine)
@@ -563,7 +563,7 @@ def calculate_williams_r(
     )
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="williams_r", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="williams_r", data_size=len(highs_arr))
     result = df.lazy().select(
         wr=wr_expr
     ).collect(engine=exec_engine)
@@ -618,7 +618,7 @@ def calculate_cci(
     cci_expr = (tp - sma_tp) / (constant * mean_deviation + 1e-10)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine_smart(engine, operation="cci", data_size=len(highs_arr))
+    exec_engine = EngineManager.select_engine(engine, operation="cci", data_size=len(highs_arr))
     result = df.lazy().select(
         cci=cci_expr
     ).collect(engine=exec_engine)

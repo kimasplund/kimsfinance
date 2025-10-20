@@ -63,6 +63,7 @@
 - **Technical indicators** - GPU-accelerated ATR, RSI, Stochastic
 - **Linear algebra** - 30-50x speedup on GPU
 - **Auto selection** - Smart CPU/GPU routing
+- **Auto-tuning** - Calibrate CPU/GPU crossover points for your hardware
 
 ---
 
@@ -563,6 +564,21 @@ While chart rendering is optimal on CPU, GPU acceleration provides massive speed
 | Moving Averages | ✅ Optimal | ❌ Slower | - |
 
 **Recommendation**: Use GPU for OHLCV processing, CPU for chart rendering.
+
+### Auto-tuning
+
+`kimsfinance` can auto-tune the `GPU_CROSSOVER_THRESHOLDS` to your specific hardware. This can lead to significant performance improvements by ensuring that the GPU is only used when it is actually faster than the CPU.
+
+To run the auto-tuner, simply call the `run_autotune` function:
+
+```python
+from kimsfinance.core import run_autotune
+
+# This will benchmark your CPU and GPU and save the optimal thresholds
+run_autotune()
+```
+
+The auto-tuner will run a series of benchmarks to determine the optimal crossover points for your hardware and save the results to a cache file. The next time you run `kimsfinance`, it will automatically load the tuned thresholds.
 
 ---
 
