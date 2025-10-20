@@ -155,6 +155,7 @@ from .api import (
 # Convenience Functions
 # ============================================================================
 
+
 def gpu_available() -> bool:
     """
     Check if GPU acceleration is available.
@@ -219,7 +220,7 @@ def info() -> None:
 
     if gpu_avail:
         engine_info = get_engine_info()
-        if 'cudf_version' in engine_info:
+        if "cudf_version" in engine_info:
             print(f"  cuDF Version: {engine_info['cudf_version']}")
 
     # Activation status
@@ -256,18 +257,15 @@ __all__ = [
     "__version__",
     "version",
     "info",
-
     # Integration & Configuration
     "activate",
     "deactivate",
     "is_active",
     "configure",
     "get_config",
-
     # Convenience
     "gpu_available",
     "get_engine_info",
-
     # Core Types
     "ArrayResult",
     "SeriesResult",
@@ -281,7 +279,6 @@ __all__ = [
     "LinearFitResult",
     "MACDResult",
     "EngineConfig",
-
     # Exceptions
     "KimsFinanceError",
     "GPUNotAvailableError",
@@ -289,23 +286,19 @@ __all__ = [
     "EngineError",
     "OperationNotSupportedError",
     "ConfigurationError",
-
     # Engine
     "EngineManager",
     "with_engine_fallback",
-
     # Decorators
     "gpu_accelerated",
     "get_array_module",
     "to_gpu",
     "to_cpu",
-
     # Moving Averages
     "calculate_sma",
     "calculate_ema",
     "calculate_multiple_mas",
     "from_pandas_series",
-
     # NaN Operations
     "nanmin_gpu",
     "nanmax_gpu",
@@ -314,14 +307,12 @@ __all__ = [
     "nan_indices",
     "replace_nan",
     "should_use_gpu_for_nan_ops",
-
     # Linear Algebra
     "least_squares_fit",
     "trend_line",
     "polynomial_fit",
     "correlation",
     "moving_linear_fit",
-
     # Technical Indicators (Base)
     "calculate_atr",
     "calculate_picks_momentum_ratio",
@@ -331,7 +322,6 @@ __all__ = [
     "calculate_bollinger_bands",
     "calculate_stochastic_oscillator",
     "calculate_obv",
-
     # Phase 1 Indicators (8 indicators + variants)
     "calculate_stochastic",
     "calculate_stochastic_rsi",
@@ -344,7 +334,6 @@ __all__ = [
     "calculate_cci",
     "calculate_mfi",
     "calculate_supertrend",
-
     # Aggregations
     "volume_sum",
     "volume_weighted_price",
@@ -353,7 +342,6 @@ __all__ = [
     "rolling_mean",
     "cumulative_sum",
     "group_aggregation",
-
     # Standalone API
     "plot",
     "make_addplot",
@@ -363,6 +351,7 @@ __all__ = [
 # ============================================================================
 # Library Initialization
 # ============================================================================
+
 
 def _check_dependencies():
     """Check and report on optional dependencies."""
@@ -376,30 +365,35 @@ def _check_dependencies():
 
     try:
         import polars
+
         deps["polars"] = True
     except ImportError:
         pass
 
     try:
         import numpy
+
         deps["numpy"] = True
     except ImportError:
         pass
 
     try:
         import pandas
+
         deps["pandas"] = True
     except ImportError:
         pass
 
     try:
         import cupy
+
         deps["cupy"] = True
     except ImportError:
         pass
 
     try:
         import cudf
+
         deps["cudf"] = True
     except ImportError:
         pass
@@ -411,22 +405,17 @@ def _check_dependencies():
 _deps = _check_dependencies()
 
 if not _deps["polars"]:
-    raise ImportError(
-        "Polars is required but not installed. "
-        "Install with: pip install polars"
-    )
+    raise ImportError("Polars is required but not installed. " "Install with: pip install polars")
 
 if not _deps["numpy"]:
-    raise ImportError(
-        "NumPy is required but not installed. "
-        "Install with: pip install numpy"
-    )
+    raise ImportError("NumPy is required but not installed. " "Install with: pip install numpy")
 
 # Optional GPU dependencies
 if not (_deps["cupy"] and _deps["cudf"]):
     import warnings
+
     warnings.warn(
         "GPU acceleration not available. Install RAPIDS for GPU support:\n"
         "  pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x",
-        UserWarning
+        UserWarning,
     )

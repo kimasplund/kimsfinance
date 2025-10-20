@@ -12,7 +12,7 @@ from kimsfinance.plotting.renderer import (
     save_chart,
     THEMES,
     _hex_to_rgba,
-    SPEED_PRESETS
+    SPEED_PRESETS,
 )
 from kimsfinance.plotting.parallel import render_charts_parallel
 
@@ -61,10 +61,7 @@ def test_theme_with_color_overrides():
     """
     # Use modern theme but override up_color
     img = render_ohlcv_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        theme="modern",
-        up_color="#FFFF00"  # Override with yellow
+        SAMPLE_OHLC, SAMPLE_VOLUME, theme="modern", up_color="#FFFF00"  # Override with yellow
     )
 
     assert isinstance(img, Image.Image)
@@ -80,11 +77,7 @@ def test_backward_compatibility():
 
     # Call with explicit color parameters (should override theme)
     img2 = render_ohlcv_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        bg_color="#123456",
-        up_color="#ABCDEF",
-        down_color="#FEDCBA"
+        SAMPLE_OHLC, SAMPLE_VOLUME, bg_color="#123456", up_color="#ABCDEF", down_color="#FEDCBA"
     )
     assert isinstance(img2, Image.Image)
 
@@ -122,7 +115,9 @@ def test_wick_width_large_chart():
     Tests wick width calculation on a large chart (maximum width enforcement).
     """
     # Large chart with high wick_width_ratio should cap at 10% of bar width
-    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, width=3840, height=2160, wick_width_ratio=0.5)
+    img = render_ohlcv_chart(
+        SAMPLE_OHLC, SAMPLE_VOLUME, width=3840, height=2160, wick_width_ratio=0.5
+    )
     assert isinstance(img, Image.Image)
     assert img.size == (3840, 2160)
 
@@ -159,6 +154,7 @@ def test_wick_width_edge_cases():
 
 
 # Tests for save_chart() function (Task 3)
+
 
 def test_save_chart_webp():
     """
@@ -258,8 +254,9 @@ def test_save_chart_auto_format_detection():
             save_chart(img, output_path)  # No format parameter - auto-detect
 
             loaded_img = Image.open(output_path)
-            assert loaded_img.format == expected_format, \
-                f"Expected {expected_format} for {filename}, got {loaded_img.format}"
+            assert (
+                loaded_img.format == expected_format
+            ), f"Expected {expected_format} for {filename}, got {loaded_img.format}"
 
 
 def test_save_chart_explicit_format():
@@ -402,19 +399,20 @@ def test_save_chart_format_override_extension():
 
 # Tests for RGBA mode and antialiasing (Task 4)
 
+
 def test_hex_to_rgba_basic():
     """
     Test basic hex to RGBA conversion.
     """
     # Test with # prefix
-    assert _hex_to_rgba('#FF0000') == (255, 0, 0, 255)
-    assert _hex_to_rgba('#00FF00') == (0, 255, 0, 255)
-    assert _hex_to_rgba('#0000FF') == (0, 0, 255, 255)
+    assert _hex_to_rgba("#FF0000") == (255, 0, 0, 255)
+    assert _hex_to_rgba("#00FF00") == (0, 255, 0, 255)
+    assert _hex_to_rgba("#0000FF") == (0, 0, 255, 255)
 
     # Test without # prefix
-    assert _hex_to_rgba('FF0000') == (255, 0, 0, 255)
-    assert _hex_to_rgba('FFFFFF') == (255, 255, 255, 255)
-    assert _hex_to_rgba('000000') == (0, 0, 0, 255)
+    assert _hex_to_rgba("FF0000") == (255, 0, 0, 255)
+    assert _hex_to_rgba("FFFFFF") == (255, 255, 255, 255)
+    assert _hex_to_rgba("000000") == (0, 0, 0, 255)
 
 
 def test_hex_to_rgba_with_alpha():
@@ -422,10 +420,10 @@ def test_hex_to_rgba_with_alpha():
     Test hex to RGBA conversion with custom alpha values.
     """
     # Test various alpha values
-    assert _hex_to_rgba('#FF0000', alpha=0) == (255, 0, 0, 0)
-    assert _hex_to_rgba('#00FF00', alpha=128) == (0, 255, 0, 128)
-    assert _hex_to_rgba('#0000FF', alpha=200) == (0, 0, 255, 200)
-    assert _hex_to_rgba('#FFFFFF', alpha=64) == (255, 255, 255, 64)
+    assert _hex_to_rgba("#FF0000", alpha=0) == (255, 0, 0, 0)
+    assert _hex_to_rgba("#00FF00", alpha=128) == (0, 255, 0, 128)
+    assert _hex_to_rgba("#0000FF", alpha=200) == (0, 0, 255, 200)
+    assert _hex_to_rgba("#FFFFFF", alpha=64) == (255, 255, 255, 64)
 
 
 def test_hex_to_rgba_theme_colors():
@@ -433,12 +431,12 @@ def test_hex_to_rgba_theme_colors():
     Test hex to RGBA conversion with actual theme colors.
     """
     # Classic theme colors
-    assert _hex_to_rgba(THEMES['classic']['bg']) == (0, 0, 0, 255)
-    assert _hex_to_rgba(THEMES['classic']['up']) == (0, 255, 0, 255)
-    assert _hex_to_rgba(THEMES['classic']['down']) == (255, 0, 0, 255)
+    assert _hex_to_rgba(THEMES["classic"]["bg"]) == (0, 0, 0, 255)
+    assert _hex_to_rgba(THEMES["classic"]["up"]) == (0, 255, 0, 255)
+    assert _hex_to_rgba(THEMES["classic"]["down"]) == (255, 0, 0, 255)
 
     # Light theme colors
-    assert _hex_to_rgba(THEMES['light']['bg']) == (255, 255, 255, 255)
+    assert _hex_to_rgba(THEMES["light"]["bg"]) == (255, 255, 255, 255)
 
 
 def test_render_rgba_mode_enabled():
@@ -503,7 +501,7 @@ def test_rgba_mode_with_custom_colors():
         bg_color="#123456",
         up_color="#ABCDEF",
         down_color="#FEDCBA",
-        enable_antialiasing=True
+        enable_antialiasing=True,
     )
 
     assert img.mode == "RGBA"
@@ -641,15 +639,14 @@ def test_rgba_mode_with_wick_widths():
     """
     for ratio in [0.05, 0.1, 0.2, 0.3]:
         img = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            wick_width_ratio=ratio,
-            enable_antialiasing=True
+            SAMPLE_OHLC, SAMPLE_VOLUME, wick_width_ratio=ratio, enable_antialiasing=True
         )
         assert img.mode == "RGBA"
         assert isinstance(img, Image.Image)
 
 
 # Tests for Grid Lines and Price Levels (Task 5)
+
 
 def test_render_with_grid_enabled():
     """
@@ -688,9 +685,7 @@ def test_grid_with_all_themes():
     """
     for theme_name in THEMES.keys():
         # Grid enabled
-        img_grid = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name, show_grid=True
-        )
+        img_grid = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name, show_grid=True)
         assert isinstance(img_grid, Image.Image)
 
         # Grid disabled
@@ -704,11 +699,7 @@ def test_grid_with_rgba_mode():
     """
     Test grid rendering in RGBA mode with transparency.
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        enable_antialiasing=True,
-        show_grid=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=True, show_grid=True)
 
     # Verify RGBA mode
     assert img.mode == "RGBA"
@@ -719,11 +710,7 @@ def test_grid_with_rgb_mode():
     """
     Test grid rendering in RGB mode (no transparency).
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        enable_antialiasing=False,
-        show_grid=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=False, show_grid=True)
 
     # Verify RGB mode
     assert img.mode == "RGB"
@@ -738,9 +725,7 @@ def test_grid_various_chart_sizes():
 
     for width, height in sizes:
         img = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            width=width, height=height,
-            show_grid=True
+            SAMPLE_OHLC, SAMPLE_VOLUME, width=width, height=height, show_grid=True
         )
         assert isinstance(img, Image.Image)
         assert img.size == (width, height)
@@ -759,10 +744,7 @@ def test_grid_with_large_dataset():
     }
     large_volume = np.random.uniform(1000, 5000, 100)
 
-    img = render_ohlcv_chart(
-        large_ohlc, large_volume,
-        show_grid=True
-    )
+    img = render_ohlcv_chart(large_ohlc, large_volume, show_grid=True)
 
     assert isinstance(img, Image.Image)
 
@@ -780,10 +762,7 @@ def test_grid_with_small_dataset():
     }
     small_volume = np.array([1000])
 
-    img = render_ohlcv_chart(
-        small_ohlc, small_volume,
-        show_grid=True
-    )
+    img = render_ohlcv_chart(small_ohlc, small_volume, show_grid=True)
 
     assert isinstance(img, Image.Image)
 
@@ -793,12 +772,13 @@ def test_grid_with_custom_colors():
     Test grid with custom color overrides (grid uses theme color).
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
+        SAMPLE_OHLC,
+        SAMPLE_VOLUME,
         theme="modern",
         bg_color="#000000",
         up_color="#FFFFFF",
         down_color="#CCCCCC",
-        show_grid=True
+        show_grid=True,
     )
 
     # Grid should use theme's grid color, not custom colors
@@ -841,13 +821,14 @@ def test_grid_with_all_features():
     Test grid works with all other features combined.
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
+        SAMPLE_OHLC,
+        SAMPLE_VOLUME,
         width=1600,
         height=900,
         theme="tradingview",
         wick_width_ratio=0.15,
         enable_antialiasing=True,
-        show_grid=True
+        show_grid=True,
     )
 
     assert isinstance(img, Image.Image)
@@ -857,14 +838,12 @@ def test_grid_with_all_features():
 
 # Tests for Batch Drawing Optimization (Task 6)
 
+
 def test_batch_drawing_explicit_enabled():
     """
     Test batch drawing mode when explicitly enabled.
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=True)
 
     # Verify image was created
     assert isinstance(img, Image.Image)
@@ -875,10 +854,7 @@ def test_batch_drawing_explicit_disabled():
     """
     Test sequential drawing mode when batch drawing is explicitly disabled.
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=False
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=False)
 
     # Verify image was created
     assert isinstance(img, Image.Image)
@@ -890,10 +866,7 @@ def test_batch_drawing_auto_enable_small_dataset():
     Test that batch drawing is NOT auto-enabled for small datasets (<1000 candles).
     """
     # Small dataset (5 candles) should use sequential mode by default
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=None  # Auto-detect mode
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=None)  # Auto-detect mode
 
     # Verify image was created (visual output should be identical)
     assert isinstance(img, Image.Image)
@@ -914,10 +887,7 @@ def test_batch_drawing_auto_enable_large_dataset():
     large_volume = np.random.uniform(1000, 5000, 1000)
 
     # Should auto-enable batch drawing
-    img = render_ohlcv_chart(
-        large_ohlc, large_volume,
-        use_batch_drawing=None  # Auto-detect mode
-    )
+    img = render_ohlcv_chart(large_ohlc, large_volume, use_batch_drawing=None)  # Auto-detect mode
 
     # Verify image was created
     assert isinstance(img, Image.Image)
@@ -937,10 +907,7 @@ def test_batch_drawing_threshold_boundary():
     }
     boundary_volume = np.random.uniform(1000, 5000, 1000)
 
-    img = render_ohlcv_chart(
-        boundary_ohlc, boundary_volume,
-        use_batch_drawing=None
-    )
+    img = render_ohlcv_chart(boundary_ohlc, boundary_volume, use_batch_drawing=None)
 
     assert isinstance(img, Image.Image)
 
@@ -953,10 +920,7 @@ def test_batch_drawing_threshold_boundary():
     }
     below_threshold_volume = np.random.uniform(1000, 5000, 999)
 
-    img2 = render_ohlcv_chart(
-        below_threshold_ohlc, below_threshold_volume,
-        use_batch_drawing=None
-    )
+    img2 = render_ohlcv_chart(below_threshold_ohlc, below_threshold_volume, use_batch_drawing=None)
 
     assert isinstance(img2, Image.Image)
 
@@ -967,16 +931,15 @@ def test_batch_vs_sequential_visual_identical():
     """
     # Render with batch mode
     img_batch = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
+        SAMPLE_OHLC,
+        SAMPLE_VOLUME,
         use_batch_drawing=True,
-        show_grid=False  # Disable grid for cleaner comparison
+        show_grid=False,  # Disable grid for cleaner comparison
     )
 
     # Render with sequential mode
     img_sequential = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=False,
-        show_grid=False
+        SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=False, show_grid=False
     )
 
     # Both should be the same size and mode
@@ -996,17 +959,13 @@ def test_batch_drawing_with_all_themes():
     for theme_name in THEMES.keys():
         # Batch mode
         img_batch = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            theme=theme_name,
-            use_batch_drawing=True
+            SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name, use_batch_drawing=True
         )
         assert isinstance(img_batch, Image.Image)
 
         # Sequential mode
         img_seq = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            theme=theme_name,
-            use_batch_drawing=False
+            SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name, use_batch_drawing=False
         )
         assert isinstance(img_seq, Image.Image)
 
@@ -1019,9 +978,7 @@ def test_batch_drawing_with_rgba_mode():
     Test batch drawing in RGBA mode.
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        enable_antialiasing=True,
-        use_batch_drawing=True
+        SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=True, use_batch_drawing=True
     )
 
     assert img.mode == "RGBA"
@@ -1033,9 +990,7 @@ def test_batch_drawing_with_rgb_mode():
     Test batch drawing in RGB mode.
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        enable_antialiasing=False,
-        use_batch_drawing=True
+        SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=False, use_batch_drawing=True
     )
 
     assert img.mode == "RGB"
@@ -1046,11 +1001,7 @@ def test_batch_drawing_with_grid():
     """
     Test batch drawing with grid lines enabled.
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        show_grid=True,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=True, use_batch_drawing=True)
 
     assert isinstance(img, Image.Image)
 
@@ -1060,11 +1011,12 @@ def test_batch_drawing_with_custom_colors():
     Test batch drawing with custom color overrides.
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
+        SAMPLE_OHLC,
+        SAMPLE_VOLUME,
         bg_color="#000000",
         up_color="#00FF00",
         down_color="#FF0000",
-        use_batch_drawing=True
+        use_batch_drawing=True,
     )
 
     assert isinstance(img, Image.Image)
@@ -1078,9 +1030,7 @@ def test_batch_drawing_various_sizes():
 
     for width, height in sizes:
         img = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            width=width, height=height,
-            use_batch_drawing=True
+            SAMPLE_OHLC, SAMPLE_VOLUME, width=width, height=height, use_batch_drawing=True
         )
         assert img.size == (width, height)
         assert isinstance(img, Image.Image)
@@ -1100,10 +1050,7 @@ def test_batch_drawing_large_dataset():
     large_volume = np.random.uniform(1000, 5000, 10000)
 
     # Batch mode should handle large datasets efficiently
-    img = render_ohlcv_chart(
-        large_ohlc, large_volume,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(large_ohlc, large_volume, use_batch_drawing=True)
 
     assert isinstance(img, Image.Image)
     assert img.size == (1920, 1080)
@@ -1115,9 +1062,7 @@ def test_batch_drawing_with_wick_widths():
     """
     for ratio in [0.05, 0.1, 0.2, 0.3]:
         img = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            wick_width_ratio=ratio,
-            use_batch_drawing=True
+            SAMPLE_OHLC, SAMPLE_VOLUME, wick_width_ratio=ratio, use_batch_drawing=True
         )
         assert isinstance(img, Image.Image)
 
@@ -1135,10 +1080,7 @@ def test_batch_drawing_all_bullish():
     }
     bullish_volume = SAMPLE_VOLUME
 
-    img = render_ohlcv_chart(
-        bullish_ohlc, bullish_volume,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(bullish_ohlc, bullish_volume, use_batch_drawing=True)
 
     assert isinstance(img, Image.Image)
 
@@ -1156,10 +1098,7 @@ def test_batch_drawing_all_bearish():
     }
     bearish_volume = SAMPLE_VOLUME
 
-    img = render_ohlcv_chart(
-        bearish_ohlc, bearish_volume,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(bearish_ohlc, bearish_volume, use_batch_drawing=True)
 
     assert isinstance(img, Image.Image)
 
@@ -1169,10 +1108,7 @@ def test_batch_drawing_mixed_candles():
     Test batch drawing with mixed bullish and bearish candles.
     """
     # Mixed candles (original sample data)
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=True)
 
     assert isinstance(img, Image.Image)
 
@@ -1181,10 +1117,7 @@ def test_batch_drawing_saves_correctly():
     """
     Test that charts rendered with batch drawing save correctly in all formats.
     """
-    img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
-        use_batch_drawing=True
-    )
+    img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=True)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         formats = [
@@ -1216,14 +1149,15 @@ def test_batch_drawing_all_features_combined():
     Test batch drawing with all features enabled.
     """
     img = render_ohlcv_chart(
-        SAMPLE_OHLC, SAMPLE_VOLUME,
+        SAMPLE_OHLC,
+        SAMPLE_VOLUME,
         width=1600,
         height=900,
         theme="modern",
         wick_width_ratio=0.15,
         enable_antialiasing=True,
         show_grid=True,
-        use_batch_drawing=True
+        use_batch_drawing=True,
     )
 
     assert isinstance(img, Image.Image)
@@ -1233,15 +1167,16 @@ def test_batch_drawing_all_features_combined():
 
 # Tests for Batch Rendering API (Task 3)
 
+
 def test_render_ohlcv_charts_basic():
     """
     Test basic batch rendering with multiple datasets.
     """
     # Create 3 datasets
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     # Render all charts
@@ -1269,7 +1204,7 @@ def test_render_ohlcv_charts_single_dataset():
     Test batch rendering with single dataset.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets)
@@ -1283,17 +1218,12 @@ def test_render_ohlcv_charts_common_kwargs():
     Test that common kwargs are applied to all charts.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     # Render with custom dimensions and theme
-    charts = render_ohlcv_charts(
-        datasets,
-        width=800,
-        height=600,
-        theme='modern'
-    )
+    charts = render_ohlcv_charts(datasets, width=800, height=600, theme="modern")
 
     # Verify all charts have same dimensions
     assert len(charts) == 2
@@ -1308,8 +1238,8 @@ def test_render_ohlcv_charts_all_themes():
     """
     for theme_name in THEMES.keys():
         datasets = [
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
         ]
 
         charts = render_ohlcv_charts(datasets, theme=theme_name)
@@ -1341,8 +1271,8 @@ def test_render_ohlcv_charts_different_data():
     volume2 = np.array([2000, 2500, 2200])
 
     datasets = [
-        {'ohlc': ohlc1, 'volume': volume1},
-        {'ohlc': ohlc2, 'volume': volume2},
+        {"ohlc": ohlc1, "volume": volume1},
+        {"ohlc": ohlc2, "volume": volume2},
     ]
 
     charts = render_ohlcv_charts(datasets)
@@ -1357,16 +1287,12 @@ def test_render_ohlcv_charts_with_custom_colors():
     Test batch rendering with custom color overrides.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(
-        datasets,
-        theme='modern',
-        bg_color='#000000',
-        up_color='#FFFFFF',
-        down_color='#CCCCCC'
+        datasets, theme="modern", bg_color="#000000", up_color="#FFFFFF", down_color="#CCCCCC"
     )
 
     assert len(charts) == 2
@@ -1382,8 +1308,8 @@ def test_render_ohlcv_charts_various_sizes():
 
     for width, height in sizes:
         datasets = [
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
         ]
 
         charts = render_ohlcv_charts(datasets, width=width, height=height)
@@ -1398,8 +1324,8 @@ def test_render_ohlcv_charts_rgba_mode():
     Test batch rendering in RGBA mode.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, enable_antialiasing=True)
@@ -1414,8 +1340,8 @@ def test_render_ohlcv_charts_rgb_mode():
     Test batch rendering in RGB mode.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, enable_antialiasing=False)
@@ -1430,8 +1356,8 @@ def test_render_ohlcv_charts_with_grid():
     Test batch rendering with grid enabled.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, show_grid=True)
@@ -1446,8 +1372,8 @@ def test_render_ohlcv_charts_without_grid():
     Test batch rendering with grid disabled.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, show_grid=False)
@@ -1462,8 +1388,8 @@ def test_render_ohlcv_charts_batch_drawing():
     Test batch rendering with batch drawing enabled.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, use_batch_drawing=True)
@@ -1478,8 +1404,8 @@ def test_render_ohlcv_charts_wick_width():
     Test batch rendering with custom wick width ratio.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(datasets, wick_width_ratio=0.2)
@@ -1494,22 +1420,22 @@ def test_render_ohlcv_charts_all_kwargs():
     Test batch rendering with all possible kwargs.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = render_ohlcv_charts(
         datasets,
         width=1600,
         height=900,
-        theme='tradingview',
-        bg_color='#131722',
-        up_color='#089981',
-        down_color='#F23645',
+        theme="tradingview",
+        bg_color="#131722",
+        up_color="#089981",
+        down_color="#F23645",
         wick_width_ratio=0.15,
         enable_antialiasing=True,
         show_grid=True,
-        use_batch_drawing=True
+        use_batch_drawing=True,
     )
 
     assert len(charts) == 2
@@ -1523,12 +1449,9 @@ def test_render_ohlcv_charts_large_batch():
     """
     Test batch rendering with many datasets (10 charts).
     """
-    datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME}
-        for _ in range(10)
-    ]
+    datasets = [{"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME} for _ in range(10)]
 
-    charts = render_ohlcv_charts(datasets, theme='modern')
+    charts = render_ohlcv_charts(datasets, theme="modern")
 
     assert len(charts) == 10
     for img in charts:
@@ -1540,12 +1463,12 @@ def test_render_ohlcv_charts_save_all():
     Test that all batch-rendered charts can be saved.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
-    charts = render_ohlcv_charts(datasets, theme='modern')
+    charts = render_ohlcv_charts(datasets, theme="modern")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         for i, img in enumerate(charts):
@@ -1568,7 +1491,7 @@ def test_render_ohlcv_charts_import_from_package():
     from kimsfinance.plotting import render_ohlcv_charts as imported_func
 
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     charts = imported_func(datasets)
@@ -1576,25 +1499,27 @@ def test_render_ohlcv_charts_import_from_package():
     assert len(charts) == 1
     assert isinstance(charts[0], Image.Image)
 
+
 # Tests for Memory-Mapped Output (Task 5)
+
 
 def test_render_to_array_basic():
     """
     Test basic render_to_array functionality.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     # Verify it's a numpy array
     assert isinstance(arr, np.ndarray)
-    
+
     # Verify shape (default is 1920x1080, RGBA mode)
     assert arr.shape == (1080, 1920, 4)
-    
+
     # Verify dtype
     assert arr.dtype == np.uint8
-    
+
     # Verify values are in valid range
     assert np.all(arr >= 0)
     assert np.all(arr <= 255)
@@ -1605,9 +1530,9 @@ def test_render_to_array_rgba_mode():
     Test render_to_array returns RGBA array (default).
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=True)
-    
+
     # RGBA mode should return 4 channels
     assert arr.shape == (1080, 1920, 4)
     assert arr.dtype == np.uint8
@@ -1618,9 +1543,9 @@ def test_render_to_array_rgb_mode():
     Test render_to_array returns RGB array when antialiasing disabled.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=False)
-    
+
     # RGB mode should return 3 channels
     assert arr.shape == (1080, 1920, 3)
     assert arr.dtype == np.uint8
@@ -1631,13 +1556,13 @@ def test_render_to_array_custom_dimensions():
     Test render_to_array with custom dimensions.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     # Test various sizes
     sizes = [(800, 600), (1920, 1080), (3840, 2160), (400, 300)]
-    
+
     for width, height in sizes:
         arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, width=width, height=height)
-        
+
         # Verify shape matches (H, W, C)
         assert arr.shape[0] == height
         assert arr.shape[1] == width
@@ -1649,10 +1574,10 @@ def test_render_to_array_all_themes():
     Test render_to_array with all available themes.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     for theme_name in THEMES.keys():
         arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name)
-        
+
         # Verify valid array
         assert isinstance(arr, np.ndarray)
         assert arr.shape == (1080, 1920, 4)
@@ -1664,15 +1589,11 @@ def test_render_to_array_custom_colors():
     Test render_to_array with custom color overrides.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        bg_color='#000000',
-        up_color='#00FF00',
-        down_color='#FF0000'
+        SAMPLE_OHLC, SAMPLE_VOLUME, bg_color="#000000", up_color="#00FF00", down_color="#FF0000"
     )
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (1080, 1920, 4)
 
@@ -1682,9 +1603,9 @@ def test_render_to_array_with_grid():
     Test render_to_array with grid enabled.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=True)
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (1080, 1920, 4)
 
@@ -1694,9 +1615,9 @@ def test_render_to_array_without_grid():
     Test render_to_array with grid disabled.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=False)
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (1080, 1920, 4)
 
@@ -1706,9 +1627,9 @@ def test_render_to_array_batch_drawing():
     Test render_to_array with batch drawing enabled.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, use_batch_drawing=True)
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (1080, 1920, 4)
 
@@ -1718,19 +1639,19 @@ def test_render_to_array_save_to_npy():
     Test that render_to_array output can be saved to numpy file.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "chart.npy")
         np.save(output_path, arr)
-        
+
         # Verify file exists
         assert os.path.exists(output_path)
-        
+
         # Load it back
         loaded_arr = np.load(output_path)
-        
+
         # Verify arrays match
         assert np.array_equal(arr, loaded_arr)
         assert loaded_arr.shape == arr.shape
@@ -1743,16 +1664,16 @@ def test_render_to_array_round_trip():
     """
     from kimsfinance.plotting import render_to_array
     from PIL import Image as PILImage
-    
+
     # Render to array
     arr1 = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     # Convert to PIL Image
-    img = PILImage.fromarray(arr1, mode='RGBA')
-    
+    img = PILImage.fromarray(arr1, mode="RGBA")
+
     # Convert back to array
     arr2 = np.array(img)
-    
+
     # Should be identical
     assert np.array_equal(arr1, arr2)
 
@@ -1762,11 +1683,11 @@ def test_render_to_array_memory_layout():
     Test that array has correct memory layout (C-contiguous).
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     # Verify C-contiguous (row-major) layout
-    assert arr.flags['C_CONTIGUOUS']
+    assert arr.flags["C_CONTIGUOUS"]
 
 
 def test_render_to_array_writable():
@@ -1774,16 +1695,16 @@ def test_render_to_array_writable():
     Test that returned array is writable.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     # Should be writable
-    assert arr.flags['WRITEABLE']
-    
+    assert arr.flags["WRITEABLE"]
+
     # Test modifying a pixel
     original_pixel = arr[0, 0].copy()
     arr[0, 0] = [255, 0, 0, 255]
-    
+
     # Verify it changed
     assert not np.array_equal(arr[0, 0], original_pixel)
 
@@ -1793,7 +1714,7 @@ def test_render_to_array_large_dataset():
     Test render_to_array with large dataset.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     # Create large dataset
     large_ohlc = {
         "open": np.random.uniform(100, 200, 1000),
@@ -1802,9 +1723,9 @@ def test_render_to_array_large_dataset():
         "close": np.random.uniform(100, 200, 1000),
     }
     large_volume = np.random.uniform(1000, 5000, 1000)
-    
+
     arr = render_to_array(large_ohlc, large_volume)
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (1080, 1920, 4)
     assert arr.dtype == np.uint8
@@ -1815,19 +1736,19 @@ def test_render_to_array_various_kwargs():
     Test render_to_array with various rendering options.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(
         SAMPLE_OHLC,
         SAMPLE_VOLUME,
         width=1600,
         height=900,
-        theme='modern',
+        theme="modern",
         wick_width_ratio=0.15,
         enable_antialiasing=True,
         show_grid=True,
-        use_batch_drawing=True
+        use_batch_drawing=True,
     )
-    
+
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (900, 1600, 4)
     assert arr.dtype == np.uint8
@@ -1838,10 +1759,10 @@ def test_render_to_array_import_from_package():
     Test that render_to_array is properly exported from package.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     # Should be importable and callable
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     assert isinstance(arr, np.ndarray)
 
 
@@ -1850,14 +1771,14 @@ def test_render_to_array_compare_to_render():
     Test that render_to_array produces same result as render + conversion.
     """
     from kimsfinance.plotting import render_to_array
-    
+
     # Method 1: Direct array rendering
     arr1 = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=False)
-    
+
     # Method 2: Render to Image, then convert to array
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=False)
     arr2 = np.array(img)
-    
+
     # Should produce identical results
     assert np.array_equal(arr1, arr2)
 
@@ -1867,13 +1788,13 @@ def test_render_to_array_pixel_values():
     Test that pixel values are valid uint8 (0-255).
     """
     from kimsfinance.plotting import render_to_array
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    
+
     # All values should be 0-255
     assert arr.min() >= 0
     assert arr.max() <= 255
-    
+
     # Should have non-zero pixels (actual chart content)
     assert arr.max() > 0
 
@@ -1884,21 +1805,21 @@ def test_render_to_array_different_formats():
     """
     from kimsfinance.plotting import render_to_array
     from PIL import Image as PILImage
-    
+
     arr = render_to_array(SAMPLE_OHLC, SAMPLE_VOLUME)
-    img = PILImage.fromarray(arr, mode='RGBA')
-    
+    img = PILImage.fromarray(arr, mode="RGBA")
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save in various formats
         formats = [
             ("test.png", "PNG"),
             ("test.webp", "WEBP"),
         ]
-        
+
         for filename, expected_format in formats:
             output_path = os.path.join(tmpdir, filename)
             img.save(output_path)
-            
+
             assert os.path.exists(output_path)
             loaded_img = PILImage.open(output_path)
             assert loaded_img.format == expected_format
@@ -1906,21 +1827,23 @@ def test_render_to_array_different_formats():
 
 # Tests for render_and_save() function (Task 4: Direct-to-File API)
 
+
 def test_render_and_save_basic():
     """
     Test basic render_and_save functionality with auto-format detection.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test_render_and_save.webp")
-        
+
         # Render and save in one step
         from kimsfinance.plotting import render_and_save
+
         render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path)
-        
+
         # Verify file was created
         assert os.path.exists(output_path)
         assert os.path.getsize(output_path) > 0
-        
+
         # Verify it's valid WebP
         img = Image.open(output_path)
         assert img.format == "WEBP"
@@ -1932,13 +1855,13 @@ def test_render_and_save_with_speed():
     Test render_and_save with different speed presets.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # Test all speed modes
-        for speed in ['fast', 'balanced', 'best']:
+        for speed in ["fast", "balanced", "best"]:
             output_path = os.path.join(tmpdir, f"test_{speed}.webp")
             render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path, speed=speed)
-            
+
             # Verify file exists
             assert os.path.exists(output_path)
             img = Image.open(output_path)
@@ -1950,11 +1873,11 @@ def test_render_and_save_with_quality():
     Test render_and_save with explicit quality parameter.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test_quality.webp")
         render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path, quality=90)
-        
+
         assert os.path.exists(output_path)
         img = Image.open(output_path)
         assert img.format == "WEBP"
@@ -1965,20 +1888,22 @@ def test_render_and_save_with_render_kwargs():
     Test render_and_save passes render_kwargs correctly.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test_kwargs.png")
-        
+
         # Pass various rendering parameters
         render_and_save(
-            SAMPLE_OHLC, SAMPLE_VOLUME, output_path,
+            SAMPLE_OHLC,
+            SAMPLE_VOLUME,
+            output_path,
             width=800,
             height=600,
-            theme='modern',
+            theme="modern",
             enable_antialiasing=True,
-            show_grid=False
+            show_grid=False,
         )
-        
+
         # Verify file created with correct dimensions
         assert os.path.exists(output_path)
         img = Image.open(output_path)
@@ -1990,18 +1915,18 @@ def test_render_and_save_all_formats():
     Test render_and_save with all supported formats.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         formats = [
             ("test.webp", "WEBP"),
             ("test.png", "PNG"),
             ("test.jpg", "JPEG"),
         ]
-        
+
         for filename, expected_format in formats:
             output_path = os.path.join(tmpdir, filename)
             render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path)
-            
+
             assert os.path.exists(output_path)
             img = Image.open(output_path)
             assert img.format == expected_format
@@ -2012,11 +1937,11 @@ def test_render_and_save_explicit_format():
     Test render_and_save with explicit format parameter.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test.dat")
         render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path, format="png")
-        
+
         # Should be PNG despite .dat extension
         assert os.path.exists(output_path)
         img = Image.open(output_path)
@@ -2028,11 +1953,11 @@ def test_render_and_save_no_return_value():
     Test that render_and_save returns None (saves to disk).
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test.webp")
         result = render_and_save(SAMPLE_OHLC, SAMPLE_VOLUME, output_path)
-        
+
         # Function should return None
         assert result is None
         # But file should exist
@@ -2044,24 +1969,26 @@ def test_render_and_save_combined_parameters():
     Test render_and_save with both save and render parameters.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "test_combined.webp")
-        
+
         render_and_save(
-            SAMPLE_OHLC, SAMPLE_VOLUME, output_path,
+            SAMPLE_OHLC,
+            SAMPLE_VOLUME,
+            output_path,
             # Save parameters
-            speed='fast',
+            speed="fast",
             quality=85,
             # Render parameters
             width=1600,
             height=900,
-            theme='tradingview',
+            theme="tradingview",
             enable_antialiasing=True,
             show_grid=True,
-            use_batch_drawing=False
+            use_batch_drawing=False,
         )
-        
+
         assert os.path.exists(output_path)
         img = Image.open(output_path)
         assert img.size == (1600, 900)
@@ -2073,59 +2000,56 @@ def test_render_and_save_vs_separate_calls():
     Test that render_and_save produces same output as separate render + save.
     """
     from kimsfinance.plotting import render_and_save
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # Using render_and_save
         combined_path = os.path.join(tmpdir, "combined.png")
         render_and_save(
-            SAMPLE_OHLC, SAMPLE_VOLUME, combined_path,
-            speed='balanced',
-            theme='modern',
+            SAMPLE_OHLC,
+            SAMPLE_VOLUME,
+            combined_path,
+            speed="balanced",
+            theme="modern",
             width=1920,
-            height=1080
+            height=1080,
         )
-        
+
         # Using separate calls
         separate_path = os.path.join(tmpdir, "separate.png")
         img = render_ohlcv_chart(
-            SAMPLE_OHLC, SAMPLE_VOLUME,
-            theme='modern',
-            width=1920,
-            height=1080
+            SAMPLE_OHLC, SAMPLE_VOLUME, theme="modern", width=1920, height=1080
         )
-        save_chart(img, separate_path, speed='balanced')
-        
+        save_chart(img, separate_path, speed="balanced")
+
         # Both files should exist and have similar sizes
         assert os.path.exists(combined_path)
         assert os.path.exists(separate_path)
-        
+
         combined_size = os.path.getsize(combined_path)
         separate_size = os.path.getsize(separate_path)
-        
+
         # Sizes should be identical (same rendering + encoding)
         assert combined_size == separate_size
 
 
 # Tests for Parallel Rendering (Task 6)
 
+
 def test_render_charts_parallel_basic():
     """
     Test basic parallel rendering with multiple datasets.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.webp")
-            for i in range(len(datasets))
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.webp") for i in range(len(datasets))]
 
         # Render in parallel
-        results = render_charts_parallel(datasets, output_paths, speed='fast')
+        results = render_charts_parallel(datasets, output_paths, speed="fast")
 
         # Verify results
         assert len(results) == 3
@@ -2146,8 +2070,8 @@ def test_render_charts_parallel_in_memory():
     Test parallel rendering to in-memory PNG bytes.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     # Render to bytes (no output_paths)
@@ -2160,7 +2084,7 @@ def test_render_charts_parallel_in_memory():
         assert len(result) > 0
 
         # Verify it's valid PNG
-        assert result.startswith(b'\x89PNG')
+        assert result.startswith(b"\x89PNG")
 
 
 def test_render_charts_parallel_order_preserved():
@@ -2185,8 +2109,8 @@ def test_render_charts_parallel_order_preserved():
     volume2 = np.array([2000, 2500, 2200])
 
     datasets = [
-        {'ohlc': ohlc1, 'volume': volume1},
-        {'ohlc': ohlc2, 'volume': volume2},
+        {"ohlc": ohlc1, "volume": volume1},
+        {"ohlc": ohlc2, "volume": volume2},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -2205,23 +2129,13 @@ def test_render_charts_parallel_num_workers():
     """
     Test parallel rendering with different worker counts.
     """
-    datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME}
-        for _ in range(4)
-    ]
+    datasets = [{"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME} for _ in range(4)]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(4)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(4)]
 
         # Test with specific worker count
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            num_workers=2
-        )
+        results = render_charts_parallel(datasets, output_paths, num_workers=2)
 
         assert len(results) == 4
         for path in output_paths:
@@ -2233,22 +2147,15 @@ def test_render_charts_parallel_auto_workers():
     Test parallel rendering with automatic worker detection.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
         # num_workers=None should use os.cpu_count()
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            num_workers=None
-        )
+        results = render_charts_parallel(datasets, output_paths, num_workers=None)
 
         assert len(results) == 2
 
@@ -2258,22 +2165,15 @@ def test_render_charts_parallel_speed_modes():
     Test parallel rendering with different speed modes.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
-    for speed in ['fast', 'balanced', 'best']:
+    for speed in ["fast", "balanced", "best"]:
         with tempfile.TemporaryDirectory() as tmpdir:
-            output_paths = [
-                os.path.join(tmpdir, f"chart_{i}.webp")
-                for i in range(2)
-            ]
+            output_paths = [os.path.join(tmpdir, f"chart_{i}.webp") for i in range(2)]
 
-            results = render_charts_parallel(
-                datasets,
-                output_paths,
-                speed=speed
-            )
+            results = render_charts_parallel(datasets, output_paths, speed=speed)
 
             assert len(results) == 2
             for path in output_paths:
@@ -2285,25 +2185,22 @@ def test_render_charts_parallel_common_kwargs():
     Test parallel rendering with common rendering kwargs.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
         # Pass common rendering options
         results = render_charts_parallel(
             datasets,
             output_paths,
-            theme='modern',
+            theme="modern",
             width=800,
             height=600,
             enable_antialiasing=True,
-            show_grid=True
+            show_grid=True,
         )
 
         assert len(results) == 2
@@ -2318,23 +2215,12 @@ def test_render_charts_parallel_large_batch():
     """
     Test parallel rendering with many charts (10 charts).
     """
-    datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME}
-        for _ in range(10)
-    ]
+    datasets = [{"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME} for _ in range(10)]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(10)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(10)]
 
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            num_workers=4,
-            speed='fast'
-        )
+        results = render_charts_parallel(datasets, output_paths, num_workers=4, speed="fast")
 
         assert len(results) == 10
         for path in output_paths:
@@ -2347,7 +2233,7 @@ def test_render_charts_parallel_single_chart():
     Test parallel rendering with single chart.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -2376,9 +2262,9 @@ def test_render_charts_parallel_mixed_formats():
     Test parallel rendering with different output formats.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -2408,8 +2294,8 @@ def test_render_charts_parallel_length_mismatch_error():
     Test that length mismatch raises ValueError.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -2426,21 +2312,14 @@ def test_render_charts_parallel_all_themes():
     """
     for theme_name in THEMES.keys():
         datasets = [
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-            {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+            {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            output_paths = [
-                os.path.join(tmpdir, f"chart_{i}.png")
-                for i in range(2)
-            ]
+            output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
-            results = render_charts_parallel(
-                datasets,
-                output_paths,
-                theme=theme_name
-            )
+            results = render_charts_parallel(datasets, output_paths, theme=theme_name)
 
             assert len(results) == 2
             for path in output_paths:
@@ -2452,23 +2331,20 @@ def test_render_charts_parallel_custom_colors():
     Test parallel rendering with custom color overrides.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
         results = render_charts_parallel(
             datasets,
             output_paths,
-            theme='modern',
-            bg_color='#000000',
-            up_color='#FFFFFF',
-            down_color='#CCCCCC'
+            theme="modern",
+            bg_color="#000000",
+            up_color="#FFFFFF",
+            down_color="#CCCCCC",
         )
 
         assert len(results) == 2
@@ -2479,21 +2355,14 @@ def test_render_charts_parallel_batch_drawing():
     Test parallel rendering with batch drawing enabled.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            use_batch_drawing=True
-        )
+        results = render_charts_parallel(datasets, output_paths, use_batch_drawing=True)
 
         assert len(results) == 2
 
@@ -2505,7 +2374,7 @@ def test_render_charts_parallel_import_from_package():
     from kimsfinance.plotting import render_charts_parallel as imported_func
 
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     # Render to bytes
@@ -2520,8 +2389,8 @@ def test_render_charts_parallel_in_memory_load_images():
     Test that in-memory PNG bytes can be loaded as images.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     # Render to bytes
@@ -2530,6 +2399,7 @@ def test_render_charts_parallel_in_memory_load_images():
     # Load each as image
     for png_bytes in png_bytes_list:
         import io
+
         buf = io.BytesIO(png_bytes)
         img = Image.open(buf)
 
@@ -2543,21 +2413,14 @@ def test_render_charts_parallel_wick_width():
     Test parallel rendering with custom wick width ratio.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            wick_width_ratio=0.2
-        )
+        results = render_charts_parallel(datasets, output_paths, wick_width_ratio=0.2)
 
         assert len(results) == 2
 
@@ -2567,21 +2430,14 @@ def test_render_charts_parallel_rgba_mode():
     Test parallel rendering in RGBA mode.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            enable_antialiasing=True
-        )
+        results = render_charts_parallel(datasets, output_paths, enable_antialiasing=True)
 
         assert len(results) == 2
 
@@ -2597,21 +2453,14 @@ def test_render_charts_parallel_rgb_mode():
     Test parallel rendering in RGB mode.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.png")
-            for i in range(2)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.png") for i in range(2)]
 
-        results = render_charts_parallel(
-            datasets,
-            output_paths,
-            enable_antialiasing=False
-        )
+        results = render_charts_parallel(datasets, output_paths, enable_antialiasing=False)
 
         assert len(results) == 2
 
@@ -2621,29 +2470,26 @@ def test_render_charts_parallel_all_features():
     Test parallel rendering with all features enabled.
     """
     datasets = [
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
-        {'ohlc': SAMPLE_OHLC, 'volume': SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
+        {"ohlc": SAMPLE_OHLC, "volume": SAMPLE_VOLUME},
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [
-            os.path.join(tmpdir, f"chart_{i}.webp")
-            for i in range(3)
-        ]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.webp") for i in range(3)]
 
         results = render_charts_parallel(
             datasets,
             output_paths,
             num_workers=2,
-            speed='fast',
+            speed="fast",
             width=1600,
             height=900,
-            theme='tradingview',
+            theme="tradingview",
             wick_width_ratio=0.15,
             enable_antialiasing=True,
             show_grid=True,
-            use_batch_drawing=True
+            use_batch_drawing=True,
         )
 
         assert len(results) == 3
@@ -2656,6 +2502,7 @@ def test_render_charts_parallel_all_features():
 
 
 # Tests for Quality Parameter (Task 2)
+
 
 def test_quality_parameter_webp():
     """
@@ -2809,7 +2656,7 @@ def test_quality_overrides_speed_preset():
     with tempfile.TemporaryDirectory() as tmpdir:
         # speed='fast' normally uses quality=75, but we override to 95
         output_path = os.path.join(tmpdir, "override.webp")
-        save_chart(img, output_path, speed='fast', quality=95)
+        save_chart(img, output_path, speed="fast", quality=95)
 
         # Verify file exists
         assert os.path.exists(output_path)
@@ -2873,7 +2720,7 @@ def test_quality_parameter_with_different_speeds():
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Test quality override with all speed modes
-        for speed in ['fast', 'balanced', 'best']:
+        for speed in ["fast", "balanced", "best"]:
             for quality in [60, 80, 95]:
                 output_path = os.path.join(tmpdir, f"speed_{speed}_quality_{quality}.webp")
                 save_chart(img, output_path, speed=speed, quality=quality)
@@ -2923,7 +2770,7 @@ def test_numpy_arrays_c_contiguous():
                 "low": np.array([99, 101, 100, 104, 102]),
                 "close": np.array([102, 101, 102, 104, 103]),
             },
-            "volume": np.array([1000, 1500, 1200, 2000, 1800])
+            "volume": np.array([1000, 1500, 1200, 2000, 1800]),
         },
         # Large dataset (1000 candles)
         {
@@ -2933,8 +2780,8 @@ def test_numpy_arrays_c_contiguous():
                 "low": np.random.uniform(100, 200, 1000),
                 "close": np.random.uniform(100, 200, 1000),
             },
-            "volume": np.random.uniform(1000, 5000, 1000)
-        }
+            "volume": np.random.uniform(1000, 5000, 1000),
+        },
     ]
 
     for dataset in test_datasets:
@@ -2966,7 +2813,9 @@ def test_numpy_arrays_c_contiguous():
         assert np.issubdtype(open_prices.dtype, np.number), f"Unexpected dtype: {open_prices.dtype}"
         assert np.issubdtype(high_prices.dtype, np.number), f"Unexpected dtype: {high_prices.dtype}"
         assert np.issubdtype(low_prices.dtype, np.number), f"Unexpected dtype: {low_prices.dtype}"
-        assert np.issubdtype(close_prices.dtype, np.number), f"Unexpected dtype: {close_prices.dtype}"
+        assert np.issubdtype(
+            close_prices.dtype, np.number
+        ), f"Unexpected dtype: {close_prices.dtype}"
         assert np.issubdtype(volume_data.dtype, np.number), f"Unexpected dtype: {volume_data.dtype}"
 
     # Also verify that rendering works correctly with these contiguous arrays
@@ -2992,8 +2841,12 @@ def test_numpy_arrays_memory_layout_non_contiguous():
     non_contiguous_high = large_array[1::2]
 
     # Verify these are NOT contiguous before conversion
-    assert not non_contiguous_open.flags.c_contiguous, "Test setup error: array should be non-contiguous"
-    assert not non_contiguous_high.flags.c_contiguous, "Test setup error: array should be non-contiguous"
+    assert (
+        not non_contiguous_open.flags.c_contiguous
+    ), "Test setup error: array should be non-contiguous"
+    assert (
+        not non_contiguous_high.flags.c_contiguous
+    ), "Test setup error: array should be non-contiguous"
 
     # Convert to contiguous arrays (as renderer does)
     contiguous_open = np.ascontiguousarray(to_numpy_array(non_contiguous_open))
@@ -3004,8 +2857,12 @@ def test_numpy_arrays_memory_layout_non_contiguous():
     assert contiguous_high.flags.c_contiguous, "Array must be C-contiguous after conversion"
 
     # Verify data integrity (values should be preserved)
-    assert np.array_equal(contiguous_open, non_contiguous_open), "Data must be preserved during conversion"
-    assert np.array_equal(contiguous_high, non_contiguous_high), "Data must be preserved during conversion"
+    assert np.array_equal(
+        contiguous_open, non_contiguous_open
+    ), "Data must be preserved during conversion"
+    assert np.array_equal(
+        contiguous_high, non_contiguous_high
+    ), "Data must be preserved during conversion"
 
     # Verify the arrays work in rendering
     num_candles = min(len(contiguous_open), len(contiguous_high))

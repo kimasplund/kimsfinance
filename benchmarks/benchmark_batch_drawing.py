@@ -2,6 +2,7 @@ import timeit
 import numpy as np
 from kimsfinance.plotting.renderer import render_ohlcv_chart
 
+
 def generate_data(num_candles):
     """Generate sample OHLCV data."""
     ohlc = {
@@ -13,15 +14,15 @@ def generate_data(num_candles):
     volume = np.random.uniform(1000, 5000, num_candles)
     return {"ohlc": ohlc, "volume": volume}
 
+
 def run_benchmark(use_batch_drawing, data, num_runs=10):
     """Run benchmark for a given rendering mode."""
     stmt = lambda: render_ohlcv_chart(
-        ohlc=data["ohlc"],
-        volume=data["volume"],
-        use_batch_drawing=use_batch_drawing
+        ohlc=data["ohlc"], volume=data["volume"], use_batch_drawing=use_batch_drawing
     )
     times = timeit.repeat(stmt, repeat=3, number=num_runs)
     return min(times) / num_runs
+
 
 def main():
     """Main benchmark function."""
@@ -41,10 +42,13 @@ def main():
         # Compare results
         if batch_time > 0:
             speedup = sequential_time / batch_time
-            print(f"\nBatch drawing is {speedup:.2f}x {'faster' if speedup > 1 else 'slower'} than sequential drawing.")
+            print(
+                f"\nBatch drawing is {speedup:.2f}x {'faster' if speedup > 1 else 'slower'} than sequential drawing."
+            )
         else:
             print("\nBatch drawing is significantly faster.")
         print("-" * 40)
+
 
 if __name__ == "__main__":
     main()

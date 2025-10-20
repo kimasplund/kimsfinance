@@ -18,9 +18,8 @@ from ..core import ArrayLike
 from .atr import calculate_atr
 from .swing import find_swing_points
 
-def _calculate_polygon_properties(
-    polygon: list[tuple[int, int]]
-) -> tuple[int, int]:
+
+def _calculate_polygon_properties(polygon: list[tuple[int, int]]) -> tuple[int, int]:
     """
     Calculates the interior (I) and boundary (B) points for a simple polygon
     with integer vertices.
@@ -55,7 +54,7 @@ def calculate_picks_momentum_ratio(
     close: ArrayLike,
     n: int = 10,
     atr_period: int = 14,
-    atr_multiplier: float = 0.5
+    atr_multiplier: float = 0.5,
 ) -> tuple[np.ndarray, list]:
     """
     Calculates the Pick's Momentum Ratio (PMR) for a given price series.
@@ -85,15 +84,14 @@ def calculate_picks_momentum_ratio(
 
     # Combine and sort swing points by their index in the price series
     swing_points = sorted(
-        [(idx, 'high') for idx in swing_highs_idx] +
-        [(idx, 'low') for idx in swing_lows_idx]
+        [(idx, "high") for idx in swing_highs_idx] + [(idx, "low") for idx in swing_lows_idx]
     )
 
     # Iterate through swing points to form polygons (triangles)
     for i in range(len(swing_points) - 2):
         p1_idx, p1_type = swing_points[i]
-        p2_idx, p2_type = swing_points[i+1]
-        p3_idx, p3_type = swing_points[i+2]
+        p2_idx, p2_type = swing_points[i + 1]
+        p3_idx, p3_type = swing_points[i + 2]
 
         # Ensure we have an alternating sequence (e.g., high-low-high)
         if p1_type == p2_type or p2_type == p3_type:
@@ -105,9 +103,9 @@ def calculate_picks_momentum_ratio(
             continue
 
         # Get prices for vertices
-        y1_price = high[p1_idx] if p1_type == 'high' else low[p1_idx]
-        y2_price = high[p2_idx] if p2_type == 'high' else low[p2_idx]
-        y3_price = high[p3_idx] if p3_type == 'high' else low[p3_idx]
+        y1_price = high[p1_idx] if p1_type == "high" else low[p1_idx]
+        y2_price = high[p2_idx] if p2_type == "high" else low[p2_idx]
+        y3_price = high[p3_idx] if p3_type == "high" else low[p3_idx]
 
         # Create vertices and discretize them into integer grid coordinates
         v1 = (p1_idx, int(round(y1_price / pq)))

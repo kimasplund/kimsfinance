@@ -29,9 +29,7 @@ from ..core.decorators import get_array_module
 
 
 def rolling_max(
-    arr: np.ndarray | Any,
-    window: int,
-    min_periods: int | None = None
+    arr: np.ndarray | Any, window: int, min_periods: int | None = None
 ) -> np.ndarray | Any:
     """
     Calculate rolling maximum with support for both NumPy and CuPy.
@@ -56,15 +54,13 @@ def rolling_max(
 
     for i in range(min_periods - 1, len(arr)):
         start = max(0, i - window + 1)
-        result[i] = xp.max(arr[start:i + 1])
+        result[i] = xp.max(arr[start : i + 1])
 
     return result
 
 
 def rolling_min(
-    arr: np.ndarray | Any,
-    window: int,
-    min_periods: int | None = None
+    arr: np.ndarray | Any, window: int, min_periods: int | None = None
 ) -> np.ndarray | Any:
     """
     Calculate rolling minimum with support for both NumPy and CuPy.
@@ -89,15 +85,13 @@ def rolling_min(
 
     for i in range(min_periods - 1, len(arr)):
         start = max(0, i - window + 1)
-        result[i] = xp.min(arr[start:i + 1])
+        result[i] = xp.min(arr[start : i + 1])
 
     return result
 
 
 def rolling_mean(
-    arr: np.ndarray | Any,
-    window: int,
-    min_periods: int | None = None
+    arr: np.ndarray | Any, window: int, min_periods: int | None = None
 ) -> np.ndarray | Any:
     """
     Calculate rolling mean (SMA) with support for both NumPy and CuPy.
@@ -122,16 +116,13 @@ def rolling_mean(
 
     for i in range(min_periods - 1, len(arr)):
         start = max(0, i - window + 1)
-        result[i] = xp.mean(arr[start:i + 1])
+        result[i] = xp.mean(arr[start : i + 1])
 
     return result
 
 
 def rolling_std(
-    arr: np.ndarray | Any,
-    window: int,
-    min_periods: int | None = None,
-    ddof: int = 1
+    arr: np.ndarray | Any, window: int, min_periods: int | None = None, ddof: int = 1
 ) -> np.ndarray | Any:
     """
     Calculate rolling standard deviation with support for both NumPy and CuPy.
@@ -157,16 +148,13 @@ def rolling_std(
 
     for i in range(min_periods - 1, len(arr)):
         start = max(0, i - window + 1)
-        result[i] = xp.std(arr[start:i + 1], ddof=ddof)
+        result[i] = xp.std(arr[start : i + 1], ddof=ddof)
 
     return result
 
 
 def ewm_mean(
-    arr: np.ndarray | Any,
-    span: int,
-    adjust: bool = False,
-    min_periods: int | None = None
+    arr: np.ndarray | Any, span: int, adjust: bool = False, min_periods: int | None = None
 ) -> np.ndarray | Any:
     """
     Calculate exponential weighted moving average (Wilder's smoothing).
@@ -222,9 +210,7 @@ def ewm_mean(
 
 
 def rolling_sum(
-    arr: np.ndarray | Any,
-    window: int,
-    min_periods: int | None = None
+    arr: np.ndarray | Any, window: int, min_periods: int | None = None
 ) -> np.ndarray | Any:
     """
     Calculate rolling sum with support for both NumPy and CuPy.
@@ -249,16 +235,13 @@ def rolling_sum(
 
     for i in range(min_periods - 1, len(arr)):
         start = max(0, i - window + 1)
-        result[i] = xp.sum(arr[start:i + 1])
+        result[i] = xp.sum(arr[start : i + 1])
 
     return result
 
 
 # Optimized version using cumsum (faster for large windows)
-def rolling_sum_optimized(
-    arr: np.ndarray | Any,
-    window: int
-) -> np.ndarray | Any:
+def rolling_sum_optimized(arr: np.ndarray | Any, window: int) -> np.ndarray | Any:
     """
     Optimized rolling sum using cumulative sum.
 
@@ -285,21 +268,18 @@ def rolling_sum_optimized(
     result = cumsum[window:] - cumsum[:-window]
 
     # Set first (window-1) values to NaN
-    result = xp.concatenate([
-        xp.full(window - 1, xp.nan, dtype=xp.float64),
-        result[window - 1:]
-    ])
+    result = xp.concatenate([xp.full(window - 1, xp.nan, dtype=xp.float64), result[window - 1 :]])
 
     return result
 
 
 # Re-export for convenience
 __all__ = [
-    'rolling_max',
-    'rolling_min',
-    'rolling_mean',
-    'rolling_std',
-    'rolling_sum',
-    'rolling_sum_optimized',
-    'ewm_mean',
+    "rolling_max",
+    "rolling_min",
+    "rolling_mean",
+    "rolling_std",
+    "rolling_sum",
+    "rolling_sum_optimized",
+    "ewm_mean",
 ]

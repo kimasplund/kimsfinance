@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from kimsfinance.ops.picks import calculate_picks_momentum_ratio
 
+
 @pytest.fixture
 def sample_data():
     """Generates a longer sample OHLC data for testing."""
@@ -13,6 +14,7 @@ def sample_data():
     high = close + np.random.uniform(0, 2, size=100)
     low = close - np.random.uniform(0, 2, size=100)
     return high, low, close
+
 
 def test_calculate_picks_momentum_ratio(sample_data):
     """Test the calculate_picks_momentum_ratio function."""
@@ -31,11 +33,15 @@ def test_calculate_picks_momentum_ratio(sample_data):
     assert len(polygons) > 0
     assert not np.all(np.isnan(pmr_values))
 
-@pytest.mark.parametrize("n, atr_multiplier", [
-    (3, 0.2),
-    (10, 1.0),
-    (20, 2.0),
-])
+
+@pytest.mark.parametrize(
+    "n, atr_multiplier",
+    [
+        (3, 0.2),
+        (10, 1.0),
+        (20, 2.0),
+    ],
+)
 def test_different_parameters(sample_data, n, atr_multiplier):
     """Test with different n and atr_multiplier parameters."""
     high, low, close = sample_data
@@ -48,6 +54,7 @@ def test_different_parameters(sample_data, n, atr_multiplier):
     assert isinstance(pmr_values, np.ndarray)
     assert len(pmr_values) == len(high)
     assert isinstance(polygons, list)
+
 
 def test_no_swing_points(sample_data):
     """Test the case where no swing points are found."""
@@ -64,6 +71,7 @@ def test_no_swing_points(sample_data):
     assert isinstance(polygons, list)
     assert len(polygons) == 0
     assert np.all(np.isnan(pmr_values))
+
 
 def test_polygon_contents(sample_data):
     """Test the contents of the generated polygons."""
@@ -82,6 +90,7 @@ def test_polygon_contents(sample_data):
             assert len(vertex) == 2
             assert isinstance(vertex[0], (int, np.integer))
             assert isinstance(vertex[1], (int, np.integer))
+
 
 def test_with_known_output(sample_data):
     """Test with a known output to verify the algorithm's correctness."""

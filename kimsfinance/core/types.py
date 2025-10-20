@@ -46,6 +46,7 @@ type Engine = Literal["cpu", "gpu", "auto"]
 # Financial Data Types
 # ============================================================================
 
+
 class OHLCProtocol(Protocol):
     """Protocol for OHLC data structures."""
 
@@ -67,6 +68,7 @@ type MACDResult = tuple[ArrayResult, ArrayResult, ArrayResult]  # (macd, signal,
 # Configuration Types
 # ============================================================================
 
+
 class EngineConfig:
     """Engine configuration settings."""
 
@@ -76,14 +78,17 @@ class EngineConfig:
         *,
         gpu_min_rows: int = 10_000,
         gpu_operations: set[str] | None = None,
-        fallback_on_error: bool = True
+        fallback_on_error: bool = True,
     ):
         self.engine = engine
         self.gpu_min_rows = gpu_min_rows
         self.gpu_operations = gpu_operations or {
-            "nanmin", "nanmax", "isnan",
-            "least_squares", "atr",
-            "volume_sum"
+            "nanmin",
+            "nanmax",
+            "isnan",
+            "least_squares",
+            "atr",
+            "volume_sum",
         }
         self.fallback_on_error = fallback_on_error
 
@@ -91,6 +96,7 @@ class EngineConfig:
 # ============================================================================
 # Type Guards
 # ============================================================================
+
 
 def is_polars_dataframe(obj: object) -> TypeGuard[pl.DataFrame | pl.LazyFrame]:
     """Check if object is a Polars DataFrame or LazyFrame."""
@@ -102,7 +108,9 @@ def is_pandas_dataframe(obj: object) -> TypeGuard[pd.DataFrame]:
     return isinstance(obj, pd.DataFrame)
 
 
-def is_array_like(obj: object) -> TypeGuard[NDArray[Any] | pl.Series | pd.Series | list[Any] | tuple[Any, ...]]:
+def is_array_like(
+    obj: object,
+) -> TypeGuard[NDArray[Any] | pl.Series | pd.Series | list[Any] | tuple[Any, ...]]:
     """Check if object is array-like."""
     return isinstance(obj, (np.ndarray, pl.Series, pd.Series, list, tuple))
 

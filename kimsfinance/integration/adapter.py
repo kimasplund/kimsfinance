@@ -37,10 +37,7 @@ _performance_stats = {
 }
 
 
-def activate(*,
-             engine: str = "auto",
-             strict: bool = False,
-             verbose: bool = True) -> None:
+def activate(*, engine: str = "auto", strict: bool = False, verbose: bool = True) -> None:
     """
     Activate kimsfinance acceleration.
 
@@ -76,19 +73,18 @@ def activate(*,
     try:
         import mplfinance
     except ImportError:
-        raise ImportError(
-            "mplfinance is not installed. "
-            "Install with: pip install mplfinance"
-        )
+        raise ImportError("mplfinance is not installed. " "Install with: pip install mplfinance")
 
     # Apply patches
     from .hooks import patch_plotting_functions
+
     patch_plotting_functions(config=_config)
 
     _is_active = True
 
     if verbose:
         from ..core.engine import EngineManager
+
         gpu_available = EngineManager.check_gpu_available()
 
         print("✓ kimsfinance activated!")
@@ -98,8 +94,7 @@ def activate(*,
 
         if not gpu_available and engine == "gpu":
             warnings.warn(
-                "GPU engine requested but not available. Falling back to CPU.",
-                UserWarning
+                "GPU engine requested but not available. Falling back to CPU.", UserWarning
             )
 
 
@@ -125,6 +120,7 @@ def deactivate(*, verbose: bool = True) -> None:
 
     # Remove patches
     from .hooks import unpatch_plotting_functions
+
     unpatch_plotting_functions()
 
     _is_active = False
@@ -172,16 +168,16 @@ def configure(**kwargs) -> None:
     global _config
 
     valid_keys = {
-        "default_engine", "gpu_min_rows", "strict_mode",
-        "performance_tracking", "verbose"
+        "default_engine",
+        "gpu_min_rows",
+        "strict_mode",
+        "performance_tracking",
+        "verbose",
     }
 
     for key, value in kwargs.items():
         if key not in valid_keys:
-            raise ValueError(
-                f"Invalid configuration key: {key!r}. "
-                f"Valid keys: {valid_keys}"
-            )
+            raise ValueError(f"Invalid configuration key: {key!r}. " f"Valid keys: {valid_keys}")
         _config[key] = value
 
     if _config["verbose"]:
@@ -223,7 +219,7 @@ def get_performance_stats() -> dict[str, Any]:
         warnings.warn(
             "Performance tracking is disabled. "
             "Enable with: configure(performance_tracking=True)",
-            UserWarning
+            UserWarning,
         )
 
     return _performance_stats.copy()
@@ -265,6 +261,7 @@ def _track_operation(engine_used: str, time_saved_ms: float = 0.0) -> None:
 
     # Update speedup estimate
     if _performance_stats["total_calls"] > 0:
-        avg_speedup = 1.0 + (_performance_stats["time_saved_ms"] /
-                            (_performance_stats["total_calls"] * 10))  # Rough estimate
+        avg_speedup = 1.0 + (
+            _performance_stats["time_saved_ms"] / (_performance_stats["total_calls"] * 10)
+        )  # Rough estimate
         _performance_stats["speedup"] = avg_speedup
