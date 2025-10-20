@@ -46,7 +46,7 @@ def calculate_mfi(
     volume: ArrayLike,
     period: int = 14,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     Calculate Money Flow Index (MFI).
@@ -140,24 +140,17 @@ def calculate_mfi(
 
     # Get array module (numpy or cupy)
     from ..core.decorators import get_array_module
+
     xp = get_array_module(high)
 
     # Calculate positive and negative money flows
     # Note: This returns arrays of length n-1 (uses diff of typical price)
-    positive_flow, negative_flow = positive_negative_money_flow(
-        high, low, close, volume
-    )
+    positive_flow, negative_flow = positive_negative_money_flow(high, low, close, volume)
 
     # Calculate rolling sums of positive and negative flows
     # Need to add one NaN at the beginning to align with original data
-    positive_flow_padded = xp.concatenate([
-        xp.array([xp.nan], dtype=xp.float64),
-        positive_flow
-    ])
-    negative_flow_padded = xp.concatenate([
-        xp.array([xp.nan], dtype=xp.float64),
-        negative_flow
-    ])
+    positive_flow_padded = xp.concatenate([xp.array([xp.nan], dtype=xp.float64), positive_flow])
+    negative_flow_padded = xp.concatenate([xp.array([xp.nan], dtype=xp.float64), negative_flow])
 
     # Calculate rolling sums over the period
     positive_sum = rolling_sum(positive_flow_padded, window=period)
@@ -188,5 +181,5 @@ def calculate_mfi(
 
 # Re-export for convenience
 __all__ = [
-    'calculate_mfi',
+    "calculate_mfi",
 ]

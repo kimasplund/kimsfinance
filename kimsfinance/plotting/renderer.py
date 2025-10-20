@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw
 
 try:
     import svgwrite
+
     SVGWRITE_AVAILABLE = True
 except ImportError:
     SVGWRITE_AVAILABLE = False
@@ -18,30 +19,25 @@ from ..core import to_numpy_array, ArrayLike
 # Optional Numba JIT compilation for hot paths
 try:
     from numba import jit
+
     NUMBA_AVAILABLE = True
 except ImportError:
     NUMBA_AVAILABLE = False
+
     def jit(*args, **kwargs):
         """Fallback decorator that does nothing when Numba is not available."""
+
         def decorator(func):
             return func
+
         return decorator
 
 
 # Speed presets for encoding performance
 SPEED_PRESETS = {
-    'fast': {
-        'webp': {'quality': 75, 'method': 4},
-        'png': {'compress_level': 1}
-    },
-    'balanced': {
-        'webp': {'quality': 85, 'method': 5},
-        'png': {'compress_level': 6}
-    },
-    'best': {
-        'webp': {'quality': 100, 'method': 6},
-        'png': {'compress_level': 9}
-    },
+    "fast": {"webp": {"quality": 75, "method": 4}, "png": {"compress_level": 1}},
+    "balanced": {"webp": {"quality": 85, "method": 5}, "png": {"compress_level": 6}},
+    "best": {"webp": {"quality": 100, "method": 6}, "png": {"compress_level": 9}},
 }
 
 
@@ -64,7 +60,7 @@ def _hex_to_rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:
         >>> _hex_to_rgba('0000FF', alpha=200)
         (0, 0, 255, 200)
     """
-    hex_color = hex_color.lstrip('#')
+    hex_color = hex_color.lstrip("#")
     r = int(hex_color[0:2], 16)
     g = int(hex_color[2:4], 16)
     b = int(hex_color[4:6], 16)
@@ -75,9 +71,9 @@ def save_chart(
     img: Image.Image,
     output_path: str,
     format: str | None = None,
-    speed: str = 'balanced',
+    speed: str = "balanced",
     quality: int | None = None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """
     Save chart with optimized settings per format.
@@ -157,13 +153,11 @@ def save_chart(
     """
     # Validate speed parameter
     if speed not in SPEED_PRESETS:
-        raise ValueError(
-            f"Invalid speed '{speed}'. Choose from: {list(SPEED_PRESETS.keys())}"
-        )
+        raise ValueError(f"Invalid speed '{speed}'. Choose from: {list(SPEED_PRESETS.keys())}")
 
     if format is None:
         # Auto-detect format from file extension
-        extension = output_path.split('.')[-1].lower() if '.' in output_path else ''
+        extension = output_path.split(".")[-1].lower() if "." in output_path else ""
         if not extension:
             raise ValueError(
                 f"Cannot auto-detect format from path '{output_path}'. "
@@ -176,66 +170,61 @@ def save_chart(
 
     # Validate quality parameter based on format
     if quality is not None:
-        if format_lower == 'webp' and not (1 <= quality <= 100):
-            raise ValueError(
-                f"WebP quality must be in range 1-100, got {quality}"
-            )
-        if format_lower in ('jpeg', 'jpg') and not (1 <= quality <= 95):
-            raise ValueError(
-                f"JPEG quality must be in range 1-95, got {quality}"
-            )
+        if format_lower == "webp" and not (1 <= quality <= 100):
+            raise ValueError(f"WebP quality must be in range 1-100, got {quality}")
+        if format_lower in ("jpeg", "jpg") and not (1 <= quality <= 95):
+            raise ValueError(f"JPEG quality must be in range 1-95, got {quality}")
 
     # Get speed preset for this format
     preset = SPEED_PRESETS[speed].get(format_lower, {})
 
-    if format_lower == 'webp':
+    if format_lower == "webp":
         # WebP lossless: Apply speed preset for quality/method trade-off
         # Preset controls quality (75-100) and method (4-6)
-        default_params = {'lossless': True}
+        default_params = {"lossless": True}
         default_params.update(preset)  # Apply speed preset
 
         # Quality parameter overrides preset quality
         if quality is not None:
-            default_params['quality'] = quality
+            default_params["quality"] = quality
 
         default_params.update(kwargs)  # kwargs override preset
-        img.save(output_path, 'WEBP', **default_params)
-    elif format_lower == 'png':
+        img.save(output_path, "WEBP", **default_params)
+    elif format_lower == "png":
         # PNG: Lossless with speed-based compression level
         # Preset controls compress_level (1-9)
         # optimize=True is always enabled for best compression
-        default_params = {'optimize': True}
+        default_params = {"optimize": True}
         default_params.update(preset)  # Apply speed preset
         default_params.update(kwargs)  # kwargs override preset
-        img.save(output_path, 'PNG', **default_params)
-    elif format_lower in ('jpeg', 'jpg'):
+        img.save(output_path, "PNG", **default_params)
+    elif format_lower in ("jpeg", "jpg"):
         # JPEG: Lossy but widely compatible
         # quality=95 is high quality with minimal artifacts
         # progressive=True enables progressive encoding (better for web)
         # optimize=True enables additional optimization passes
         # Note: JPEG doesn't support transparency, so convert RGBA to RGB
-        default_params = {'quality': 95, 'optimize': True, 'progressive': True}
+        default_params = {"quality": 95, "optimize": True, "progressive": True}
 
         # Quality parameter overrides default quality
         if quality is not None:
-            default_params['quality'] = quality
+            default_params["quality"] = quality
 
         default_params.update(kwargs)
 
         # Convert RGBA to RGB if needed (JPEG doesn't support alpha channel)
-        if img.mode == 'RGBA':
+        if img.mode == "RGBA":
             # Convert RGBA to RGB by compositing on white background
-            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+            rgb_img = Image.new("RGB", img.size, (255, 255, 255))
             rgb_img.paste(img, mask=img.split()[3])  # Use alpha channel as mask
-            rgb_img.save(output_path, 'JPEG', **default_params)
+            rgb_img.save(output_path, "JPEG", **default_params)
         else:
-            img.save(output_path, 'JPEG', **default_params)
-    elif format_lower == 'svg':
+            img.save(output_path, "JPEG", **default_params)
+    elif format_lower == "svg":
         # SVG: True vector graphics
         if not SVGWRITE_AVAILABLE:
             raise ImportError(
-                "svgwrite is required for SVG export. "
-                "Install with: pip install svgwrite"
+                "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
             )
         # SVG export is handled separately - this path should not be reached
         # when using the proper SVG rendering pipeline
@@ -301,16 +290,15 @@ def render_candlestick_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
-    up_color_final = up_color or theme_colors['up']
-    down_color_final = down_color or theme_colors['down']
-    grid_color_final = theme_colors['grid']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
+    up_color_final = up_color or theme_colors["up"]
+    down_color_final = down_color or theme_colors["down"]
+    grid_color_final = theme_colors["grid"]
 
     # Convert to numpy arrays
     open_prices = np.ascontiguousarray(to_numpy_array(ohlc["open"]))
@@ -322,7 +310,7 @@ def render_candlestick_svg(
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # Define chart areas (70% for candlestick, 30% for volume if volume data provided)
     has_volume = volume is not None
@@ -355,7 +343,9 @@ def render_candlestick_svg(
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
         for i in range(1, 10):
             y = int(i * chart_height / 10)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
@@ -369,9 +359,9 @@ def render_candlestick_svg(
                 grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    candles_group = dwg.add(dwg.g(id='candles'))
+    candles_group = dwg.add(dwg.g(id="candles"))
     if has_volume:
-        volume_group = dwg.add(dwg.g(id='volume'))
+        volume_group = dwg.add(dwg.g(id="volume"))
 
     # Draw candlesticks
     for i in range(num_candles):
@@ -404,19 +394,17 @@ def render_candlestick_svg(
             body_height = 1
 
         # Draw wick (vertical line from low to high)
-        candles_group.add(dwg.line(
-            start=(x_center, y_high),
-            end=(x_center, y_low),
-            stroke=color,
-            stroke_width=wick_width
-        ))
+        candles_group.add(
+            dwg.line(
+                start=(x_center, y_high),
+                end=(x_center, y_low),
+                stroke=color,
+                stroke_width=wick_width,
+            )
+        )
 
         # Draw body (rectangle)
-        candles_group.add(dwg.rect(
-            insert=(x, body_top),
-            size=(bar_width, body_height),
-            fill=color
-        ))
+        candles_group.add(dwg.rect(insert=(x, body_top), size=(bar_width, body_height), fill=color))
 
         # Draw volume bar if volume data provided
         if has_volume:
@@ -424,12 +412,9 @@ def render_candlestick_svg(
             vol_height = (vol / volume_range) * volume_height
             vol_y = height - vol_height
 
-            volume_group.add(dwg.rect(
-                insert=(x, vol_y),
-                size=(bar_width, vol_height),
-                fill=color,
-                opacity=0.5
-            ))
+            volume_group.add(
+                dwg.rect(insert=(x, vol_y), size=(bar_width, vol_height), fill=color, opacity=0.5)
+            )
 
     # Save or return SVG
     if output_path:
@@ -493,16 +478,15 @@ def render_ohlc_bars_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
-    up_color_final = up_color or theme_colors['up']
-    down_color_final = down_color or theme_colors['down']
-    grid_color_final = theme_colors['grid']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
+    up_color_final = up_color or theme_colors["up"]
+    down_color_final = down_color or theme_colors["down"]
+    grid_color_final = theme_colors["grid"]
 
     # Convert to numpy arrays
     open_prices = np.ascontiguousarray(to_numpy_array(ohlc["open"]))
@@ -514,7 +498,7 @@ def render_ohlc_bars_svg(
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # Define chart areas (70% for OHLC bars, 30% for volume if volume data provided)
     has_volume = volume is not None
@@ -543,7 +527,9 @@ def render_ohlc_bars_svg(
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
         for i in range(1, 10):
             y = int(i * chart_height / 10)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
@@ -557,9 +543,9 @@ def render_ohlc_bars_svg(
                 grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    bars_group = dwg.add(dwg.g(id='ohlc_bars'))
+    bars_group = dwg.add(dwg.g(id="ohlc_bars"))
     if has_volume:
-        volume_group = dwg.add(dwg.g(id='volume'))
+        volume_group = dwg.add(dwg.g(id="volume"))
 
     # Draw OHLC bars
     for i in range(num_bars):
@@ -584,28 +570,21 @@ def render_ohlc_bars_svg(
         y_close = chart_height - ((c - price_min) / price_range) * chart_height
 
         # 1. Draw vertical line (high to low)
-        bars_group.add(dwg.line(
-            start=(x_center, y_high),
-            end=(x_center, y_low),
-            stroke=color,
-            stroke_width=1
-        ))
+        bars_group.add(
+            dwg.line(start=(x_center, y_high), end=(x_center, y_low), stroke=color, stroke_width=1)
+        )
 
         # 2. Draw left tick (open)
-        bars_group.add(dwg.line(
-            start=(x_left, y_open),
-            end=(x_center, y_open),
-            stroke=color,
-            stroke_width=1
-        ))
+        bars_group.add(
+            dwg.line(start=(x_left, y_open), end=(x_center, y_open), stroke=color, stroke_width=1)
+        )
 
         # 3. Draw right tick (close)
-        bars_group.add(dwg.line(
-            start=(x_center, y_close),
-            end=(x_right, y_close),
-            stroke=color,
-            stroke_width=1
-        ))
+        bars_group.add(
+            dwg.line(
+                start=(x_center, y_close), end=(x_right, y_close), stroke=color, stroke_width=1
+            )
+        )
 
         # 4. Draw volume bar if volume data provided
         if has_volume:
@@ -615,12 +594,11 @@ def render_ohlc_bars_svg(
             vol_x = (i + 0.25) * bar_width
             vol_width = bar_width * 0.5
 
-            volume_group.add(dwg.rect(
-                insert=(vol_x, vol_y),
-                size=(vol_width, vol_height),
-                fill=color,
-                opacity=0.5
-            ))
+            volume_group.add(
+                dwg.rect(
+                    insert=(vol_x, vol_y), size=(vol_width, vol_height), fill=color, opacity=0.5
+                )
+            )
 
     # Save or return SVG
     if output_path:
@@ -687,16 +665,15 @@ def render_line_chart_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
     # Line color defaults to theme's up_color
-    line_color_final = line_color or theme_colors['up']
-    grid_color_final = theme_colors['grid']
+    line_color_final = line_color or theme_colors["up"]
+    grid_color_final = theme_colors["grid"]
 
     # Convert to numpy arrays
     close_prices = np.ascontiguousarray(to_numpy_array(ohlc["close"]))
@@ -707,7 +684,7 @@ def render_line_chart_svg(
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # Define chart areas (70% for price chart, 30% for volume if volume data provided)
     has_volume = volume is not None
@@ -735,7 +712,9 @@ def render_line_chart_svg(
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
         for i in range(1, 10):
             y = int(i * chart_height / 10)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
@@ -749,9 +728,9 @@ def render_line_chart_svg(
                 grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    line_group = dwg.add(dwg.g(id='line'))
+    line_group = dwg.add(dwg.g(id="line"))
     if has_volume:
-        volume_group = dwg.add(dwg.g(id='volume'))
+        volume_group = dwg.add(dwg.g(id="volume"))
 
     # Calculate line points
     points = []
@@ -776,22 +755,20 @@ def render_line_chart_svg(
         polygon_points.append((points[0][0], chart_height))
 
         # Fill with semi-transparent color (20% opacity)
-        line_group.add(dwg.polygon(
-            points=polygon_points,
-            fill=line_color_final,
-            opacity=0.2
-        ))
+        line_group.add(dwg.polygon(points=polygon_points, fill=line_color_final, opacity=0.2))
 
     # Draw line connecting all points
     if len(points) > 1:
-        line_group.add(dwg.polyline(
-            points=points,
-            stroke=line_color_final,
-            stroke_width=line_width,
-            fill='none',
-            stroke_linejoin='round',
-            stroke_linecap='round'
-        ))
+        line_group.add(
+            dwg.polyline(
+                points=points,
+                stroke=line_color_final,
+                stroke_width=line_width,
+                fill="none",
+                stroke_linejoin="round",
+                stroke_linecap="round",
+            )
+        )
 
     # Draw volume bars if volume data provided
     if has_volume:
@@ -805,12 +782,14 @@ def render_line_chart_svg(
 
             x_start = i * point_spacing + bar_spacing / 2
 
-            volume_group.add(dwg.rect(
-                insert=(x_start, vol_y),
-                size=(bar_width_val, vol_height),
-                fill=line_color_final,
-                opacity=0.5
-            ))
+            volume_group.add(
+                dwg.rect(
+                    insert=(x_start, vol_y),
+                    size=(bar_width_val, vol_height),
+                    fill=line_color_final,
+                    opacity=0.5,
+                )
+            )
 
     # Save or return SVG
     if output_path:
@@ -878,8 +857,7 @@ def render_renko_chart_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Calculate Renko bricks from OHLC data
@@ -889,9 +867,9 @@ def render_renko_chart_svg(
     if not bricks:
         # Create empty chart with background
         dwg = svgwrite.Drawing(size=(width, height))
-        theme_colors = THEMES.get(theme, THEMES['classic'])
-        bg_color_final = bg_color or theme_colors['bg']
-        dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+        theme_colors = THEMES.get(theme, THEMES["classic"])
+        bg_color_final = bg_color or theme_colors["bg"]
+        dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
         if output_path:
             _save_svg_or_svgz(dwg, output_path)
@@ -900,24 +878,25 @@ def render_renko_chart_svg(
     # Get actual box_size used for brick calculation
     if box_size is None:
         from ..ops.indicators import calculate_atr
-        high_prices = to_numpy_array(ohlc['high'])
-        low_prices = to_numpy_array(ohlc['low'])
-        close_prices = to_numpy_array(ohlc['close'])
-        atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine='cpu')
+
+        high_prices = to_numpy_array(ohlc["high"])
+        low_prices = to_numpy_array(ohlc["low"])
+        close_prices = to_numpy_array(ohlc["close"])
+        atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine="cpu")
         box_size = float(np.nanmedian(atr)) * 0.75
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
-    up_color_final = up_color or theme_colors['up']
-    down_color_final = down_color or theme_colors['down']
-    grid_color_final = theme_colors['grid']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
+    up_color_final = up_color or theme_colors["up"]
+    down_color_final = down_color or theme_colors["down"]
+    grid_color_final = theme_colors["grid"]
 
     # Create SVG drawing
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # Define chart areas (70% for bricks, 30% for volume)
     has_volume = volume is not None
@@ -925,7 +904,7 @@ def render_renko_chart_svg(
     volume_height = int(height * 0.3)
 
     # Calculate price range for all bricks
-    brick_prices = np.array([b['price'] for b in bricks])
+    brick_prices = np.array([b["price"] for b in bricks])
     price_min = float(np.min(brick_prices) - box_size)
     price_max = float(np.max(brick_prices) + box_size)
     price_range = price_max - price_min
@@ -950,7 +929,9 @@ def render_renko_chart_svg(
 
     # Draw grid lines (background layer)
     if show_grid:
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
 
         # Horizontal price grid lines (10 divisions)
         for i in range(1, 10):
@@ -966,9 +947,9 @@ def render_renko_chart_svg(
                 grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    bricks_group = dwg.add(dwg.g(id='bricks'))
+    bricks_group = dwg.add(dwg.g(id="bricks"))
     if has_volume:
-        volume_group = dwg.add(dwg.g(id='volume'))
+        volume_group = dwg.add(dwg.g(id="volume"))
         volume_data = np.ascontiguousarray(to_numpy_array(volume))
 
     # Draw bricks
@@ -979,35 +960,36 @@ def render_renko_chart_svg(
         # Calculate Y position
         # For up bricks: price is the top
         # For down bricks: price is the bottom
-        if brick['direction'] == 1:
+        if brick["direction"] == 1:
             # Up brick: draw from price (top) downward by brick_height
-            y_top = scale_price(brick['price'])
+            y_top = scale_price(brick["price"])
             y_bottom = y_top + brick_height
             color = up_color_final
         else:
             # Down brick: draw from price (bottom) upward by brick_height
-            y_bottom = scale_price(brick['price'])
+            y_bottom = scale_price(brick["price"])
             y_top = y_bottom - brick_height
             color = down_color_final
 
         # Draw brick rectangle
-        bricks_group.add(dwg.rect(
-            insert=(x_start, y_top),
-            size=(bar_width, brick_height),
-            fill=color,
-            stroke=color
-        ))
+        bricks_group.add(
+            dwg.rect(
+                insert=(x_start, y_top), size=(bar_width, brick_height), fill=color, stroke=color
+            )
+        )
 
         # Draw uniform volume bars (simplified - not aggregated per brick)
         if has_volume:
             # For MVP, show uniform volume bars as placeholder
             volume_bar_height = volume_height // 2  # Uniform height
-            volume_group.add(dwg.rect(
-                insert=(x_start, height - volume_bar_height),
-                size=(bar_width, volume_bar_height),
-                fill=color,
-                opacity=0.5
-            ))
+            volume_group.add(
+                dwg.rect(
+                    insert=(x_start, height - volume_bar_height),
+                    size=(bar_width, volume_bar_height),
+                    fill=color,
+                    opacity=0.5,
+                )
+            )
 
     # Save or return SVG
     if output_path:
@@ -1072,16 +1054,15 @@ def render_pnf_chart_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
-    up_color_final = up_color or theme_colors['up']
-    down_color_final = down_color or theme_colors['down']
-    grid_color_final = theme_colors['grid']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
+    up_color_final = up_color or theme_colors["up"]
+    down_color_final = down_color or theme_colors["down"]
+    grid_color_final = theme_colors["grid"]
 
     # Calculate PNF columns using existing algorithm
     columns = calculate_pnf_columns(ohlc, box_size, reversal_boxes)
@@ -1090,7 +1071,7 @@ def render_pnf_chart_svg(
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # If no columns, return empty chart
     if not columns:
@@ -1101,20 +1082,18 @@ def render_pnf_chart_svg(
     # Find price range from all boxes
     all_prices = []
     for col in columns:
-        all_prices.extend(col['boxes'])
+        all_prices.extend(col["boxes"])
 
     # Calculate box_size if it was auto-calculated
     if box_size is None:
-        high_prices = to_numpy_array(ohlc['high'])
-        low_prices = to_numpy_array(ohlc['low'])
-        close_prices = to_numpy_array(ohlc['close'])
+        high_prices = to_numpy_array(ohlc["high"])
+        low_prices = to_numpy_array(ohlc["low"])
+        close_prices = to_numpy_array(ohlc["close"])
 
         if len(close_prices) >= 14:
             from ..ops.indicators import calculate_atr
-            atr = calculate_atr(
-                ohlc['high'], ohlc['low'], ohlc['close'],
-                period=14, engine='cpu'
-            )
+
+            atr = calculate_atr(ohlc["high"], ohlc["low"], ohlc["close"], period=14, engine="cpu")
             box_size = float(np.nanmedian(atr))
         else:
             data_price_range = float(np.max(high_prices) - np.min(low_prices))
@@ -1143,7 +1122,9 @@ def render_pnf_chart_svg(
 
     # Draw grid lines (background layer)
     if show_grid:
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
 
         # Horizontal price lines (10 divisions)
         for i in range(1, 10):
@@ -1156,29 +1137,29 @@ def render_pnf_chart_svg(
             grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    symbols_group = dwg.add(dwg.g(id='pnf_symbols'))
+    symbols_group = dwg.add(dwg.g(id="pnf_symbols"))
 
     # Draw columns
     for col_idx, column in enumerate(columns):
         x_start = col_idx * column_width
         x_center = x_start + column_width / 2
 
-        for box_price in column['boxes']:
+        for box_price in column["boxes"]:
             y_center = scale_price(box_price)
             half_box = box_width / 2
             half_height = box_height / 2
 
-            if column['type'] == 'X':
+            if column["type"] == "X":
                 # Draw X as two diagonal lines forming an X shape
                 # Create a path element for the X
                 x_path = dwg.path(
                     d=f"M {x_center - half_box},{y_center - half_height} "
-                      f"L {x_center + half_box},{y_center + half_height} "
-                      f"M {x_center - half_box},{y_center + half_height} "
-                      f"L {x_center + half_box},{y_center - half_height}",
+                    f"L {x_center + half_box},{y_center + half_height} "
+                    f"M {x_center - half_box},{y_center + half_height} "
+                    f"L {x_center + half_box},{y_center - half_height}",
                     stroke=up_color_final,
                     stroke_width=2,
-                    fill='none'
+                    fill="none",
                 )
                 symbols_group.add(x_path)
 
@@ -1189,7 +1170,7 @@ def render_pnf_chart_svg(
                     r=half_box,
                     stroke=down_color_final,
                     stroke_width=2,
-                    fill='none'
+                    fill="none",
                 )
                 symbols_group.add(o_circle)
 
@@ -1258,16 +1239,15 @@ def render_hollow_candles_svg(
     """
     if not SVGWRITE_AVAILABLE:
         raise ImportError(
-            "svgwrite is required for SVG export. "
-            "Install with: pip install svgwrite"
+            "svgwrite is required for SVG export. " "Install with: pip install svgwrite"
         )
 
     # Get theme colors
-    theme_colors = THEMES.get(theme, THEMES['classic'])
-    bg_color_final = bg_color or theme_colors['bg']
-    up_color_final = up_color or theme_colors['up']
-    down_color_final = down_color or theme_colors['down']
-    grid_color_final = theme_colors['grid']
+    theme_colors = THEMES.get(theme, THEMES["classic"])
+    bg_color_final = bg_color or theme_colors["bg"]
+    up_color_final = up_color or theme_colors["up"]
+    down_color_final = down_color or theme_colors["down"]
+    grid_color_final = theme_colors["grid"]
 
     # Convert to numpy arrays
     open_prices = np.ascontiguousarray(to_numpy_array(ohlc["open"]))
@@ -1279,7 +1259,7 @@ def render_hollow_candles_svg(
     dwg = svgwrite.Drawing(size=(width, height))
 
     # Add background
-    dwg.add(dwg.rect(insert=(0, 0), size=('100%', '100%'), fill=bg_color_final))
+    dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), fill=bg_color_final))
 
     # Define chart areas (70% for candlestick, 30% for volume if volume data provided)
     has_volume = volume is not None
@@ -1312,7 +1292,9 @@ def render_hollow_candles_svg(
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
-        grid_group = dwg.add(dwg.g(id='grid', stroke=grid_color_final, stroke_width=1, opacity=0.25))
+        grid_group = dwg.add(
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+        )
         for i in range(1, 10):
             y = int(i * chart_height / 10)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
@@ -1326,9 +1308,9 @@ def render_hollow_candles_svg(
                 grid_group.add(dwg.line(start=(x, 0), end=(x, height)))
 
     # Create groups for organized SVG structure
-    candles_group = dwg.add(dwg.g(id='candles'))
+    candles_group = dwg.add(dwg.g(id="candles"))
     if has_volume:
-        volume_group = dwg.add(dwg.g(id='volume'))
+        volume_group = dwg.add(dwg.g(id="volume"))
 
     # Draw hollow candlesticks
     for i in range(num_candles):
@@ -1361,30 +1343,32 @@ def render_hollow_candles_svg(
             body_height = 1
 
         # Draw wick (vertical line from low to high)
-        candles_group.add(dwg.line(
-            start=(x_center, y_high),
-            end=(x_center, y_low),
-            stroke=color,
-            stroke_width=wick_width
-        ))
+        candles_group.add(
+            dwg.line(
+                start=(x_center, y_high),
+                end=(x_center, y_low),
+                stroke=color,
+                stroke_width=wick_width,
+            )
+        )
 
         # Draw body - HOLLOW vs FILLED based on direction
         if is_bullish:
             # Bullish: HOLLOW (outline only, no fill)
-            candles_group.add(dwg.rect(
-                insert=(x, body_top),
-                size=(bar_width, body_height),
-                fill='none',
-                stroke=color,
-                stroke_width=1
-            ))
+            candles_group.add(
+                dwg.rect(
+                    insert=(x, body_top),
+                    size=(bar_width, body_height),
+                    fill="none",
+                    stroke=color,
+                    stroke_width=1,
+                )
+            )
         else:
             # Bearish: FILLED (solid rectangle)
-            candles_group.add(dwg.rect(
-                insert=(x, body_top),
-                size=(bar_width, body_height),
-                fill=color
-            ))
+            candles_group.add(
+                dwg.rect(insert=(x, body_top), size=(bar_width, body_height), fill=color)
+            )
 
         # Draw volume bar if volume data provided
         if has_volume:
@@ -1392,12 +1376,9 @@ def render_hollow_candles_svg(
             vol_height = (vol / volume_range) * volume_height
             vol_y = height - vol_height
 
-            volume_group.add(dwg.rect(
-                insert=(x, vol_y),
-                size=(bar_width, vol_height),
-                fill=color,
-                opacity=0.5
-            ))
+            volume_group.add(
+                dwg.rect(insert=(x, vol_y), size=(bar_width, vol_height), fill=color, opacity=0.5)
+            )
 
     # Save or return SVG
     if output_path:
@@ -1408,40 +1389,20 @@ def render_hollow_candles_svg(
 
 # Color themes for candlestick charts
 THEMES = {
-    'classic': {
-        'bg': '#000000',
-        'up': '#00FF00',
-        'down': '#FF0000',
-        'grid': '#333333'
-    },
-    'modern': {
-        'bg': '#1E1E1E',
-        'up': '#26A69A',
-        'down': '#EF5350',
-        'grid': '#424242'
-    },
-    'tradingview': {
-        'bg': '#131722',
-        'up': '#089981',
-        'down': '#F23645',
-        'grid': '#2A2E39'
-    },
-    'light': {
-        'bg': '#FFFFFF',
-        'up': '#26A69A',
-        'down': '#EF5350',
-        'grid': '#E0E0E0'
-    }
+    "classic": {"bg": "#000000", "up": "#00FF00", "down": "#FF0000", "grid": "#333333"},
+    "modern": {"bg": "#1E1E1E", "up": "#26A69A", "down": "#EF5350", "grid": "#424242"},
+    "tradingview": {"bg": "#131722", "up": "#089981", "down": "#F23645", "grid": "#2A2E39"},
+    "light": {"bg": "#FFFFFF", "up": "#26A69A", "down": "#EF5350", "grid": "#E0E0E0"},
 }
 
 # Pre-computed RGBA colors for antialiasing mode (computed once at module load)
 # This eliminates repeated hex_to_rgba() calls during rendering
 THEMES_RGBA = {
     theme: {
-        'bg': _hex_to_rgba(colors['bg']),
-        'up': _hex_to_rgba(colors['up']),
-        'down': _hex_to_rgba(colors['down']),
-        'grid': _hex_to_rgba(colors['grid'], alpha=64)  # 25% opacity for grid
+        "bg": _hex_to_rgba(colors["bg"]),
+        "up": _hex_to_rgba(colors["up"]),
+        "down": _hex_to_rgba(colors["down"]),
+        "grid": _hex_to_rgba(colors["grid"], alpha=64),  # 25% opacity for grid
     }
     for theme, colors in THEMES.items()
 }
@@ -1450,7 +1411,7 @@ THEMES_RGBA = {
 THEMES_RGB = THEMES
 
 
-def _save_svg_or_svgz(dwg: 'svgwrite.Drawing', output_path: str) -> None:
+def _save_svg_or_svgz(dwg: "svgwrite.Drawing", output_path: str) -> None:
     """
     Save SVG drawing to file, with automatic SVGZ compression if path ends with .svgz.
 
@@ -1462,15 +1423,14 @@ def _save_svg_or_svgz(dwg: 'svgwrite.Drawing', output_path: str) -> None:
         >>> _save_svg_or_svgz(dwg, 'chart.svg')   # Saves uncompressed SVG
         >>> _save_svg_or_svgz(dwg, 'chart.svgz')  # Saves gzipped SVGZ (75-85% smaller)
     """
-    if output_path.endswith('.svgz'):
+    if output_path.endswith(".svgz"):
         # Save as compressed SVGZ (gzipped SVG)
         svg_string = dwg.tostring()
-        with open(output_path, 'wb') as f:
-            f.write(gzip.compress(svg_string.encode('utf-8'), compresslevel=9))
+        with open(output_path, "wb") as f:
+            f.write(gzip.compress(svg_string.encode("utf-8"), compresslevel=9))
     else:
         # Save as regular SVG
         dwg.saveas(output_path)
-
 
 
 def _draw_grid(
@@ -1480,7 +1440,7 @@ def _draw_grid(
     chart_height: int,
     num_candles: int,
     candle_width: float,
-    grid_color: str | tuple[int, int, int, int]
+    grid_color: str | tuple[int, int, int, int],
 ) -> None:
     """
     Draw grid lines for price levels and time markers.
@@ -1513,11 +1473,7 @@ def _draw_grid(
     y_coords = (horizontal_indices * chart_height // 10).astype(int)
 
     for y in y_coords:
-        draw.line(
-            [(0, y), (width, y)],
-            fill=color,
-            width=1
-        )
+        draw.line([(0, y), (width, y)], fill=color, width=1)
 
     # Draw vertical time marker lines
     # Space them out to max 20 lines for readability
@@ -1527,11 +1483,7 @@ def _draw_grid(
 
     for x in x_coords:
         # Draw from top to bottom of chart area only
-        draw.line(
-            [(x, 0), (x, chart_height)],
-            fill=color,
-            width=1
-        )
+        draw.line([(x, 0), (x, chart_height)], fill=color, width=1)
 
 
 @jit(nopython=True, cache=True)
@@ -1550,9 +1502,20 @@ def _calculate_coordinates_jit(
     volume_range: float,
     chart_height: int,
     volume_height: int,
-    height: int
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    height: int,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
     """
     JIT-compiled vectorized coordinate calculation for candlestick charts.
 
@@ -1594,10 +1557,18 @@ def _calculate_coordinates_jit(
     x_center = (x_start + bar_width / 2).astype(np.int32)
 
     # Vectorized price scaling
-    y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(np.int32)
+    y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
 
     # Vectorized volume scaling
     vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
@@ -1609,8 +1580,19 @@ def _calculate_coordinates_jit(
     # Determine bullish/bearish
     is_bullish = close_prices >= open_prices
 
-    return (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-            vol_heights, body_top, body_bottom, is_bullish)
+    return (
+        x_start,
+        x_end,
+        x_center,
+        y_high,
+        y_low,
+        y_open,
+        y_close,
+        vol_heights,
+        body_top,
+        body_bottom,
+        is_bullish,
+    )
 
 
 def _calculate_coordinates_numpy(
@@ -1628,9 +1610,20 @@ def _calculate_coordinates_numpy(
     volume_range: float,
     chart_height: int,
     volume_height: int,
-    height: int
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
-           np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    height: int,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
     """
     NumPy-based vectorized coordinate calculation (fallback when Numba unavailable).
 
@@ -1658,10 +1651,18 @@ def _calculate_coordinates_numpy(
     x_center = (x_start + bar_width / 2).astype(np.int32)
 
     # Vectorized price scaling
-    y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(np.int32)
+    y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
 
     # Vectorized volume scaling
     vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
@@ -1673,8 +1674,19 @@ def _calculate_coordinates_numpy(
     # Determine bullish/bearish
     is_bullish = close_prices >= open_prices
 
-    return (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-            vol_heights, body_top, body_bottom, is_bullish)
+    return (
+        x_start,
+        x_end,
+        x_center,
+        y_high,
+        y_low,
+        y_open,
+        y_close,
+        vol_heights,
+        body_top,
+        body_bottom,
+        is_bullish,
+    )
 
 
 def render_ohlc_bars(
@@ -1725,29 +1737,29 @@ def render_ohlc_bars(
     if enable_antialiasing:
         # RGBA mode: use pre-computed RGBA tuples
         mode: str = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
 
         # Use pre-computed colors or convert custom overrides
         bg_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
+            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         )
         up_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(up_color) if up_color else theme_colors_rgba['up']
+            _hex_to_rgba(up_color) if up_color else theme_colors_rgba["up"]
         )
         down_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(down_color) if down_color else theme_colors_rgba['down']
+            _hex_to_rgba(down_color) if down_color else theme_colors_rgba["down"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         # RGB mode: use hex color strings directly
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
 
         # Use theme colors or custom overrides (all hex strings)
-        bg_color_final = bg_color or theme_colors_rgb['bg']
-        up_color_final = up_color or theme_colors_rgb['up']
-        down_color_final = down_color or theme_colors_rgb['down']
-        grid_color_final = theme_colors_rgb['grid']
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
+        up_color_final = up_color or theme_colors_rgb["up"]
+        down_color_final = down_color or theme_colors_rgb["down"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Ensure C-contiguous memory layout for optimal CPU cache performance
     open_prices = np.ascontiguousarray(to_numpy_array(ohlc["open"]))
@@ -1786,7 +1798,7 @@ def render_ohlc_bars(
             chart_height=chart_height,
             num_candles=num_bars,
             candle_width=bar_width,
-            grid_color=grid_color_final
+            grid_color=grid_color_final,
         )
 
     # Vectorized coordinate calculation for performance
@@ -1796,10 +1808,18 @@ def render_ohlc_bars(
     x_rights = (x_centers + tick_length).astype(np.int32)
 
     # Vectorized price scaling
-    y_highs = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_lows = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_opens = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(np.int32)
-    y_closes = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(np.int32)
+    y_highs = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_lows = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_opens = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
+    y_closes = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
 
     # Vectorized volume scaling
     vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
@@ -1815,56 +1835,44 @@ def render_ohlc_bars(
     for i in bullish_indices:
         # 1. Draw vertical line (high to low)
         draw.line(
-            [(x_centers[i], y_highs[i]), (x_centers[i], y_lows[i])],
-            fill=up_color_final,
-            width=1
+            [(x_centers[i], y_highs[i]), (x_centers[i], y_lows[i])], fill=up_color_final, width=1
         )
         # 2. Draw left tick (open)
         draw.line(
-            [(x_lefts[i], y_opens[i]), (x_centers[i], y_opens[i])],
-            fill=up_color_final,
-            width=1
+            [(x_lefts[i], y_opens[i]), (x_centers[i], y_opens[i])], fill=up_color_final, width=1
         )
         # 3. Draw right tick (close)
         draw.line(
-            [(x_centers[i], y_closes[i]), (x_rights[i], y_closes[i])],
-            fill=up_color_final,
-            width=1
+            [(x_centers[i], y_closes[i]), (x_rights[i], y_closes[i])], fill=up_color_final, width=1
         )
         # 4. Draw volume bar
         vol_start_x = int((i + 0.25) * bar_width)
         vol_end_x = int((i + 0.75) * bar_width)
         draw.rectangle(
-            (vol_start_x, height - vol_heights[i], vol_end_x, height),
-            fill=up_color_final
+            (vol_start_x, height - vol_heights[i], vol_end_x, height), fill=up_color_final
         )
 
     # Draw all bearish bars (red)
     for i in bearish_indices:
         # 1. Draw vertical line (high to low)
         draw.line(
-            [(x_centers[i], y_highs[i]), (x_centers[i], y_lows[i])],
-            fill=down_color_final,
-            width=1
+            [(x_centers[i], y_highs[i]), (x_centers[i], y_lows[i])], fill=down_color_final, width=1
         )
         # 2. Draw left tick (open)
         draw.line(
-            [(x_lefts[i], y_opens[i]), (x_centers[i], y_opens[i])],
-            fill=down_color_final,
-            width=1
+            [(x_lefts[i], y_opens[i]), (x_centers[i], y_opens[i])], fill=down_color_final, width=1
         )
         # 3. Draw right tick (close)
         draw.line(
             [(x_centers[i], y_closes[i]), (x_rights[i], y_closes[i])],
             fill=down_color_final,
-            width=1
+            width=1,
         )
         # 4. Draw volume bar
         vol_start_x = int((i + 0.25) * bar_width)
         vol_end_x = int((i + 0.75) * bar_width)
         draw.rectangle(
-            (vol_start_x, height - vol_heights[i], vol_end_x, height),
-            fill=down_color_final
+            (vol_start_x, height - vol_heights[i], vol_end_x, height), fill=down_color_final
         )
 
     return img
@@ -1934,29 +1942,29 @@ def render_ohlcv_chart(
     if enable_antialiasing:
         # RGBA mode: use pre-computed RGBA tuples
         mode: str = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
 
         # Use pre-computed colors or convert custom overrides
         bg_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
+            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         )
         up_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(up_color) if up_color else theme_colors_rgba['up']
+            _hex_to_rgba(up_color) if up_color else theme_colors_rgba["up"]
         )
         down_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(down_color) if down_color else theme_colors_rgba['down']
+            _hex_to_rgba(down_color) if down_color else theme_colors_rgba["down"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         # RGB mode: use hex color strings directly
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
 
         # Use theme colors or custom overrides (all hex strings)
-        bg_color_final = bg_color or theme_colors_rgb['bg']
-        up_color_final = up_color or theme_colors_rgb['up']
-        down_color_final = down_color or theme_colors_rgb['down']
-        grid_color_final = theme_colors_rgb['grid']
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
+        up_color_final = up_color or theme_colors_rgb["up"]
+        down_color_final = down_color or theme_colors_rgb["down"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Ensure C-contiguous memory layout for optimal CPU cache performance.
     # C-contiguous arrays have elements stored in row-major order in memory,
@@ -2009,7 +2017,7 @@ def render_ohlcv_chart(
             chart_height=chart_height,
             num_candles=num_candles,
             candle_width=candle_width,
-            grid_color=grid_color_final
+            grid_color=grid_color_final,
         )
 
     # Auto-enable batch drawing for large datasets if not explicitly specified
@@ -2028,8 +2036,19 @@ def render_ohlcv_chart(
         # otherwise fall back to pure NumPy implementation
         if NUMBA_AVAILABLE and num_candles >= 1000:
             # JIT-compiled path: 50-100% faster for large datasets
-            (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-             vol_heights, body_top, body_bottom, is_bullish) = _calculate_coordinates_jit(
+            (
+                x_start,
+                x_end,
+                x_center,
+                y_high,
+                y_low,
+                y_open,
+                y_close,
+                vol_heights,
+                body_top,
+                body_bottom,
+                is_bullish,
+            ) = _calculate_coordinates_jit(
                 num_candles=num_candles,
                 candle_width=candle_width,
                 spacing=spacing,
@@ -2044,12 +2063,23 @@ def render_ohlcv_chart(
                 volume_range=volume_range,
                 chart_height=chart_height,
                 volume_height=volume_height,
-                height=height
+                height=height,
             )
         else:
             # NumPy fallback path: Still fast, but no JIT overhead for small datasets
-            (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-             vol_heights, body_top, body_bottom, is_bullish) = _calculate_coordinates_numpy(
+            (
+                x_start,
+                x_end,
+                x_center,
+                y_high,
+                y_low,
+                y_open,
+                y_close,
+                vol_heights,
+                body_top,
+                body_bottom,
+                is_bullish,
+            ) = _calculate_coordinates_numpy(
                 num_candles=num_candles,
                 candle_width=candle_width,
                 spacing=spacing,
@@ -2064,7 +2094,7 @@ def render_ohlcv_chart(
                 volume_range=volume_range,
                 chart_height=chart_height,
                 volume_height=volume_height,
-                height=height
+                height=height,
             )
 
         # --- Grouped Batch Drawing ---
@@ -2078,17 +2108,13 @@ def render_ohlcv_chart(
             draw.line(
                 (x_center[i], y_high[i], x_center[i], y_low[i]),
                 fill=up_color_final,
-                width=wick_width
+                width=wick_width,
             )
             # Body
-            draw.rectangle(
-                (x_start[i], body_top[i], x_end[i], body_bottom[i]),
-                fill=up_color_final
-            )
+            draw.rectangle((x_start[i], body_top[i], x_end[i], body_bottom[i]), fill=up_color_final)
             # Volume
             draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=up_color_final
+                (x_start[i], height - vol_heights[i], x_end[i], height), fill=up_color_final
             )
 
         # Draw all bearish elements (red candles)
@@ -2097,17 +2123,15 @@ def render_ohlcv_chart(
             draw.line(
                 (x_center[i], y_high[i], x_center[i], y_low[i]),
                 fill=down_color_final,
-                width=wick_width
+                width=wick_width,
             )
             # Body
             draw.rectangle(
-                (x_start[i], body_top[i], x_end[i], body_bottom[i]),
-                fill=down_color_final
+                (x_start[i], body_top[i], x_end[i], body_bottom[i]), fill=down_color_final
             )
             # Volume
             draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=down_color_final
+                (x_start[i], height - vol_heights[i], x_end[i], height), fill=down_color_final
             )
 
     else:
@@ -2117,10 +2141,16 @@ def render_ohlcv_chart(
         is_bullish = close_prices >= open_prices
 
         # Vectorized price scaling (eliminates per-candle scale_price() calls)
-        y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(int)
+        y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
         y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(int)
-        y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(int)
-        y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(int)
+        y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
+        y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
 
         # Vectorized volume scaling
         vol_heights = ((volume_data / volume_range) * volume_height).astype(int)
@@ -2139,23 +2169,13 @@ def render_ohlcv_chart(
             color = up_color_final if is_bullish[i] else down_color_final
 
             # Draw wick
-            draw.line(
-                (x_center[i], y_high[i], x_center[i], y_low[i]),
-                fill=color,
-                width=wick_width
-            )
+            draw.line((x_center[i], y_high[i], x_center[i], y_low[i]), fill=color, width=wick_width)
 
             # Draw body
-            draw.rectangle(
-                (x_start[i], body_top[i], x_end[i], body_bottom[i]),
-                fill=color
-            )
+            draw.rectangle((x_start[i], body_top[i], x_end[i], body_bottom[i]), fill=color)
 
             # Draw volume bar
-            draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=color
-            )
+            draw.rectangle((x_start[i], height - vol_heights[i], x_end[i], height), fill=color)
 
     return img
 
@@ -2207,29 +2227,29 @@ def render_hollow_candles(
     if enable_antialiasing:
         # RGBA mode: use pre-computed RGBA tuples
         mode: str = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
 
         # Use pre-computed colors or convert custom overrides
         bg_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
+            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         )
         up_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(up_color) if up_color else theme_colors_rgba['up']
+            _hex_to_rgba(up_color) if up_color else theme_colors_rgba["up"]
         )
         down_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(down_color) if down_color else theme_colors_rgba['down']
+            _hex_to_rgba(down_color) if down_color else theme_colors_rgba["down"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         # RGB mode: use hex color strings directly
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
 
         # Use theme colors or custom overrides (all hex strings)
-        bg_color_final = bg_color or theme_colors_rgb['bg']
-        up_color_final = up_color or theme_colors_rgb['up']
-        down_color_final = down_color or theme_colors_rgb['down']
-        grid_color_final = theme_colors_rgb['grid']
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
+        up_color_final = up_color or theme_colors_rgb["up"]
+        down_color_final = down_color or theme_colors_rgb["down"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Ensure C-contiguous memory layout for optimal CPU cache performance
     open_prices = np.ascontiguousarray(to_numpy_array(ohlc["open"]))
@@ -2272,7 +2292,7 @@ def render_hollow_candles(
             chart_height=chart_height,
             num_candles=num_candles,
             candle_width=candle_width,
-            grid_color=grid_color_final
+            grid_color=grid_color_final,
         )
 
     # Auto-enable batch drawing for large datasets if not explicitly specified
@@ -2284,8 +2304,19 @@ def render_hollow_candles(
 
         # Use JIT-compiled version for large datasets when Numba is available
         if NUMBA_AVAILABLE and num_candles >= 1000:
-            (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-             vol_heights, body_top, body_bottom, is_bullish) = _calculate_coordinates_jit(
+            (
+                x_start,
+                x_end,
+                x_center,
+                y_high,
+                y_low,
+                y_open,
+                y_close,
+                vol_heights,
+                body_top,
+                body_bottom,
+                is_bullish,
+            ) = _calculate_coordinates_jit(
                 num_candles=num_candles,
                 candle_width=candle_width,
                 spacing=spacing,
@@ -2300,12 +2331,23 @@ def render_hollow_candles(
                 volume_range=volume_range,
                 chart_height=chart_height,
                 volume_height=volume_height,
-                height=height
+                height=height,
             )
         else:
             # NumPy fallback path
-            (x_start, x_end, x_center, y_high, y_low, y_open, y_close,
-             vol_heights, body_top, body_bottom, is_bullish) = _calculate_coordinates_numpy(
+            (
+                x_start,
+                x_end,
+                x_center,
+                y_high,
+                y_low,
+                y_open,
+                y_close,
+                vol_heights,
+                body_top,
+                body_bottom,
+                is_bullish,
+            ) = _calculate_coordinates_numpy(
                 num_candles=num_candles,
                 candle_width=candle_width,
                 spacing=spacing,
@@ -2320,7 +2362,7 @@ def render_hollow_candles(
                 volume_range=volume_range,
                 chart_height=chart_height,
                 volume_height=volume_height,
-                height=height
+                height=height,
             )
 
         # Group coordinates by color for efficient drawing
@@ -2333,19 +2375,18 @@ def render_hollow_candles(
             draw.line(
                 (x_center[i], y_high[i], x_center[i], y_low[i]),
                 fill=up_color_final,
-                width=wick_width
+                width=wick_width,
             )
             # Body - HOLLOW (outline only, no fill)
             draw.rectangle(
                 (x_start[i], body_top[i], x_end[i], body_bottom[i]),
                 outline=up_color_final,
                 fill=None,
-                width=1
+                width=1,
             )
             # Volume
             draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=up_color_final
+                (x_start[i], height - vol_heights[i], x_end[i], height), fill=up_color_final
             )
 
         # Draw all bearish elements (filled candles)
@@ -2354,18 +2395,17 @@ def render_hollow_candles(
             draw.line(
                 (x_center[i], y_high[i], x_center[i], y_low[i]),
                 fill=down_color_final,
-                width=wick_width
+                width=wick_width,
             )
             # Body - FILLED (solid rectangle)
             draw.rectangle(
                 (x_start[i], body_top[i], x_end[i], body_bottom[i]),
                 fill=down_color_final,
-                outline=down_color_final
+                outline=down_color_final,
             )
             # Volume
             draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=down_color_final
+                (x_start[i], height - vol_heights[i], x_end[i], height), fill=down_color_final
             )
 
     else:
@@ -2374,10 +2414,16 @@ def render_hollow_candles(
         is_bullish = close_prices >= open_prices
 
         # Vectorized price scaling
-        y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(int)
+        y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
         y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(int)
-        y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(int)
-        y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(int)
+        y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
+        y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
+            int
+        )
 
         # Vectorized volume scaling
         vol_heights = ((volume_data / volume_range) * volume_height).astype(int)
@@ -2396,11 +2442,7 @@ def render_hollow_candles(
             color = up_color_final if is_bullish[i] else down_color_final
 
             # Draw wick
-            draw.line(
-                (x_center[i], y_high[i], x_center[i], y_low[i]),
-                fill=color,
-                width=wick_width
-            )
+            draw.line((x_center[i], y_high[i], x_center[i], y_low[i]), fill=color, width=wick_width)
 
             # Draw body (HOLLOW vs FILLED based on bullish/bearish)
             if is_bullish[i]:
@@ -2409,29 +2451,23 @@ def render_hollow_candles(
                     (x_start[i], body_top[i], x_end[i], body_bottom[i]),
                     outline=up_color_final,
                     fill=None,
-                    width=1
+                    width=1,
                 )
             else:
                 # FILLED: Draw solid rectangle
                 draw.rectangle(
                     (x_start[i], body_top[i], x_end[i], body_bottom[i]),
                     fill=down_color_final,
-                    outline=down_color_final
+                    outline=down_color_final,
                 )
 
             # Draw volume bar
-            draw.rectangle(
-                (x_start[i], height - vol_heights[i], x_end[i], height),
-                fill=color
-            )
+            draw.rectangle((x_start[i], height - vol_heights[i], x_end[i], height), fill=color)
 
     return img
 
 
-def render_ohlcv_charts(
-    datasets: list[dict[str, Any]],
-    **common_kwargs
-) -> list[Image.Image]:
+def render_ohlcv_charts(datasets: list[dict[str, Any]], **common_kwargs) -> list[Image.Image]:
     """
     Render multiple candlestick charts with shared settings.
 
@@ -2475,10 +2511,7 @@ def render_ohlcv_charts(
         - All common_kwargs are passed to each render_ohlcv_chart() call
         - For parallel rendering, see kimsfinance.plotting.parallel module
     """
-    return [
-        render_ohlcv_chart(d['ohlc'], d['volume'], **common_kwargs)
-        for d in datasets
-    ]
+    return [render_ohlcv_chart(d["ohlc"], d["volume"], **common_kwargs) for d in datasets]
 
 
 def render_line_chart(
@@ -2541,27 +2574,27 @@ def render_line_chart(
     if enable_antialiasing:
         # RGBA mode: use pre-computed RGBA tuples
         mode: str = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
 
         # Use pre-computed colors or convert custom overrides
         bg_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
+            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         )
         # Line color defaults to theme's up_color
         line_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(line_color) if line_color else theme_colors_rgba['up']
+            _hex_to_rgba(line_color) if line_color else theme_colors_rgba["up"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         # RGB mode: use hex color strings directly
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
 
         # Use theme colors or custom overrides (all hex strings)
-        bg_color_final = bg_color or theme_colors_rgb['bg']
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
         # Line color defaults to theme's up_color
-        line_color_final = line_color or theme_colors_rgb['up']
-        grid_color_final = theme_colors_rgb['grid']
+        line_color_final = line_color or theme_colors_rgb["up"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Ensure C-contiguous memory layout for optimal performance
     close_prices = np.ascontiguousarray(to_numpy_array(ohlc["close"]))
@@ -2596,7 +2629,7 @@ def render_line_chart(
             chart_height=chart_height,
             num_candles=num_candles,
             candle_width=candle_width,
-            grid_color=grid_color_final
+            grid_color=grid_color_final,
         )
 
     # Vectorized coordinate calculation for line points
@@ -2608,7 +2641,9 @@ def render_line_chart(
     x_coords = ((indices + 0.5) * point_spacing).astype(np.int32)
 
     # Vectorized price scaling
-    y_coords = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(np.int32)
+    y_coords = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
+        np.int32
+    )
 
     # Create point list for PIL's line drawing
     points = list(zip(x_coords.tolist(), y_coords.tolist()))
@@ -2625,8 +2660,12 @@ def render_line_chart(
         # Fill with semi-transparent color (20% opacity)
         if isinstance(line_color_final, tuple):
             # RGBA mode: create semi-transparent version
-            fill_color_alpha = (line_color_final[0], line_color_final[1],
-                               line_color_final[2], 50)  # 20% opacity
+            fill_color_alpha = (
+                line_color_final[0],
+                line_color_final[1],
+                line_color_final[2],
+                50,
+            )  # 20% opacity
         else:
             # Shouldn't happen in RGBA mode, but handle gracefully
             fill_color_alpha = _hex_to_rgba(line_color_final, alpha=50)
@@ -2636,7 +2675,7 @@ def render_line_chart(
     # Draw line connecting all points
     # Use joint='curve' for smoother line rendering at corners
     if len(points) > 1:
-        draw.line(points, fill=line_color_final, width=line_width, joint='curve')
+        draw.line(points, fill=line_color_final, width=line_width, joint="curve")
 
     # Draw volume bars using vectorized calculations
     # Calculate bar width and positions
@@ -2653,18 +2692,13 @@ def render_line_chart(
     # Draw volume bars (using same color as line)
     for i in range(num_points):
         draw.rectangle(
-            (x_start_vol[i], height - vol_heights[i], x_end_vol[i], height),
-            fill=line_color_final
+            (x_start_vol[i], height - vol_heights[i], x_end_vol[i], height), fill=line_color_final
         )
 
     return img
 
 
-def render_to_array(
-    ohlc: dict[str, ArrayLike],
-    volume: ArrayLike,
-    **render_kwargs
-) -> np.ndarray:
+def render_to_array(ohlc: dict[str, ArrayLike], volume: ArrayLike, **render_kwargs) -> np.ndarray:
     """
     Render candlestick chart directly to numpy array.
 
@@ -2712,9 +2746,9 @@ def render_and_save(
     volume: ArrayLike,
     output_path: str,
     format: str | None = None,
-    speed: str = 'balanced',
+    speed: str = "balanced",
     quality: int | None = None,
-    **render_kwargs
+    **render_kwargs,
 ) -> None:
     """
     Render and save a candlestick chart in one step.
@@ -2816,19 +2850,17 @@ def calculate_pnf_columns(
         - More accurate than close-based algorithms
         - Returns empty list if insufficient price movement
     """
-    high_prices = to_numpy_array(ohlc['high'])
-    low_prices = to_numpy_array(ohlc['low'])
-    close_prices = to_numpy_array(ohlc['close'])
+    high_prices = to_numpy_array(ohlc["high"])
+    low_prices = to_numpy_array(ohlc["low"])
+    close_prices = to_numpy_array(ohlc["close"])
 
     # Auto-calculate box size using ATR
     if box_size is None:
         # Use ATR if we have enough data, otherwise use price range
         if len(close_prices) >= 14:
             from ..ops.indicators import calculate_atr
-            atr = calculate_atr(
-                ohlc['high'], ohlc['low'], ohlc['close'],
-                period=14, engine='cpu'
-            )
+
+            atr = calculate_atr(ohlc["high"], ohlc["low"], ohlc["close"], period=14, engine="cpu")
             box_size = float(np.nanmedian(atr))  # Use median ATR
         else:
             # Fallback for small datasets: use 1% of price range
@@ -2853,62 +2885,66 @@ def calculate_pnf_columns(
         boxes_down = int((reference_price - low) / box_size)
 
         # Current column is rising (X column) or not yet started
-        if current_column is None or current_column['type'] == 'X':
+        if current_column is None or current_column["type"] == "X":
             # Try to add X boxes
             if boxes_up > 0:
                 if current_column is None:
-                    current_column = {'type': 'X', 'boxes': [], 'start_idx': i}
+                    current_column = {"type": "X", "boxes": [], "start_idx": i}
 
                 # Add X boxes
                 for j in range(boxes_up):
                     reference_price += box_size
-                    current_column['boxes'].append(reference_price)
+                    current_column["boxes"].append(reference_price)
 
             # Check for reversal to O
             elif boxes_down >= reversal_boxes:
                 # Save current X column
-                if current_column and current_column['boxes']:
+                if current_column and current_column["boxes"]:
                     columns.append(current_column)
 
                 # Start new O column
-                current_column = {'type': 'O', 'boxes': [], 'start_idx': i}
+                current_column = {"type": "O", "boxes": [], "start_idx": i}
 
                 # Add O boxes (going down from previous high)
                 # Go back to top of last X column
                 if columns:
-                    reference_price = columns[-1]['boxes'][-1] if columns[-1]['boxes'] else reference_price
+                    reference_price = (
+                        columns[-1]["boxes"][-1] if columns[-1]["boxes"] else reference_price
+                    )
 
                 for j in range(boxes_down):
                     reference_price -= box_size
-                    current_column['boxes'].append(reference_price)
+                    current_column["boxes"].append(reference_price)
 
         # Current column is falling (O column)
-        elif current_column['type'] == 'O':
+        elif current_column["type"] == "O":
             # Try to add O boxes
             if boxes_down > 0:
                 for j in range(boxes_down):
                     reference_price -= box_size
-                    current_column['boxes'].append(reference_price)
+                    current_column["boxes"].append(reference_price)
 
             # Check for reversal to X
             elif boxes_up >= reversal_boxes:
                 # Save current O column
-                if current_column['boxes']:
+                if current_column["boxes"]:
                     columns.append(current_column)
 
                 # Start new X column
-                current_column = {'type': 'X', 'boxes': [], 'start_idx': i}
+                current_column = {"type": "X", "boxes": [], "start_idx": i}
 
                 # Go back to bottom of last O column
                 if columns:
-                    reference_price = columns[-1]['boxes'][-1] if columns[-1]['boxes'] else reference_price
+                    reference_price = (
+                        columns[-1]["boxes"][-1] if columns[-1]["boxes"] else reference_price
+                    )
 
                 for j in range(boxes_up):
                     reference_price += box_size
-                    current_column['boxes'].append(reference_price)
+                    current_column["boxes"].append(reference_price)
 
     # Add final column
-    if current_column and current_column['boxes']:
+    if current_column and current_column["boxes"]:
         columns.append(current_column)
 
     return columns
@@ -2948,26 +2984,26 @@ def render_pnf_chart(
     # Use pre-computed theme colors for optimal performance
     if enable_antialiasing:
         mode: str = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
 
         bg_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
+            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         )
         up_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(up_color) if up_color else theme_colors_rgba['up']
+            _hex_to_rgba(up_color) if up_color else theme_colors_rgba["up"]
         )
         down_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(down_color) if down_color else theme_colors_rgba['down']
+            _hex_to_rgba(down_color) if down_color else theme_colors_rgba["down"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
 
-        bg_color_final = bg_color or theme_colors_rgb['bg']
-        up_color_final = up_color or theme_colors_rgb['up']
-        down_color_final = down_color or theme_colors_rgb['down']
-        grid_color_final = theme_colors_rgb['grid']
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
+        up_color_final = up_color or theme_colors_rgb["up"]
+        down_color_final = down_color or theme_colors_rgb["down"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Calculate PNF columns
     columns = calculate_pnf_columns(ohlc, box_size, reversal_boxes)
@@ -2990,7 +3026,7 @@ def render_pnf_chart(
     # Find price range from all boxes
     all_prices = []
     for col in columns:
-        all_prices.extend(col['boxes'])
+        all_prices.extend(col["boxes"])
 
     price_min = min(all_prices) - (box_size if box_size else 0)
     price_max = max(all_prices) + (box_size if box_size else 0)
@@ -3013,16 +3049,14 @@ def render_pnf_chart(
     # Use the auto-calculated box_size if it was None
     if box_size is None:
         # Use ATR if we have enough data, otherwise use price range
-        high_prices = to_numpy_array(ohlc['high'])
-        low_prices = to_numpy_array(ohlc['low'])
-        close_prices = to_numpy_array(ohlc['close'])
+        high_prices = to_numpy_array(ohlc["high"])
+        low_prices = to_numpy_array(ohlc["low"])
+        close_prices = to_numpy_array(ohlc["close"])
 
         if len(close_prices) >= 14:
             from ..ops.indicators import calculate_atr
-            atr = calculate_atr(
-                ohlc['high'], ohlc['low'], ohlc['close'],
-                period=14, engine='cpu'
-            )
+
+            atr = calculate_atr(ohlc["high"], ohlc["low"], ohlc["close"], period=14, engine="cpu")
             box_size = float(np.nanmedian(atr))
         else:
             # Fallback for small datasets: use 1% of price range
@@ -3037,52 +3071,55 @@ def render_pnf_chart(
         # Horizontal price lines (10 divisions)
         for i in range(1, 10):
             y = int(i * chart_height / 10)
-            draw.line(
-                [(0, y), (width, y)],
-                fill=grid_color_final,
-                width=1
-            )
+            draw.line([(0, y), (width, y)], fill=grid_color_final, width=1)
 
         # Vertical column lines
         for col_idx in range(num_columns + 1):
             x = int(col_idx * column_width)
-            draw.line(
-                [(x, 0), (x, chart_height)],
-                fill=grid_color_final,
-                width=1
-            )
+            draw.line([(x, 0), (x, chart_height)], fill=grid_color_final, width=1)
 
     # Draw columns
     for col_idx, column in enumerate(columns):
         x_start = int(col_idx * column_width)
         x_center = int(x_start + column_width / 2)
 
-        for box_price in column['boxes']:
+        for box_price in column["boxes"]:
             y_center = scale_price(box_price)
             half_box = box_width // 2
             half_height = box_height // 2
 
-            if column['type'] == 'X':
+            if column["type"] == "X":
                 # Draw X (two diagonal lines)
                 # Top-left to bottom-right
                 draw.line(
-                    [(x_center - half_box, y_center - half_height),
-                     (x_center + half_box, y_center + half_height)],
-                    fill=up_color_final, width=2
+                    [
+                        (x_center - half_box, y_center - half_height),
+                        (x_center + half_box, y_center + half_height),
+                    ],
+                    fill=up_color_final,
+                    width=2,
                 )
                 # Bottom-left to top-right
                 draw.line(
-                    [(x_center - half_box, y_center + half_height),
-                     (x_center + half_box, y_center - half_height)],
-                    fill=up_color_final, width=2
+                    [
+                        (x_center - half_box, y_center + half_height),
+                        (x_center + half_box, y_center - half_height),
+                    ],
+                    fill=up_color_final,
+                    width=2,
                 )
 
             else:  # 'O'
                 # Draw O (ellipse/circle)
                 draw.ellipse(
-                    [x_center - half_box, y_center - half_height,
-                     x_center + half_box, y_center + half_height],
-                    outline=down_color_final, width=2
+                    [
+                        x_center - half_box,
+                        y_center - half_height,
+                        x_center + half_box,
+                        y_center + half_height,
+                    ],
+                    outline=down_color_final,
+                    width=2,
                 )
 
     return img
@@ -3154,9 +3191,9 @@ def calculate_renko_bricks(
         - reversal_boxes=2-3 creates smoother charts with less noise
         - Empty result may occur if price never moves by box_size
     """
-    close_prices = to_numpy_array(ohlc['close'])
-    high_prices = to_numpy_array(ohlc['high'])
-    low_prices = to_numpy_array(ohlc['low'])
+    close_prices = to_numpy_array(ohlc["close"])
+    high_prices = to_numpy_array(ohlc["high"])
+    low_prices = to_numpy_array(ohlc["low"])
 
     if len(close_prices) == 0:
         return []
@@ -3164,10 +3201,8 @@ def calculate_renko_bricks(
     # Auto-calculate box size using ATR if not provided
     if box_size is None:
         from ..ops.indicators import calculate_atr
-        atr = calculate_atr(
-            high_prices, low_prices, close_prices,
-            period=14, engine='cpu'
-        )
+
+        atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine="cpu")
         # Use 75% of median ATR for optimal balance between detail and noise filtering
         box_size = float(np.nanmedian(atr)) * 0.75
 
@@ -3200,10 +3235,12 @@ def calculate_renko_bricks(
                 # Create up bricks
                 for _ in range(num_boxes):
                     reference_price += box_size
-                    bricks.append({
-                        'price': reference_price,
-                        'direction': 1,  # Up
-                    })
+                    bricks.append(
+                        {
+                            "price": reference_price,
+                            "direction": 1,  # Up
+                        }
+                    )
                 current_direction = 1
                 continue  # Move to next candle
 
@@ -3221,10 +3258,12 @@ def calculate_renko_bricks(
                 # Create down bricks
                 for _ in range(num_boxes):
                     reference_price -= box_size
-                    bricks.append({
-                        'price': reference_price,
-                        'direction': -1,  # Down
-                    })
+                    bricks.append(
+                        {
+                            "price": reference_price,
+                            "direction": -1,  # Down
+                        }
+                    )
                 current_direction = -1
 
     return bricks
@@ -3302,13 +3341,13 @@ def render_renko_chart(
         # Return empty chart with message
         mode = "RGBA" if enable_antialiasing else "RGB"
         if enable_antialiasing:
-            theme_colors = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
+            theme_colors = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
             bg_color_final: tuple[int, int, int, int] | str = (
-                _hex_to_rgba(bg_color) if bg_color else theme_colors['bg']
+                _hex_to_rgba(bg_color) if bg_color else theme_colors["bg"]
             )
         else:
-            theme_colors = THEMES_RGB.get(theme, THEMES_RGB['classic'])
-            bg_color_final = bg_color or theme_colors['bg']
+            theme_colors = THEMES_RGB.get(theme, THEMES_RGB["classic"])
+            bg_color_final = bg_color or theme_colors["bg"]
 
         img = Image.new(mode, (width, height), bg_color_final)
         return img
@@ -3317,33 +3356,32 @@ def render_renko_chart(
     if box_size is None:
         # Recalculate to get the actual value used
         from ..ops.indicators import calculate_atr
-        high_prices = to_numpy_array(ohlc['high'])
-        low_prices = to_numpy_array(ohlc['low'])
-        close_prices = to_numpy_array(ohlc['close'])
-        atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine='cpu')
+
+        high_prices = to_numpy_array(ohlc["high"])
+        low_prices = to_numpy_array(ohlc["low"])
+        close_prices = to_numpy_array(ohlc["close"])
+        atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine="cpu")
         box_size = float(np.nanmedian(atr)) * 0.75
 
     # Use pre-computed theme colors for optimal performance
     if enable_antialiasing:
         mode = "RGBA"
-        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA['classic'])
-        bg_color_final = (
-            _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba['bg']
-        )
+        theme_colors_rgba = THEMES_RGBA.get(theme, THEMES_RGBA["classic"])
+        bg_color_final = _hex_to_rgba(bg_color) if bg_color else theme_colors_rgba["bg"]
         up_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(up_color) if up_color else theme_colors_rgba['up']
+            _hex_to_rgba(up_color) if up_color else theme_colors_rgba["up"]
         )
         down_color_final: tuple[int, int, int, int] | str = (
-            _hex_to_rgba(down_color) if down_color else theme_colors_rgba['down']
+            _hex_to_rgba(down_color) if down_color else theme_colors_rgba["down"]
         )
-        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba['grid']
+        grid_color_final: tuple[int, int, int, int] | str = theme_colors_rgba["grid"]
     else:
         mode = "RGB"
-        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB['classic'])
-        bg_color_final = bg_color or theme_colors_rgb['bg']
-        up_color_final = up_color or theme_colors_rgb['up']
-        down_color_final = down_color or theme_colors_rgb['down']
-        grid_color_final = theme_colors_rgb['grid']
+        theme_colors_rgb = THEMES_RGB.get(theme, THEMES_RGB["classic"])
+        bg_color_final = bg_color or theme_colors_rgb["bg"]
+        up_color_final = up_color or theme_colors_rgb["up"]
+        down_color_final = down_color or theme_colors_rgb["down"]
+        grid_color_final = theme_colors_rgb["grid"]
 
     # Create image
     img = Image.new(mode, (width, height), bg_color_final)
@@ -3354,7 +3392,7 @@ def render_renko_chart(
     volume_height = int(height * 0.3)
 
     # Calculate price range for all bricks
-    brick_prices = np.array([b['price'] for b in bricks])
+    brick_prices = np.array([b["price"] for b in bricks])
     price_min = float(np.min(brick_prices) - box_size)
     price_max = float(np.max(brick_prices) + box_size)
     price_range = price_max - price_min
@@ -3387,7 +3425,7 @@ def render_renko_chart(
             chart_height=chart_height,
             num_candles=num_bricks,
             candle_width=brick_width,
-            grid_color=grid_color_final
+            grid_color=grid_color_final,
         )
 
     # Vectorize brick coordinates for performance
@@ -3402,31 +3440,24 @@ def render_renko_chart(
         # Calculate Y position
         # For up bricks: price is the top
         # For down bricks: price is the bottom
-        if brick['direction'] == 1:
+        if brick["direction"] == 1:
             # Up brick: draw from price (top) downward by brick_height
-            y_top = scale_price(brick['price'])
+            y_top = scale_price(brick["price"])
             y_bottom = y_top + brick_height
             color = up_color_final
         else:
             # Down brick: draw from price (bottom) upward by brick_height
-            y_bottom = scale_price(brick['price'])
+            y_bottom = scale_price(brick["price"])
             y_top = y_bottom - brick_height
             color = down_color_final
 
         # Draw brick rectangle
-        draw.rectangle(
-            [x_start, y_top, x_end, y_bottom],
-            fill=color,
-            outline=color
-        )
+        draw.rectangle([x_start, y_top, x_end, y_bottom], fill=color, outline=color)
 
         # Draw uniform volume bars (simplified - not aggregated per brick)
         # For MVP, show uniform volume bars as placeholder
         # Advanced: aggregate volume per brick based on contributing candles
         volume_bar_height = volume_height // 2  # Uniform height for MVP
-        draw.rectangle(
-            [x_start, height - volume_bar_height, x_end, height],
-            fill=color
-        )
+        draw.rectangle([x_start, height - volume_bar_height, x_end, height], fill=color)
 
     return img

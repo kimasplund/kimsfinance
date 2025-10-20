@@ -2,12 +2,14 @@ import numpy as np
 import pytest
 from kimsfinance.ops.swing import find_swing_points
 
+
 @pytest.fixture
 def sample_data():
     """Generates sample OHLC data for testing."""
     high = np.array([10, 12, 11, 13, 14, 13, 12, 15, 14, 13, 12, 11])
     low = np.array([8, 9, 10, 11, 12, 11, 10, 9, 8, 9, 10, 9])
     return high, low
+
 
 def test_find_swing_points(sample_data):
     """Test the find_swing_points function."""

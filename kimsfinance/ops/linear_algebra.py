@@ -18,6 +18,7 @@ import numpy as np
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -36,20 +37,15 @@ def _to_numpy_array(data: ArrayLike) -> np.ndarray:
     """Convert array-like input to numpy array."""
     if isinstance(data, np.ndarray):
         return data
-    elif hasattr(data, 'to_numpy'):
+    elif hasattr(data, "to_numpy"):
         return data.to_numpy()
-    elif hasattr(data, 'values'):
+    elif hasattr(data, "values"):
         return data.values
     else:
         return np.array(data, dtype=np.float64)
 
 
-def least_squares_fit(
-    x: ArrayLike,
-    y: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> LinearFitResult:
+def least_squares_fit(x: ArrayLike, y: ArrayLike, *, engine: Engine = "auto") -> LinearFitResult:
     """
     GPU-accelerated least squares linear regression.
 
@@ -110,8 +106,8 @@ def least_squares_fit(
             X = cp.vstack([ones, x_gpu]).T  # Shape: (n, 2)
 
             # Solve normal equations: (X^T X)^-1 X^T y
-            XtX = cp.dot(X.T, X)          # Shape: (2, 2)
-            Xty = cp.dot(X.T, y_gpu)      # Shape: (2,)
+            XtX = cp.dot(X.T, X)  # Shape: (2, 2)
+            Xty = cp.dot(X.T, y_gpu)  # Shape: (2,)
 
             # Compute inverse and solve
             XtX_inv = cp.linalg.inv(XtX)
@@ -134,12 +130,7 @@ def least_squares_fit(
     return (float(slope), float(intercept))
 
 
-def trend_line(
-    x: ArrayLike,
-    y: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def trend_line(x: ArrayLike, y: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate trend line values using least squares.
 
@@ -172,11 +163,7 @@ def trend_line(
 
 
 def polynomial_fit(
-    x: ArrayLike,
-    y: ArrayLike,
-    degree: int = 2,
-    *,
-    engine: Engine = "auto"
+    x: ArrayLike, y: ArrayLike, degree: int = 2, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     GPU-accelerated polynomial curve fitting.
@@ -234,12 +221,7 @@ def polynomial_fit(
     return (coeffs, fitted)
 
 
-def correlation(
-    x: ArrayLike,
-    y: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> float:
+def correlation(x: ArrayLike, y: ArrayLike, *, engine: Engine = "auto") -> float:
     """
     GPU-accelerated Pearson correlation coefficient.
 
@@ -291,10 +273,7 @@ def correlation(
 
 
 def moving_linear_fit(
-    y: ArrayLike,
-    window: int,
-    *,
-    engine: Engine = "auto"
+    y: ArrayLike, window: int, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate moving (rolling) linear regression.
@@ -331,10 +310,10 @@ def moving_linear_fit(
     x = np.arange(window, dtype=np.float64)
 
     for i in range(n - window + 1):
-        y_window = y_arr[i:i+window]
+        y_window = y_arr[i : i + window]
         slope, intercept = least_squares_fit(x, y_window, engine=engine)
-        slopes[i+window-1] = slope
-        intercepts[i+window-1] = intercept
+        slopes[i + window - 1] = slope
+        intercepts[i + window - 1] = intercept
 
     return (slopes, intercepts)
 

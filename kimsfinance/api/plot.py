@@ -18,22 +18,25 @@ import numpy as np
 
 try:
     import mplfinance as mpf
+
     MPLFINANCE_AVAILABLE = True
 except ImportError:
     MPLFINANCE_AVAILABLE = False
 
 
-def plot(data,
-         *,
-         type='candle',
-         style='binance',
-         mav=None,
-         ema=None,
-         volume=True,
-         engine: str = "auto",
-         savefig=None,
-         returnfig=False,
-         **kwargs) -> Any:
+def plot(
+    data,
+    *,
+    type="candle",
+    style="binance",
+    mav=None,
+    ema=None,
+    volume=True,
+    engine: str = "auto",
+    savefig=None,
+    returnfig=False,
+    **kwargs,
+) -> Any:
     """
     Native PIL-based financial plotting achieving 178x speedup vs mplfinance.
 
@@ -99,7 +102,7 @@ def plot(data,
         - Falls back to mplfinance only if addplot is specified (requires matplotlib)
     """
     # Check for unsupported features that require mplfinance
-    has_addplot = 'addplot' in kwargs
+    has_addplot = "addplot" in kwargs
     has_advanced_features = mav is not None or ema is not None
 
     if has_addplot or has_advanced_features:
@@ -107,11 +110,20 @@ def plot(data,
         warnings.warn(
             "Using mplfinance fallback for addplot/mav/ema features. "
             "For maximum performance (178x speedup), use native renderer without these features.",
-            UserWarning
+            UserWarning,
         )
-        return _plot_mplfinance(data, type=type, style=style, mav=mav, ema=ema,
-                               volume=volume, engine=engine, savefig=savefig,
-                               returnfig=returnfig, **kwargs)
+        return _plot_mplfinance(
+            data,
+            type=type,
+            style=style,
+            mav=mav,
+            ema=ema,
+            volume=volume,
+            engine=engine,
+            savefig=savefig,
+            returnfig=returnfig,
+            **kwargs,
+        )
 
     # Use native PIL renderer (178x speedup!)
     from ..plotting.renderer import (
@@ -137,161 +149,235 @@ def plot(data,
     style = _map_style(style)
 
     # Extract renderer parameters
-    width = kwargs.get('width', 1920)
-    height = kwargs.get('height', 1080)
-    theme = kwargs.get('theme', style)
-    bg_color = kwargs.get('bg_color', None)
-    up_color = kwargs.get('up_color', None)
-    down_color = kwargs.get('down_color', None)
-    enable_antialiasing = kwargs.get('enable_antialiasing', True)
-    show_grid = kwargs.get('show_grid', True)
+    width = kwargs.get("width", 1920)
+    height = kwargs.get("height", 1080)
+    theme = kwargs.get("theme", style)
+    bg_color = kwargs.get("bg_color", None)
+    up_color = kwargs.get("up_color", None)
+    down_color = kwargs.get("down_color", None)
+    enable_antialiasing = kwargs.get("enable_antialiasing", True)
+    show_grid = kwargs.get("show_grid", True)
 
     # Check if SVG/SVGZ format is requested
-    is_svg_format = savefig and (savefig.lower().endswith('.svg') or savefig.lower().endswith('.svgz'))
+    is_svg_format = savefig and (
+        savefig.lower().endswith(".svg") or savefig.lower().endswith(".svgz")
+    )
 
     # SVG rendering path (for candlestick and OHLC charts)
-    if is_svg_format and type == 'candle':
+    if is_svg_format and type == "candle":
         # Route directly to candlestick SVG renderer
         svg_content = render_candlestick_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
-    if is_svg_format and type == 'ohlc':
+    if is_svg_format and type == "ohlc":
         # Route directly to OHLC SVG renderer
         svg_content = render_ohlc_bars_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
-    if is_svg_format and type == 'line':
+    if is_svg_format and type == "line":
         # Route directly to line chart SVG renderer
         svg_content = render_line_chart_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
             bg_color=bg_color,
-            line_color=kwargs.get('line_color', None),
-            line_width=kwargs.get('line_width', 2),
-            fill_area=kwargs.get('fill_area', False),
+            line_color=kwargs.get("line_color", None),
+            line_width=kwargs.get("line_width", 2),
+            fill_area=kwargs.get("fill_area", False),
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
-    if is_svg_format and (type == 'hollow_and_filled' or type == 'hollow'):
+    if is_svg_format and (type == "hollow_and_filled" or type == "hollow"):
         # Route directly to hollow candles SVG renderer
         svg_content = render_hollow_candles_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
-    if is_svg_format and type == 'renko':
+    if is_svg_format and type == "renko":
         # Route directly to Renko SVG renderer
         svg_content = render_renko_chart_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            box_size=kwargs.get('box_size', None),
-            reversal_boxes=kwargs.get('reversal_boxes', 1),
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            box_size=kwargs.get("box_size", None),
+            reversal_boxes=kwargs.get("reversal_boxes", 1),
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
-    if is_svg_format and (type == 'pnf' or type == 'pointandfigure'):
+    if is_svg_format and (type == "pnf" or type == "pointandfigure"):
         # Route directly to Point & Figure SVG renderer
         svg_content = render_pnf_chart_svg(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            box_size=kwargs.get('box_size', None),
-            reversal_boxes=kwargs.get('reversal_boxes', 3),
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            box_size=kwargs.get("box_size", None),
+            reversal_boxes=kwargs.get("reversal_boxes", 3),
             show_grid=show_grid,
             output_path=savefig,
         )
         return None  # File saved, return None like other savefig calls
 
     # Warn if SVG requested for non-supported chart types
-    if is_svg_format and type not in ['candle', 'ohlc', 'line', 'hollow_and_filled', 'hollow', 'renko', 'pnf', 'pointandfigure']:
+    if is_svg_format and type not in [
+        "candle",
+        "ohlc",
+        "line",
+        "hollow_and_filled",
+        "hollow",
+        "renko",
+        "pnf",
+        "pointandfigure",
+    ]:
         warnings.warn(
             f"SVG export is currently only supported for candlestick, OHLC, line, hollow candles, Renko, and Point & Figure charts. "
             f"Chart type '{type}' will be rendered as raster PNG instead.",
-            UserWarning
+            UserWarning,
         )
         # Convert .svg to .png for the actual rendering
         import os
-        savefig = os.path.splitext(savefig)[0] + '.png'
+
+        savefig = os.path.splitext(savefig)[0] + ".png"
 
     # Route to appropriate renderer
-    if type == 'candle':
+    if type == "candle":
         img = render_ohlcv_chart(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
-            wick_width_ratio=kwargs.get('wick_width_ratio', 0.1),
-            use_batch_drawing=kwargs.get('use_batch_drawing', None),
-        )
-
-    elif type == 'ohlc':
-        img = render_ohlc_bars(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
-        )
-
-    elif type == 'line':
-        img = render_line_chart(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
             bg_color=bg_color,
-            line_color=kwargs.get('line_color', None),
-            line_width=kwargs.get('line_width', 2),
-            fill_area=kwargs.get('fill_area', False),
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
+            up_color=up_color,
+            down_color=down_color,
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+            wick_width_ratio=kwargs.get("wick_width_ratio", 0.1),
+            use_batch_drawing=kwargs.get("use_batch_drawing", None),
         )
 
-    elif type == 'hollow_and_filled' or type == 'hollow':
+    elif type == "ohlc":
+        img = render_ohlc_bars(
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+        )
+
+    elif type == "line":
+        img = render_line_chart(
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            line_color=kwargs.get("line_color", None),
+            line_width=kwargs.get("line_width", 2),
+            fill_area=kwargs.get("fill_area", False),
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+        )
+
+    elif type == "hollow_and_filled" or type == "hollow":
         img = render_hollow_candles(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
-            wick_width_ratio=kwargs.get('wick_width_ratio', 0.1),
-            use_batch_drawing=kwargs.get('use_batch_drawing', None),
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+            wick_width_ratio=kwargs.get("wick_width_ratio", 0.1),
+            use_batch_drawing=kwargs.get("use_batch_drawing", None),
         )
 
-    elif type == 'renko':
+    elif type == "renko":
         img = render_renko_chart(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
-            box_size=kwargs.get('box_size', None),
-            reversal_boxes=kwargs.get('reversal_boxes', 1),
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+            box_size=kwargs.get("box_size", None),
+            reversal_boxes=kwargs.get("reversal_boxes", 1),
         )
 
-    elif type == 'pnf' or type == 'pointandfigure':
+    elif type == "pnf" or type == "pointandfigure":
         img = render_pnf_chart(
-            ohlc_dict, volume_array,
-            width=width, height=height, theme=theme,
-            bg_color=bg_color, up_color=up_color, down_color=down_color,
-            enable_antialiasing=enable_antialiasing, show_grid=show_grid,
-            box_size=kwargs.get('box_size', None),
-            reversal_boxes=kwargs.get('reversal_boxes', 3),
+            ohlc_dict,
+            volume_array,
+            width=width,
+            height=height,
+            theme=theme,
+            bg_color=bg_color,
+            up_color=up_color,
+            down_color=down_color,
+            enable_antialiasing=enable_antialiasing,
+            show_grid=show_grid,
+            box_size=kwargs.get("box_size", None),
+            reversal_boxes=kwargs.get("reversal_boxes", 3),
         )
 
     else:
@@ -304,9 +390,10 @@ def plot(data,
     if savefig:
         # Save to file
         save_chart(
-            img, savefig,
-            speed=kwargs.get('speed', 'balanced'),
-            quality=kwargs.get('quality', None),
+            img,
+            savefig,
+            speed=kwargs.get("speed", "balanced"),
+            quality=kwargs.get("quality", None),
         )
         return None
 
@@ -319,7 +406,7 @@ def plot(data,
         warnings.warn(
             "Chart display not implemented. Returning PIL Image object. "
             "Use savefig='path.webp' to save or returnfig=True to get Image.",
-            UserWarning
+            UserWarning,
         )
         return img
 
@@ -329,10 +416,10 @@ def _prepare_data(data):
     import polars as pl
 
     # Convert to Polars if needed
-    if hasattr(data, 'to_pandas'):
+    if hasattr(data, "to_pandas"):
         # Already Polars
         df = data
-    elif hasattr(data, 'index'):
+    elif hasattr(data, "index"):
         # Pandas DataFrame
         df = pl.from_pandas(data.reset_index())
     else:
@@ -340,17 +427,17 @@ def _prepare_data(data):
 
     # Extract OHLC and volume
     ohlc_dict = {
-        'open': df['Open'].to_numpy() if 'Open' in df.columns else df['open'].to_numpy(),
-        'high': df['High'].to_numpy() if 'High' in df.columns else df['high'].to_numpy(),
-        'low': df['Low'].to_numpy() if 'Low' in df.columns else df['low'].to_numpy(),
-        'close': df['Close'].to_numpy() if 'Close' in df.columns else df['close'].to_numpy(),
+        "open": df["Open"].to_numpy() if "Open" in df.columns else df["open"].to_numpy(),
+        "high": df["High"].to_numpy() if "High" in df.columns else df["high"].to_numpy(),
+        "low": df["Low"].to_numpy() if "Low" in df.columns else df["low"].to_numpy(),
+        "close": df["Close"].to_numpy() if "Close" in df.columns else df["close"].to_numpy(),
     }
 
     volume_col = None
-    if 'Volume' in df.columns:
-        volume_col = 'Volume'
-    elif 'volume' in df.columns:
-        volume_col = 'volume'
+    if "Volume" in df.columns:
+        volume_col = "Volume"
+    elif "volume" in df.columns:
+        volume_col = "volume"
 
     if volume_col:
         volume_array = df[volume_col].to_numpy()
@@ -363,8 +450,8 @@ def _prepare_data(data):
 
 def _map_style(style):
     """Map style aliases to canonical theme names."""
-    if style in ['binance', 'binancedark']:
-        return 'tradingview'  # Similar dark theme
+    if style in ["binance", "binancedark"]:
+        return "tradingview"  # Similar dark theme
     return style
 
 
@@ -379,28 +466,30 @@ def _plot_mplfinance(data, type, style, mav, ema, volume, engine, savefig, retur
     # Convert Polars to Pandas if needed (mplfinance requires pandas)
     import pandas as pd
 
-    if hasattr(data, 'to_pandas'):
+    if hasattr(data, "to_pandas"):
         # Polars DataFrame - convert to pandas
         data_pandas = data.to_pandas()
         # Set index to date if present
-        if 'date' in data_pandas.columns:
-            data_pandas['date'] = pd.to_datetime(data_pandas['date'])
-            data_pandas.set_index('date', inplace=True)
-        elif 'Date' in data_pandas.columns:
-            data_pandas['Date'] = pd.to_datetime(data_pandas['Date'])
-            data_pandas.set_index('Date', inplace=True)
+        if "date" in data_pandas.columns:
+            data_pandas["date"] = pd.to_datetime(data_pandas["date"])
+            data_pandas.set_index("date", inplace=True)
+        elif "Date" in data_pandas.columns:
+            data_pandas["Date"] = pd.to_datetime(data_pandas["Date"])
+            data_pandas.set_index("Date", inplace=True)
         else:
             # No date column - create dummy DatetimeIndex
-            data_pandas.index = pd.date_range(start='2025-01-01', periods=len(data_pandas), freq='D')
+            data_pandas.index = pd.date_range(
+                start="2025-01-01", periods=len(data_pandas), freq="D"
+            )
         data = data_pandas
-    elif not hasattr(data, 'index'):
+    elif not hasattr(data, "index"):
         # Not a DataFrame - convert to pandas
         data = pd.DataFrame(data)
-        data.index = pd.date_range(start='2025-01-01', periods=len(data), freq='D')
+        data.index = pd.date_range(start="2025-01-01", periods=len(data), freq="D")
     else:
         # Already pandas DataFrame - ensure DatetimeIndex
         if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.date_range(start='2025-01-01', periods=len(data), freq='D')
+            data.index = pd.date_range(start="2025-01-01", periods=len(data), freq="D")
 
     # Temporarily activate acceleration for indicator calculations
     from ..integration import activate, deactivate, configure
@@ -412,24 +501,18 @@ def _plot_mplfinance(data, type, style, mav, ema, volume, engine, savefig, retur
         # Build kwargs for mplfinance
         mpf_kwargs = {}
         if style is not None:
-            mpf_kwargs['style'] = style
+            mpf_kwargs["style"] = style
         if mav is not None:
-            mpf_kwargs['mav'] = mav
+            mpf_kwargs["mav"] = mav
         if ema is not None:
-            mpf_kwargs['ema'] = ema
+            mpf_kwargs["ema"] = ema
         if savefig is not None:
-            mpf_kwargs['savefig'] = savefig
+            mpf_kwargs["savefig"] = savefig
         if returnfig:
-            mpf_kwargs['returnfig'] = True
+            mpf_kwargs["returnfig"] = True
 
         # Call mplfinance
-        result = mpf.plot(
-            data,
-            type=type,
-            volume=volume,
-            **mpf_kwargs,
-            **kwargs
-        )
+        result = mpf.plot(data, type=type, volume=volume, **mpf_kwargs, **kwargs)
 
         return result
 
@@ -464,19 +547,15 @@ def make_addplot(data, **kwargs):
     """
     if not MPLFINANCE_AVAILABLE:
         raise ImportError(
-            "mplfinance is required for addplot. "
-            "Install with: pip install mplfinance"
+            "mplfinance is required for addplot. " "Install with: pip install mplfinance"
         )
 
     return mpf.make_addplot(data, **kwargs)
 
 
-def plot_with_indicators(data,
-                         *,
-                         type='candle',
-                         indicators: dict | None = None,
-                         engine: str = "auto",
-                         **kwargs) -> Any:
+def plot_with_indicators(
+    data, *, type="candle", indicators: dict | None = None, engine: str = "auto", **kwargs
+) -> Any:
     """
     Plot with GPU-accelerated technical indicators.
 
@@ -512,7 +591,7 @@ def plot_with_indicators(data,
     warnings.warn(
         "plot_with_indicators() uses mplfinance fallback for multi-panel support. "
         "For maximum performance (178x speedup), use plot() without indicators.",
-        UserWarning
+        UserWarning,
     )
 
     if not MPLFINANCE_AVAILABLE:
@@ -523,9 +602,9 @@ def plot_with_indicators(data,
     import polars as pl
 
     # Convert to Polars if needed
-    if hasattr(data, 'to_pandas'):
+    if hasattr(data, "to_pandas"):
         df_polars = data
-    elif hasattr(data, 'index'):
+    elif hasattr(data, "index"):
         df_polars = pl.from_pandas(data.reset_index())
     else:
         df_polars = pl.DataFrame(data)
@@ -534,44 +613,38 @@ def plot_with_indicators(data,
 
     if indicators:
         # Add SMAs
-        if 'sma' in indicators:
-            kwargs['mav'] = tuple(indicators['sma'])
+        if "sma" in indicators:
+            kwargs["mav"] = tuple(indicators["sma"])
 
         # Add RSI
-        if 'rsi' in indicators:
-            rsi_config = indicators['rsi'] if isinstance(indicators['rsi'], dict) else {'period': 14}
+        if "rsi" in indicators:
+            rsi_config = (
+                indicators["rsi"] if isinstance(indicators["rsi"], dict) else {"period": 14}
+            )
             rsi = calculate_rsi(
-                df_polars['close'].to_numpy(),
-                period=rsi_config.get('period', 14),
-                engine=engine
+                df_polars["close"].to_numpy(), period=rsi_config.get("period", 14), engine=engine
             )
-            ap = make_addplot(
-                rsi,
-                panel=rsi_config.get('panel', 2),
-                color='purple',
-                ylabel='RSI'
-            )
+            ap = make_addplot(rsi, panel=rsi_config.get("panel", 2), color="purple", ylabel="RSI")
             addplots.append(ap)
 
         # Add MACD
-        if 'macd' in indicators:
-            macd_config = indicators['macd'] if isinstance(indicators['macd'], dict) else {}
-            macd_result = calculate_macd(
-                df_polars['close'].to_numpy(),
-                engine=engine
+        if "macd" in indicators:
+            macd_config = indicators["macd"] if isinstance(indicators["macd"], dict) else {}
+            macd_result = calculate_macd(df_polars["close"].to_numpy(), engine=engine)
+            ap1 = make_addplot(
+                macd_result.macd, panel=macd_config.get("panel", 3), color="blue", ylabel="MACD"
             )
-            ap1 = make_addplot(macd_result.macd, panel=macd_config.get('panel', 3), color='blue', ylabel='MACD')
-            ap2 = make_addplot(macd_result.signal, panel=macd_config.get('panel', 3), color='red')
+            ap2 = make_addplot(macd_result.signal, panel=macd_config.get("panel", 3), color="red")
             addplots.extend([ap1, ap2])
 
     if addplots:
-        if 'addplot' in kwargs:
-            if isinstance(kwargs['addplot'], list):
-                kwargs['addplot'].extend(addplots)
+        if "addplot" in kwargs:
+            if isinstance(kwargs["addplot"], list):
+                kwargs["addplot"].extend(addplots)
             else:
-                kwargs['addplot'] = [kwargs['addplot']] + addplots
+                kwargs["addplot"] = [kwargs["addplot"]] + addplots
         else:
-            kwargs['addplot'] = addplots
+            kwargs["addplot"] = addplots
 
     # Use mplfinance fallback
     return plot(data, type=type, engine=engine, **kwargs)

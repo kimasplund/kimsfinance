@@ -37,11 +37,7 @@ from .rolling import rolling_max, rolling_min
 from .indicator_utils import validate_period, validate_non_negative
 
 
-def _calculate_midpoint(
-    high: np.ndarray,
-    low: np.ndarray,
-    period: int
-) -> np.ndarray:
+def _calculate_midpoint(high: np.ndarray, low: np.ndarray, period: int) -> np.ndarray:
     """
     Calculate midpoint line: (highest_high + lowest_low) / 2.
 
@@ -70,7 +66,7 @@ def calculate_ichimoku(
     senkou_b: int = 52,
     displacement: int = 26,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> dict[str, ArrayResult]:
     """
     Calculate Ichimoku Cloud indicator with all five lines.
@@ -198,6 +194,7 @@ def calculate_ichimoku(
 
     # Get array module for creating arrays
     from ..core.decorators import get_array_module
+
     xp = get_array_module(high)
 
     n = len(high)
@@ -240,5 +237,5 @@ def calculate_ichimoku(
 
 # Re-export for convenience
 __all__ = [
-    'calculate_ichimoku',
+    "calculate_ichimoku",
 ]

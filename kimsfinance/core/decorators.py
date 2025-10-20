@@ -31,6 +31,7 @@ from numpy.typing import NDArray
 try:
     import cupy as cp
     from cupy import ndarray as CupyArray
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -44,8 +45,8 @@ from .types import ArrayLike, Engine
 from .engine import EngineManager, GPUNotAvailableError
 
 
-P = ParamSpec('P')
-R = TypeVar('R')
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 def _to_numpy_array(data: ArrayLike) -> NDArray[np.float64]:
@@ -56,10 +57,10 @@ def _to_numpy_array(data: ArrayLike) -> NDArray[np.float64]:
     """
     if isinstance(data, np.ndarray):
         return data.astype(np.float64, copy=False)
-    elif hasattr(data, 'to_numpy'):  # pandas, polars
+    elif hasattr(data, "to_numpy"):  # pandas, polars
         arr = data.to_numpy()
         return np.asarray(arr, dtype=np.float64)
-    elif hasattr(data, 'values'):  # pandas
+    elif hasattr(data, "values"):  # pandas
         return np.asarray(data.values, dtype=np.float64)
     else:
         return np.array(data, dtype=np.float64)
@@ -111,11 +112,12 @@ def gpu_accelerated(
         - 100 lines (manual GPU/CPU branches, error handling, conversion)
         - To 20-30 lines (pure algorithm implementation)
     """
+
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             # Extract engine parameter (must be keyword-only)
-            engine_raw = kwargs.get('engine', 'auto')
+            engine_raw = kwargs.get("engine", "auto")
             if not isinstance(engine_raw, str):
                 raise TypeError(f"engine must be str, got {type(engine_raw)}")
             engine: Engine = cast(Engine, engine_raw)
@@ -126,7 +128,7 @@ def gpu_accelerated(
 
             for arg in args:
                 # Check if this looks like array-like data
-                if hasattr(arg, '__len__') and not isinstance(arg, str):
+                if hasattr(arg, "__len__") and not isinstance(arg, str):
                     arr = _to_numpy_array(arg)
                     converted_args.append(arr)
                     array_lengths.append(len(arr))
@@ -138,8 +140,7 @@ def gpu_accelerated(
             if validate_inputs and len(array_lengths) > 1:
                 if not all(length == array_lengths[0] for length in array_lengths):
                     raise ValueError(
-                        f"All input arrays must have same length. "
-                        f"Got lengths: {array_lengths}"
+                        f"All input arrays must have same length. " f"Got lengths: {array_lengths}"
                     )
 
             # Determine data size for engine selection
@@ -165,7 +166,9 @@ def gpu_accelerated(
             if exec_engine == "gpu":
                 if not CUPY_AVAILABLE or cp is None:
                     if engine == "gpu":
-                        raise GPUNotAvailableError("CuPy not installed. Install with: pip install cupy-cuda12x")
+                        raise GPUNotAvailableError(
+                            "CuPy not installed. Install with: pip install cupy-cuda12x"
+                        )
                     # Fallback to CPU for auto mode
                     exec_engine = "cpu"
                 else:
@@ -184,8 +187,7 @@ def gpu_accelerated(
                         # Transfer result(s) back to CPU
                         if isinstance(result, tuple):
                             cpu_results = tuple(
-                                cp.asnumpy(r) if isinstance(r, cp.ndarray) else r
-                                for r in result
+                                cp.asnumpy(r) if isinstance(r, cp.ndarray) else r for r in result
                             )
                             return cast(R, cpu_results)
                         elif cp is not None and isinstance(result, cp.ndarray):
@@ -200,7 +202,7 @@ def gpu_accelerated(
                         warnings.warn(
                             f"GPU execution failed, falling back to CPU: {e}",
                             RuntimeWarning,
-                            stacklevel=2
+                            stacklevel=2,
                         )
                         exec_engine = "cpu"
 
@@ -271,8 +273,8 @@ def to_cpu(arr: NDArray[Any] | Any) -> NDArray[np.float64]:
 
 # Re-export for convenience
 __all__ = [
-    'gpu_accelerated',
-    'get_array_module',
-    'to_gpu',
-    'to_cpu',
+    "gpu_accelerated",
+    "get_array_module",
+    "to_gpu",
+    "to_cpu",
 ]

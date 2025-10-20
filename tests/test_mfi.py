@@ -54,7 +54,9 @@ def test_basic_calculation():
     # First (period + 1) values should be NaN (due to rolling sum + diff)
     expected_nans = 14  # period
     actual_nans = np.sum(np.isnan(mfi))
-    assert actual_nans >= expected_nans, f"Expected at least {expected_nans} NaN values, got {actual_nans}"
+    assert (
+        actual_nans >= expected_nans
+    ), f"Expected at least {expected_nans} NaN values, got {actual_nans}"
 
     # Rest should be valid numbers
     valid_values = mfi[~np.isnan(mfi)]
@@ -114,8 +116,9 @@ def test_volume_requirement():
     valid_mfi_zero = mfi_zero[~np.isnan(mfi_zero)]
     if len(valid_mfi_zero) > 0:
         # Should be close to 0 (or 50 if both flows are 0)
-        assert np.all((valid_mfi_zero < 1.0) | (np.abs(valid_mfi_zero - 50.0) < 1.0)), \
-            "Zero volume should produce MFI near 0 or 50"
+        assert np.all(
+            (valid_mfi_zero < 1.0) | (np.abs(valid_mfi_zero - 50.0) < 1.0)
+        ), "Zero volume should produce MFI near 0 or 50"
         print(f"✓ Zero volume produces MFI values near 0 or 50: {valid_mfi_zero[:5]}")
 
 
@@ -144,7 +147,9 @@ def test_overbought_oversold():
     lows_down = closes_down - 0.5
     volumes_down = np.full(n, 1_000_000.0)
 
-    mfi_down = calculate_mfi(highs_down, lows_down, closes_down, volumes_down, period=14, engine="cpu")
+    mfi_down = calculate_mfi(
+        highs_down, lows_down, closes_down, volumes_down, period=14, engine="cpu"
+    )
     valid_mfi_down = mfi_down[~np.isnan(mfi_down)]
 
     print(f"Downtrend MFI (last 5): {valid_mfi_down[-5:]}")
@@ -248,8 +253,7 @@ def test_edge_cases():
     constant_volumes = np.full(50, 1_000_000.0)
 
     mfi_constant = calculate_mfi(
-        constant_highs, constant_lows, constant_closes, constant_volumes,
-        period=14, engine="cpu"
+        constant_highs, constant_lows, constant_closes, constant_volumes, period=14, engine="cpu"
     )
 
     # With constant typical price, all money flow goes to one direction initially
@@ -262,7 +266,7 @@ def test_edge_cases():
     # Test 3: Alternating up/down (should produce ~50 MFI)
     alternating = np.array([100.0] * 50)
     for i in range(1, 50):
-        alternating[i] = alternating[i-1] + (1.0 if i % 2 == 0 else -1.0)
+        alternating[i] = alternating[i - 1] + (1.0 if i % 2 == 0 else -1.0)
 
     highs_alt = alternating + 0.5
     lows_alt = alternating - 0.5
@@ -372,6 +376,7 @@ def main():
         print("=" * 80)
         print(f"AssertionError: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -381,6 +386,7 @@ def main():
         print("=" * 80)
         print(f"Error: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

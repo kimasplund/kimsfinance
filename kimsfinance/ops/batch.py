@@ -35,9 +35,9 @@ def _to_numpy_array(data: ArrayLike) -> np.ndarray:
     """Convert array-like input to numpy array."""
     if isinstance(data, np.ndarray):
         return data
-    elif hasattr(data, 'to_numpy'):
+    elif hasattr(data, "to_numpy"):
         return data.to_numpy()
-    elif hasattr(data, 'values'):
+    elif hasattr(data, "values"):
         return data.values
     else:
         return np.array(data, dtype=np.float64)
@@ -91,7 +91,10 @@ def calculate_indicators_batch(
     *,
     engine: Engine = "auto",
     streaming: bool | None = None,
-) -> dict[str, ArrayResult | tuple[ArrayResult, ArrayResult] | tuple[ArrayResult, ArrayResult, ArrayResult]]:
+) -> dict[
+    str,
+    ArrayResult | tuple[ArrayResult, ArrayResult] | tuple[ArrayResult, ArrayResult, ArrayResult],
+]:
     """
     Calculate multiple technical indicators in a single GPU pass with streaming support.
 
@@ -240,9 +243,7 @@ def calculate_indicators_batch(
     # Check minimum data length (ATR/RSI need period+1, Stochastic needs 14+3)
     data_size = len(closes_arr)
     if data_size < 17:  # Minimum for Stochastic (14 + 3)
-        raise ValueError(
-            f"Data length ({data_size}) must be >= 17 for indicator calculations"
-        )
+        raise ValueError(f"Data length ({data_size}) must be >= 17 for indicator calculations")
 
     # Create Polars DataFrame
     df_dict = {
@@ -295,9 +296,7 @@ def calculate_indicators_batch(
     rolling_low = pl.col("low").rolling_min(window_size=14)
     rolling_high = pl.col("high").rolling_max(window_size=14)
 
-    k_percent = 100 * (
-        (pl.col("close") - rolling_low) / (rolling_high - rolling_low + 1e-10)
-    )
+    k_percent = 100 * ((pl.col("close") - rolling_low) / (rolling_high - rolling_low + 1e-10))
     expressions["stoch_k"] = k_percent
     expressions["stoch_d"] = k_percent.rolling_mean(window_size=3)
 
@@ -319,8 +318,10 @@ def calculate_indicators_batch(
     if volumes_arr is not None:
         price_change = pl.col("close").diff()
         obv_delta = (
-            pl.when(price_change > 0).then(pl.col("volume"))
-            .when(price_change < 0).then(-pl.col("volume"))
+            pl.when(price_change > 0)
+            .then(pl.col("volume"))
+            .when(price_change < 0)
+            .then(-pl.col("volume"))
             .otherwise(0)
         )
         expressions["obv"] = obv_delta.cum_sum()
@@ -339,18 +340,22 @@ def calculate_indicators_batch(
     # ========================================================================
 
     # Smart engine selection (GPU beneficial at 15K+ rows for batch)
-    exec_engine = EngineManager.select_engine_smart(
-        engine,
-        operation="batch_indicators",
-        data_size=data_size
+    exec_engine = EngineManager.select_engine(
+        engine, operation="batch_indicators", data_size=data_size
     )
 
     # Streaming decision (auto-enable at 500K+ rows)
     use_streaming = _should_use_streaming(data_size, streaming)
 
     # Execute lazy evaluation with streaming support
-    result = df.lazy().select(**expressions).collect(
-        engine="streaming" if use_streaming else exec_engine  # Process data in chunks if enabled
+    result = (
+        df.lazy()
+        .select(**expressions)
+        .collect(
+            engine=(
+                "streaming" if use_streaming else exec_engine
+            )  # Process data in chunks if enabled
+        )
     )
 
     # ========================================================================
@@ -379,10 +384,10 @@ def calculate_indicators_batch(
 
     # Signal line: EMA of MACD line (2nd pass, small array so no streaming needed)
     signal_df = pl.DataFrame({"macd": macd_line})
-    signal_result = signal_df.lazy().select(
-        signal=pl.col("macd").ewm_mean(span=9, adjust=False)
-    ).collect(
-        engine=exec_engine  # Small array, no need for streaming
+    signal_result = (
+        signal_df.lazy()
+        .select(signal=pl.col("macd").ewm_mean(span=9, adjust=False))
+        .collect(engine=exec_engine)  # Small array, no need for streaming
     )
     signal_line = signal_result["signal"].to_numpy()
 
@@ -420,18 +425,20 @@ if __name__ == "__main__":
     # Test batch calculation
     print("\nCalculating all indicators in batch...")
     results = calculate_indicators_batch(
-        highs, lows, closes, volumes,
-        engine="cpu",
-        streaming=False  # Small dataset
+        highs, lows, closes, volumes, engine="cpu", streaming=False  # Small dataset
     )
 
     print("\n✓ Batch calculation complete:")
     print(f"  ATR: {results['atr'].shape}")
     print(f"  RSI: {results['rsi'].shape}")
     print(f"  Stochastic: %K={results['stochastic'][0].shape}, %D={results['stochastic'][1].shape}")
-    print(f"  Bollinger: upper={results['bollinger'][0].shape}, middle={results['bollinger'][1].shape}, lower={results['bollinger'][2].shape}")
+    print(
+        f"  Bollinger: upper={results['bollinger'][0].shape}, middle={results['bollinger'][1].shape}, lower={results['bollinger'][2].shape}"
+    )
     print(f"  OBV: {results['obv'].shape if results['obv'] is not None else 'None'}")
-    print(f"  MACD: macd={results['macd'][0].shape}, signal={results['macd'][1].shape}, histogram={results['macd'][2].shape}")
+    print(
+        f"  MACD: macd={results['macd'][0].shape}, signal={results['macd'][1].shape}, histogram={results['macd'][2].shape}"
+    )
 
     # Test streaming with large dataset
     print(f"\n\nTesting streaming with large dataset...")
@@ -443,9 +450,11 @@ if __name__ == "__main__":
 
     print("Calculating with auto-streaming (should enable at 500K+)...")
     results_large = calculate_indicators_batch(
-        highs_large, lows_large, closes_large,
+        highs_large,
+        lows_large,
+        closes_large,
         engine="cpu",
-        streaming=None  # Should auto-enable at 500K+
+        streaming=None,  # Should auto-enable at 500K+
     )
     print("✓ Streaming mode worked - no OOM")
     print(f"  Result shape: {results_large['atr'].shape}")

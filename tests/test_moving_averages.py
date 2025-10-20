@@ -3,6 +3,7 @@ import polars as pl
 import pytest
 from kimsfinance.ops.moving_averages import calculate_sma
 
+
 def test_calculate_sma_basic():
     """Verify basic SMA calculation."""
     df = pl.DataFrame({"close": [1, 2, 3, 4, 5]})

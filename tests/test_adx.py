@@ -137,14 +137,19 @@ def test_trend_strength():
 
     # In strong uptrend:
     # 1. ADX should be > 25 (strong trend)
-    assert np.mean(adx_valid) > 25, f"Expected strong trend (ADX > 25), got {np.mean(adx_valid):.2f}"
+    assert (
+        np.mean(adx_valid) > 25
+    ), f"Expected strong trend (ADX > 25), got {np.mean(adx_valid):.2f}"
 
     # 2. +DI should be > -DI (upward movement)
-    assert np.mean(plus_di_valid) > np.mean(minus_di_valid), \
-        f"+DI ({np.mean(plus_di_valid):.2f}) should be > -DI ({np.mean(minus_di_valid):.2f})"
+    assert np.mean(plus_di_valid) > np.mean(
+        minus_di_valid
+    ), f"+DI ({np.mean(plus_di_valid):.2f}) should be > -DI ({np.mean(minus_di_valid):.2f})"
 
     # 3. +DI should be substantial
-    assert np.mean(plus_di_valid) > 20, f"Expected +DI > 20 in uptrend, got {np.mean(plus_di_valid):.2f}"
+    assert (
+        np.mean(plus_di_valid) > 20
+    ), f"Expected +DI > 20 in uptrend, got {np.mean(plus_di_valid):.2f}"
 
 
 def test_signal_generation():
@@ -164,18 +169,10 @@ def test_signal_generation():
     valid_idx = ~(np.isnan(plus_di) | np.isnan(minus_di))
 
     # Find where +DI crosses above -DI (bullish)
-    bullish_cross = (
-        (plus_di[1:] > minus_di[1:]) &
-        (plus_di[:-1] <= minus_di[:-1]) &
-        valid_idx[1:]
-    )
+    bullish_cross = (plus_di[1:] > minus_di[1:]) & (plus_di[:-1] <= minus_di[:-1]) & valid_idx[1:]
 
     # Find where -DI crosses above +DI (bearish)
-    bearish_cross = (
-        (minus_di[1:] > plus_di[1:]) &
-        (minus_di[:-1] <= plus_di[:-1]) &
-        valid_idx[1:]
-    )
+    bearish_cross = (minus_di[1:] > plus_di[1:]) & (minus_di[:-1] <= plus_di[:-1]) & valid_idx[1:]
 
     # Should detect at least one crossover in this data
     total_crosses = np.sum(bullish_cross) + np.sum(bearish_cross)
@@ -376,6 +373,6 @@ if __name__ == "__main__":
     test_invalid_inputs()
     print("✓ Passed")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("All ADX tests passed! ✓")
-    print("="*50)
+    print("=" * 50)

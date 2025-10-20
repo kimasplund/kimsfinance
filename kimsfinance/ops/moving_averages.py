@@ -73,8 +73,7 @@ def calculate_sma(
     # Validate inputs
     if column not in data.columns:
         raise DataValidationError(
-            f"Column {column!r} not found in DataFrame. "
-            f"Available columns: {data.columns}"
+            f"Column {column!r} not found in DataFrame. " f"Available columns: {data.columns}"
         )
 
     # Normalize windows to tuple
@@ -157,8 +156,7 @@ def calculate_ema(
     # Validate inputs (same as SMA)
     if column not in data.columns:
         raise DataValidationError(
-            f"Column {column!r} not found in DataFrame. "
-            f"Available columns: {data.columns}"
+            f"Column {column!r} not found in DataFrame. " f"Available columns: {data.columns}"
         )
 
     # Normalize windows to tuple
@@ -251,8 +249,7 @@ def calculate_multiple_mas(
     # Validate column
     if column not in data.columns:
         raise DataValidationError(
-            f"Column {column!r} not found in DataFrame. "
-            f"Available columns: {data.columns}"
+            f"Column {column!r} not found in DataFrame. " f"Available columns: {data.columns}"
         )
 
     # Select execution engine
@@ -339,9 +336,7 @@ def from_pandas_series(series: object, window: int, ma_type: str = "sma") -> Mov
 
     # Calculate MA
     exec_engine = EngineManager.select_engine_smart(
-        "auto",
-        operation="moving_average",
-        data_size=len(series)
+        "auto", operation="moving_average", data_size=len(series)
     )
     match ma_type.lower():
         case "sma":
@@ -359,9 +354,7 @@ if __name__ == "__main__":
     print("Testing Polars moving averages...")
 
     # Create test data
-    test_df = pl.DataFrame({
-        "close": [100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0]
-    })
+    test_df = pl.DataFrame({"close": [100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0]})
 
     print(f"\nTest data:\n{test_df}")
 
@@ -380,10 +373,7 @@ if __name__ == "__main__":
     # Test combined
     print("\nCalculating multiple MAs in single pass...")
     mas = calculate_multiple_mas(
-        test_df, "close",
-        sma_windows=[3, 5],
-        ema_windows=[3, 5],
-        engine="auto"
+        test_df, "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="auto"
     )
     print(f"Combined SMA results: {len(mas['sma'])} arrays")
     print(f"Combined EMA results: {len(mas['ema'])} arrays")

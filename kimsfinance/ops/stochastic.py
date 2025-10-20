@@ -40,7 +40,7 @@ def calculate_stochastic(
     k_period: int = 14,
     d_period: int = 3,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate Stochastic Oscillator (%K and %D).
@@ -139,7 +139,7 @@ def calculate_stochastic_rsi(
     k_smooth: int = 3,
     d_smooth: int = 3,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate Stochastic RSI (StochRSI).
@@ -190,6 +190,6 @@ def calculate_stochastic_rsi(
 
 # Re-export for convenience
 __all__ = [
-    'calculate_stochastic',
-    'calculate_stochastic_rsi',
+    "calculate_stochastic",
+    "calculate_stochastic_rsi",
 ]

@@ -32,7 +32,9 @@ import time
 from typing import Callable, Any
 
 
-def generate_ohlcv_data(n: int = 100, seed: int = 42, trend: str = "mixed") -> dict[str, np.ndarray]:
+def generate_ohlcv_data(
+    n: int = 100, seed: int = 42, trend: str = "mixed"
+) -> dict[str, np.ndarray]:
     """
     Generate test OHLCV data for indicators.
 
@@ -74,6 +76,7 @@ def gpu_available() -> bool:
     """Check if GPU is available."""
     try:
         import cupy
+
         cupy.cuda.runtime.getDeviceCount()
         return True
     except (ImportError, Exception):
@@ -131,8 +134,7 @@ class TestPhase1Integration:
 
         # Test Stochastic
         k, d = calculate_stochastic(
-            data["high"], data["low"], data["close"],
-            k_period=14, d_period=3, engine="cpu"
+            data["high"], data["low"], data["close"], k_period=14, d_period=3, engine="cpu"
         )
         assert len(k) == n, f"Stochastic %K length mismatch: {len(k)} != {n}"
         assert len(d) == n, f"Stochastic %D length mismatch: {len(d)} != {n}"
@@ -140,17 +142,13 @@ class TestPhase1Integration:
 
         # Test VWAP
         vwap = calculate_vwap(
-            data["high"], data["low"], data["close"], data["volume"],
-            engine="cpu"
+            data["high"], data["low"], data["close"], data["volume"], engine="cpu"
         )
         assert len(vwap) == n, f"VWAP length mismatch: {len(vwap)} != {n}"
         print(f"✓ VWAP: shape={vwap.shape}")
 
         # Test Ichimoku
-        ichimoku = calculate_ichimoku(
-            data["high"], data["low"], data["close"],
-            engine="cpu"
-        )
+        ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
         assert isinstance(ichimoku, dict), "Ichimoku should return dict"
         assert len(ichimoku) == 5, f"Ichimoku should have 5 lines, got {len(ichimoku)}"
         for key, value in ichimoku.items():
@@ -159,42 +157,37 @@ class TestPhase1Integration:
 
         # Test ADX
         adx, plus_di, minus_di = calculate_adx(
-            data["high"], data["low"], data["close"],
-            period=14, engine="cpu"
+            data["high"], data["low"], data["close"], period=14, engine="cpu"
         )
         assert len(adx) == n, f"ADX length mismatch: {len(adx)} != {n}"
         assert len(plus_di) == n, f"+DI length mismatch: {len(plus_di)} != {n}"
         assert len(minus_di) == n, f"-DI length mismatch: {len(minus_di)} != {n}"
-        print(f"✓ ADX: adx shape={adx.shape}, +DI shape={plus_di.shape}, -DI shape={minus_di.shape}")
+        print(
+            f"✓ ADX: adx shape={adx.shape}, +DI shape={plus_di.shape}, -DI shape={minus_di.shape}"
+        )
 
         # Test Williams %R
         williams = calculate_williams_r(
-            data["high"], data["low"], data["close"],
-            period=14, engine="cpu"
+            data["high"], data["low"], data["close"], period=14, engine="cpu"
         )
         assert len(williams) == n, f"Williams %R length mismatch: {len(williams)} != {n}"
         print(f"✓ Williams %R: shape={williams.shape}")
 
         # Test CCI
-        cci = calculate_cci(
-            data["high"], data["low"], data["close"],
-            period=20, engine="cpu"
-        )
+        cci = calculate_cci(data["high"], data["low"], data["close"], period=20, engine="cpu")
         assert len(cci) == n, f"CCI length mismatch: {len(cci)} != {n}"
         print(f"✓ CCI: shape={cci.shape}")
 
         # Test MFI
         mfi = calculate_mfi(
-            data["high"], data["low"], data["close"], data["volume"],
-            period=14, engine="cpu"
+            data["high"], data["low"], data["close"], data["volume"], period=14, engine="cpu"
         )
         assert len(mfi) == n, f"MFI length mismatch: {len(mfi)} != {n}"
         print(f"✓ MFI: shape={mfi.shape}")
 
         # Test Supertrend
         supertrend, direction = calculate_supertrend(
-            data["high"], data["low"], data["close"],
-            period=10, multiplier=3.0, engine="cpu"
+            data["high"], data["low"], data["close"], period=10, multiplier=3.0, engine="cpu"
         )
         assert len(supertrend) == n, f"Supertrend length mismatch: {len(supertrend)} != {n}"
         assert len(direction) == n, f"Supertrend direction length mismatch: {len(direction)} != {n}"
@@ -221,13 +214,21 @@ class TestPhase1Integration:
         try:
             # All should handle gracefully (may have NaN for initial values)
             k, d = calculate_stochastic(data["high"], data["low"], data["close"], engine="cpu")
-            vwap = calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+            vwap = calculate_vwap(
+                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+            )
             ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
-            adx, plus_di, minus_di = calculate_adx(data["high"], data["low"], data["close"], engine="cpu")
+            adx, plus_di, minus_di = calculate_adx(
+                data["high"], data["low"], data["close"], engine="cpu"
+            )
             williams = calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
             cci = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
-            mfi = calculate_mfi(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
-            supertrend, direction = calculate_supertrend(data["high"], data["low"], data["close"], engine="cpu")
+            mfi = calculate_mfi(
+                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+            )
+            supertrend, direction = calculate_supertrend(
+                data["high"], data["low"], data["close"], engine="cpu"
+            )
 
             print("✓ All indicators handle minimal data (50 rows) gracefully")
 
@@ -260,7 +261,9 @@ class TestPhase1Integration:
 
         # VWAP
         start = time.perf_counter()
-        vwap = calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+        vwap = calculate_vwap(
+            data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+        )
         vwap_time = (time.perf_counter() - start) * 1000
         results.append(("VWAP", vwap_time))
 
@@ -272,7 +275,9 @@ class TestPhase1Integration:
 
         # ADX
         start = time.perf_counter()
-        adx, plus_di, minus_di = calculate_adx(data["high"], data["low"], data["close"], engine="cpu")
+        adx, plus_di, minus_di = calculate_adx(
+            data["high"], data["low"], data["close"], engine="cpu"
+        )
         adx_time = (time.perf_counter() - start) * 1000
         results.append(("ADX", adx_time))
 
@@ -296,7 +301,9 @@ class TestPhase1Integration:
 
         # Supertrend
         start = time.perf_counter()
-        supertrend, direction = calculate_supertrend(data["high"], data["low"], data["close"], engine="cpu")
+        supertrend, direction = calculate_supertrend(
+            data["high"], data["low"], data["close"], engine="cpu"
+        )
         supertrend_time = (time.perf_counter() - start) * 1000
         results.append(("Supertrend", supertrend_time))
 
@@ -331,19 +338,26 @@ class TestPhase1Integration:
 
         # Calculate with CPU
         k_cpu, d_cpu = calculate_stochastic(data["high"], data["low"], data["close"], engine="cpu")
-        vwap_cpu = calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+        vwap_cpu = calculate_vwap(
+            data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+        )
 
         # Calculate with GPU
         k_gpu, d_gpu = calculate_stochastic(data["high"], data["low"], data["close"], engine="gpu")
-        vwap_gpu = calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="gpu")
+        vwap_gpu = calculate_vwap(
+            data["high"], data["low"], data["close"], data["volume"], engine="gpu"
+        )
 
         # Verify results match within tolerance (1e-6 relative tolerance)
-        np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-6, atol=1e-8,
-                                   err_msg="Stochastic %K CPU/GPU mismatch")
-        np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-6, atol=1e-8,
-                                   err_msg="Stochastic %D CPU/GPU mismatch")
-        np.testing.assert_allclose(vwap_cpu, vwap_gpu, rtol=1e-6, atol=1e-8,
-                                   err_msg="VWAP CPU/GPU mismatch")
+        np.testing.assert_allclose(
+            k_cpu, k_gpu, rtol=1e-6, atol=1e-8, err_msg="Stochastic %K CPU/GPU mismatch"
+        )
+        np.testing.assert_allclose(
+            d_cpu, d_gpu, rtol=1e-6, atol=1e-8, err_msg="Stochastic %D CPU/GPU mismatch"
+        )
+        np.testing.assert_allclose(
+            vwap_cpu, vwap_gpu, rtol=1e-6, atol=1e-8, err_msg="VWAP CPU/GPU mismatch"
+        )
 
         print("✓ GPU acceleration works correctly (results match CPU within tolerance)")
 
@@ -367,13 +381,21 @@ class TestPhase1Integration:
 
             # Run all indicators
             k, d = calculate_stochastic(data["high"], data["low"], data["close"], engine="cpu")
-            vwap = calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+            vwap = calculate_vwap(
+                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+            )
             ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
-            adx, plus_di, minus_di = calculate_adx(data["high"], data["low"], data["close"], engine="cpu")
+            adx, plus_di, minus_di = calculate_adx(
+                data["high"], data["low"], data["close"], engine="cpu"
+            )
             williams = calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
             cci = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
-            mfi = calculate_mfi(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
-            supertrend, direction = calculate_supertrend(data["high"], data["low"], data["close"], engine="cpu")
+            mfi = calculate_mfi(
+                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
+            )
+            supertrend, direction = calculate_supertrend(
+                data["high"], data["low"], data["close"], engine="cpu"
+            )
 
             # Verify appropriate signals generated (no NaN everywhere)
             assert not np.all(np.isnan(k)), f"Stochastic all NaN for {pattern} data"
@@ -406,55 +428,59 @@ class TestPhase1Integration:
         indicators = {}
 
         k, d = calculate_stochastic(data["high"], data["low"], data["close"], engine="cpu")
-        indicators['stochastic_k'] = k
-        indicators['stochastic_d'] = d
+        indicators["stochastic_k"] = k
+        indicators["stochastic_d"] = d
 
-        indicators['vwap'] = calculate_vwap(
+        indicators["vwap"] = calculate_vwap(
             data["high"], data["low"], data["close"], data["volume"], engine="cpu"
         )
 
         ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
-        indicators.update({f'ichimoku_{k}': v for k, v in ichimoku.items()})
+        indicators.update({f"ichimoku_{k}": v for k, v in ichimoku.items()})
 
-        adx, plus_di, minus_di = calculate_adx(data["high"], data["low"], data["close"], engine="cpu")
-        indicators['adx'] = adx
-        indicators['plus_di'] = plus_di
-        indicators['minus_di'] = minus_di
+        adx, plus_di, minus_di = calculate_adx(
+            data["high"], data["low"], data["close"], engine="cpu"
+        )
+        indicators["adx"] = adx
+        indicators["plus_di"] = plus_di
+        indicators["minus_di"] = minus_di
 
-        indicators['williams_r'] = calculate_williams_r(
+        indicators["williams_r"] = calculate_williams_r(
             data["high"], data["low"], data["close"], engine="cpu"
         )
 
-        indicators['cci'] = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
+        indicators["cci"] = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
 
-        indicators['mfi'] = calculate_mfi(
+        indicators["mfi"] = calculate_mfi(
             data["high"], data["low"], data["close"], data["volume"], engine="cpu"
         )
 
         supertrend, direction = calculate_supertrend(
             data["high"], data["low"], data["close"], engine="cpu"
         )
-        indicators['supertrend'] = supertrend
-        indicators['supertrend_direction'] = direction
+        indicators["supertrend"] = supertrend
+        indicators["supertrend_direction"] = direction
 
         # Verify no conflicts or issues
-        assert len(indicators) >= 14, f"Expected at least 14 indicator values, got {len(indicators)}"
+        assert (
+            len(indicators) >= 14
+        ), f"Expected at least 14 indicator values, got {len(indicators)}"
 
         # Test combining signals (example: multi-confirmation)
         valid_idx = 100  # After warmup period
 
         # Momentum confirmation: Stochastic oversold + Williams oversold
-        stoch_oversold = indicators['stochastic_k'][valid_idx] < 20
-        williams_oversold = indicators['williams_r'][valid_idx] < -80
+        stoch_oversold = indicators["stochastic_k"][valid_idx] < 20
+        williams_oversold = indicators["williams_r"][valid_idx] < -80
         momentum_oversold = stoch_oversold and williams_oversold
 
         # Volume confirmation: Price above VWAP and MFI not overbought
-        price_above_vwap = data['close'][valid_idx] > indicators['vwap'][valid_idx]
-        mfi_ok = indicators['mfi'][valid_idx] < 80
+        price_above_vwap = data["close"][valid_idx] > indicators["vwap"][valid_idx]
+        mfi_ok = indicators["mfi"][valid_idx] < 80
         volume_ok = price_above_vwap and mfi_ok
 
         # Trend confirmation: ADX > 25 (trending) and Supertrend direction
-        trending = indicators['adx'][valid_idx] > 25
+        trending = indicators["adx"][valid_idx] > 25
 
         print(f"✓ Multi-indicator strategy compatible:")
         print(f"  - Momentum oversold: {momentum_oversold}")
@@ -470,14 +496,14 @@ class TestPhase1Integration:
         ops_dir = dir(ops)
 
         required_indicators = [
-            'calculate_stochastic',
-            'calculate_vwap',
-            'calculate_ichimoku',
-            'calculate_adx',
-            'calculate_williams_r',
-            'calculate_cci',
-            'calculate_mfi',
-            'calculate_supertrend',
+            "calculate_stochastic",
+            "calculate_vwap",
+            "calculate_ichimoku",
+            "calculate_adx",
+            "calculate_williams_r",
+            "calculate_cci",
+            "calculate_mfi",
+            "calculate_supertrend",
         ]
 
         for indicator in required_indicators:
@@ -485,14 +511,18 @@ class TestPhase1Integration:
             assert hasattr(ops, indicator), f"{indicator} not accessible via ops.{indicator}"
 
         # Check all 8 in ops.__all__
-        if hasattr(ops, '__all__'):
+        if hasattr(ops, "__all__"):
             for indicator in required_indicators:
                 assert indicator in ops.__all__, f"{indicator} not in ops.__all__"
 
         print("✓ All 8 Phase 1 indicators exported consistently")
-        print(f"✓ All indicators in module dir: {all(ind in ops_dir for ind in required_indicators)}")
-        if hasattr(ops, '__all__'):
-            print(f"✓ All indicators in __all__: {all(ind in ops.__all__ for ind in required_indicators)}")
+        print(
+            f"✓ All indicators in module dir: {all(ind in ops_dir for ind in required_indicators)}"
+        )
+        if hasattr(ops, "__all__"):
+            print(
+                f"✓ All indicators in __all__: {all(ind in ops.__all__ for ind in required_indicators)}"
+            )
 
 
 if __name__ == "__main__":
@@ -525,5 +555,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ Integration test failed: {e}")
         import traceback
+
         traceback.print_exc()
         exit(1)

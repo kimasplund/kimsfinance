@@ -52,6 +52,7 @@ from PIL import Image, ImageDraw
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
 # Since the main package requires polars, we'll import the renderer module directly
 # by reading and executing it with necessary dependencies mocked
 def load_renderer_module():
@@ -63,18 +64,17 @@ def load_renderer_module():
 
     # Replace the problematic import
     renderer_code = renderer_code.replace(
-        "from ..core import to_numpy_array, ArrayLike",
-        "# Import replaced by benchmark script"
+        "from ..core import to_numpy_array, ArrayLike", "# Import replaced by benchmark script"
     )
 
     # Create module namespace with necessary functions
     namespace = {
-        '__name__': 'kimsfinance.plotting.renderer',
-        '__file__': str(renderer_path),
-        'Image': Image,
-        'ImageDraw': ImageDraw,
-        'np': np,
-        'to_numpy_array': lambda data: data if isinstance(data, np.ndarray) else np.asarray(data),
+        "__name__": "kimsfinance.plotting.renderer",
+        "__file__": str(renderer_path),
+        "Image": Image,
+        "ImageDraw": ImageDraw,
+        "np": np,
+        "to_numpy_array": lambda data: data if isinstance(data, np.ndarray) else np.asarray(data),
     }
 
     # Execute the renderer module code
@@ -82,16 +82,18 @@ def load_renderer_module():
 
     return namespace
 
+
 # Load the renderer functions
 renderer = load_renderer_module()
-render_ohlcv_chart = renderer['render_ohlcv_chart']
-save_chart = renderer['save_chart']
-THEMES = renderer['THEMES']
+render_ohlcv_chart = renderer["render_ohlcv_chart"]
+save_chart = renderer["save_chart"]
+THEMES = renderer["THEMES"]
 
 
 @dataclass
 class BenchmarkResult:
     """Container for benchmark results."""
+
     scenario: str
     num_candles: int
     render_time_ms: float
@@ -146,13 +148,13 @@ def generate_realistic_ohlcv_data(num_candles: int, seed: int = 42) -> dict[str,
     volume = np.random.lognormal(mean=10, sigma=1, size=num_candles).astype(np.int64)
 
     return {
-        'ohlc': {
-            'open': open_prices,
-            'high': high_prices,
-            'low': low_prices,
-            'close': close_prices,
+        "ohlc": {
+            "open": open_prices,
+            "high": high_prices,
+            "low": low_prices,
+            "close": close_prices,
         },
-        'volume': volume
+        "volume": volume,
     }
 
 
@@ -165,6 +167,7 @@ def measure_memory_usage() -> float:
     """
     try:
         import psutil
+
         process = psutil.Process()
         return process.memory_info().rss / 1024 / 1024
     except ImportError:
@@ -173,10 +176,7 @@ def measure_memory_usage() -> float:
 
 
 def benchmark_rendering(
-    num_candles: int,
-    scenario_name: str,
-    n_runs: int = 5,
-    **render_kwargs
+    num_candles: int, scenario_name: str, n_runs: int = 5, **render_kwargs
 ) -> BenchmarkResult:
     """
     Benchmark chart rendering with specified configuration.
@@ -194,7 +194,7 @@ def benchmark_rendering(
     data = generate_realistic_ohlcv_data(num_candles)
 
     # Warm-up run (JIT compilation, cache warming)
-    _ = render_ohlcv_chart(data['ohlc'], data['volume'], **render_kwargs)
+    _ = render_ohlcv_chart(data["ohlc"], data["volume"], **render_kwargs)
 
     # Measure memory before
     mem_before = measure_memory_usage()
@@ -203,7 +203,7 @@ def benchmark_rendering(
     render_times = []
     for _ in range(n_runs):
         start = time.perf_counter()
-        img = render_ohlcv_chart(data['ohlc'], data['volume'], **render_kwargs)
+        img = render_ohlcv_chart(data["ohlc"], data["volume"], **render_kwargs)
         end = time.perf_counter()
         render_times.append((end - start) * 1000)  # Convert to milliseconds
 
@@ -217,7 +217,7 @@ def benchmark_rendering(
     # Benchmark export file sizes
     file_sizes = {}
     with tempfile.TemporaryDirectory() as tmpdir:
-        for format in ['webp', 'png', 'jpeg']:
+        for format in ["webp", "png", "jpeg"]:
             filepath = os.path.join(tmpdir, f"test.{format}")
             save_chart(img, filepath)
             file_size_kb = os.path.getsize(filepath) / 1024
@@ -233,13 +233,12 @@ def benchmark_rendering(
         file_sizes=file_sizes,
         memory_mb=memory_mb,
         ops_per_sec=ops_per_sec,
-        config=render_kwargs
+        config=render_kwargs,
     )
 
 
 def benchmark_export_performance(
-    num_candles: int = 1000,
-    n_runs: int = 5
+    num_candles: int = 1000, n_runs: int = 5
 ) -> dict[str, dict[str, float]]:
     """
     Benchmark export performance for different formats.
@@ -253,11 +252,11 @@ def benchmark_export_performance(
     """
     # Generate data and render once
     data = generate_realistic_ohlcv_data(num_candles)
-    img = render_ohlcv_chart(data['ohlc'], data['volume'])
+    img = render_ohlcv_chart(data["ohlc"], data["volume"])
 
     results = {}
 
-    for format in ['webp', 'png', 'jpeg']:
+    for format in ["webp", "png", "jpeg"]:
         encode_times = []
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -277,16 +276,15 @@ def benchmark_export_performance(
             file_size_kb = os.path.getsize(filepath) / 1024
 
         results[format.upper()] = {
-            'encode_time_ms': float(np.median(encode_times)),
-            'file_size_kb': file_size_kb
+            "encode_time_ms": float(np.median(encode_times)),
+            "file_size_kb": file_size_kb,
         }
 
     return results
 
 
 def run_comprehensive_benchmarks(
-    dataset_sizes: list[int] = [100, 1000, 10000, 100000],
-    n_runs: int = 5
+    dataset_sizes: list[int] = [100, 1000, 10000, 100000], n_runs: int = 5
 ) -> list[BenchmarkResult]:
     """
     Run comprehensive benchmark suite covering all scenarios.
@@ -307,12 +305,12 @@ def run_comprehensive_benchmarks(
     print("\n[1/7] Benchmarking dataset size scaling...")
     for size in dataset_sizes:
         result = benchmark_rendering(
-            num_candles=size,
-            scenario_name=f"Baseline ({size:,} candles)",
-            n_runs=n_runs
+            num_candles=size, scenario_name=f"Baseline ({size:,} candles)", n_runs=n_runs
         )
         results.append(result)
-        print(f"  {size:>6,} candles: {result.render_time_ms:>8.2f} ms ({result.ops_per_sec:.2f} charts/sec)")
+        print(
+            f"  {size:>6,} candles: {result.render_time_ms:>8.2f} ms ({result.ops_per_sec:.2f} charts/sec)"
+        )
 
     # 2. RGB vs RGBA Mode
     print("\n[2/7] Benchmarking RGB vs RGBA mode...")
@@ -321,7 +319,7 @@ def run_comprehensive_benchmarks(
             num_candles=10000,
             scenario_name=f"{mode} mode",
             n_runs=n_runs,
-            enable_antialiasing=antialiasing
+            enable_antialiasing=antialiasing,
         )
         results.append(result)
         print(f"  {mode:4s} mode: {result.render_time_ms:>8.2f} ms")
@@ -334,19 +332,16 @@ def run_comprehensive_benchmarks(
             num_candles=10000,
             scenario_name=f"Grid {grid_str}",
             n_runs=n_runs,
-            show_grid=grid_enabled
+            show_grid=grid_enabled,
         )
         results.append(result)
         print(f"  {grid_str:7s} grid: {result.render_time_ms:>8.2f} ms")
 
     # 4. Theme Comparison
     print("\n[4/7] Benchmarking all themes (verify no performance difference)...")
-    for theme_name in ['classic', 'modern', 'tradingview', 'light']:
+    for theme_name in ["classic", "modern", "tradingview", "light"]:
         result = benchmark_rendering(
-            num_candles=10000,
-            scenario_name=f"Theme: {theme_name}",
-            n_runs=n_runs,
-            theme=theme_name
+            num_candles=10000, scenario_name=f"Theme: {theme_name}", n_runs=n_runs, theme=theme_name
         )
         results.append(result)
         print(f"  {theme_name:12s}: {result.render_time_ms:>8.2f} ms")
@@ -358,20 +353,24 @@ def run_comprehensive_benchmarks(
             num_candles=10000,
             scenario_name=f"Wick width ratio: {wick_ratio}",
             n_runs=n_runs,
-            wick_width_ratio=wick_ratio
+            wick_width_ratio=wick_ratio,
         )
         results.append(result)
         print(f"  Ratio {wick_ratio:.2f}: {result.render_time_ms:>8.2f} ms")
 
     # 6. Resolution Scaling
     print("\n[6/7] Benchmarking different resolutions...")
-    for res_width, res_height, res_name in [(1280, 720, "720p"), (1920, 1080, "1080p"), (3840, 2160, "4K")]:
+    for res_width, res_height, res_name in [
+        (1280, 720, "720p"),
+        (1920, 1080, "1080p"),
+        (3840, 2160, "4K"),
+    ]:
         result = benchmark_rendering(
             num_candles=10000,
             scenario_name=f"Resolution: {res_name}",
             n_runs=n_runs,
             width=res_width,
-            height=res_height
+            height=res_height,
         )
         results.append(result)
         print(f"  {res_name:4s}: {result.render_time_ms:>8.2f} ms")
@@ -384,8 +383,8 @@ def run_comprehensive_benchmarks(
         n_runs=n_runs,
         enable_antialiasing=True,
         show_grid=True,
-        theme='tradingview',
-        wick_width_ratio=0.1
+        theme="tradingview",
+        wick_width_ratio=0.1,
     )
     results.append(result)
     print(f"  All features: {result.render_time_ms:>8.2f} ms")
@@ -397,8 +396,7 @@ def run_comprehensive_benchmarks(
 
 
 def format_results_markdown(
-    results: list[BenchmarkResult],
-    export_perf: dict[str, dict[str, float]]
+    results: list[BenchmarkResult], export_perf: dict[str, dict[str, float]]
 ) -> str:
     """
     Format benchmark results as markdown tables.
@@ -462,7 +460,9 @@ def format_results_markdown(
     rgba_result = next((r for r in results if r.scenario == "RGBA mode"), None)
 
     if rgb_result and rgba_result:
-        overhead = ((rgba_result.render_time_ms - rgb_result.render_time_ms) / rgb_result.render_time_ms) * 100
+        overhead = (
+            (rgba_result.render_time_ms - rgb_result.render_time_ms) / rgb_result.render_time_ms
+        ) * 100
         md.append(
             f"| RGB  | {rgb_result.render_time_ms:>15.2f} | "
             f"{rgb_result.file_sizes.get('WEBP', 0):>19.1f} | "
@@ -489,7 +489,9 @@ def format_results_markdown(
     with_grid = next((r for r in results if r.scenario == "Grid with"), None)
 
     if no_grid and with_grid:
-        overhead = ((with_grid.render_time_ms - no_grid.render_time_ms) / no_grid.render_time_ms) * 100
+        overhead = (
+            (with_grid.render_time_ms - no_grid.render_time_ms) / no_grid.render_time_ms
+        ) * 100
         md.append(f"| Without grid | {no_grid.render_time_ms:>15.2f} | baseline |")
         md.append(f"| With grid    | {with_grid.render_time_ms:>15.2f} | +{overhead:>5.1f}% |")
     md.append("")
@@ -551,15 +553,17 @@ def format_results_markdown(
     # Export Format Performance
     md.append("## 7. Export Format Performance")
     md.append("")
-    md.append("Encoding time and file size comparison for different formats (1000 candles, 1920x1080).")
+    md.append(
+        "Encoding time and file size comparison for different formats (1000 candles, 1920x1080)."
+    )
     md.append("")
     md.append("| Format | Encode Time (ms) | File Size (KB) | Compression |")
     md.append("|--------|------------------|----------------|-------------|")
 
     if export_perf:
-        baseline_size = export_perf.get('PNG', {}).get('file_size_kb', 1)
+        baseline_size = export_perf.get("PNG", {}).get("file_size_kb", 1)
         for fmt, data in sorted(export_perf.items()):
-            compression_ratio = baseline_size / data['file_size_kb']
+            compression_ratio = baseline_size / data["file_size_kb"]
             md.append(
                 f"| {fmt:6s} | "
                 f"{data['encode_time_ms']:>15.2f} | "
@@ -567,7 +571,9 @@ def format_results_markdown(
                 f"{compression_ratio:>10.2f}x |"
             )
     md.append("")
-    md.append("**Note:** Pillow 11+ uses zlib-ng for PNG compression, providing 2-3x faster encoding.")
+    md.append(
+        "**Note:** Pillow 11+ uses zlib-ng for PNG compression, providing 2-3x faster encoding."
+    )
     md.append("")
 
     # Combined Features
@@ -577,16 +583,22 @@ def format_results_markdown(
     md.append("")
 
     combined = next((r for r in results if r.scenario == "All features enabled"), None)
-    baseline = next((r for r in results if "10,000 candles" in r.scenario and "Baseline" in r.scenario), None)
+    baseline = next(
+        (r for r in results if "10,000 candles" in r.scenario and "Baseline" in r.scenario), None
+    )
 
     if combined and baseline:
-        overhead = ((combined.render_time_ms - baseline.render_time_ms) / baseline.render_time_ms) * 100
+        overhead = (
+            (combined.render_time_ms - baseline.render_time_ms) / baseline.render_time_ms
+        ) * 100
         md.append("| Configuration   | Render Time (ms) | Overhead |")
         md.append("|----------------|------------------|----------|")
         md.append(f"| Baseline       | {baseline.render_time_ms:>15.2f} | baseline |")
         md.append(f"| All features   | {combined.render_time_ms:>15.2f} | +{overhead:>5.1f}% |")
         md.append("")
-        md.append(f"**Performance:** {combined.ops_per_sec:.2f} charts/second with all features enabled.")
+        md.append(
+            f"**Performance:** {combined.ops_per_sec:.2f} charts/second with all features enabled."
+        )
     md.append("")
 
     # Key Findings
@@ -594,38 +606,60 @@ def format_results_markdown(
     md.append("")
 
     if rgb_result and rgba_result:
-        rgba_overhead = ((rgba_result.render_time_ms - rgb_result.render_time_ms) / rgb_result.render_time_ms) * 100
-        md.append(f"1. **RGBA Mode:** Adds ~{rgba_overhead:.1f}% overhead for antialiasing (worth it for quality)")
+        rgba_overhead = (
+            (rgba_result.render_time_ms - rgb_result.render_time_ms) / rgb_result.render_time_ms
+        ) * 100
+        md.append(
+            f"1. **RGBA Mode:** Adds ~{rgba_overhead:.1f}% overhead for antialiasing (worth it for quality)"
+        )
 
     if no_grid and with_grid:
-        grid_overhead = ((with_grid.render_time_ms - no_grid.render_time_ms) / no_grid.render_time_ms) * 100
+        grid_overhead = (
+            (with_grid.render_time_ms - no_grid.render_time_ms) / no_grid.render_time_ms
+        ) * 100
         md.append(f"2. **Grid Lines:** Adds ~{grid_overhead:.1f}% overhead (minimal impact)")
 
     md.append("3. **Themes:** No measurable performance difference between themes")
     md.append("4. **Wick Width:** Variable wick widths have negligible performance impact")
 
     # Find 100K candle result for scaling conclusion
-    large_result = next((r for r in results if r.num_candles == 100000 and "Baseline" in r.scenario), None)
+    large_result = next(
+        (r for r in results if r.num_candles == 100000 and "Baseline" in r.scenario), None
+    )
     if large_result:
-        md.append(f"5. **Scalability:** Renders 100K candles in {large_result.render_time_ms:.0f}ms (~{large_result.ops_per_sec:.2f} charts/sec)")
+        md.append(
+            f"5. **Scalability:** Renders 100K candles in {large_result.render_time_ms:.0f}ms (~{large_result.ops_per_sec:.2f} charts/sec)"
+        )
 
     if export_perf:
-        webp_data = export_perf.get('WEBP', {})
-        png_data = export_perf.get('PNG', {})
+        webp_data = export_perf.get("WEBP", {})
+        png_data = export_perf.get("PNG", {})
         if webp_data and png_data:
-            size_reduction = ((png_data['file_size_kb'] - webp_data['file_size_kb']) / png_data['file_size_kb']) * 100
-            md.append(f"6. **WebP Format:** ~{size_reduction:.0f}% smaller files than PNG (lossless)")
+            size_reduction = (
+                (png_data["file_size_kb"] - webp_data["file_size_kb"]) / png_data["file_size_kb"]
+            ) * 100
+            md.append(
+                f"6. **WebP Format:** ~{size_reduction:.0f}% smaller files than PNG (lossless)"
+            )
 
     md.append("")
 
     # Recommendations
     md.append("## Recommendations")
     md.append("")
-    md.append("1. **Use RGBA mode** (enable_antialiasing=True) for production - the quality improvement is worth the ~5-10% overhead")
-    md.append("2. **Enable grid lines** (show_grid=True) - minimal performance impact (<5% overhead)")
-    md.append("3. **Use WebP format** for storage - significantly smaller files with no quality loss")
+    md.append(
+        "1. **Use RGBA mode** (enable_antialiasing=True) for production - the quality improvement is worth the ~5-10% overhead"
+    )
+    md.append(
+        "2. **Enable grid lines** (show_grid=True) - minimal performance impact (<5% overhead)"
+    )
+    md.append(
+        "3. **Use WebP format** for storage - significantly smaller files with no quality loss"
+    )
     md.append("4. **Use PNG format** for compatibility - Pillow 11+ zlib-ng makes it fast enough")
-    md.append("5. **Avoid JPEG** for candlestick charts - lossy compression artifacts on sharp lines")
+    md.append(
+        "5. **Avoid JPEG** for candlestick charts - lossy compression artifacts on sharp lines"
+    )
     md.append("6. **Choose any theme** - performance is identical, purely aesthetic choice")
     md.append("")
 
@@ -644,23 +678,20 @@ def main():
 
     parser = argparse.ArgumentParser(description="Benchmark candlestick chart renderer")
     parser.add_argument(
-        '--sizes',
+        "--sizes",
         type=int,
-        nargs='+',
+        nargs="+",
         default=[100, 1000, 10000, 100000],
-        help='Dataset sizes to test (default: 100 1000 10000 100000)'
+        help="Dataset sizes to test (default: 100 1000 10000 100000)",
     )
     parser.add_argument(
-        '--n-runs',
-        type=int,
-        default=5,
-        help='Number of runs per benchmark (default: 5)'
+        "--n-runs", type=int, default=5, help="Number of runs per benchmark (default: 5)"
     )
     parser.add_argument(
-        '--output',
+        "--output",
         type=str,
-        default='BENCHMARK_RESULTS.md',
-        help='Output markdown file (default: BENCHMARK_RESULTS.md)'
+        default="BENCHMARK_RESULTS.md",
+        help="Output markdown file (default: BENCHMARK_RESULTS.md)",
     )
 
     args = parser.parse_args()
@@ -677,10 +708,7 @@ def main():
     print(f"Runs per benchmark: {args.n_runs}")
 
     # Run comprehensive benchmarks
-    results = run_comprehensive_benchmarks(
-        dataset_sizes=args.sizes,
-        n_runs=args.n_runs
-    )
+    results = run_comprehensive_benchmarks(dataset_sizes=args.sizes, n_runs=args.n_runs)
 
     # Benchmark export performance separately
     print("\nBenchmarking export format performance...")
@@ -707,13 +735,17 @@ def main():
     all_times = [r.render_time_ms for r in results]
     print(f"Render time range: {min(all_times):.2f} - {max(all_times):.2f} ms")
 
-    baseline_10k = next((r for r in results if r.num_candles == 10000 and "Baseline" in r.scenario), None)
+    baseline_10k = next(
+        (r for r in results if r.num_candles == 10000 and "Baseline" in r.scenario), None
+    )
     if baseline_10k:
-        print(f"10K candles baseline: {baseline_10k.render_time_ms:.2f} ms ({baseline_10k.ops_per_sec:.2f} charts/sec)")
+        print(
+            f"10K candles baseline: {baseline_10k.render_time_ms:.2f} ms ({baseline_10k.ops_per_sec:.2f} charts/sec)"
+        )
 
     print(f"\nView full results in {args.output}")
     print("")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
