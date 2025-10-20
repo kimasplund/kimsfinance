@@ -335,7 +335,7 @@ def from_pandas_series(series: object, window: int, ma_type: str = "sma") -> Mov
     df = pl.DataFrame({"_data": series})
 
     # Calculate MA
-    exec_engine = EngineManager.select_engine_smart(
+    exec_engine = EngineManager.select_engine(
         "auto", operation="moving_average", data_size=len(series)
     )
     match ma_type.lower():
