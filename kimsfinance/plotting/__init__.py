@@ -12,7 +12,7 @@ from .renderer import (
     render_ohlc_bars_svg,
     render_line_chart_svg,
     render_pnf_chart_svg,
-    THEMES
+    THEMES,
 )
 from .parallel import render_charts_parallel
 
@@ -29,5 +29,5 @@ __all__ = [
     "render_line_chart_svg",
     "render_pnf_chart_svg",
     "THEMES",
-    "render_charts_parallel"
+    "render_charts_parallel",
 ]

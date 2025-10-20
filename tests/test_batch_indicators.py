@@ -19,6 +19,7 @@ from unittest.mock import patch
 # Import will fail until batch.py is implemented - that's expected
 try:
     from kimsfinance.ops.batch import calculate_indicators_batch
+
     BATCH_AVAILABLE = True
 except ImportError:
     BATCH_AVAILABLE = False
@@ -36,15 +37,13 @@ from kimsfinance.core import EngineManager
 
 
 # Skip all tests if batch module not yet implemented
-pytestmark = pytest.mark.skipif(
-    not BATCH_AVAILABLE,
-    reason="batch.py not yet implemented"
-)
+pytestmark = pytest.mark.skipif(not BATCH_AVAILABLE, reason="batch.py not yet implemented")
 
 
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def small_ohlcv_data():
@@ -86,6 +85,7 @@ def large_ohlcv_data():
 # Correctness Tests (PRIMARY)
 # ============================================================================
 
+
 class TestBatchCorrectness:
     """
     Test that batch results match individual indicator results.
@@ -103,22 +103,23 @@ class TestBatchCorrectness:
 
         # Batch calculation
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         atr_batch = batch_results["atr"]
 
         # Compare (within floating-point precision)
         np.testing.assert_allclose(
-            atr_batch, atr_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch ATR does not match individual ATR"
+            atr_batch,
+            atr_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch ATR does not match individual ATR",
         )
 
         # Verify shape
-        assert atr_batch.shape == atr_individual.shape, \
-            "Batch ATR shape should match individual ATR shape"
+        assert (
+            atr_batch.shape == atr_individual.shape
+        ), "Batch ATR shape should match individual ATR shape"
 
     def test_batch_rsi_matches_individual(self, small_ohlcv_data):
         """Batch RSI should match individual calculate_rsi()."""
@@ -127,16 +128,16 @@ class TestBatchCorrectness:
         rsi_individual = calculate_rsi(closes, 14, engine="cpu")
 
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         rsi_batch = batch_results["rsi"]
 
         np.testing.assert_allclose(
-            rsi_batch, rsi_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch RSI does not match individual RSI"
+            rsi_batch,
+            rsi_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch RSI does not match individual RSI",
         )
 
         assert rsi_batch.shape == rsi_individual.shape
@@ -150,21 +151,23 @@ class TestBatchCorrectness:
         )
 
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         k_batch, d_batch = batch_results["stochastic"]
 
         np.testing.assert_allclose(
-            k_batch, k_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch Stochastic %K does not match individual"
+            k_batch,
+            k_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch Stochastic %K does not match individual",
         )
         np.testing.assert_allclose(
-            d_batch, d_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch Stochastic %D does not match individual"
+            d_batch,
+            d_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch Stochastic %D does not match individual",
         )
 
         assert k_batch.shape == k_individual.shape
@@ -174,31 +177,33 @@ class TestBatchCorrectness:
         """Batch Bollinger Bands should match individual calculation."""
         highs, lows, closes, volumes = small_ohlcv_data
 
-        upper_ind, middle_ind, lower_ind = calculate_bollinger_bands(
-            closes, 20, 2.0, engine="cpu"
-        )
+        upper_ind, middle_ind, lower_ind = calculate_bollinger_bands(closes, 20, 2.0, engine="cpu")
 
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         upper_batch, middle_batch, lower_batch = batch_results["bollinger"]
 
         np.testing.assert_allclose(
-            upper_batch, upper_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch Bollinger upper band does not match individual"
+            upper_batch,
+            upper_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch Bollinger upper band does not match individual",
         )
         np.testing.assert_allclose(
-            middle_batch, middle_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch Bollinger middle band does not match individual"
+            middle_batch,
+            middle_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch Bollinger middle band does not match individual",
         )
         np.testing.assert_allclose(
-            lower_batch, lower_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch Bollinger lower band does not match individual"
+            lower_batch,
+            lower_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch Bollinger lower band does not match individual",
         )
 
         assert upper_batch.shape == upper_ind.shape
@@ -212,16 +217,16 @@ class TestBatchCorrectness:
         obv_individual = calculate_obv(closes, volumes, engine="cpu")
 
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         obv_batch = batch_results["obv"]
 
         np.testing.assert_allclose(
-            obv_batch, obv_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch OBV does not match individual OBV"
+            obv_batch,
+            obv_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch OBV does not match individual OBV",
         )
 
         assert obv_batch.shape == obv_individual.shape
@@ -230,42 +235,47 @@ class TestBatchCorrectness:
         """Batch MACD should match individual calculate_macd()."""
         highs, lows, closes, volumes = small_ohlcv_data
 
-        macd_ind, signal_ind, hist_ind = calculate_macd(
-            closes, 12, 26, 9, engine="cpu"
-        )
+        macd_ind, signal_ind, hist_ind = calculate_macd(closes, 12, 26, 9, engine="cpu")
 
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         macd_batch, signal_batch, hist_batch = batch_results["macd"]
 
         np.testing.assert_allclose(
-            macd_batch, macd_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch MACD line does not match individual"
+            macd_batch,
+            macd_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch MACD line does not match individual",
         )
         np.testing.assert_allclose(
-            signal_batch, signal_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch MACD signal does not match individual"
+            signal_batch,
+            signal_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch MACD signal does not match individual",
         )
         np.testing.assert_allclose(
-            hist_batch, hist_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch MACD histogram does not match individual"
+            hist_batch,
+            hist_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch MACD histogram does not match individual",
         )
 
         assert macd_batch.shape == macd_ind.shape
         assert signal_batch.shape == signal_ind.shape
         assert hist_batch.shape == hist_ind.shape
 
-    @pytest.mark.parametrize("dataset_fixture", [
-        "small_ohlcv_data",
-        "medium_ohlcv_data",
-        "large_ohlcv_data",
-    ])
+    @pytest.mark.parametrize(
+        "dataset_fixture",
+        [
+            "small_ohlcv_data",
+            "medium_ohlcv_data",
+            "large_ohlcv_data",
+        ],
+    )
     def test_correctness_across_dataset_sizes(self, dataset_fixture, request):
         """Test correctness across small, medium, and large datasets."""
         highs, lows, closes, volumes = request.getfixturevalue(dataset_fixture)
@@ -277,39 +287,46 @@ class TestBatchCorrectness:
 
         # Calculate all indicators in batch
         batch_results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Verify ATR, RSI, and Stochastic match (representative indicators)
         np.testing.assert_allclose(
-            batch_results["atr"], atr_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg=f"ATR mismatch for {dataset_fixture}"
+            batch_results["atr"],
+            atr_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"ATR mismatch for {dataset_fixture}",
         )
         np.testing.assert_allclose(
-            batch_results["rsi"], rsi_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg=f"RSI mismatch for {dataset_fixture}"
+            batch_results["rsi"],
+            rsi_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"RSI mismatch for {dataset_fixture}",
         )
 
         k_batch, d_batch = batch_results["stochastic"]
         np.testing.assert_allclose(
-            k_batch, k_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg=f"Stochastic %K mismatch for {dataset_fixture}"
+            k_batch,
+            k_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Stochastic %K mismatch for {dataset_fixture}",
         )
         np.testing.assert_allclose(
-            d_batch, d_ind,
-            rtol=1e-10, atol=1e-10,
-            err_msg=f"Stochastic %D mismatch for {dataset_fixture}"
+            d_batch,
+            d_ind,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg=f"Stochastic %D mismatch for {dataset_fixture}",
         )
 
 
 # ============================================================================
 # Streaming Tests (Critical for Memory Management)
 # ============================================================================
+
 
 class TestBatchStreaming:
     """
@@ -325,16 +342,12 @@ class TestBatchStreaming:
 
         # Without streaming
         results_no_stream = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # With streaming
         results_with_stream = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=True
+            highs, lows, closes, volumes, engine="cpu", streaming=True
         )
 
         # Compare all indicators
@@ -344,20 +357,19 @@ class TestBatchStreaming:
 
             if isinstance(result_no, tuple):
                 # Multi-value indicators (stochastic, bollinger, macd)
-                assert len(result_no) == len(result_yes), \
-                    f"Tuple length mismatch for {key}"
+                assert len(result_no) == len(result_yes), f"Tuple length mismatch for {key}"
                 for i, (a, b) in enumerate(zip(result_no, result_yes)):
                     np.testing.assert_allclose(
-                        a, b,
-                        rtol=1e-10, atol=1e-10,
-                        err_msg=f"Streaming mismatch for {key}[{i}]"
+                        a, b, rtol=1e-10, atol=1e-10, err_msg=f"Streaming mismatch for {key}[{i}]"
                     )
             else:
                 # Single-value indicators (atr, rsi, obv)
                 np.testing.assert_allclose(
-                    result_no, result_yes,
-                    rtol=1e-10, atol=1e-10,
-                    err_msg=f"Streaming mismatch for {key}"
+                    result_no,
+                    result_yes,
+                    rtol=1e-10,
+                    atol=1e-10,
+                    err_msg=f"Streaming mismatch for {key}",
                 )
 
     def test_streaming_auto_enables_at_threshold(self, large_ohlcv_data):
@@ -367,22 +379,20 @@ class TestBatchStreaming:
         # streaming=None should auto-enable at 500K+
         # This test verifies it doesn't crash (OOM protection)
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=None  # Auto-enable
+            highs, lows, closes, volumes, engine="cpu", streaming=None  # Auto-enable
         )
 
         # Verify results are valid
-        assert results["atr"].shape[0] == len(closes), \
-            "ATR should have same length as input"
-        assert results["rsi"].shape[0] == len(closes), \
-            "RSI should have same length as input"
+        assert results["atr"].shape[0] == len(closes), "ATR should have same length as input"
+        assert results["rsi"].shape[0] == len(closes), "RSI should have same length as input"
 
         # Verify no NaN at end (streaming shouldn't introduce artifacts)
-        assert not np.isnan(results["atr"][-1]) or np.isnan(results["atr"][-2]), \
-            "ATR should have valid values at end"
-        assert not np.isnan(results["rsi"][-1]) or np.isnan(results["rsi"][-2]), \
-            "RSI should have valid values at end"
+        assert not np.isnan(results["atr"][-1]) or np.isnan(
+            results["atr"][-2]
+        ), "ATR should have valid values at end"
+        assert not np.isnan(results["rsi"][-1]) or np.isnan(
+            results["rsi"][-2]
+        ), "RSI should have valid values at end"
 
     def test_streaming_with_small_data_same_as_no_streaming(self, small_ohlcv_data):
         """Streaming with small data should behave same as no streaming."""
@@ -390,16 +400,12 @@ class TestBatchStreaming:
 
         # Force streaming on small data
         results_streaming = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=True
+            highs, lows, closes, volumes, engine="cpu", streaming=True
         )
 
         # No streaming
         results_no_streaming = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Should be identical
@@ -410,21 +416,26 @@ class TestBatchStreaming:
             if isinstance(result_stream, tuple):
                 for i, (a, b) in enumerate(zip(result_stream, result_no_stream)):
                     np.testing.assert_allclose(
-                        a, b,
-                        rtol=1e-10, atol=1e-10,
-                        err_msg=f"Small data streaming mismatch for {key}[{i}]"
+                        a,
+                        b,
+                        rtol=1e-10,
+                        atol=1e-10,
+                        err_msg=f"Small data streaming mismatch for {key}[{i}]",
                     )
             else:
                 np.testing.assert_allclose(
-                    result_stream, result_no_stream,
-                    rtol=1e-10, atol=1e-10,
-                    err_msg=f"Small data streaming mismatch for {key}"
+                    result_stream,
+                    result_no_stream,
+                    rtol=1e-10,
+                    atol=1e-10,
+                    err_msg=f"Small data streaming mismatch for {key}",
                 )
 
 
 # ============================================================================
 # Engine Selection Tests
 # ============================================================================
+
 
 class TestBatchEngineSelection:
     """Test smart engine selection for batch operations."""
@@ -437,53 +448,47 @@ class TestBatchEngineSelection:
         """Batch should use CPU for datasets < 15K rows."""
         highs, lows, closes, volumes = small_ohlcv_data
 
-        with patch.object(EngineManager, 'check_gpu_available', return_value=True):
-            results = calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="auto"
-            )
+        with patch.object(EngineManager, "check_gpu_available", return_value=True):
+            results = calculate_indicators_batch(highs, lows, closes, volumes, engine="auto")
 
             # Should complete successfully (implies CPU used)
             assert results["atr"].shape[0] == len(closes)
             assert results["rsi"].shape[0] == len(closes)
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_batch_gpu_threshold_is_15k(self, mock_gpu):
         """Batch GPU threshold should be 15K (vs 100K for individual)."""
         from kimsfinance.core.engine import GPU_CROSSOVER_THRESHOLDS
 
         # Verify batch_indicators threshold exists
-        assert "batch_indicators" in GPU_CROSSOVER_THRESHOLDS, \
-            "batch_indicators should have GPU threshold"
+        assert (
+            "batch_indicators" in GPU_CROSSOVER_THRESHOLDS
+        ), "batch_indicators should have GPU threshold"
 
         # Verify it's 15K as per design document
-        assert GPU_CROSSOVER_THRESHOLDS["batch_indicators"] == 15_000, \
-            "Batch indicators threshold should be 15K rows"
+        assert (
+            GPU_CROSSOVER_THRESHOLDS["batch_indicators"] == 15_000
+        ), "Batch indicators threshold should be 15K rows"
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_batch_explicit_cpu_ignores_size(self, mock_gpu, large_ohlcv_data):
         """Batch with engine='cpu' uses CPU regardless of data size."""
         highs, lows, closes, volumes = large_ohlcv_data
 
         # Even with large data, explicit CPU should be used
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         assert results["atr"].shape[0] == len(closes)
         assert results["rsi"].shape[0] == len(closes)
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=False)
+    @patch.object(EngineManager, "check_gpu_available", return_value=False)
     def test_batch_auto_falls_back_to_cpu_without_gpu(self, mock_gpu, large_ohlcv_data):
         """Batch with engine='auto' uses CPU when GPU unavailable."""
         highs, lows, closes, volumes = large_ohlcv_data
 
-        results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="auto"
-        )
+        results = calculate_indicators_batch(highs, lows, closes, volumes, engine="auto")
 
         # Should complete on CPU
         assert results["atr"].shape[0] == len(closes)
@@ -494,6 +499,7 @@ class TestBatchEngineSelection:
 # Edge Cases and Error Handling
 # ============================================================================
 
+
 class TestBatchEdgeCases:
     """Test edge cases and error handling."""
 
@@ -502,14 +508,13 @@ class TestBatchEdgeCases:
         highs, lows, closes, _ = small_ohlcv_data
 
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes=None,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes=None, engine="cpu", streaming=False
         )
 
         # OBV should not be in results
-        assert "obv" not in results or results["obv"] is None, \
-            "OBV should be skipped when volumes not provided"
+        assert (
+            "obv" not in results or results["obv"] is None
+        ), "OBV should be skipped when volumes not provided"
 
         # Other indicators should work
         assert "atr" in results
@@ -528,9 +533,7 @@ class TestBatchEdgeCases:
         volumes = np.abs(np.random.randn(n) * 1000000)
 
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Should complete without error
@@ -543,9 +546,7 @@ class TestBatchEdgeCases:
 
         # Batch always calculates all indicators
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Should contain all indicators
@@ -562,9 +563,7 @@ class TestBatchEdgeCases:
 
         # Batch uses standard periods (ATR=14, RSI=14, etc.)
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Calculate individual with same standard periods
@@ -573,14 +572,18 @@ class TestBatchEdgeCases:
 
         # Should match (batch uses period=14 for both)
         np.testing.assert_allclose(
-            results["atr"], atr_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch ATR should match individual with period=14"
+            results["atr"],
+            atr_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch ATR should match individual with period=14",
         )
         np.testing.assert_allclose(
-            results["rsi"], rsi_individual,
-            rtol=1e-10, atol=1e-10,
-            err_msg="Batch RSI should match individual with period=14"
+            results["rsi"],
+            rsi_individual,
+            rtol=1e-10,
+            atol=1e-10,
+            err_msg="Batch RSI should match individual with period=14",
         )
 
     def test_batch_with_nan_in_data(self, small_ohlcv_data):
@@ -593,9 +596,7 @@ class TestBatchEdgeCases:
 
         # Should not crash
         results = calculate_indicators_batch(
-            highs, lows, closes_with_nan, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes_with_nan, volumes, engine="cpu", streaming=False
         )
 
         # Results should exist (behavior depends on indicator)
@@ -608,9 +609,7 @@ class TestBatchEdgeCases:
         highs, lows, closes, volumes = small_ohlcv_data
 
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
 
         # Single-value indicators return numpy arrays
@@ -633,6 +632,7 @@ class TestBatchEdgeCases:
 # API Validation Tests
 # ============================================================================
 
+
 class TestBatchAPIValidation:
     """Test API parameter validation and error handling."""
 
@@ -643,10 +643,7 @@ class TestBatchAPIValidation:
         highs, lows, closes, volumes = small_ohlcv_data
 
         with pytest.raises(ConfigurationError):
-            calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="invalid"
-            )
+            calculate_indicators_batch(highs, lows, closes, volumes, engine="invalid")
 
     def test_batch_mismatched_array_lengths_raises_error(self):
         """Mismatched OHLCV array lengths should raise ValueError."""
@@ -656,10 +653,7 @@ class TestBatchAPIValidation:
         volumes = np.array([100, 200, 300])
 
         with pytest.raises(ValueError):
-            calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="cpu"
-            )
+            calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu")
 
     def test_batch_empty_array_raises_error(self):
         """Empty arrays should raise ValueError."""
@@ -669,10 +663,7 @@ class TestBatchAPIValidation:
         volumes = np.array([])
 
         with pytest.raises(ValueError):
-            calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="cpu"
-            )
+            calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu")
 
     def test_batch_insufficient_data_raises_error(self):
         """Data with insufficient length should raise ValueError."""
@@ -685,19 +676,13 @@ class TestBatchAPIValidation:
         volumes = np.abs(np.random.randn(n) * 1000000)
 
         with pytest.raises(ValueError, match="Data length.*must be >= 17"):
-            calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="cpu"
-            )
+            calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu")
 
     def test_batch_returns_all_indicators_in_dict(self, small_ohlcv_data):
         """Batch should return dictionary with all indicators."""
         highs, lows, closes, volumes = small_ohlcv_data
 
-        results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu"
-        )
+        results = calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu")
 
         # Verify dictionary structure
         assert isinstance(results, dict), "Results should be a dictionary"
@@ -705,13 +690,13 @@ class TestBatchAPIValidation:
 
         # Verify all expected keys present
         expected_keys = {"atr", "rsi", "stochastic", "bollinger", "obv", "macd"}
-        assert set(results.keys()) == expected_keys, \
-            f"Results should have keys {expected_keys}"
+        assert set(results.keys()) == expected_keys, f"Results should have keys {expected_keys}"
 
 
 # ============================================================================
 # Performance Validation Tests (Optional)
 # ============================================================================
+
 
 class TestBatchPerformanceCharacteristics:
     """
@@ -729,15 +714,12 @@ class TestBatchPerformanceCharacteristics:
 
         start = time.time()
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         elapsed = time.time() - start
 
         # 1000 rows should complete in under 1 second
-        assert elapsed < 1.0, \
-            f"Small dataset (1K rows) took {elapsed:.3f}s - should be <1s"
+        assert elapsed < 1.0, f"Small dataset (1K rows) took {elapsed:.3f}s - should be <1s"
 
     def test_batch_completes_in_reasonable_time_large_data(self, large_ohlcv_data):
         """Batch should complete in reasonable time on large datasets."""
@@ -747,15 +729,12 @@ class TestBatchPerformanceCharacteristics:
 
         start = time.time()
         results = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         elapsed = time.time() - start
 
         # 200K rows should complete in under 10 seconds
-        assert elapsed < 10.0, \
-            f"Large dataset (200K rows) took {elapsed:.3f}s - should be <10s"
+        assert elapsed < 10.0, f"Large dataset (200K rows) took {elapsed:.3f}s - should be <10s"
 
 
 if __name__ == "__main__":

@@ -29,4 +29,4 @@ def to_numpy_array(data: ArrayLike) -> np.ndarray:
         return np.asarray(data)
 
 
-__all__ = ['to_numpy_array']
+__all__ = ["to_numpy_array"]

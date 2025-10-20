@@ -14,6 +14,7 @@ import polars as pl
 # Import the library (now properly installed)
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import kimsfinance as mfp
 
@@ -22,7 +23,7 @@ def print_section(title: str):
     """Print section header."""
     print(f"\n{'=' * 80}")
     print(f"  {title}")
-    print('=' * 80)
+    print("=" * 80)
 
 
 def test_library_info():
@@ -57,10 +58,7 @@ def test_moving_averages():
 
     # Test combined
     mas = mfp.calculate_multiple_mas(
-        df, "close",
-        sma_windows=[3, 5],
-        ema_windows=[3, 5],
-        engine="cpu"
+        df, "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="cpu"
     )
     print(f"✓ Combined MAs: {len(mas['sma'])} SMAs, {len(mas['ema'])} EMAs")
 
@@ -142,7 +140,9 @@ def test_indicators():
 
     # Test Bollinger Bands
     upper, middle, lower = mfp.calculate_bollinger_bands(closes, period=20, engine="cpu")
-    print(f"✓ Bollinger Bands: upper={upper[-1]:.2f}, middle={middle[-1]:.2f}, lower={lower[-1]:.2f}")
+    print(
+        f"✓ Bollinger Bands: upper={upper[-1]:.2f}, middle={middle[-1]:.2f}, lower={lower[-1]:.2f}"
+    )
 
     # Test Stochastic Oscillator
     k, d = mfp.calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
@@ -287,6 +287,7 @@ def main():
         print_section("TEST FAILED")
         print(f"✗ Error: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

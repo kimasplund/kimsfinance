@@ -6,12 +6,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from kimsfinance.plotting.renderer import (
-    render_ohlcv_chart,
-    save_chart,
-    THEMES,
-    SPEED_PRESETS
-)
+from kimsfinance.plotting.renderer import render_ohlcv_chart, save_chart, THEMES, SPEED_PRESETS
 
 # Sample test data
 SAMPLE_OHLC = {
@@ -25,12 +20,13 @@ SAMPLE_VOLUME = np.array([1000, 1500, 1200, 2000, 1800])
 
 # Tests for Speed Parameter (Task 1)
 
+
 def test_speed_parameter_fast_webp():
     """Test save_chart with speed='fast' for WebP format."""
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "fast.webp")
-        save_chart(img, output_path, speed='fast')
+        save_chart(img, output_path, speed="fast")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "WEBP"
@@ -42,7 +38,7 @@ def test_speed_parameter_balanced_webp():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "balanced.webp")
-        save_chart(img, output_path, speed='balanced')
+        save_chart(img, output_path, speed="balanced")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "WEBP"
@@ -54,7 +50,7 @@ def test_speed_parameter_best_webp():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "best.webp")
-        save_chart(img, output_path, speed='best')
+        save_chart(img, output_path, speed="best")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "WEBP"
@@ -66,7 +62,7 @@ def test_speed_parameter_fast_png():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "fast.png")
-        save_chart(img, output_path, speed='fast')
+        save_chart(img, output_path, speed="fast")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "PNG"
@@ -78,7 +74,7 @@ def test_speed_parameter_balanced_png():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "balanced.png")
-        save_chart(img, output_path, speed='balanced')
+        save_chart(img, output_path, speed="balanced")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "PNG"
@@ -90,7 +86,7 @@ def test_speed_parameter_best_png():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "best.png")
-        save_chart(img, output_path, speed='best')
+        save_chart(img, output_path, speed="best")
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "PNG"
@@ -103,11 +99,11 @@ def test_speed_parameter_invalid():
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "invalid.webp")
         with pytest.raises(ValueError, match="Invalid speed"):
-            save_chart(img, output_path, speed='super_fast')
+            save_chart(img, output_path, speed="super_fast")
         with pytest.raises(ValueError, match="Invalid speed"):
-            save_chart(img, output_path, speed='slow')
+            save_chart(img, output_path, speed="slow")
         with pytest.raises(ValueError, match="Invalid speed"):
-            save_chart(img, output_path, speed='')
+            save_chart(img, output_path, speed="")
 
 
 def test_speed_parameter_default():
@@ -117,7 +113,7 @@ def test_speed_parameter_default():
         default_path = os.path.join(tmpdir, "default.webp")
         save_chart(img, default_path)
         balanced_path = os.path.join(tmpdir, "balanced.webp")
-        save_chart(img, balanced_path, speed='balanced')
+        save_chart(img, balanced_path, speed="balanced")
         assert os.path.exists(default_path)
         assert os.path.exists(balanced_path)
 
@@ -129,9 +125,9 @@ def test_speed_parameter_file_size_comparison_webp():
         fast_path = os.path.join(tmpdir, "fast.webp")
         balanced_path = os.path.join(tmpdir, "balanced.webp")
         best_path = os.path.join(tmpdir, "best.webp")
-        save_chart(img, fast_path, speed='fast')
-        save_chart(img, balanced_path, speed='balanced')
-        save_chart(img, best_path, speed='best')
+        save_chart(img, fast_path, speed="fast")
+        save_chart(img, balanced_path, speed="balanced")
+        save_chart(img, best_path, speed="best")
         fast_size = os.path.getsize(fast_path)
         balanced_size = os.path.getsize(balanced_path)
         best_size = os.path.getsize(best_path)
@@ -150,9 +146,9 @@ def test_speed_parameter_file_size_comparison_png():
         fast_path = os.path.join(tmpdir, "fast.png")
         balanced_path = os.path.join(tmpdir, "balanced.png")
         best_path = os.path.join(tmpdir, "best.png")
-        save_chart(img, fast_path, speed='fast')
-        save_chart(img, balanced_path, speed='balanced')
-        save_chart(img, best_path, speed='best')
+        save_chart(img, fast_path, speed="fast")
+        save_chart(img, balanced_path, speed="balanced")
+        save_chart(img, best_path, speed="best")
         fast_size = os.path.getsize(fast_path)
         balanced_size = os.path.getsize(balanced_path)
         best_size = os.path.getsize(best_path)
@@ -170,7 +166,7 @@ def test_speed_parameter_kwargs_override():
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = os.path.join(tmpdir, "override.webp")
-        save_chart(img, output_path, speed='fast', quality=100, method=6)
+        save_chart(img, output_path, speed="fast", quality=100, method=6)
         assert os.path.exists(output_path)
         loaded_img = Image.open(output_path)
         assert loaded_img.format == "WEBP"
@@ -180,7 +176,7 @@ def test_speed_parameter_all_modes_webp():
     """Test all three speed modes work correctly for WebP."""
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
-        for speed_mode in ['fast', 'balanced', 'best']:
+        for speed_mode in ["fast", "balanced", "best"]:
             output_path = os.path.join(tmpdir, f"{speed_mode}.webp")
             save_chart(img, output_path, speed=speed_mode)
             assert os.path.exists(output_path)
@@ -193,7 +189,7 @@ def test_speed_parameter_all_modes_png():
     """Test all three speed modes work correctly for PNG."""
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
-        for speed_mode in ['fast', 'balanced', 'best']:
+        for speed_mode in ["fast", "balanced", "best"]:
             output_path = os.path.join(tmpdir, f"{speed_mode}.png")
             save_chart(img, output_path, speed=speed_mode)
             assert os.path.exists(output_path)
@@ -206,7 +202,7 @@ def test_speed_parameter_jpeg_unaffected():
     """Test that speed parameter doesn't affect JPEG (no preset defined)."""
     img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME)
     with tempfile.TemporaryDirectory() as tmpdir:
-        for speed_mode in ['fast', 'balanced', 'best']:
+        for speed_mode in ["fast", "balanced", "best"]:
             output_path = os.path.join(tmpdir, f"{speed_mode}.jpg")
             save_chart(img, output_path, speed=speed_mode)
             assert os.path.exists(output_path)
@@ -219,7 +215,7 @@ def test_speed_parameter_with_all_themes():
     for theme_name in THEMES.keys():
         img = render_ohlcv_chart(SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name)
         with tempfile.TemporaryDirectory() as tmpdir:
-            for speed_mode in ['fast', 'balanced', 'best']:
+            for speed_mode in ["fast", "balanced", "best"]:
                 output_path = os.path.join(tmpdir, f"{theme_name}_{speed_mode}.webp")
                 save_chart(img, output_path, speed=speed_mode)
                 assert os.path.exists(output_path)
@@ -242,25 +238,25 @@ def test_speed_parameter_backward_compatibility():
 def test_speed_presets_constant_exists():
     """Test that SPEED_PRESETS constant is properly defined."""
     assert isinstance(SPEED_PRESETS, dict)
-    assert 'fast' in SPEED_PRESETS
-    assert 'balanced' in SPEED_PRESETS
-    assert 'best' in SPEED_PRESETS
-    for speed_mode in ['fast', 'balanced', 'best']:
-        assert 'webp' in SPEED_PRESETS[speed_mode]
-        assert 'png' in SPEED_PRESETS[speed_mode]
-        assert 'quality' in SPEED_PRESETS[speed_mode]['webp']
-        assert 'method' in SPEED_PRESETS[speed_mode]['webp']
-        assert 'compress_level' in SPEED_PRESETS[speed_mode]['png']
+    assert "fast" in SPEED_PRESETS
+    assert "balanced" in SPEED_PRESETS
+    assert "best" in SPEED_PRESETS
+    for speed_mode in ["fast", "balanced", "best"]:
+        assert "webp" in SPEED_PRESETS[speed_mode]
+        assert "png" in SPEED_PRESETS[speed_mode]
+        assert "quality" in SPEED_PRESETS[speed_mode]["webp"]
+        assert "method" in SPEED_PRESETS[speed_mode]["webp"]
+        assert "compress_level" in SPEED_PRESETS[speed_mode]["png"]
 
 
 def test_speed_presets_values():
     """Test that SPEED_PRESETS has the correct values as specified in the plan."""
-    assert SPEED_PRESETS['fast']['webp']['quality'] == 75
-    assert SPEED_PRESETS['fast']['webp']['method'] == 4
-    assert SPEED_PRESETS['fast']['png']['compress_level'] == 1
-    assert SPEED_PRESETS['balanced']['webp']['quality'] == 85
-    assert SPEED_PRESETS['balanced']['webp']['method'] == 5
-    assert SPEED_PRESETS['balanced']['png']['compress_level'] == 6
-    assert SPEED_PRESETS['best']['webp']['quality'] == 100
-    assert SPEED_PRESETS['best']['webp']['method'] == 6
-    assert SPEED_PRESETS['best']['png']['compress_level'] == 9
+    assert SPEED_PRESETS["fast"]["webp"]["quality"] == 75
+    assert SPEED_PRESETS["fast"]["webp"]["method"] == 4
+    assert SPEED_PRESETS["fast"]["png"]["compress_level"] == 1
+    assert SPEED_PRESETS["balanced"]["webp"]["quality"] == 85
+    assert SPEED_PRESETS["balanced"]["webp"]["method"] == 5
+    assert SPEED_PRESETS["balanced"]["png"]["compress_level"] == 6
+    assert SPEED_PRESETS["best"]["webp"]["quality"] == 100
+    assert SPEED_PRESETS["best"]["webp"]["method"] == 6
+    assert SPEED_PRESETS["best"]["png"]["compress_level"] == 9

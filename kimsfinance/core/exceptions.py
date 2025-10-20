@@ -10,6 +10,7 @@ from __future__ import annotations
 
 class KimsFinanceError(Exception):
     """Base exception for all kimsfinance errors."""
+
     pass
 
 
@@ -43,6 +44,7 @@ class DataValidationError(KimsFinanceError):
     - Empty DataFrames
     - NaN values in critical columns
     """
+
     pass
 
 
@@ -52,6 +54,7 @@ class EngineError(KimsFinanceError):
 
     This is typically caught internally for fallback to CPU.
     """
+
     pass
 
 
@@ -61,6 +64,7 @@ class OperationNotSupportedError(KimsFinanceError):
 
     Example: Certain complex operations may not have GPU implementations yet.
     """
+
     pass
 
 
@@ -72,4 +76,5 @@ class ConfigurationError(KimsFinanceError):
     - Invalid engine parameter
     - Conflicting settings
     """
+
     pass

@@ -16,6 +16,7 @@ import polars as pl
 
 from .types import Engine
 from .exceptions import GPUNotAvailableError, ConfigurationError
+from .autotune import load_tuned_thresholds, run_autotune
 
 
 __all__ = [
@@ -23,36 +24,31 @@ __all__ = [
     "with_engine_fallback",
     "GPUNotAvailableError",
     "GPU_CROSSOVER_THRESHOLDS",
+    "run_autotune",
 ]
 
 
-P = ParamSpec('P')
-R = TypeVar('R')
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
-# Empirical GPU crossover thresholds (rows)
-# Below these thresholds, CPU is faster due to data transfer overhead
-# Above these thresholds, GPU provides significant speedup
-GPU_CROSSOVER_THRESHOLDS = {
-    "atr": 100_000,
-    "rsi": 100_000,
-    "stochastic": 500_000,
-    "bollinger": 100_000,
-    "obv": 100_000,
-    "macd": 100_000,
-    "batch_indicators": 15_000,  # Much lower for batch! Amortizes data transfer overhead
+# Load thresholds on module import
+GPU_CROSSOVER_THRESHOLDS = load_tuned_thresholds()
+
+# Advanced heuristics for get_optimal_engine()
+OPERATION_HEURISTICS = {
+    "nan_ops": {"threshold": 10_000, "ops": ["nanmin", "nanmax", "isnan"]},
+    "linear_algebra": {"threshold": 1_000, "ops": ["least_squares", "trend_line"]},
+    "indicators": {"threshold": 5_000, "ops": ["atr", "rsi"]},
+    "aggregations": {"threshold": 5_000, "ops": ["volume_sum"]},
+    "transformations": {"threshold": 10_000, "ops": ["pnf", "renko"]},
+    "moving_averages": {"threshold": float("inf"), "ops": ["sma", "ema"]},  # Always CPU
 }
 
 
 class EngineManager:
     """
     Manages execution engine selection and GPU availability detection.
-
-    The EngineManager provides intelligent engine selection based on:
-    - GPU availability
-    - Data size
-    - Operation type
-    - User preferences
     """
 
     _gpu_available: bool | None = None  # Cache GPU availability check
@@ -60,220 +56,84 @@ class EngineManager:
     @classmethod
     def check_gpu_available(cls) -> bool:
         """
-        Check if GPU acceleration is available.
-
-        Performs a simple test operation using Polars GPU engine.
-        Result is cached for performance.
-
-        Returns:
-            bool: True if GPU is available and functional
+        Check if GPU acceleration is available (lightweight check).
         """
         if cls._gpu_available is not None:
             return cls._gpu_available
 
         try:
-            # Try to execute a simple GPU operation
-            test_df = pl.DataFrame({"x": [1.0, 2.0, 3.0]})
-            test_df.lazy().select(pl.col("x")).collect(engine="gpu")
+            import cudf
+
             cls._gpu_available = True
             return True
-        except Exception:
+        except ImportError:
             cls._gpu_available = False
             return False
 
     @classmethod
     def reset_gpu_cache(cls) -> None:
-        """Reset the GPU availability cache (useful for testing)."""
+        """Reset the GPU availability cache."""
         cls._gpu_available = None
 
     @classmethod
-    def select_engine(cls, engine: Engine) -> Literal["cpu", "gpu"]:
+    def select_engine(
+        cls, engine: Engine, operation: str | None = None, data_size: int | None = None
+    ) -> Literal["cpu", "gpu"]:
         """
-        Select the appropriate execution engine.
+        Select the appropriate execution engine with intelligent defaults.
 
         Args:
             engine: Requested engine ("cpu", "gpu", or "auto")
+            operation: Operation name for threshold-based selection
+            data_size: Dataset size for threshold check
 
         Returns:
-            Actual engine to use ("cpu" or "gpu")
-
-        Raises:
-            GPUNotAvailableError: If GPU requested but not available
-            ConfigurationError: If invalid engine specified
+            Selected engine ("cpu" or "gpu")
         """
-        match engine:
-            case "cpu":
-                return "cpu"
+        if engine not in ("cpu", "gpu", "auto"):
+            raise ConfigurationError(f"Invalid engine: {engine!r}")
 
-            case "gpu":
-                if not cls.check_gpu_available():
-                    raise GPUNotAvailableError()
-                return "gpu"
-
-            case "auto":
-                return "gpu" if cls.check_gpu_available() else "cpu"
-
-            case _:
-                raise ConfigurationError(
-                    f"Invalid engine: {engine!r}. Must be 'cpu', 'gpu', or 'auto'."
-                )
-
-    @classmethod
-    def select_engine_smart(
-        cls,
-        engine: Engine,
-        operation: str | None = None,
-        data_size: int | None = None
-    ) -> Literal["cpu", "gpu"]:
-        """
-        Select execution engine with intelligent size-based defaults.
-
-        This method extends select_engine() with automatic threshold-based
-        selection when engine="auto". It uses empirical GPU crossover thresholds
-        to determine when GPU acceleration is beneficial.
-
-        Args:
-            engine: User-specified engine ("cpu", "gpu", or "auto")
-            operation: Operation name for threshold lookup (e.g., "atr", "rsi", "macd")
-            data_size: Dataset size in rows for automatic threshold check
-
-        Returns:
-            Actual engine to use ("cpu" or "gpu")
-
-        Raises:
-            GPUNotAvailableError: If GPU requested but not available
-            ConfigurationError: If invalid engine specified
-
-        Examples:
-            >>> # Explicit CPU selection (always returns "cpu")
-            >>> EngineManager.select_engine_smart("cpu")
-            "cpu"
-
-            >>> # Explicit GPU selection (checks availability)
-            >>> EngineManager.select_engine_smart("gpu")
-            "gpu"  # or raises GPUNotAvailableError
-
-            >>> # Auto with operation and size (intelligent selection)
-            >>> EngineManager.select_engine_smart("auto", "atr", 50_000)
-            "cpu"  # Below 100K threshold
-
-            >>> EngineManager.select_engine_smart("auto", "atr", 150_000)
-            "gpu"  # Above 100K threshold (if GPU available)
-
-            >>> # Auto without operation/size (conservative default)
-            >>> EngineManager.select_engine_smart("auto")
-            "cpu"  # Conservative default when no context
-
-            >>> # Unknown operation uses default threshold
-            >>> EngineManager.select_engine_smart("auto", "custom_indicator", 200_000)
-            "gpu"  # Uses default 100K threshold
-
-        Performance Rationale:
-            GPU crossover thresholds are empirically derived from benchmarks:
-            - Below threshold: CPU faster (data transfer overhead dominates)
-            - Above threshold: GPU faster (parallel computation benefits)
-            - Default threshold: 100K rows (conservative, works for most operations)
-            - Stochastic: 500K rows (more complex computation pattern)
-
-        See Also:
-            - GPU_CROSSOVER_THRESHOLDS: Empirical threshold values
-            - select_engine(): Basic engine selection without smart defaults
-            - get_optimal_engine(): Advanced heuristics with more operations
-        """
-        # Explicit CPU selection
         if engine == "cpu":
             return "cpu"
 
-        # Explicit GPU selection
+        gpu_available = cls.check_gpu_available()
+
         if engine == "gpu":
-            if not cls.check_gpu_available():
+            if not gpu_available:
                 raise GPUNotAvailableError()
             return "gpu"
 
-        # Auto selection with intelligent defaults
-        if engine == "auto":
-            # Check GPU availability first
-            if not cls.check_gpu_available():
-                return "cpu"
-
-            # If operation and data_size provided, use threshold-based selection
-            if operation is not None and data_size is not None:
-                # Get threshold for operation (default to 100K if unknown)
-                threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, 100_000)
-                return "gpu" if data_size >= threshold else "cpu"
-
-            # Conservative default: CPU when no context available
+        # Auto selection
+        if not gpu_available:
             return "cpu"
 
-        # Invalid engine
-        raise ConfigurationError(
-            f"Invalid engine: {engine!r}. Must be 'cpu', 'gpu', or 'auto'."
-        )
+        if operation and data_size is not None:
+            threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, GPU_CROSSOVER_THRESHOLDS["default"])
+            return "gpu" if data_size >= threshold else "cpu"
+
+        return "cpu"  # Conservative default for "auto"
 
     @classmethod
     def get_optimal_engine(
-        cls,
-        operation: str,
-        data_size: int,
-        *,
-        force_cpu: bool = False
+        cls, operation: str, data_size: int, *, force_cpu: bool = False
     ) -> Engine:
         """
-        Get the optimal engine for a specific operation and data size.
-
-        Uses performance heuristics to determine when GPU is beneficial.
+        Get the optimal engine using advanced performance heuristics.
 
         Args:
-            operation: Operation name (e.g., "nanmin", "moving_average", "least_squares")
+            operation: Operation name
             data_size: Number of rows in dataset
             force_cpu: If True, always return "cpu"
-
-        Returns:
-            Recommended engine
-
-        Performance Heuristics:
-            - Moving averages: GPU not beneficial (data transfer overhead)
-            - NaN operations: GPU beneficial for >10K rows (40-80x speedup)
-            - Least squares: GPU beneficial for >1K rows (30-50x speedup)
-            - ATR: GPU beneficial for >5K rows (10-24x speedup)
-            - Small data (<1K): Always use CPU (overhead dominates)
         """
-        if force_cpu or not cls.check_gpu_available():
+        if force_cpu or not cls.check_gpu_available() or data_size < 1_000:
             return "cpu"
 
-        # Always use CPU for very small datasets
-        if data_size < 1_000:
-            return "cpu"
+        for details in OPERATION_HEURISTICS.values():
+            if operation in details["ops"]:
+                return "gpu" if data_size >= details["threshold"] else "cpu"
 
-        # Operation-specific heuristics
-        match operation:
-            case "moving_average" | "sma" | "ema":
-                # GPU not beneficial for moving averages
-                return "cpu"
-
-            case "nanmin" | "nanmax" | "isnan" | "nan_bounds":
-                # GPU beneficial for NaN operations with >10K rows
-                return "gpu" if data_size >= 10_000 else "cpu"
-
-            case "least_squares" | "trend_line":
-                # GPU beneficial for linear algebra with >1K rows
-                return "gpu" if data_size >= 1_000 else "cpu"
-
-            case "atr" | "rsi" | "indicators":
-                # GPU beneficial for indicators with >5K rows
-                return "gpu" if data_size >= 5_000 else "cpu"
-
-            case "volume_sum" | "aggregations":
-                # GPU beneficial for aggregations with >5K rows
-                return "gpu" if data_size >= 5_000 else "cpu"
-
-            case "pnf" | "renko" | "transformations":
-                # GPU beneficial for transformations with >10K rows
-                return "gpu" if data_size >= 10_000 else "cpu"
-
-            case _:
-                # Unknown operation: Conservative heuristic
-                return "gpu" if data_size >= 10_000 else "cpu"
+        # Default for unknown operations
+        return "gpu" if data_size >= 10_000 else "cpu"
 
     @classmethod
     def get_info(cls) -> dict[str, str | bool]:
@@ -294,6 +154,7 @@ class EngineManager:
         if gpu_available:
             try:
                 import cudf
+
                 info["cudf_version"] = str(cudf.__version__)
             except ImportError:
                 info["cudf_version"] = "Not installed"
@@ -311,6 +172,7 @@ def with_engine_fallback(func: Callable[..., R]) -> Callable[..., R]:
         def my_operation(data, *, engine: Engine = "auto"):
             ...
     """
+
     @functools.wraps(func)
     def wrapper(*args: object, engine: Engine = "auto", **kwargs: object) -> R:
         selected_engine = EngineManager.select_engine(engine)

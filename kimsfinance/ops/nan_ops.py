@@ -20,6 +20,7 @@ import numpy as np
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -38,19 +39,15 @@ def _to_numpy_array(data: ArrayLike) -> np.ndarray:
     """Convert array-like input to numpy array."""
     if isinstance(data, np.ndarray):
         return data
-    elif hasattr(data, 'to_numpy'):  # Polars Series
+    elif hasattr(data, "to_numpy"):  # Polars Series
         return data.to_numpy()
-    elif hasattr(data, 'values'):  # Pandas Series
+    elif hasattr(data, "values"):  # Pandas Series
         return data.values
     else:
         return np.array(data, dtype=np.float64)
 
 
-def nanmin_gpu(
-    data: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> float:
+def nanmin_gpu(data: ArrayLike, *, engine: Engine = "auto") -> float:
     """
     GPU-accelerated minimum of array, ignoring NaN values.
 
@@ -111,11 +108,7 @@ def nanmin_gpu(
     return float(np.nanmin(arr))
 
 
-def nanmax_gpu(
-    data: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> float:
+def nanmax_gpu(data: ArrayLike, *, engine: Engine = "auto") -> float:
     """
     GPU-accelerated maximum of array, ignoring NaN values.
 
@@ -162,12 +155,7 @@ def nanmax_gpu(
     return float(np.nanmax(arr))
 
 
-def nan_bounds(
-    highs: ArrayLike,
-    lows: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> BoundsResult:
+def nan_bounds(highs: ArrayLike, lows: ArrayLike, *, engine: Engine = "auto") -> BoundsResult:
     """
     Compute (min, max) bounds in a single GPU call.
 
@@ -225,11 +213,7 @@ def nan_bounds(
     return (min_val, max_val)
 
 
-def isnan_gpu(
-    data: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def isnan_gpu(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     """
     GPU-accelerated NaN detection.
 
@@ -276,11 +260,7 @@ def isnan_gpu(
     return np.isnan(arr)
 
 
-def nan_indices(
-    data: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def nan_indices(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     """
     Get indices where values are NaN (GPU-accelerated).
 
@@ -325,12 +305,7 @@ def nan_indices(
     return np.where(np.isnan(arr))[0]
 
 
-def replace_nan(
-    data: ArrayLike,
-    value: float = 0.0,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def replace_nan(data: ArrayLike, value: float = 0.0, *, engine: Engine = "auto") -> ArrayResult:
     """
     Replace NaN values with specified value (GPU-accelerated).
 

@@ -96,8 +96,9 @@ def test_atr_bands():
         distance_from_median = abs(supertrend[i] - hl_avg[i])
         expected_max_distance = multiplier * atr[i] * 1.5  # 50% tolerance for state adjustments
 
-        assert distance_from_median <= expected_max_distance, \
-            f"Supertrend at index {i} too far from expected band range"
+        assert (
+            distance_from_median <= expected_max_distance
+        ), f"Supertrend at index {i} too far from expected band range"
 
 
 def test_state_tracking():
@@ -175,11 +176,13 @@ def test_different_multipliers():
     # Supertrend values should be different
     valid_idx = ~np.isnan(st_2) & ~np.isnan(st_3) & ~np.isnan(st_4)
 
-    assert not np.allclose(st_2[valid_idx], st_3[valid_idx]), \
-        "Different multipliers should produce different Supertrend values"
+    assert not np.allclose(
+        st_2[valid_idx], st_3[valid_idx]
+    ), "Different multipliers should produce different Supertrend values"
 
-    assert not np.allclose(st_3[valid_idx], st_4[valid_idx]), \
-        "Different multipliers should produce different Supertrend values"
+    assert not np.allclose(
+        st_3[valid_idx], st_4[valid_idx]
+    ), "Different multipliers should produce different Supertrend values"
 
     # Lower multiplier (more sensitive) may have more direction changes
     changes_2 = np.sum(np.abs(np.diff(dir_2[~np.isnan(dir_2)])))
@@ -204,16 +207,18 @@ def test_supertrend_as_support_resistance():
     if np.any(uptrend_idx):
         uptrend_above = closes[uptrend_idx] >= supertrend[uptrend_idx]
         # Most closes should be above supertrend in uptrend
-        assert np.mean(uptrend_above) > 0.5, \
-            "In uptrend, price should generally be above Supertrend"
+        assert (
+            np.mean(uptrend_above) > 0.5
+        ), "In uptrend, price should generally be above Supertrend"
 
     # In downtrend (direction = -1), close should generally be below supertrend
     downtrend_idx = valid_idx & (direction == -1)
     if np.any(downtrend_idx):
         downtrend_below = closes[downtrend_idx] <= supertrend[downtrend_idx]
         # Most closes should be below supertrend in downtrend
-        assert np.mean(downtrend_below) > 0.5, \
-            "In downtrend, price should generally be below Supertrend"
+        assert (
+            np.mean(downtrend_below) > 0.5
+        ), "In downtrend, price should generally be below Supertrend"
 
 
 def test_edge_cases():
@@ -221,7 +226,9 @@ def test_edge_cases():
     # Minimal data (period + a few extra points)
     highs = np.array([101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112], dtype=np.float64)
     lows = np.array([99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110], dtype=np.float64)
-    closes = np.array([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111], dtype=np.float64)
+    closes = np.array(
+        [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111], dtype=np.float64
+    )
 
     supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
 
@@ -307,11 +314,9 @@ def test_performance():
         )
         cpu_time = time.time() - start
 
-        results.append({
-            "size": size,
-            "cpu_time": cpu_time,
-            "valid_values": np.sum(~np.isnan(supertrend))
-        })
+        results.append(
+            {"size": size, "cpu_time": cpu_time, "valid_values": np.sum(~np.isnan(supertrend))}
+        )
 
     # Print performance results
     print("\nSupertrend Performance Benchmark:")
@@ -328,8 +333,9 @@ def test_performance():
     if len(results) >= 2:
         time_ratio = results[-1]["cpu_time"] / results[0]["cpu_time"]
         size_ratio = results[-1]["size"] / results[0]["size"]
-        assert time_ratio < size_ratio * 1.5, \
-            f"Performance should scale sub-linearly (time_ratio={time_ratio:.2f}, size_ratio={size_ratio})"
+        assert (
+            time_ratio < size_ratio * 1.5
+        ), f"Performance should scale sub-linearly (time_ratio={time_ratio:.2f}, size_ratio={size_ratio})"
 
 
 def test_comparison_with_different_periods():

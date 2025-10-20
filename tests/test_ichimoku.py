@@ -127,8 +127,9 @@ def test_displacement():
     # Senkou A[26] should equal (Tenkan[0] + Kijun[0]) / 2
     if not np.isnan(tenkan[0]) and not np.isnan(kijun[0]):
         expected_senkou_a_26 = (tenkan[0] + kijun[0]) / 2.0
-        assert np.isclose(senkou_a[26], expected_senkou_a_26, rtol=1e-5), \
-            f"Senkou A displacement incorrect: {senkou_a[26]} != {expected_senkou_a_26}"
+        assert np.isclose(
+            senkou_a[26], expected_senkou_a_26, rtol=1e-5
+        ), f"Senkou A displacement incorrect: {senkou_a[26]} != {expected_senkou_a_26}"
         print(f"  ✓ Senkou A[26] = {senkou_a[26]:.4f} (displaced from position 0)")
 
     # Test Chikou Span displacement (backward by 26)
@@ -137,13 +138,15 @@ def test_displacement():
     assert np.sum(np.isnan(chikou[-26:])) == 26, "Last 26 Chikou values should be NaN"
 
     # Chikou[0] should equal Close[26]
-    assert np.isclose(chikou[0], closes[26], rtol=1e-5), \
-        f"Chikou displacement incorrect: {chikou[0]} != {closes[26]}"
+    assert np.isclose(
+        chikou[0], closes[26], rtol=1e-5
+    ), f"Chikou displacement incorrect: {chikou[0]} != {closes[26]}"
     print(f"  ✓ Chikou[0] = {chikou[0]:.4f} = Close[26] = {closes[26]:.4f}")
 
     # Chikou[50] should equal Close[76]
-    assert np.isclose(chikou[50], closes[76], rtol=1e-5), \
-        f"Chikou displacement incorrect at position 50"
+    assert np.isclose(
+        chikou[50], closes[76], rtol=1e-5
+    ), f"Chikou displacement incorrect at position 50"
     print(f"  ✓ Chikou[50] = {chikou[50]:.4f} = Close[76] = {closes[76]:.4f}")
 
 
@@ -230,24 +233,14 @@ def test_different_periods():
 
     # Standard settings
     standard = calculate_ichimoku(
-        highs, lows, closes,
-        tenkan=9, kijun=26, senkou_b=52,
-        engine="cpu"
+        highs, lows, closes, tenkan=9, kijun=26, senkou_b=52, engine="cpu"
     )
 
     # Fast settings (crypto/intraday)
-    fast = calculate_ichimoku(
-        highs, lows, closes,
-        tenkan=7, kijun=22, senkou_b=44,
-        engine="cpu"
-    )
+    fast = calculate_ichimoku(highs, lows, closes, tenkan=7, kijun=22, senkou_b=44, engine="cpu")
 
     # Slow settings (weekly)
-    slow = calculate_ichimoku(
-        highs, lows, closes,
-        tenkan=12, kijun=30, senkou_b=60,
-        engine="cpu"
-    )
+    slow = calculate_ichimoku(highs, lows, closes, tenkan=12, kijun=30, senkou_b=60, engine="cpu")
 
     # Check all variants calculate successfully
     for name, ichi in [("Standard", standard), ("Fast", fast), ("Slow", slow)]:
@@ -259,8 +252,9 @@ def test_different_periods():
         print(f"  ✓ {name} settings calculated successfully")
 
     # Fast settings should respond quicker (fewer NaN at start)
-    assert np.sum(np.isnan(fast["tenkan"])) < np.sum(np.isnan(standard["tenkan"])), \
-        "Fast settings should have fewer NaN values"
+    assert np.sum(np.isnan(fast["tenkan"])) < np.sum(
+        np.isnan(standard["tenkan"])
+    ), "Fast settings should have fewer NaN values"
     print(f"  ✓ Fast Tenkan NaN: {np.sum(np.isnan(fast['tenkan']))}")
     print(f"  ✓ Standard Tenkan NaN: {np.sum(np.isnan(standard['tenkan']))}")
 
@@ -299,8 +293,9 @@ def test_edge_cases():
     kijun_const = ichimoku_const["kijun"]
 
     # After sufficient period, values should stabilize
-    assert np.allclose(tenkan_const[50:], 100.0, rtol=1e-3, equal_nan=True), \
-        "Tenkan should be constant with constant prices"
+    assert np.allclose(
+        tenkan_const[50:], 100.0, rtol=1e-3, equal_nan=True
+    ), "Tenkan should be constant with constant prices"
     print("  ✓ Constant prices produce constant lines")
 
 
@@ -388,6 +383,7 @@ if __name__ == "__main__":
         print("=" * 80)
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
     except Exception as e:
@@ -396,5 +392,6 @@ if __name__ == "__main__":
         print("=" * 80)
         print(f"Error: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

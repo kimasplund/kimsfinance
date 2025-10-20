@@ -57,7 +57,7 @@ def calculate_supertrend(
     period: int = 10,
     multiplier: float = 3.0,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate Supertrend indicator with trend direction.
@@ -189,32 +189,36 @@ def calculate_supertrend(
     # Note: This loop is necessary due to state dependency
     for i in range(period + 1, n):
         # Update final lower band (support in uptrend)
-        if xp.isnan(basic_lower_band[i]) or xp.isnan(final_lower_band[i-1]):
+        if xp.isnan(basic_lower_band[i]) or xp.isnan(final_lower_band[i - 1]):
             final_lower_band[i] = basic_lower_band[i]
-        elif basic_lower_band[i] > final_lower_band[i-1] or close[i-1] < final_lower_band[i-1]:
+        elif (
+            basic_lower_band[i] > final_lower_band[i - 1] or close[i - 1] < final_lower_band[i - 1]
+        ):
             final_lower_band[i] = basic_lower_band[i]
         else:
-            final_lower_band[i] = final_lower_band[i-1]
+            final_lower_band[i] = final_lower_band[i - 1]
 
         # Update final upper band (resistance in downtrend)
-        if xp.isnan(basic_upper_band[i]) or xp.isnan(final_upper_band[i-1]):
+        if xp.isnan(basic_upper_band[i]) or xp.isnan(final_upper_band[i - 1]):
             final_upper_band[i] = basic_upper_band[i]
-        elif basic_upper_band[i] < final_upper_band[i-1] or close[i-1] > final_upper_band[i-1]:
+        elif (
+            basic_upper_band[i] < final_upper_band[i - 1] or close[i - 1] > final_upper_band[i - 1]
+        ):
             final_upper_band[i] = basic_upper_band[i]
         else:
-            final_upper_band[i] = final_upper_band[i-1]
+            final_upper_band[i] = final_upper_band[i - 1]
 
         # Determine trend direction and supertrend value
         # Switch to downtrend if close crosses below upper band
-        if direction[i-1] == 1 and close[i] <= final_lower_band[i]:
+        if direction[i - 1] == 1 and close[i] <= final_lower_band[i]:
             direction[i] = -1
             supertrend[i] = final_upper_band[i]
         # Switch to uptrend if close crosses above lower band
-        elif direction[i-1] == -1 and close[i] >= final_upper_band[i]:
+        elif direction[i - 1] == -1 and close[i] >= final_upper_band[i]:
             direction[i] = 1
             supertrend[i] = final_lower_band[i]
         # Continue existing trend
-        elif direction[i-1] == 1:
+        elif direction[i - 1] == 1:
             direction[i] = 1
             supertrend[i] = final_lower_band[i]
         else:
@@ -230,5 +234,5 @@ def calculate_supertrend(
 
 # Re-export for convenience
 __all__ = [
-    'calculate_supertrend',
+    "calculate_supertrend",
 ]

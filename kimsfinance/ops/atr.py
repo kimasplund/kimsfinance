@@ -24,12 +24,7 @@ from .indicator_utils import true_range, _wilder_smoothing
 
 @gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
 def calculate_atr(
-    high: ArrayLike,
-    low: ArrayLike,
-    close: ArrayLike,
-    period: int = 14,
-    *,
-    engine: Engine = "auto"
+    high: ArrayLike, low: ArrayLike, close: ArrayLike, period: int = 14, *, engine: Engine = "auto"
 ) -> ArrayResult:
     """
     Calculate Average True Range (ATR).

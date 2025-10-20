@@ -44,12 +44,7 @@ def generate_sample_ohlcv(num_candles: int = 1000) -> tuple[dict, np.ndarray]:
     high_prices = np.maximum.reduce([open_prices, close_prices, high_prices])
     low_prices = np.minimum.reduce([open_prices, close_prices, low_prices])
 
-    ohlc = {
-        'open': open_prices,
-        'high': high_prices,
-        'low': low_prices,
-        'close': close_prices
-    }
+    ohlc = {"open": open_prices, "high": high_prices, "low": low_prices, "close": close_prices}
 
     # Generate volume
     volume = np.random.randint(1000, 10000, num_candles).astype(float)
@@ -57,12 +52,7 @@ def generate_sample_ohlcv(num_candles: int = 1000) -> tuple[dict, np.ndarray]:
     return ohlc, volume
 
 
-def benchmark_speed_mode(
-    format: str,
-    speed: str,
-    num_candles: int = 1000,
-    n_runs: int = 5
-) -> dict:
+def benchmark_speed_mode(format: str, speed: str, num_candles: int = 1000, n_runs: int = 5) -> dict:
     """
     Benchmark encoding time for a specific speed mode.
 
@@ -98,9 +88,9 @@ def benchmark_speed_mode(
         file_size_kb = os.path.getsize(filepath) / 1024
 
     return {
-        'encode_time_ms': float(np.median(encode_times)),
-        'file_size_kb': round(file_size_kb, 1),
-        'speedup': None  # Will be calculated relative to 'best' mode
+        "encode_time_ms": float(np.median(encode_times)),
+        "file_size_kb": round(file_size_kb, 1),
+        "speedup": None,  # Will be calculated relative to 'best' mode
     }
 
 
@@ -113,6 +103,7 @@ def main():
 
     import platform
     import PIL
+
     print(f"System: {platform.system()} {platform.release()}")
     print(f"Python: {platform.python_version()}")
     print(f"Pillow: {PIL.__version__}")
@@ -122,8 +113,8 @@ def main():
     num_candles = 1000
     n_runs = 5
 
-    formats = ['webp', 'png']
-    speed_modes = ['fast', 'balanced', 'best']
+    formats = ["webp", "png"]
+    speed_modes = ["fast", "balanced", "best"]
 
     results = {}
 
@@ -138,16 +129,18 @@ def main():
         for speed in speed_modes:
             result = benchmark_speed_mode(format, speed, num_candles, n_runs)
             results[format][speed] = result
-            print(f"  {speed:>8}: {result['encode_time_ms']:7.2f} ms  |  {result['file_size_kb']:6.1f} KB")
+            print(
+                f"  {speed:>8}: {result['encode_time_ms']:7.2f} ms  |  {result['file_size_kb']:6.1f} KB"
+            )
 
         print()
 
     # Calculate speedups relative to 'best' mode
     for format in formats:
-        best_time = results[format]['best']['encode_time_ms']
+        best_time = results[format]["best"]["encode_time_ms"]
         for speed in speed_modes:
-            speedup = best_time / results[format][speed]['encode_time_ms']
-            results[format][speed]['speedup'] = speedup
+            speedup = best_time / results[format][speed]["encode_time_ms"]
+            results[format][speed]["speedup"] = speedup
 
     # Generate markdown report
     print()
@@ -164,17 +157,21 @@ def main():
 
         for speed in speed_modes:
             r = results[format][speed]
-            print(f"| {speed:>10} | {r['encode_time_ms']:>17.2f} | {r['file_size_kb']:>14.1f} | {r['speedup']:>17.2f}x |")
+            print(
+                f"| {speed:>10} | {r['encode_time_ms']:>17.2f} | {r['file_size_kb']:>14.1f} | {r['speedup']:>17.2f}x |"
+            )
 
         print()
 
         # Calculate improvements
-        fast_speedup = results[format]['fast']['speedup']
-        balanced_speedup = results[format]['balanced']['speedup']
+        fast_speedup = results[format]["fast"]["speedup"]
+        balanced_speedup = results[format]["balanced"]["speedup"]
 
         print(f"**Key Findings:**")
         print(f"- `speed='fast'`: **{fast_speedup:.1f}x faster** than 'best' mode")
-        print(f"- `speed='balanced'`: **{balanced_speedup:.1f}x faster** than 'best' mode (default)")
+        print(
+            f"- `speed='balanced'`: **{balanced_speedup:.1f}x faster** than 'best' mode (default)"
+        )
         print()
 
     # Overall recommendation
@@ -213,5 +210,5 @@ def main():
     print()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
