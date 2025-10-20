@@ -230,6 +230,23 @@ pip install numba>=0.59
 
 ## 🚀 Quick Start
 
+### Loading Data
+
+kimsfinance accepts in-memory data (NumPy arrays, Polars/Pandas DataFrames). Load from any source:
+
+```python
+import polars as pl
+import kimsfinance as kf
+
+# Load from Parquet (recommended - 10-100x faster than CSV)
+df = pl.read_parquet('ohlcv_data.parquet')
+
+# Plot directly
+kf.plot(df, type='candle', savefig='chart.webp')
+```
+
+📖 **See [Data Loading Guide](docs/DATA_LOADING.md)** for Parquet, CSV, databases, APIs, WebSockets, and more.
+
 ### Basic Chart Rendering
 
 ```python
@@ -776,6 +793,8 @@ python -c "import cudf; import cupy; print('GPU ready!')"
 
 ## 📖 Documentation
 
+- [Data Loading Guide](docs/DATA_LOADING.md) - **Load from Parquet, CSV, APIs, databases, WebSockets**
+- [Output Formats Guide](docs/OUTPUT_FORMATS.md) - **SVG, SVGZ, WebP, PNG, JPEG comparison**
 - [Full API Reference](docs/API.md)
 - [Performance Guide](docs/PERFORMANCE.md)
 - [GPU Optimization](docs/GPU_OPTIMIZATION.md)
