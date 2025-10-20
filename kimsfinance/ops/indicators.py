@@ -721,7 +721,7 @@ def calculate_keltner_channels(
     })
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine_smart(
+    exec_engine = EngineManager.select_engine(
         engine, operation="keltner", data_size=len(closes_arr)
     )
 
@@ -1205,7 +1205,7 @@ def calculate_cmf(
     })
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine_smart(
+    exec_engine = EngineManager.select_engine(
         engine, operation="cmf", data_size=len(closes_arr)
     )
 
@@ -2721,7 +2721,7 @@ def calculate_donchian_channels(
     })
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine_smart(
+    exec_engine = EngineManager.select_engine(
         engine, operation="donchian", data_size=len(highs_arr)
     )
 

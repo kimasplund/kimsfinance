@@ -17,6 +17,16 @@ from kimsfinance.ops.indicators import calculate_keltner_channels, calculate_atr
 from kimsfinance.core import EngineManager
 
 
+def gpu_available() -> bool:
+    """Check if GPU is available."""
+    try:
+        import cupy
+        cupy.cuda.runtime.getDeviceCount()
+        return True
+    except (ImportError, Exception):
+        return False
+
+
 # ============================================================================
 # Test Fixtures
 # ============================================================================
@@ -152,6 +162,7 @@ class TestKeltnerChannelsBasic:
 # GPU/CPU Equivalence Tests
 # ============================================================================
 
+@pytest.mark.skipif(not gpu_available(), reason="GPU not available")
 class TestKeltnerChannelsGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
