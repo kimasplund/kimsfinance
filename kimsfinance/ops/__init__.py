@@ -67,7 +67,9 @@ from .ichimoku import calculate_ichimoku
 from .adx import calculate_adx
 from .mfi import calculate_mfi
 from .supertrend import calculate_supertrend
+from .atr import calculate_atr as calculate_atr_standalone
 from .picks import calculate_picks_momentum_ratio
+from .swing import find_swing_points
 
 
 __all__ = [
@@ -112,6 +114,7 @@ __all__ = [
     "calculate_mfi",
     "calculate_supertrend",
     "calculate_picks_momentum_ratio",
+    "find_swing_points",
     # Consolidated indicators
     "calculate_atr",
     "calculate_rsi",

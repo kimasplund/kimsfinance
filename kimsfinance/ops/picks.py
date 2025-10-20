@@ -1,11 +1,11 @@
 """
-Pick's Theorem Momentum Ratio Indicator
-=======================================
+Pick's Theorem Momentum Ratio Indicator by kimsfinance
+========================================================
 
 A speculative indicator based on Pick's Theorem, which relates the area of a
 simple polygon to the number of integer points on its boundary and in its interior.
 
-This corrected version uses the Shoelace formula to calculate the area and the GCD
+This version uses the Shoelace formula to calculate the area and the GCD
 method to find boundary points, then applies Pick's Theorem to solve for the
 interior points. This is both mathematically correct and computationally efficient.
 """
@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import math
 from ..core import ArrayLike
-from .indicators import calculate_atr
+from .atr import calculate_atr
 from .swing import find_swing_points
 
 def _calculate_polygon_properties(
@@ -56,7 +56,7 @@ def calculate_picks_momentum_ratio(
     n: int = 10,
     atr_period: int = 14,
     atr_multiplier: float = 0.5
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, list]:
     """
     Calculates the Pick's Momentum Ratio (PMR) for a given price series.
 
@@ -71,7 +71,7 @@ def calculate_picks_momentum_ratio(
     Returns:
         A tuple containing:
         - An array of PMR values
-        - An array of polygon vertices (in integer grid coordinates)
+        - A list of polygon vertices (in integer grid coordinates)
     """
     # 1. Calculate ATR
     atr = calculate_atr(high, low, close, period=atr_period)
