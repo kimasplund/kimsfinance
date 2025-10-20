@@ -39,17 +39,18 @@ from typing import Any
 
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from ..core.decorators import get_array_module
-from .indicator_utils import true_range, directional_movement, validate_period, EPSILON, _wilder_smoothing
+from .indicator_utils import (
+    true_range,
+    directional_movement,
+    validate_period,
+    EPSILON,
+    _wilder_smoothing,
+)
 
 
 @gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
 def calculate_adx(
-    high: ArrayLike,
-    low: ArrayLike,
-    close: ArrayLike,
-    period: int = 14,
-    *,
-    engine: Engine = "auto"
+    high: ArrayLike, low: ArrayLike, close: ArrayLike, period: int = 14, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult, ArrayResult]:
     """
     Calculate ADX (Average Directional Index) with +DI and -DI.
@@ -172,6 +173,7 @@ def calculate_adx(
 
     # Import here to get the correct array module after GPU routing
     from ..core.decorators import get_array_module
+
     xp = get_array_module(high)
 
     # Step 1: Calculate directional movements (+DM, -DM)
@@ -222,5 +224,5 @@ def calculate_adx(
 
 # Re-export for convenience
 __all__ = [
-    'calculate_adx',
+    "calculate_adx",
 ]

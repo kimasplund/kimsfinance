@@ -22,6 +22,7 @@ import pandas as pd
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -37,11 +38,7 @@ from ..core import (
 )
 
 
-def volume_sum(
-    volume: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> float:
+def volume_sum(volume: ArrayLike, *, engine: Engine = "auto") -> float:
     """
     GPU-accelerated volume summation.
 
@@ -93,10 +90,7 @@ def volume_sum(
 
 
 def volume_weighted_price(
-    prices: ArrayLike,
-    volume: ArrayLike,
-    *,
-    engine: Engine = "auto"
+    prices: ArrayLike, volume: ArrayLike, *, engine: Engine = "auto"
 ) -> float:
     """
     GPU-accelerated Volume Weighted Average Price (VWAP).
@@ -151,11 +145,7 @@ def volume_weighted_price(
 
 
 def ohlc_resample(
-    df: DataFrameInput,
-    timeframe: str,
-    *,
-    timestamp_col: str = "timestamp",
-    engine: Engine = "auto"
+    df: DataFrameInput, timeframe: str, *, timestamp_col: str = "timestamp", engine: Engine = "auto"
 ) -> pl.DataFrame:
     """
     Resample OHLC data to different timeframe using Polars.
@@ -199,9 +189,9 @@ def ohlc_resample(
 
     # Ensure timestamp is datetime type
     if not polars_df[timestamp_col].dtype == pl.Datetime:
-        polars_df = polars_df.with_columns([
-            pl.col(timestamp_col).str.to_datetime().alias(timestamp_col)
-        ])
+        polars_df = polars_df.with_columns(
+            [pl.col(timestamp_col).str.to_datetime().alias(timestamp_col)]
+        )
 
     # Map timeframe string to Polars duration
     timeframe_map = {
@@ -221,26 +211,28 @@ def ohlc_resample(
     polars_timeframe = timeframe_map[timeframe]
 
     # Resample OHLC data
-    resampled = polars_df.sort(timestamp_col).group_by_dynamic(
-        timestamp_col,
-        every=polars_timeframe
-    ).agg([
-        pl.col("open").first().alias("open"),
-        pl.col("high").max().alias("high"),
-        pl.col("low").min().alias("low"),
-        pl.col("close").last().alias("close"),
-        pl.col("volume").sum().alias("volume") if "volume" in polars_df.columns else pl.lit(0).alias("volume")
-    ])
+    resampled = (
+        polars_df.sort(timestamp_col)
+        .group_by_dynamic(timestamp_col, every=polars_timeframe)
+        .agg(
+            [
+                pl.col("open").first().alias("open"),
+                pl.col("high").max().alias("high"),
+                pl.col("low").min().alias("low"),
+                pl.col("close").last().alias("close"),
+                (
+                    pl.col("volume").sum().alias("volume")
+                    if "volume" in polars_df.columns
+                    else pl.lit(0).alias("volume")
+                ),
+            ]
+        )
+    )
 
     return resampled
 
 
-def rolling_sum(
-    data: ArrayLike,
-    window: int,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def rolling_sum(data: ArrayLike, window: int, *, engine: Engine = "auto") -> ArrayResult:
     """
     GPU-accelerated rolling (moving) sum.
 
@@ -262,19 +254,12 @@ def rolling_sum(
     # Use Polars for rolling operations (faster than numpy)
     df = pl.DataFrame({"data": data_arr})
 
-    result = df.select(
-        pl.col("data").rolling_sum(window_size=window)
-    )["data"].to_numpy()
+    result = df.select(pl.col("data").rolling_sum(window_size=window))["data"].to_numpy()
 
     return result
 
 
-def rolling_mean(
-    data: ArrayLike,
-    window: int,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def rolling_mean(data: ArrayLike, window: int, *, engine: Engine = "auto") -> ArrayResult:
     """
     GPU-accelerated rolling (moving) mean.
 
@@ -292,18 +277,12 @@ def rolling_mean(
 
     df = pl.DataFrame({"data": data_arr})
 
-    result = df.select(
-        pl.col("data").rolling_mean(window_size=window)
-    )["data"].to_numpy()
+    result = df.select(pl.col("data").rolling_mean(window_size=window))["data"].to_numpy()
 
     return result
 
 
-def cumulative_sum(
-    data: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def cumulative_sum(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     """
     GPU-accelerated cumulative sum.
 
@@ -348,7 +327,7 @@ def group_aggregation(
     agg_col: str,
     agg_func: str = "sum",
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     GPU-accelerated group-by aggregation using Polars.

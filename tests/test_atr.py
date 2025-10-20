@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from kimsfinance.ops.indicators import calculate_atr
 
+
 @pytest.fixture
 def sample_data():
     """Generates sample OHLC data for testing."""
@@ -9,6 +10,7 @@ def sample_data():
     low = np.array([8, 9, 10, 11, 12])
     close = np.array([9, 11, 10, 12, 13])
     return high, low, close
+
 
 def test_calculate_atr(sample_data):
     """Test the calculate_atr function with a simple case."""

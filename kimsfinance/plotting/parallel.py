@@ -35,7 +35,7 @@ def _render_one_chart(args: tuple[Any, ...]) -> str | bytes:
     else:
         # Return as PNG bytes for in-memory processing
         buf = io.BytesIO()
-        img.save(buf, format='PNG')
+        img.save(buf, format="PNG")
         return buf.getvalue()
 
 
@@ -43,8 +43,8 @@ def render_charts_parallel(
     datasets: list[dict[str, Any]],
     output_paths: list[str] | None = None,
     num_workers: int | None = None,
-    speed: str = 'fast',
-    **common_render_kwargs: Any
+    speed: str = "fast",
+    **common_render_kwargs: Any,
 ) -> list[str | bytes]:
     """
     Render multiple charts in parallel using multiprocessing.
@@ -135,11 +135,11 @@ def render_charts_parallel(
         output_paths_list = list(output_paths)
 
     # Prepare save_kwargs (only used when saving to file)
-    save_kwargs = {'speed': speed}
+    save_kwargs = {"speed": speed}
 
     # Build argument tuples for each chart
     args_list = [
-        (d['ohlc'], d['volume'], path, save_kwargs, common_render_kwargs)
+        (d["ohlc"], d["volume"], path, save_kwargs, common_render_kwargs)
         for d, path in zip(datasets, output_paths_list)
     ]
 

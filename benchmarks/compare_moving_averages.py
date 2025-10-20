@@ -63,7 +63,7 @@ def generate_ohlcv_data(n_rows: int, seed: int = 42) -> pd.DataFrame:
     """Generate synthetic OHLCV data for benchmarking."""
     np.random.seed(seed)
 
-    dates = pd.date_range(start='2020-01-01', periods=n_rows, freq='1min')
+    dates = pd.date_range(start="2020-01-01", periods=n_rows, freq="1min")
 
     # Generate realistic price movement
     close = 100 + np.cumsum(np.random.randn(n_rows) * 0.5)
@@ -72,24 +72,28 @@ def generate_ohlcv_data(n_rows: int, seed: int = 42) -> pd.DataFrame:
     open_ = close + np.random.randn(n_rows) * 0.2
     volume = np.random.randint(1000, 10000, n_rows)
 
-    return pd.DataFrame({
-        'timestamp': dates,
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume
-    }).set_index('timestamp')
+    return pd.DataFrame(
+        {
+            "timestamp": dates,
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }
+    ).set_index("timestamp")
 
 
 def load_real_ohlcv_data(filepath: str) -> pd.DataFrame:
     """Load real OHLCV data from CSV file."""
     df = pd.read_csv(filepath)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    return df.set_index('timestamp')
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    return df.set_index("timestamp")
 
 
-def benchmark_pandas_sma(prices: np.ndarray, windows: list[int], n_runs: int = 5) -> BenchmarkResult:
+def benchmark_pandas_sma(
+    prices: np.ndarray, windows: list[int], n_runs: int = 5
+) -> BenchmarkResult:
     """Benchmark pandas rolling mean (current mplfinance approach)."""
     times = []
 
@@ -108,7 +112,9 @@ def benchmark_pandas_sma(prices: np.ndarray, windows: list[int], n_runs: int = 5
     return BenchmarkResult("pandas SMA", times)
 
 
-def benchmark_pandas_ema(prices: np.ndarray, windows: list[int], n_runs: int = 5) -> BenchmarkResult:
+def benchmark_pandas_ema(
+    prices: np.ndarray, windows: list[int], n_runs: int = 5
+) -> BenchmarkResult:
     """Benchmark pandas exponential weighted mean (current mplfinance approach)."""
     times = []
 
@@ -128,11 +134,7 @@ def benchmark_pandas_ema(prices: np.ndarray, windows: list[int], n_runs: int = 5
 
 
 def benchmark_polars_sma(
-    df: pl.DataFrame,
-    column: str,
-    windows: list[int],
-    engine: Engine,
-    n_runs: int = 5
+    df: pl.DataFrame, column: str, windows: list[int], engine: Engine, n_runs: int = 5
 ) -> BenchmarkResult:
     """Benchmark Polars rolling mean."""
     try:
@@ -152,15 +154,13 @@ def benchmark_polars_sma(
     except GPUNotAvailableError as e:
         return BenchmarkResult(f"Polars SMA ({engine.upper()})", [], error=str(e))
     except Exception as e:
-        return BenchmarkResult(f"Polars SMA ({engine.upper()})", [], error=f"{type(e).__name__}: {e}")
+        return BenchmarkResult(
+            f"Polars SMA ({engine.upper()})", [], error=f"{type(e).__name__}: {e}"
+        )
 
 
 def benchmark_polars_ema(
-    df: pl.DataFrame,
-    column: str,
-    windows: list[int],
-    engine: Engine,
-    n_runs: int = 5
+    df: pl.DataFrame, column: str, windows: list[int], engine: Engine, n_runs: int = 5
 ) -> BenchmarkResult:
     """Benchmark Polars exponential weighted mean."""
     try:
@@ -180,13 +180,13 @@ def benchmark_polars_ema(
     except GPUNotAvailableError as e:
         return BenchmarkResult(f"Polars EMA ({engine.upper()})", [], error=str(e))
     except Exception as e:
-        return BenchmarkResult(f"Polars EMA ({engine.upper()})", [], error=f"{type(e).__name__}: {e}")
+        return BenchmarkResult(
+            f"Polars EMA ({engine.upper()})", [], error=f"{type(e).__name__}: {e}"
+        )
 
 
 def validate_accuracy(
-    pandas_result: np.ndarray,
-    polars_result: np.ndarray,
-    tolerance: float = 1e-6
+    pandas_result: np.ndarray, polars_result: np.ndarray, tolerance: float = 1e-6
 ) -> tuple[bool, float]:
     """
     Validate that Polars results match pandas results within tolerance.
@@ -199,7 +199,7 @@ def validate_accuracy(
     polars_nan_mask = np.isnan(polars_result)
 
     if not np.array_equal(pandas_nan_mask, polars_nan_mask):
-        return False, float('inf')
+        return False, float("inf")
 
     # Compare non-NaN values
     non_nan_mask = ~pandas_nan_mask
@@ -222,7 +222,9 @@ def print_header(text: str, char: str = "="):
 
 def print_results_table(results: list[BenchmarkResult], baseline: BenchmarkResult):
     """Print benchmark results in formatted table."""
-    print(f"{'Implementation':<25} {'Mean Time':>15} {'Std Dev':>12} {'Min/Max':>18} {'Speedup':>10}")
+    print(
+        f"{'Implementation':<25} {'Mean Time':>15} {'Std Dev':>12} {'Min/Max':>18} {'Speedup':>10}"
+    )
     print("─" * 100)
 
     for result in results:
@@ -241,16 +243,13 @@ def print_results_table(results: list[BenchmarkResult], baseline: BenchmarkResul
             speedup = baseline.mean / result.mean
             speedup_str = f"{speedup:.2f}x"
 
-        print(f"{result.name:<25} {mean_ms:>12.2f} ms {std_ms:>9.2f} ms "
-              f"{min_ms:>7.2f}/{max_ms:<7.2f} ms {speedup_str:>10}")
+        print(
+            f"{result.name:<25} {mean_ms:>12.2f} ms {std_ms:>9.2f} ms "
+            f"{min_ms:>7.2f}/{max_ms:<7.2f} ms {speedup_str:>10}"
+        )
 
 
-def run_benchmark_suite(
-    data: pd.DataFrame,
-    test_name: str,
-    windows: list[int],
-    n_runs: int = 5
-):
+def run_benchmark_suite(data: pd.DataFrame, test_name: str, windows: list[int], n_runs: int = 5):
     """Run complete benchmark suite for given data."""
 
     print_header(test_name)
@@ -259,7 +258,7 @@ def run_benchmark_suite(
     print(f"Number of runs per test: {n_runs}\n")
 
     # Extract close prices
-    close_prices = data['close'].values
+    close_prices = data["close"].values
 
     # Convert to Polars
     polars_df = pl.from_pandas(data.reset_index())
@@ -276,11 +275,11 @@ def run_benchmark_suite(
     sma_results.append(pandas_sma)
 
     # Polars CPU
-    polars_cpu_sma = benchmark_polars_sma(polars_df, 'close', windows, 'cpu', n_runs)
+    polars_cpu_sma = benchmark_polars_sma(polars_df, "close", windows, "cpu", n_runs)
     sma_results.append(polars_cpu_sma)
 
     # Polars GPU (if available)
-    polars_gpu_sma = benchmark_polars_sma(polars_df, 'close', windows, 'gpu', n_runs)
+    polars_gpu_sma = benchmark_polars_sma(polars_df, "close", windows, "gpu", n_runs)
     sma_results.append(polars_gpu_sma)
 
     print_results_table(sma_results, pandas_sma)
@@ -297,11 +296,11 @@ def run_benchmark_suite(
     ema_results.append(pandas_ema)
 
     # Polars CPU
-    polars_cpu_ema = benchmark_polars_ema(polars_df, 'close', windows, 'cpu', n_runs)
+    polars_cpu_ema = benchmark_polars_ema(polars_df, "close", windows, "cpu", n_runs)
     ema_results.append(polars_cpu_ema)
 
     # Polars GPU (if available)
-    polars_gpu_ema = benchmark_polars_ema(polars_df, 'close', windows, 'gpu', n_runs)
+    polars_gpu_ema = benchmark_polars_ema(polars_df, "close", windows, "gpu", n_runs)
     ema_results.append(polars_gpu_ema)
 
     print_results_table(ema_results, pandas_ema)
@@ -313,12 +312,14 @@ def run_benchmark_suite(
 
     # Get reference results from pandas
     pandas_sma_results = [pd.Series(close_prices).rolling(w).mean().values for w in windows]
-    pandas_ema_results = [pd.Series(close_prices).ewm(span=w, adjust=False).mean().values for w in windows]
+    pandas_ema_results = [
+        pd.Series(close_prices).ewm(span=w, adjust=False).mean().values for w in windows
+    ]
 
     # Get Polars results (use CPU to avoid GPU errors)
     try:
-        polars_sma_results = calculate_sma(polars_df, 'close', windows, engine='cpu')
-        polars_ema_results = calculate_ema(polars_df, 'close', windows, engine='cpu')
+        polars_sma_results = calculate_sma(polars_df, "close", windows, engine="cpu")
+        polars_ema_results = calculate_ema(polars_df, "close", windows, engine="cpu")
 
         print("\nSMA Accuracy Check:")
         all_valid = True
@@ -347,29 +348,22 @@ def main():
     """Main benchmark execution."""
     parser = argparse.ArgumentParser(description="Benchmark moving average implementations")
     parser.add_argument(
-        '--sizes',
+        "--sizes",
         type=int,
-        nargs='+',
+        nargs="+",
         default=[1_000, 10_000, 50_000, 100_000],
-        help='Data sizes to test (default: 1000 10000 50000 100000)'
+        help="Data sizes to test (default: 1000 10000 50000 100000)",
     )
     parser.add_argument(
-        '--windows',
+        "--windows",
         type=int,
-        nargs='+',
+        nargs="+",
         default=[5, 10, 20, 50, 100],
-        help='Moving average windows (default: 5 10 20 50 100)'
+        help="Moving average windows (default: 5 10 20 50 100)",
     )
+    parser.add_argument("--use-real-data", type=str, help="Path to real OHLCV CSV file (optional)")
     parser.add_argument(
-        '--use-real-data',
-        type=str,
-        help='Path to real OHLCV CSV file (optional)'
-    )
-    parser.add_argument(
-        '--n-runs',
-        type=int,
-        default=5,
-        help='Number of benchmark runs per test (default: 5)'
+        "--n-runs", type=int, default=5, help="Number of benchmark runs per test (default: 5)"
     )
 
     args = parser.parse_args()
@@ -382,6 +376,7 @@ def main():
 
     try:
         import cudf
+
         print(f"cuDF Version: {cudf.__version__} (GPU available)")
     except ImportError:
         print("cuDF: Not installed (GPU tests will be skipped)")
@@ -390,12 +385,7 @@ def main():
     if not args.use_real_data:
         for size in args.sizes:
             data = generate_ohlcv_data(size)
-            run_benchmark_suite(
-                data,
-                f"Synthetic Data - {size:,} rows",
-                args.windows,
-                args.n_runs
-            )
+            run_benchmark_suite(data, f"Synthetic Data - {size:,} rows", args.windows, args.n_runs)
 
     # Run benchmark with real data if provided
     if args.use_real_data:
@@ -405,7 +395,7 @@ def main():
                 real_data,
                 f"Real Data - {len(real_data):,} rows ({Path(args.use_real_data).name})",
                 args.windows,
-                args.n_runs
+                args.n_runs,
             )
         except Exception as e:
             print(f"\n✗ Failed to load real data: {e}")
@@ -423,5 +413,5 @@ def main():
     print("  → Both implementations are numerically equivalent to pandas")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

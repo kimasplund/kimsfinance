@@ -28,8 +28,8 @@ __all__ = [
 ]
 
 
-P = ParamSpec('P')
-R = TypeVar('R')
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 # Load thresholds on module import
@@ -42,7 +42,7 @@ OPERATION_HEURISTICS = {
     "indicators": {"threshold": 5_000, "ops": ["atr", "rsi"]},
     "aggregations": {"threshold": 5_000, "ops": ["volume_sum"]},
     "transformations": {"threshold": 10_000, "ops": ["pnf", "renko"]},
-    "moving_averages": {"threshold": float('inf'), "ops": ["sma", "ema"]},  # Always CPU
+    "moving_averages": {"threshold": float("inf"), "ops": ["sma", "ema"]},  # Always CPU
 }
 
 
@@ -63,6 +63,7 @@ class EngineManager:
 
         try:
             import cudf
+
             cls._gpu_available = True
             return True
         except ImportError:
@@ -76,10 +77,7 @@ class EngineManager:
 
     @classmethod
     def select_engine(
-        cls,
-        engine: Engine,
-        operation: str | None = None,
-        data_size: int | None = None
+        cls, engine: Engine, operation: str | None = None, data_size: int | None = None
     ) -> Literal["cpu", "gpu"]:
         """
         Select the appropriate execution engine with intelligent defaults.
@@ -110,20 +108,14 @@ class EngineManager:
             return "cpu"
 
         if operation and data_size is not None:
-            threshold = GPU_CROSSOVER_THRESHOLDS.get(
-                operation, GPU_CROSSOVER_THRESHOLDS["default"]
-            )
+            threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, GPU_CROSSOVER_THRESHOLDS["default"])
             return "gpu" if data_size >= threshold else "cpu"
 
         return "cpu"  # Conservative default for "auto"
 
     @classmethod
     def get_optimal_engine(
-        cls,
-        operation: str,
-        data_size: int,
-        *,
-        force_cpu: bool = False
+        cls, operation: str, data_size: int, *, force_cpu: bool = False
     ) -> Engine:
         """
         Get the optimal engine using advanced performance heuristics.
@@ -162,6 +154,7 @@ class EngineManager:
         if gpu_available:
             try:
                 import cudf
+
                 info["cudf_version"] = str(cudf.__version__)
             except ImportError:
                 info["cudf_version"] = "Not installed"
@@ -179,6 +172,7 @@ def with_engine_fallback(func: Callable[..., R]) -> Callable[..., R]:
         def my_operation(data, *, engine: Engine = "auto"):
             ...
     """
+
     @functools.wraps(func)
     def wrapper(*args: object, engine: Engine = "auto", **kwargs: object) -> R:
         selected_engine = EngineManager.select_engine(engine)

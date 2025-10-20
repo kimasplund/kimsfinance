@@ -42,9 +42,7 @@ def validate_non_negative(value: float | int, name: str) -> None:
 
 
 def true_range(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any,
-    close: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any, close: np.ndarray | Any
 ) -> np.ndarray | Any:
     """
     Calculate True Range for volatility indicators.
@@ -85,9 +83,7 @@ def true_range(
     return tr
 
 
-def gain_loss_separation(
-    prices: np.ndarray | Any
-) -> tuple[np.ndarray | Any, np.ndarray | Any]:
+def gain_loss_separation(prices: np.ndarray | Any) -> tuple[np.ndarray | Any, np.ndarray | Any]:
     """
     Separate price changes into gains and losses.
 
@@ -123,9 +119,7 @@ def gain_loss_separation(
 
 
 def typical_price(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any,
-    close: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any, close: np.ndarray | Any
 ) -> np.ndarray | Any:
     """
     Calculate Typical Price (HLC/3).
@@ -153,10 +147,7 @@ def typical_price(
 
 
 def money_flow(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any,
-    close: np.ndarray | Any,
-    volume: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any, close: np.ndarray | Any, volume: np.ndarray | Any
 ) -> np.ndarray | Any:
     """
     Calculate Raw Money Flow for volume indicators.
@@ -186,10 +177,7 @@ def money_flow(
 
 
 def positive_negative_money_flow(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any,
-    close: np.ndarray | Any,
-    volume: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any, close: np.ndarray | Any, volume: np.ndarray | Any
 ) -> tuple[np.ndarray | Any, np.ndarray | Any]:
     """
     Separate money flow into positive and negative flows.
@@ -232,8 +220,7 @@ def positive_negative_money_flow(
 
 
 def directional_movement(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any
 ) -> tuple[np.ndarray | Any, np.ndarray | Any]:
     """
     Calculate Directional Movement (+DM, -DM) for ADX.
@@ -266,25 +253,14 @@ def directional_movement(
     low_diff = -xp.diff(low)  # Negative because we want low[i-1] - low[i]
 
     # Initialize +DM and -DM
-    plus_dm = xp.where(
-        (high_diff > 0) & (high_diff > low_diff),
-        high_diff,
-        0.0
-    )
+    plus_dm = xp.where((high_diff > 0) & (high_diff > low_diff), high_diff, 0.0)
 
-    minus_dm = xp.where(
-        (low_diff > 0) & (low_diff > high_diff),
-        low_diff,
-        0.0
-    )
+    minus_dm = xp.where((low_diff > 0) & (low_diff > high_diff), low_diff, 0.0)
 
     return plus_dm, minus_dm
 
 
-def percentage_change(
-    arr: np.ndarray | Any,
-    periods: int = 1
-) -> np.ndarray | Any:
+def percentage_change(arr: np.ndarray | Any, periods: int = 1) -> np.ndarray | Any:
     """
     Calculate percentage change over N periods.
 
@@ -313,10 +289,7 @@ def percentage_change(
     return result
 
 
-def median_price(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any
-) -> np.ndarray | Any:
+def median_price(high: np.ndarray | Any, low: np.ndarray | Any) -> np.ndarray | Any:
     """
     Calculate Median Price (HL/2).
 
@@ -340,9 +313,7 @@ def median_price(
 
 
 def weighted_close(
-    high: np.ndarray | Any,
-    low: np.ndarray | Any,
-    close: np.ndarray | Any
+    high: np.ndarray | Any, low: np.ndarray | Any, close: np.ndarray | Any
 ) -> np.ndarray | Any:
     """
     Calculate Weighted Close (HLCC/4).
@@ -369,10 +340,7 @@ def weighted_close(
 
 
 # Re-export for convenience
-def _wilder_smoothing(
-    arr: np.ndarray | Any,
-    period: int
-) -> np.ndarray | Any:
+def _wilder_smoothing(arr: np.ndarray | Any, period: int) -> np.ndarray | Any:
     """
     Apply Wilder's smoothing (EWM with alpha=1/period).
 
@@ -395,9 +363,10 @@ def _wilder_smoothing(
     alpha = 1.0 / period
 
     # Initialize with nanmean of first period values (skipping NaN)
-    if xp.__name__ == 'cupy':
+    if xp.__name__ == "cupy":
         # CuPy doesn't have nanmean, so convert to numpy temporarily
         import numpy as np_module
+
         first_valid = np_module.nanmean(xp.asnumpy(arr[:period]))
         result[period - 1] = first_valid
     else:
@@ -414,19 +383,19 @@ def _wilder_smoothing(
 
 
 __all__ = [
-    'EPSILON',
-    'LAMBERT_CONSTANT',
-    'validate_period',
-    'validate_positive',
-    'validate_non_negative',
-    'true_range',
-    'gain_loss_separation',
-    'typical_price',
-    'money_flow',
-    'positive_negative_money_flow',
-    'directional_movement',
-    'percentage_change',
-    'median_price',
-    'weighted_close',
-    '_wilder_smoothing',
+    "EPSILON",
+    "LAMBERT_CONSTANT",
+    "validate_period",
+    "validate_positive",
+    "validate_non_negative",
+    "true_range",
+    "gain_loss_separation",
+    "typical_price",
+    "money_flow",
+    "positive_negative_money_flow",
+    "directional_movement",
+    "percentage_change",
+    "median_price",
+    "weighted_close",
+    "_wilder_smoothing",
 ]

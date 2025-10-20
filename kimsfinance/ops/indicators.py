@@ -20,6 +20,7 @@ import polars as pl
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -42,7 +43,7 @@ def calculate_atr(
     closes: ArrayLike,
     period: int = 14,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     GPU-accelerated Average True Range (ATR) calculation.
@@ -89,11 +90,13 @@ def calculate_atr(
         raise ValueError(f"Data length ({len(highs_arr)}) must be >= period ({period})")
 
     # Create Polars DataFrame for calculation
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+        }
+    )
 
     # Calculate True Range using Polars expressions
     df = df.with_columns(
@@ -110,19 +113,12 @@ def calculate_atr(
 
     # Execute with selected engine
     exec_engine = EngineManager.select_engine(engine, operation="atr", data_size=len(highs_arr))
-    result = df.lazy().select(
-        atr=atr_expr
-    ).collect(engine=exec_engine)
+    result = df.lazy().select(atr=atr_expr).collect(engine=exec_engine)
 
     return result["atr"].to_numpy()
 
 
-def calculate_rsi(
-    prices: ArrayLike,
-    period: int = 14,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_rsi(prices: ArrayLike, period: int = 14, *, engine: Engine = "auto") -> ArrayResult:
     """
     GPU-accelerated Relative Strength Index (RSI).
 
@@ -166,7 +162,7 @@ def calculate_rsi(
     # Separate gains and losses
     df = df.with_columns(
         gain=pl.when(delta > 0).then(delta).otherwise(0),
-        loss=pl.when(delta < 0).then(-delta).otherwise(0)
+        loss=pl.when(delta < 0).then(-delta).otherwise(0),
     )
 
     # Wilder's smoothing for average gain/loss
@@ -175,14 +171,12 @@ def calculate_rsi(
     avg_loss = pl.col("loss").ewm_mean(span=2 * period - 1, adjust=False)
 
     # Calculate RS and RSI
-    rs = (avg_gain / (avg_loss + 1e-10))
+    rs = avg_gain / (avg_loss + 1e-10)
     rsi_expr = (100 - (100 / (1 + rs))).alias("rsi")
 
     # Execute with selected engine
     exec_engine = EngineManager.select_engine(engine, operation="rsi", data_size=len(prices_arr))
-    result = df.lazy().select(
-        rsi=rsi_expr
-    ).collect(engine=exec_engine)
+    result = df.lazy().select(rsi=rsi_expr).collect(engine=exec_engine)
 
     return result["rsi"].to_numpy()
 
@@ -193,7 +187,7 @@ def calculate_macd(
     slow_period: int = 26,
     signal_period: int = 9,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> MACDResult:
     """
     GPU-accelerated MACD (Moving Average Convergence Divergence).
@@ -249,11 +243,7 @@ def calculate_macd(
 
 
 def calculate_bollinger_bands(
-    prices: ArrayLike,
-    period: int = 20,
-    num_std: float = 2.0,
-    *,
-    engine: Engine = "auto"
+    prices: ArrayLike, period: int = 20, num_std: float = 2.0, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult, ArrayResult]:
     """
     GPU-accelerated Bollinger Bands.
@@ -287,13 +277,19 @@ def calculate_bollinger_bands(
     df = pl.DataFrame({"price": prices_arr})
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine(engine, operation="bollinger", data_size=len(prices_arr))
+    exec_engine = EngineManager.select_engine(
+        engine, operation="bollinger", data_size=len(prices_arr)
+    )
 
     # Calculate middle band (SMA) and rolling standard deviation in one pass
-    result = df.lazy().select(
-        middle=pl.col("price").rolling_mean(window_size=period),
-        std_dev=pl.col("price").rolling_std(window_size=period)
-    ).collect(engine=exec_engine)
+    result = (
+        df.lazy()
+        .select(
+            middle=pl.col("price").rolling_mean(window_size=period),
+            std_dev=pl.col("price").rolling_std(window_size=period),
+        )
+        .collect(engine=exec_engine)
+    )
 
     middle_band = result["middle"].to_numpy()
     std_dev = result["std_dev"].to_numpy()
@@ -311,7 +307,7 @@ def calculate_stochastic_oscillator(
     closes: ArrayLike,
     period: int = 14,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate the Stochastic Oscillator.
@@ -344,40 +340,34 @@ def calculate_stochastic_oscillator(
     lows_arr = to_numpy_array(lows)
     closes_arr = to_numpy_array(closes)
 
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+        }
+    )
 
     # Calculate rolling high and low
     rolling_low = pl.col("low").rolling_min(window_size=period)
     rolling_high = pl.col("high").rolling_max(window_size=period)
 
     # Calculate %K
-    k_percent = 100 * (
-        (pl.col("close") - rolling_low) / (rolling_high - rolling_low + 1e-10)
-    )
+    k_percent = 100 * ((pl.col("close") - rolling_low) / (rolling_high - rolling_low + 1e-10))
 
     # Calculate %D (3-period SMA of %K)
     d_percent = k_percent.rolling_mean(window_size=3)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="stochastic", data_size=len(highs_arr))
-    result = df.lazy().select(
-        k=k_percent,
-        d=d_percent
-    ).collect(engine=exec_engine)
+    exec_engine = EngineManager.select_engine(
+        engine, operation="stochastic", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(k=k_percent, d=d_percent).collect(engine=exec_engine)
 
     return (result["k"].to_numpy(), result["d"].to_numpy())
 
 
-def calculate_obv(
-    closes: ArrayLike,
-    volumes: ArrayLike,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_obv(closes: ArrayLike, volumes: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate On-Balance Volume (OBV).
     Automatically uses GPU for datasets > 100,000 rows when engine='auto'.
@@ -396,20 +386,26 @@ def calculate_obv(
     closes_arr = to_numpy_array(closes)
     volumes_arr = to_numpy_array(volumes)
 
-    df = pl.DataFrame({
-        "close": closes_arr,
-        "volume": volumes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "close": closes_arr,
+            "volume": volumes_arr,
+        }
+    )
 
     # Determine direction of price change
     price_change = pl.col("close").diff()
 
     # Calculate OBV
-    obv = pl.when(price_change > 0).then(pl.col("volume")) \
-            .when(price_change < 0).then(-pl.col("volume")) \
-            .otherwise(0) \
-            .cum_sum() \
-            .alias("obv")
+    obv = (
+        pl.when(price_change > 0)
+        .then(pl.col("volume"))
+        .when(price_change < 0)
+        .then(-pl.col("volume"))
+        .otherwise(0)
+        .cum_sum()
+        .alias("obv")
+    )
 
     # Execute with selected engine
     exec_engine = EngineManager.select_engine(engine, operation="obv", data_size=len(closes_arr))
@@ -424,7 +420,7 @@ def calculate_vwap(
     closes: ArrayLike,
     volumes: ArrayLike,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     GPU-accelerated Volume Weighted Average Price (VWAP).
@@ -445,12 +441,14 @@ def calculate_vwap(
     closes_arr = to_numpy_array(closes)
     volumes_arr = to_numpy_array(volumes)
 
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-        "volume": volumes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+            "volume": volumes_arr,
+        }
+    )
 
     # Calculate Typical Price and cumulative sums
     vwap_expr = (
@@ -459,9 +457,7 @@ def calculate_vwap(
 
     # Execute with selected engine
     exec_engine = EngineManager.select_engine(engine, operation="vwap", data_size=len(highs_arr))
-    result = df.lazy().select(
-        vwap=vwap_expr
-    ).collect(engine=exec_engine)
+    result = df.lazy().select(vwap=vwap_expr).collect(engine=exec_engine)
 
     return result["vwap"].to_numpy()
 
@@ -473,7 +469,7 @@ def calculate_vwap_anchored(
     volumes: ArrayLike,
     anchor_indices: ArrayLike,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     GPU-accelerated Anchored VWAP.
@@ -496,13 +492,15 @@ def calculate_vwap_anchored(
     volumes_arr = to_numpy_array(volumes)
     anchors_arr = to_numpy_array(anchor_indices)
 
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-        "volume": volumes_arr,
-        "anchor": anchors_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+            "volume": volumes_arr,
+            "anchor": anchors_arr,
+        }
+    )
 
     # Create a 'session_id' that increments at each anchor point
     session_id = pl.col("anchor").cum_sum()
@@ -513,10 +511,10 @@ def calculate_vwap_anchored(
     ).cum_sum().over(session_id) / pl.col("volume").cum_sum().over(session_id)
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="vwap_anchored", data_size=len(highs_arr))
-    result = df.lazy().select(
-        anchored_vwap=vwap_expr
-    ).collect(engine=exec_engine)
+    exec_engine = EngineManager.select_engine(
+        engine, operation="vwap_anchored", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(anchored_vwap=vwap_expr).collect(engine=exec_engine)
 
     return result["anchored_vwap"].to_numpy()
 
@@ -527,7 +525,7 @@ def calculate_williams_r(
     closes: ArrayLike,
     period: int = 14,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     GPU-accelerated Williams %R.
@@ -547,26 +545,26 @@ def calculate_williams_r(
     lows_arr = to_numpy_array(lows)
     closes_arr = to_numpy_array(closes)
 
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+        }
+    )
 
     # Calculate highest high and lowest low over the period
     highest_high = pl.col("high").rolling_max(window_size=period)
     lowest_low = pl.col("low").rolling_min(window_size=period)
 
     # Calculate Williams %R
-    wr_expr = -100 * (
-        (highest_high - pl.col("close")) / (highest_high - lowest_low + 1e-10)
-    )
+    wr_expr = -100 * ((highest_high - pl.col("close")) / (highest_high - lowest_low + 1e-10))
 
     # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="williams_r", data_size=len(highs_arr))
-    result = df.lazy().select(
-        wr=wr_expr
-    ).collect(engine=exec_engine)
+    exec_engine = EngineManager.select_engine(
+        engine, operation="williams_r", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(wr=wr_expr).collect(engine=exec_engine)
 
     return result["wr"].to_numpy()
 
@@ -578,7 +576,7 @@ def calculate_cci(
     period: int = 20,
     constant: float = 0.015,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     GPU-accelerated Commodity Channel Index (CCI).
@@ -599,11 +597,13 @@ def calculate_cci(
     lows_arr = to_numpy_array(lows)
     closes_arr = to_numpy_array(closes)
 
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+        }
+    )
 
     # Calculate Typical Price
     tp = (pl.col("high") + pl.col("low") + pl.col("close")) / 3
@@ -619,9 +619,7 @@ def calculate_cci(
 
     # Execute with selected engine
     exec_engine = EngineManager.select_engine(engine, operation="cci", data_size=len(highs_arr))
-    result = df.lazy().select(
-        cci=cci_expr
-    ).collect(engine=exec_engine)
+    result = df.lazy().select(cci=cci_expr).collect(engine=exec_engine)
 
     return result["cci"].to_numpy()
 
@@ -680,6 +678,5 @@ if __name__ == "__main__":
     cci = calculate_cci(highs, lows, closes, period=20, engine="auto")
     print(f"\nCCI calculated: {len(cci)} values")
     print(f"  Last 5 CCI values: {cci[-5:]}")
-
 
     print("\n✓ All indicators working correctly!")

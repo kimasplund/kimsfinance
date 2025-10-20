@@ -55,7 +55,7 @@ class TestExplicitEngineSelection:
         result = EngineManager.select_engine("cpu", operation=operation, data_size=data_size)
         assert result == "cpu"
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     @pytest.mark.parametrize("data_size", [100, 1_000, 100_000])
     @pytest.mark.parametrize("operation", ["atr", "rsi", None])
     def test_explicit_gpu_selection_available(self, mock_gpu, data_size, operation):
@@ -64,7 +64,7 @@ class TestExplicitEngineSelection:
         assert result == "gpu"
         mock_gpu.assert_called_once()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=False)
+    @patch.object(EngineManager, "check_gpu_available", return_value=False)
     def test_explicit_gpu_selection_unavailable(self, mock_gpu):
         """Test that engine='gpu' raises error when GPU is unavailable."""
         with pytest.raises(GPUNotAvailableError):
@@ -78,45 +78,51 @@ class TestAutoEngineSelection:
     def setup_method(self):
         EngineManager.reset_gpu_cache()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_auto_defaults_to_cpu_without_context(self, mock_gpu):
         """Test engine='auto' defaults to 'cpu' without context."""
         result = EngineManager.select_engine("auto")
         assert result == "cpu"
         mock_gpu.assert_called_once()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=False)
+    @patch.object(EngineManager, "check_gpu_available", return_value=False)
     def test_auto_returns_cpu_with_no_gpu(self, mock_gpu):
         """Test engine='auto' returns 'cpu' when GPU is unavailable."""
         result = EngineManager.select_engine("auto", operation="atr", data_size=200_000)
         assert result == "cpu"
         mock_gpu.assert_called_once()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
-    @pytest.mark.parametrize("operation,threshold", [
-        ("atr", 100_000),
-        ("rsi", 100_000),
-        ("stochastic", 500_000),
-    ])
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
+    @pytest.mark.parametrize(
+        "operation,threshold",
+        [
+            ("atr", 100_000),
+            ("rsi", 100_000),
+            ("stochastic", 500_000),
+        ],
+    )
     def test_auto_with_small_data_returns_cpu(self, mock_gpu, operation, threshold):
         """Test engine='auto' returns 'cpu' for data below threshold."""
         result = EngineManager.select_engine("auto", operation=operation, data_size=threshold - 1)
         assert result == "cpu"
         mock_gpu.assert_called_once()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
-    @pytest.mark.parametrize("operation,threshold", [
-        ("atr", 100_000),
-        ("rsi", 100_000),
-        ("stochastic", 500_000),
-    ])
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
+    @pytest.mark.parametrize(
+        "operation,threshold",
+        [
+            ("atr", 100_000),
+            ("rsi", 100_000),
+            ("stochastic", 500_000),
+        ],
+    )
     def test_auto_with_large_data_returns_gpu(self, mock_gpu, operation, threshold):
         """Test engine='auto' returns 'gpu' for data at or above threshold."""
         result = EngineManager.select_engine("auto", operation=operation, data_size=threshold)
         assert result == "gpu"
         mock_gpu.assert_called_once()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_auto_unknown_operation_uses_default_threshold(self, mock_gpu):
         """Test that unknown operations use the default threshold."""
         result_small = EngineManager.select_engine("auto", "unknown", 50_000)
@@ -146,27 +152,27 @@ class TestIndicatorEngineIntegration:
         self.small_closes = 100 + np.cumsum(np.random.randn(self.small_size))
         self.large_closes = 100 + np.cumsum(np.random.randn(self.large_size))
 
-    @patch.object(EngineManager, 'select_engine')
+    @patch.object(EngineManager, "select_engine")
     def test_rsi_calls_select_engine_correctly(self, mock_select):
         """Test that calculate_rsi() calls select_engine() correctly."""
         mock_select.return_value = "cpu"
         calculate_rsi(self.small_closes, period=14, engine="auto")
         mock_select.assert_called_once_with("auto", operation="rsi", data_size=self.small_size)
 
-    @patch('kimsfinance.ops.indicators.pl.LazyFrame.collect')
+    @patch("kimsfinance.ops.indicators.pl.LazyFrame.collect")
     def test_rsi_with_small_data_uses_cpu(self, mock_collect):
         """Test that RSI with small data uses the CPU engine."""
-        mock_collect.return_value = pl.DataFrame({'rsi': []})
+        mock_collect.return_value = pl.DataFrame({"rsi": []})
         calculate_rsi(self.small_closes, period=14, engine="auto")
-        mock_collect.assert_called_with(engine='cpu')
+        mock_collect.assert_called_with(engine="cpu")
 
-    @patch('kimsfinance.ops.indicators.pl.LazyFrame.collect')
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch("kimsfinance.ops.indicators.pl.LazyFrame.collect")
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_rsi_with_large_data_uses_gpu(self, mock_gpu, mock_collect):
         """Test that RSI with large data uses the GPU engine."""
-        mock_collect.return_value = pl.DataFrame({'rsi': []})
+        mock_collect.return_value = pl.DataFrame({"rsi": []})
         calculate_rsi(self.large_closes, period=14, engine="auto")
-        mock_collect.assert_called_with(engine='gpu')
+        mock_collect.assert_called_with(engine="gpu")
 
 
 class TestEdgeCases:
@@ -175,13 +181,13 @@ class TestEdgeCases:
     def setup_method(self):
         EngineManager.reset_gpu_cache()
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_exactly_at_threshold(self, mock_gpu):
         """Test behavior at the exact threshold."""
         result = EngineManager.select_engine("auto", "atr", 100_000)
         assert result == "gpu"
 
-    @patch.object(EngineManager, 'check_gpu_available', return_value=True)
+    @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_one_row_below_threshold(self, mock_gpu):
         """Test behavior one row below the threshold."""
         result = EngineManager.select_engine("auto", "atr", 99_999)

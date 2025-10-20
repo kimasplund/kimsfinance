@@ -10,11 +10,8 @@ from __future__ import annotations
 import numpy as np
 from ..core import ArrayLike
 
-def find_swing_points(
-    data: ArrayLike,
-    n: int = 10,
-    is_high: bool = True
-) -> np.ndarray:
+
+def find_swing_points(data: ArrayLike, n: int = 10, is_high: bool = True) -> np.ndarray:
     """
     Find swing highs or lows in a price series.
 
