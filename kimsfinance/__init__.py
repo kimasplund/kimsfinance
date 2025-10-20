@@ -120,8 +120,8 @@ from .ops import (
     calculate_cci,
     calculate_mfi,
     calculate_supertrend,
-    calculate_picks_momentum_ratio,
     find_swing_points,
+    calculate_donchian_channels,
 )
 
 # Aggregations
@@ -324,7 +324,6 @@ __all__ = [
 
     # Technical Indicators (Base)
     "calculate_atr",
-    "calculate_picks_momentum_ratio",
     "find_swing_points",
     "calculate_rsi",
     "calculate_macd",
@@ -344,6 +343,7 @@ __all__ = [
     "calculate_cci",
     "calculate_mfi",
     "calculate_supertrend",
+    "calculate_donchian_channels",
 
     # Aggregations
     "volume_sum",

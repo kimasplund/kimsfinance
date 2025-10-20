@@ -120,21 +120,98 @@ All charts are generated from real Bitcoin price data (50 candles from September
 - **Use Case:** Print materials, professional publications
 - **Best For:** Reports, academic papers, physical media
 
+## Indicator Showcase Collection
+
+The `indicators/` folder contains **75 specialized charts** across **16 categories** (4.1 MB total), demonstrating kimsfinance's comprehensive technical indicator support. All charts use Binance Dark theme, 720p HD resolution (1280x720), 100 candles displayed with 50 warmup period.
+
+### Tier 1 Indicators ⭐ (Recently Added)
+
+#### RSI (Relative Strength Index) - `indicators/rsi/`
+**4 charts, 252 KB total**
+
+- **01_rsi_14.webp** (60 KB) - Standard 14-period RSI with 70/30 overbought/oversold zones
+- **02_rsi_7_14_21.webp** (64 KB) - Multiple RSI periods (7, 14, 21) for multi-timeframe analysis
+- **03_rsi_zones.webp** (64 KB) - Extended zones (80/70/30/20) for detailed analysis
+- **04_rsi_with_sma.webp** (60 KB) - RSI with 9-period SMA for smoothing and trend confirmation
+
+**Use Cases:** Momentum analysis, overbought/oversold detection, divergence identification
+
+#### MACD (Moving Average Convergence Divergence) - `indicators/macd/`
+**4 charts, 240 KB total**
+
+- **01_macd_standard.webp** (60 KB) - Standard MACD (12,26,9) with histogram
+- **02_macd_fast.webp** (64 KB) - Fast MACD (5,35,5) for quicker signals
+- **03_macd_zero_line.webp** (60 KB) - Emphasis on zero-line crossovers
+- **04_macd_histogram.webp** (52 KB) - Histogram-only view for momentum changes
+
+**Use Cases:** Trend following, momentum shifts, divergence analysis, crossover strategies
+
+#### Stochastic Oscillator - `indicators/stochastic/`
+**3 charts, 200 KB total**
+
+- **01_stochastic_14_3.webp** (64 KB) - Standard stochastic (14,3,3) with 80/20 zones
+- **02_stochastic_fast.webp** (68 KB) - Fast stochastic (5,3,3) for day trading
+- **03_stochastic_zones.webp** (68 KB) - Multiple zones for detailed analysis
+
+**Use Cases:** Overbought/oversold conditions, momentum reversals, crossover signals
+
+#### Multi-Panel Dashboards - `indicators/multi_panel/`
+**4 charts, 272 KB total**
+
+- **01_price_volume_rsi.webp** (56 KB) - 3-panel layout: Price + Volume + RSI
+- **02_price_volume_macd.webp** (60 KB) - 3-panel layout: Price + Volume + MACD
+- **03_price_volume_stochastic.webp** (64 KB) - 3-panel layout: Price + Volume + Stochastic
+- **04_full_dashboard.webp** (88 KB) - 4-panel comprehensive dashboard: Price + Volume + RSI + MACD
+
+**Use Cases:** Professional trading terminals, comprehensive analysis, multi-indicator strategies
+
+### Other Indicator Categories
+
+- **SMA (Simple Moving Averages)** - `indicators/sma/` - 7 charts showing various period combinations
+- **EMA (Exponential Moving Averages)** - `indicators/ema/` - 7 charts with faster-responding averages
+- **WMA (Weighted Moving Averages)** - `indicators/wma/` - 6 charts with weighted price emphasis
+- **Bollinger Bands** - `indicators/bollinger/` - 4 charts showing volatility bands
+- **Volume Analysis** - `indicators/volume/` - 5 charts with volume indicators
+- **Multiple Timeframes** - `indicators/multiple_timeframes/` - 4 charts comparing different periods
+- **Chart Types** - `indicators/chart_types/` - 7 charts (candle, hollow, OHLC, line, renko)
+- **Trading Strategies** - `indicators/trading_strategies/` - 6 charts showing common setups
+- **Fibonacci Periods** - `indicators/fibonacci_periods/` - 6 charts with Fibonacci-based MAs
+- **Institutional** - `indicators/institutional/` - 6 charts with institutional-level indicators
+- **Experimental** - `indicators/experimental/` - 8 charts (ADX, regime detection, advanced)
+- **No Indicators** - `indicators/no_indicators/` - 6 clean charts for comparison
+
+### Complete Chart Statistics
+
+- **Main Samples**: 16 charts (683 KB) - Various styles and resolutions
+- **Indicator Showcase**: 75 charts (4.1 MB) - Technical indicators across 16 categories
+- **Total Collection**: 91 charts, ~4.8 MB
+- **Coverage**: RSI, MACD, Stochastic, SMA, EMA, WMA, Bollinger, Volume, Multi-panel, and more
+- **New Tier 1 Additions**: 15 charts (968 KB) - RSI, MACD, Stochastic, Multi-panel dashboards
+
 ## Technical Details
 
-- **Data Source:** Bitcoin OHLCV data from binance-visual-ml test dataset (starting from row 600)
-- **Time Period:** September 14, 2025, 15:15 - 19:20 UTC (50 candles displayed, 5-minute intervals)
+- **Data Source:** Bitcoin OHLCV data from binance-visual-ml test dataset
+  - Main samples: Starting from row 600
+  - Indicator samples: Starting from row 1000
+- **Time Period:** September 2025, 5-minute intervals
 - **Indicator Warmup:** 50 additional candles loaded for proper indicator calculation
 - **Format:** WebP (modern, efficient image format)
-- **Total Charts:** 16 different variations
-  - 9 standard resolution styles
-  - 3 charts with technical indicators
-  - 4 high-resolution variants (HD 720p, Full HD 1080p)
-- **Average File Size:** 38.7 KB (including HD variants)
-- **Standard Resolution:** ~27 KB average
-- **HD 720p:** ~45 KB
-- **Full HD 1080p:** ~75-96 KB (still smaller than standard PNG!)
-- **Generation Time:** ~20-25 seconds for all 16 charts
+- **Total Charts:** 91 charts across all collections
+  - **Main samples:** 16 variations (683 KB)
+    - 9 standard resolution styles
+    - 3 charts with technical indicators
+    - 4 high-resolution variants (HD 720p, Full HD 1080p)
+  - **Indicator showcase:** 75 specialized charts (4.1 MB)
+    - 16 indicator categories
+    - Tier 1 additions: RSI, MACD, Stochastic, Multi-panel (15 charts)
+- **File Sizes:**
+  - Main samples average: ~43 KB
+  - Indicator samples average: ~55 KB (720p HD)
+  - HD 720p: ~45-68 KB
+  - Full HD 1080p: ~75-96 KB (still smaller than standard PNG!)
+- **Generation Time:**
+  - Main samples: ~20-25 seconds for 16 charts
+  - Tier 1 indicators: ~30-40 seconds for 15 charts
 - **GPU Acceleration:** Compatible (auto-detects and uses GPU when available)
 
 ### Indicator Calculation
@@ -178,7 +255,9 @@ JPG equivalent:     ~320 KB (3-4x larger)
 - 📱 Better mobile performance
 - 🖥️ HD-ready without file bloat
 
-## Usage Example
+## Usage Examples
+
+### Basic Charts
 
 To generate similar charts in your own code:
 
@@ -229,9 +308,58 @@ kf.plot(
 )
 ```
 
+### Tier 1 Indicators (Advanced)
+
+Create multi-panel charts with RSI, MACD, and Stochastic:
+
+```python
+import kimsfinance as kf
+import polars as pl
+
+# Load data with warmup period for indicator calculation
+df = pl.read_csv("your_data.csv")
+
+# Calculate RSI
+rsi = kf.calculate_rsi(df["close"], period=14)
+
+# Calculate MACD
+macd_result = kf.calculate_macd(df["close"], fast=12, slow=26, signal=9)
+macd_line = macd_result.macd
+signal_line = macd_result.signal
+histogram = macd_result.histogram
+
+# Calculate Stochastic
+stoch_result = kf.calculate_stochastic(
+    df["high"], df["low"], df["close"],
+    k_period=14, d_period=3
+)
+
+# Create multi-panel dashboard
+apds = [
+    kf.make_addplot(rsi, panel=2, color='cyan', ylabel='RSI'),
+    kf.make_addplot(macd_line, panel=3, color='cyan', ylabel='MACD'),
+    kf.make_addplot(signal_line, panel=3, color='orange'),
+    kf.make_addplot(histogram, panel=3, type='bar', color='gray'),
+]
+
+kf.plot(
+    df,
+    type="candle",
+    style="binancedark",
+    volume=True,
+    addplot=apds,
+    panel_ratios=(3, 1, 1, 1),  # Price, Volume, RSI, MACD
+    figratio=(16, 9),
+    figscale=1.6,
+    savefig="full_dashboard.webp"
+)
+```
+
 ## Regenerating Samples
 
-To regenerate these sample charts:
+### Main Sample Charts
+
+To regenerate the 16 main sample charts:
 
 ```bash
 # From the repository root
@@ -246,6 +374,25 @@ The script will:
    - 4 high-resolution variants (720p, 1080p)
 3. Save them as optimized WebP files
 4. Display file sizes and generation statistics
+
+### Tier 1 Indicator Charts
+
+To regenerate the RSI, MACD, Stochastic, and Multi-panel charts:
+
+```bash
+# From the repository root
+.venv/bin/python scripts/generate_tier1_indicators.py
+```
+
+The script will:
+1. Load 100 candles from CSV row 1000 (with 50 warmup candles)
+2. Generate 15 Tier 1 indicator charts:
+   - 4 RSI variations (14-period, multiple periods, zones, with SMA)
+   - 4 MACD variations (standard, fast, zero-line, histogram)
+   - 3 Stochastic variations (standard, fast, zones)
+   - 4 Multi-panel dashboards (price+volume+RSI, +MACD, +Stochastic, full)
+3. Save them to `docs/sample_charts/indicators/` subdirectories
+4. All charts use Binance Dark theme, 720p HD resolution
 
 ## Performance Characteristics
 
@@ -303,9 +450,11 @@ Available built-in styles:
 
 - **Try the examples** - Copy the code above and modify parameters
 - **Explore styles** - Test different visual themes for your use case
-- **Add indicators** - Combine with technical indicators (MA, RSI, MACD, etc.)
+- **Add indicators** - Explore the 75+ indicator examples in `indicators/` folder
+- **Multi-panel layouts** - Create professional trading dashboards with multiple indicators
 - **Customize** - Create your own color schemes and layouts
 - **Optimize** - Enable GPU acceleration for 10-50x speedup on large datasets
+- **Tier 1 Indicators** - Start with RSI, MACD, and Stochastic - the most popular technical indicators
 
 ## Questions or Issues?
 
