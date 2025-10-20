@@ -1,6 +1,6 @@
 # kimsfinance
 
-**High-Performance Financial Charting Library with GPU Acceleration**
+**High-Performance Financial Charting Library with optional GPU Acceleration**
 
 [![Chart Speed](https://img.shields.io/badge/Chart_Rendering-6,249_img/sec-brightgreen.svg)](https://github.com)
 [![Speedup](https://img.shields.io/badge/Speedup-178x_faster-blue.svg)](https://github.com)
@@ -934,8 +934,8 @@ a fundamentally different architecture optimized for extreme performance.
 
 ## 📧 Contact
 
-- GitHub Issues: [Report a bug](https://github.com/yourusername/kimsfinance/issues)
-- Email: your.email@example.com
+- GitHub Issues: [Report a bug](https://github.com/kimasplund/kimsfinance/issues)
+- Email: hello@asplund.kim
 - Discord: [Join our community](https://discord.gg/...)
 
 ---
