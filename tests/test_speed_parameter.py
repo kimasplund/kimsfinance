@@ -6,7 +6,9 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from kimsfinance.plotting.renderer import render_ohlcv_chart, save_chart, THEMES, SPEED_PRESETS
+from kimsfinance.plotting import render_ohlcv_chart, save_chart
+from kimsfinance.config.themes import THEMES
+from kimsfinance.config.chart_settings import SPEED_PRESETS
 
 # Sample test data
 SAMPLE_OHLC = {

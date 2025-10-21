@@ -29,6 +29,7 @@ from ..core import (
     EngineManager,
     MACDResult,
 )
+from ..core.exceptions import ConfigurationError
 
 
 def _to_numpy_array(data: ArrayLike) -> np.ndarray:
@@ -221,6 +222,10 @@ def calculate_indicators_batch(
         - calculate_bollinger_bands: Individual Bollinger Bands calculation
         - calculate_obv: Individual OBV calculation
     """
+    # Validate engine parameter before any computation
+    if engine not in ("auto", "cpu", "gpu"):
+        raise ConfigurationError(f"Invalid engine: '{engine}'. Must be 'auto', 'cpu', or 'gpu'")
+
     # Convert inputs to numpy arrays
     highs_arr = _to_numpy_array(highs)
     lows_arr = _to_numpy_array(lows)
@@ -329,24 +334,30 @@ def calculate_indicators_batch(
     # ========================================================================
     # MACD - Fast: 12, Slow: 26, Signal: 9
     # ========================================================================
+    # ========================================================================
+    # MACD - Fast: 12, Slow: 26, Signal: 9
+    # ========================================================================
     # MACD Line = EMA(12) - EMA(26)
-    # Signal Line = EMA(MACD, 9) [requires 2nd pass]
+    # Signal Line = EMA(MACD, 9)
     # Histogram = MACD - Signal
-    expressions["ema_fast"] = pl.col("close").ewm_mean(span=12, adjust=False)
-    expressions["ema_slow"] = pl.col("close").ewm_mean(span=26, adjust=False)
+    ema_fast = pl.col("close").ewm_mean(span=12, adjust=False, min_samples=12)
+    ema_slow = pl.col("close").ewm_mean(span=26, adjust=False, min_samples=26)
+    expressions["macd_line"] = ema_fast - ema_slow
+    expressions["macd_signal"] = expressions["macd_line"].ewm_mean(span=9, adjust=False, min_samples=9)
 
     # ========================================================================
     # Execute all indicators in single GPU pass
     # ========================================================================
 
     # Smart engine selection (GPU beneficial at 15K+ rows for batch)
-    exec_engine = EngineManager.select_engine(
-        engine, operation="batch_indicators", data_size=data_size
-    )
+
 
     # Streaming decision (auto-enable at 500K+ rows)
     use_streaming = _should_use_streaming(data_size, streaming)
 
+    exec_engine = EngineManager.select_engine(
+        engine, operation="batch_indicators", data_size=data_size
+    )
     # Execute lazy evaluation with streaming support
     result = (
         df.lazy()
@@ -377,21 +388,12 @@ def calculate_indicators_batch(
     # OBV (if volumes provided)
     obv = result["obv"].to_numpy() if volumes_arr is not None else None
 
-    # MACD (requires 2nd pass for signal line)
-    ema_fast = result["ema_fast"].to_numpy()
-    ema_slow = result["ema_slow"].to_numpy()
-    macd_line = ema_fast - ema_slow
+    # OBV (if volumes provided)
+    obv = result["obv"].to_numpy() if volumes_arr is not None else None
 
-    # Signal line: EMA of MACD line (2nd pass, small array so no streaming needed)
-    signal_df = pl.DataFrame({"macd": macd_line})
-    signal_result = (
-        signal_df.lazy()
-        .select(signal=pl.col("macd").ewm_mean(span=9, adjust=False))
-        .collect(engine=exec_engine)  # Small array, no need for streaming
-    )
-    signal_line = signal_result["signal"].to_numpy()
-
-    # MACD histogram
+    # MACD
+    macd_line = result["macd_line"].to_numpy()
+    signal_line = result["macd_signal"].to_numpy()
     histogram = macd_line - signal_line
 
     # ========================================================================

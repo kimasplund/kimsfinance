@@ -34,8 +34,8 @@ from ..core import (
     Engine,
     EngineManager,
     GPUNotAvailableError,
-    to_numpy_array,
 )
+from ..utils.array_utils import to_numpy_array
 
 
 def volume_sum(volume: ArrayLike, *, engine: Engine = "auto") -> float:
