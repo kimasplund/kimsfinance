@@ -126,8 +126,9 @@ def plot(
         )
 
     # Use native PIL renderer (178x speedup!)
-    from ..plotting.renderer import (
+    from ..plotting import (
         render_ohlcv_chart,
+        render_ohlcv_charts,
         render_ohlc_bars,
         render_line_chart,
         render_hollow_candles,

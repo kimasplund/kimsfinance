@@ -44,21 +44,20 @@ def test_moving_averages():
 
     # Generate test data
     prices = np.array([100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0])
-    df = pl.DataFrame({"close": prices})
 
     print(f"Test data: {len(prices)} prices")
 
     # Test SMA
-    sma_5 = mfp.calculate_sma(df, "close", windows=5, engine="cpu")[0]
+    sma_5 = mfp.calculate_sma(prices, period=5, engine="cpu")
     print(f"✓ SMA(5) calculated: {sma_5[-3:]}")
 
     # Test EMA
-    ema_3 = mfp.calculate_ema(df, "close", windows=3, engine="cpu")[0]
+    ema_3 = mfp.calculate_ema(prices, period=3, engine="cpu")
     print(f"✓ EMA(3) calculated: {ema_3[-3:]}")
 
     # Test combined
     mas = mfp.calculate_multiple_mas(
-        df, "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="cpu"
+        pl.DataFrame({"close": prices}), "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="cpu"
     )
     print(f"✓ Combined MAs: {len(mas['sma'])} SMAs, {len(mas['ema'])} EMAs")
 

@@ -1,8 +1,8 @@
 """Operations modules for kimsfinance."""
 
-from .moving_averages import (
-    calculate_sma as calculate_sma_polars,
-    calculate_ema as calculate_ema_polars,
+from .indicators.moving_averages import (
+    calculate_sma,
+    calculate_ema,
     calculate_multiple_mas,
     from_pandas_series,
 )
@@ -50,36 +50,7 @@ from .stochastic import (
     calculate_stochastic_rsi,
 )
 
-from .indicators import (
-    calculate_aroon,
-    calculate_atr,
-    calculate_rsi,
-    calculate_macd,
-    calculate_bollinger_bands,
-    calculate_stochastic_oscillator,
-    calculate_obv,
-    calculate_vwap,
-    calculate_vwap_anchored,
-    calculate_williams_r,
-    calculate_cci,
-    calculate_keltner_channels,
-    calculate_fibonacci_retracement,
-    calculate_pivot_points,
-    calculate_cmf,
-    calculate_volume_profile,
-    calculate_sma,
-    calculate_ema,
-    calculate_dema,
-    calculate_tema,
-    calculate_wma,
-    calculate_vwma,
-    calculate_hma,
-    calculate_parabolic_sar,
-    calculate_donchian_channels,
-    calculate_roc,
-    calculate_tsi,
-    calculate_elder_ray,
-)
+from .indicators import *
 
 from .ichimoku import calculate_ichimoku
 from .adx import calculate_adx
