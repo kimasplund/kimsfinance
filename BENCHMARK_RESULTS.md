@@ -1,6 +1,6 @@
 # Candlestick Chart Renderer Performance Benchmark
 
-**Generated:** 2025-10-22 10:35:28
+**Generated:** 2025-10-22 10:49:09
 
 ## System Information
 
@@ -8,17 +8,20 @@
 - **Pillow Version:** 12.0.0
 - **NumPy Version:** 2.3.4
 - **Platform:** Linux 6.17.1-061701-generic
-- **CPU:** x86_64
+- **CPU:** 13th Gen Intel(R) Core(TM) i9-13980HX (32 cores)
+- **Memory:** 61Gi
+- **GPU:** NVIDIA RTX 3500 Ada Generation Laptop GPU (12282 MiB)
 
 ## 1. Dataset Size Scaling
 
 Performance scaling with increasing number of candles (baseline configuration).
 
+*Note: PIL raster formats only. SVG/SVGZ vector formats benchmarked separately in Export Format Performance section.*
+
 | Candles | Render Time (ms) | Ops/Sec | WebP (KB) | PNG (KB) | JPEG (KB) |
 |---------|------------------|---------|-----------|----------|-----------|
-|      50 |            1.16 |  864.81 |       1.4 |     12.7 |     138.3 |
-|     100 |            1.17 |  852.71 |       2.2 |     13.8 |     158.3 |
-|     500 |            2.17 |  461.10 |       6.2 |     19.6 |     200.8 |
+|      50 |            1.30 |  768.25 |       1.4 |     12.7 |     138.3 |
+|     100 |            1.25 |  802.15 |       2.2 |     13.8 |     158.3 |
 
 ## 2. RGB vs RGBA Mode Comparison
 
@@ -26,8 +29,8 @@ Impact of antialiasing (RGBA mode) on rendering performance.
 
 | Mode | Render Time (ms) | File Size WebP (KB) | File Size PNG (KB) | Overhead |
 |------|------------------|---------------------|--------------------|----------|
-| RGB  |           30.03 |                14.2 |               28.2 | baseline |
-| RGBA |           27.69 |                14.2 |               30.6 | + -7.8% |
+| RGB  |           30.26 |                14.2 |               28.2 | baseline |
+| RGBA |           27.63 |                14.2 |               30.6 | + -8.7% |
 
 ## 3. Grid Rendering Overhead
 
@@ -35,8 +38,8 @@ Performance impact of grid line rendering.
 
 | Configuration | Render Time (ms) | Overhead |
 |--------------|------------------|----------|
-| Without grid |           27.37 | baseline |
-| With grid    |           27.61 | +  0.9% |
+| Without grid |           27.66 | baseline |
+| With grid    |           28.51 | +  3.0% |
 
 ## 4. Theme Performance Comparison
 
@@ -44,10 +47,10 @@ Verify that theme selection has no performance impact (colors only).
 
 | Theme       | Render Time (ms) | Variance |
 |-------------|------------------|----------|
-| classic     |           27.51 |    -0.5% |
-| modern      |           27.72 |    +0.3% |
-| tradingview |           27.68 |    +0.2% |
-| light       |           27.64 |    -0.0% |
+| classic     |           28.87 |    +2.6% |
+| modern      |           28.00 |    -0.5% |
+| tradingview |           27.80 |    -1.2% |
+| light       |           27.88 |    -0.9% |
 
 **Conclusion:** Theme selection has negligible performance impact (<1% variance).
 
@@ -57,9 +60,9 @@ Performance with different wick width ratios.
 
 | Wick Ratio | Render Time (ms) |
 |------------|------------------|
-| 0.05       |           27.79 |
-| 0.1        |           27.69 |
-| 0.2        |           27.58 |
+| 0.05       |           27.76 |
+| 0.1        |           27.68 |
+| 0.2        |           27.72 |
 
 ## 6. Resolution Scaling
 
@@ -67,9 +70,9 @@ Performance impact of output resolution.
 
 | Resolution | Render Time (ms) | WebP (KB) | PNG (KB) | JPEG (KB) |
 |------------|------------------|-----------|----------|-----------|
-| 720p       |           26.75 |       8.9 |     18.7 |     157.6 |
-| 1080p      |           27.54 |      14.2 |     30.6 |     271.6 |
-| 4K         |           32.29 |      27.6 |     73.8 |     680.5 |
+| 720p       |           26.87 |       8.9 |     18.7 |     157.6 |
+| 1080p      |           27.84 |      14.2 |     30.6 |     271.6 |
+| 4K         |           31.83 |      27.6 |     73.8 |     680.5 |
 
 ## 7. Export Format Performance
 
@@ -77,9 +80,11 @@ Encoding time and file size comparison for different formats (1000 candles, 1920
 
 | Format | Encode Time (ms) | File Size (KB) | Compression |
 |--------|------------------|----------------|-------------|
-| JPEG   |           30.84 |          223.7 |       0.10x |
-| PNG    |          128.98 |           22.8 |       1.00x |
-| WEBP   |          202.07 |            9.5 |       2.39x |
+| JPEG   |           32.14 |          223.7 |       0.10x |
+| PNG    |          131.11 |           22.8 |       1.00x |
+| SVG    |          174.64 |          387.2 |       0.06x |
+| SVGZ   |          190.55 |           90.9 |       0.25x |
+| WEBP   |          206.98 |            9.5 |       2.39x |
 
 **Note:** Pillow 11+ uses zlib-ng for PNG compression, providing 2-3x faster encoding.
 
@@ -90,8 +95,8 @@ Performance with all features enabled (RGBA mode, grid, theme, optimal wick widt
 
 ## Key Findings
 
-1. **RGBA Mode:** Adds ~-7.8% overhead for antialiasing (worth it for quality)
-2. **Grid Lines:** Adds ~0.9% overhead (minimal impact)
+1. **RGBA Mode:** Adds ~-8.7% overhead for antialiasing (worth it for quality)
+2. **Grid Lines:** Adds ~3.0% overhead (minimal impact)
 3. **Themes:** No measurable performance difference between themes
 4. **Wick Width:** Variable wick widths have negligible performance impact
 6. **WebP Format:** ~58% smaller files than PNG (lossless)

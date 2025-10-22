@@ -10,10 +10,13 @@ overhead across various configurations.
 Benchmark Scenarios:
     - Dataset sizes: 100, 1K, 10K, 100K candles
     - RGB vs RGBA mode (antialiasing)
-    - Export formats: WebP, PNG, JPEG
+    - Export formats: WebP, PNG, JPEG, SVG, SVGZ
     - With/without grid rendering
     - All 4 color themes
     - Variable wick widths
+
+Note: SVG/SVGZ formats use a separate vector rendering pipeline.
+The benchmark measures both raster (PIL) and vector (SVG) performance.
 
 Metrics Measured:
     - Rendering time (milliseconds)
@@ -67,6 +70,13 @@ def load_renderer_module():
         "from ..core import to_numpy_array, ArrayLike", "# Import replaced by benchmark script"
     )
 
+    # Check if svgwrite is available
+    try:
+        import svgwrite
+        SVGWRITE_AVAILABLE = True
+    except ImportError:
+        SVGWRITE_AVAILABLE = False
+
     # Create module namespace with necessary functions
     namespace = {
         "__name__": "kimsfinance.plotting.renderer",
@@ -75,6 +85,7 @@ def load_renderer_module():
         "ImageDraw": ImageDraw,
         "np": np,
         "to_numpy_array": lambda data: data if isinstance(data, np.ndarray) else np.asarray(data),
+        "SVGWRITE_AVAILABLE": SVGWRITE_AVAILABLE,
     }
 
     # Execute the renderer module code
@@ -88,6 +99,14 @@ renderer = load_renderer_module()
 render_ohlcv_chart = renderer["render_ohlcv_chart"]
 save_chart = renderer["save_chart"]
 THEMES = renderer["THEMES"]
+
+# Import SVG rendering functions
+try:
+    from kimsfinance.plotting.svg_renderer import render_candlestick_svg
+    SVG_AVAILABLE = True
+except ImportError:
+    SVG_AVAILABLE = False
+    render_candlestick_svg = None
 
 
 @dataclass
@@ -250,12 +269,13 @@ def benchmark_export_performance(
     Returns:
         Dict mapping format -> {'encode_time_ms': float, 'file_size_kb': float}
     """
-    # Generate data and render once
+    # Generate data and render once (for PIL formats)
     data = generate_realistic_ohlcv_data(num_candles)
     img = render_ohlcv_chart(data["ohlc"], data["volume"])
 
     results = {}
 
+    # Benchmark PIL-based raster formats
     for format in ["webp", "png", "jpeg"]:
         encode_times = []
 
@@ -279,6 +299,40 @@ def benchmark_export_performance(
             "encode_time_ms": float(np.median(encode_times)),
             "file_size_kb": file_size_kb,
         }
+
+    # Benchmark SVG-based vector formats
+    if SVG_AVAILABLE and render_candlestick_svg is not None:
+        for format in ["svg", "svgz"]:
+            encode_times = []
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Warm-up
+                filepath = os.path.join(tmpdir, f"warmup.{format}")
+                render_candlestick_svg(
+                    data["ohlc"],
+                    data["volume"],
+                    output_path=filepath,
+                )
+
+                # Benchmark encoding time
+                for i in range(n_runs):
+                    filepath = os.path.join(tmpdir, f"test_{i}.{format}")
+                    start = time.perf_counter()
+                    render_candlestick_svg(
+                        data["ohlc"],
+                        data["volume"],
+                        output_path=filepath,
+                    )
+                    end = time.perf_counter()
+                    encode_times.append((end - start) * 1000)
+
+                # Get final file size
+                file_size_kb = os.path.getsize(filepath) / 1024
+
+            results[format.upper()] = {
+                "encode_time_ms": float(np.median(encode_times)),
+                "file_size_kb": file_size_kb,
+            }
 
     return results
 
@@ -425,13 +479,48 @@ def format_results_markdown(
     md.append(f"- **Pillow Version:** {PIL.__version__}")
     md.append(f"- **NumPy Version:** {np.__version__}")
     md.append(f"- **Platform:** {platform.system()} {platform.release()}")
-    md.append(f"- **CPU:** {platform.processor() or platform.machine()}")
+
+    # Enhanced CPU info
+    try:
+        with open('/proc/cpuinfo', 'r') as f:
+            for line in f:
+                if 'model name' in line:
+                    cpu_model = line.split(':')[1].strip()
+                    md.append(f"- **CPU:** {cpu_model} ({os.cpu_count()} cores)")
+                    break
+    except:
+        md.append(f"- **CPU:** {platform.processor() or platform.machine()}")
+
+    # Memory info
+    try:
+        import subprocess
+        mem_info = subprocess.check_output(['free', '-h'], text=True)
+        mem_total = mem_info.split('\n')[1].split()[1]
+        md.append(f"- **Memory:** {mem_total}")
+    except:
+        pass
+
+    # GPU info
+    try:
+        import subprocess
+        gpu_info = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=name,memory.total', '--format=csv,noheader'],
+            text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        if gpu_info:
+            gpu_name, gpu_mem = gpu_info.split(', ')
+            md.append(f"- **GPU:** {gpu_name} ({gpu_mem})")
+    except:
+        pass
+
     md.append("")
 
     # Dataset Size Scaling
     md.append("## 1. Dataset Size Scaling")
     md.append("")
     md.append("Performance scaling with increasing number of candles (baseline configuration).")
+    md.append("")
+    md.append("*Note: PIL raster formats only. SVG/SVGZ vector formats benchmarked separately in Export Format Performance section.*")
     md.append("")
     md.append("| Candles | Render Time (ms) | Ops/Sec | WebP (KB) | PNG (KB) | JPEG (KB) |")
     md.append("|---------|------------------|---------|-----------|----------|-----------|")
@@ -703,7 +792,38 @@ def main():
     print(f"Pillow {PIL.__version__}")
     print(f"NumPy {np.__version__}")
     print(f"Platform: {platform.system()} {platform.release()}")
-    print(f"CPU: {platform.processor() or platform.machine()}")
+
+    # Enhanced CPU info
+    try:
+        with open('/proc/cpuinfo', 'r') as f:
+            for line in f:
+                if 'model name' in line:
+                    cpu_model = line.split(':')[1].strip()
+                    print(f"CPU: {cpu_model} ({os.cpu_count()} cores)")
+                    break
+    except:
+        print(f"CPU: {platform.processor() or platform.machine()}")
+
+    # Memory info
+    try:
+        import subprocess
+        mem_info = subprocess.check_output(['free', '-h'], text=True)
+        mem_total = mem_info.split('\n')[1].split()[1]
+        print(f"Memory: {mem_total}")
+    except:
+        pass
+
+    # GPU info
+    try:
+        import subprocess
+        gpu_info = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=name,memory.total', '--format=csv,noheader'],
+            text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        if gpu_info:
+            print(f"GPU: {gpu_info}")
+    except:
+        pass
     print(f"\nDataset sizes: {args.sizes}")
     print(f"Runs per benchmark: {args.n_runs}")
 
