@@ -15,6 +15,9 @@ from numpy.typing import NDArray
 import polars as pl
 import pandas as pd
 
+# Import at module level to avoid circular import issues
+from ..config.gpu_thresholds import get_threshold
+
 
 # ============================================================================
 # Result Types
@@ -76,12 +79,13 @@ class EngineConfig:
         self,
         engine: Engine = "auto",
         *,
-        gpu_min_rows: int = 10_000,
+        gpu_min_rows: int | None = None,
         gpu_operations: set[str] | None = None,
         fallback_on_error: bool = True,
     ):
         self.engine = engine
-        self.gpu_min_rows = gpu_min_rows
+        # Use config threshold if not explicitly provided
+        self.gpu_min_rows = gpu_min_rows if gpu_min_rows is not None else get_threshold("default")
         self.gpu_operations = gpu_operations or {
             "nanmin",
             "nanmax",

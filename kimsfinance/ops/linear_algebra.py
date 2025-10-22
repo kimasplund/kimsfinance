@@ -23,6 +23,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import (
     ArrayLike,
     ArrayResult,
@@ -88,8 +89,9 @@ def least_squares_fit(x: ArrayLike, y: ArrayLike, *, engine: Engine = "auto") ->
 
     exec_engine = EngineManager.select_engine(engine)
 
-    # Use optimal engine based on data size
-    if len(x_arr) < 1_000:
+    # Use optimal engine based on data size (linear algebra operations)
+    linear_algebra_threshold = get_threshold("linear_algebra")
+    if len(x_arr) < linear_algebra_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -188,7 +190,9 @@ def polynomial_fit(
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(x_arr) < 1_000:
+    # Use optimal engine based on data size (linear algebra operations)
+    linear_algebra_threshold = get_threshold("linear_algebra")
+    if len(x_arr) < linear_algebra_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -245,7 +249,9 @@ def correlation(x: ArrayLike, y: ArrayLike, *, engine: Engine = "auto") -> float
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(x_arr) < 1_000:
+    # Use optimal engine based on data size (linear algebra operations)
+    linear_algebra_threshold = get_threshold("linear_algebra")
+    if len(x_arr) < linear_algebra_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":

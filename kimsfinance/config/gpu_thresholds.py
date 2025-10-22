@@ -41,6 +41,29 @@ GPU_THRESHOLDS: dict[str, int] = {
     # Rolling window operations
     # GPU-accelerated rolling operations (min/max/mean/std)
     "rolling": 50_000,  # Rolling min/max/mean/std
+
+    # Aggregation operations (simple reductions)
+    # GPU benefit only for large datasets
+    "aggregation": 5_000,  # volume_sum, cumulative_sum, volume_weighted_price
+
+    # Batch indicator operations
+    # Lower threshold due to batch processing overhead
+    "batch_indicators": 15_000,  # Batch processing of multiple indicators
+
+    # NaN operations
+    # GPU benefit for large datasets with many NaN checks
+    "nan_ops": 10_000,  # nanmin, nanmax, isnan
+
+    # Linear algebra operations
+    # GPU efficient for matrix operations
+    "linear_algebra": 1_000,  # least_squares, trend_line
+
+    # Transformation operations
+    # GPU benefit for large datasets with complex transforms
+    "transformation": 10_000,  # pnf, renko
+
+    # Default fallback for unspecified operations
+    "default": 100_000,
 }
 
 
@@ -90,3 +113,28 @@ def should_use_gpu_histogram(data_size: int) -> bool:
 def should_use_gpu_rolling(data_size: int) -> bool:
     """Check if GPU should be used for rolling window operations."""
     return data_size >= GPU_THRESHOLDS["rolling"]
+
+
+def should_use_gpu_aggregation(data_size: int) -> bool:
+    """Check if GPU should be used for aggregation operations."""
+    return data_size >= GPU_THRESHOLDS["aggregation"]
+
+
+def should_use_gpu_batch(data_size: int) -> bool:
+    """Check if GPU should be used for batch indicator operations."""
+    return data_size >= GPU_THRESHOLDS["batch_indicators"]
+
+
+def should_use_gpu_nan_ops(data_size: int) -> bool:
+    """Check if GPU should be used for NaN operations."""
+    return data_size >= GPU_THRESHOLDS["nan_ops"]
+
+
+def should_use_gpu_linear_algebra(data_size: int) -> bool:
+    """Check if GPU should be used for linear algebra operations."""
+    return data_size >= GPU_THRESHOLDS["linear_algebra"]
+
+
+def should_use_gpu_transformation(data_size: int) -> bool:
+    """Check if GPU should be used for transformation operations."""
+    return data_size >= GPU_THRESHOLDS["transformation"]

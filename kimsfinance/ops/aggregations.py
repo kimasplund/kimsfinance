@@ -27,6 +27,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import (
     ArrayLike,
     ArrayResult,
@@ -70,7 +71,9 @@ def volume_sum(volume: ArrayLike, *, engine: Engine = "auto") -> float:
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(volume_arr) < 5_000:
+    # Use aggregation threshold for simple reduction operations
+    aggregation_threshold = get_threshold("aggregation")
+    if len(volume_arr) < aggregation_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -118,7 +121,9 @@ def volume_weighted_price(
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(prices_arr) < 5_000:
+    # Use aggregation threshold for weighted average calculation
+    aggregation_threshold = get_threshold("aggregation")
+    if len(prices_arr) < aggregation_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -308,7 +313,9 @@ def cumulative_sum(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(data_arr) < 5_000:
+    # Use aggregation threshold for cumulative operations
+    aggregation_threshold = get_threshold("aggregation")
+    if len(data_arr) < aggregation_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":

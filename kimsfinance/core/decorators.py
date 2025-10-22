@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 
 from .types import ArrayLike, Engine
 from .engine import EngineManager, GPUNotAvailableError
+from ..config.gpu_thresholds import get_threshold
 
 
 P = ParamSpec("P")
@@ -153,7 +154,8 @@ def gpu_accelerated(
             # Smart engine selection with size-based override
             if engine == "auto":
                 # Automatically select based on data size and GPU availability
-                threshold = min_gpu_size if min_gpu_size is not None else 100_000
+                # Use provided threshold or get default from config
+                threshold = min_gpu_size if min_gpu_size is not None else get_threshold("default")
                 if data_size >= threshold and EngineManager.check_gpu_available():
                     exec_engine = "gpu"
                 else:

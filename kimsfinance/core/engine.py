@@ -18,6 +18,7 @@ import polars as pl
 from .types import Engine
 from .exceptions import GPUNotAvailableError, ConfigurationError
 from .autotune import load_tuned_thresholds, run_autotune
+from ..config.gpu_thresholds import get_threshold
 
 
 __all__ = [
@@ -37,12 +38,13 @@ R = TypeVar("R")
 GPU_CROSSOVER_THRESHOLDS = load_tuned_thresholds()
 
 # Advanced heuristics for get_optimal_engine()
+# Thresholds are now loaded from gpu_thresholds.py for consistency
 OPERATION_HEURISTICS = {
-    "nan_ops": {"threshold": 10_000, "ops": ["nanmin", "nanmax", "isnan"]},
-    "linear_algebra": {"threshold": 1_000, "ops": ["least_squares", "trend_line"]},
-    "indicators": {"threshold": 5_000, "ops": ["atr", "rsi"]},
-    "aggregations": {"threshold": 5_000, "ops": ["volume_sum"]},
-    "transformations": {"threshold": 10_000, "ops": ["pnf", "renko"]},
+    "nan_ops": {"threshold": get_threshold("nan_ops"), "ops": ["nanmin", "nanmax", "isnan"]},
+    "linear_algebra": {"threshold": get_threshold("linear_algebra"), "ops": ["least_squares", "trend_line"]},
+    "indicators": {"threshold": get_threshold("aggregation"), "ops": ["atr", "rsi"]},
+    "aggregations": {"threshold": get_threshold("aggregation"), "ops": ["volume_sum"]},
+    "transformations": {"threshold": get_threshold("transformation"), "ops": ["pnf", "renko"]},
     "moving_averages": {"threshold": float("inf"), "ops": ["sma", "ema"]},  # Always CPU
 }
 
@@ -151,7 +153,9 @@ class EngineManager:
             data_size: Number of rows in dataset
             force_cpu: If True, always return "cpu"
         """
-        if force_cpu or not cls.check_gpu_available() or data_size < 1_000:
+        # Minimum size for any GPU operation (linear algebra operations have lowest threshold)
+        min_threshold = get_threshold("linear_algebra")
+        if force_cpu or not cls.check_gpu_available() or data_size < min_threshold:
             return "cpu"
 
         for details in OPERATION_HEURISTICS.values():
@@ -159,7 +163,8 @@ class EngineManager:
                 return "gpu" if data_size >= details["threshold"] else "cpu"
 
         # Default for unknown operations
-        return "gpu" if data_size >= 10_000 else "cpu"
+        default_threshold = get_threshold("default")
+        return "gpu" if data_size >= default_threshold else "cpu"
 
     @classmethod
     def get_info(cls) -> dict[str, str | bool]:
