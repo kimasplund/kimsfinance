@@ -16,24 +16,28 @@ class TestVolumeProfile:
         np.random.seed(42)
         n = 100
         # Generate prices with known distribution
-        prices = np.concatenate([
-            np.random.uniform(99, 101, 30),   # Low price cluster
-            np.random.uniform(100, 102, 40),  # Middle price cluster (most volume)
-            np.random.uniform(101, 103, 30),  # High price cluster
-        ])
+        prices = np.concatenate(
+            [
+                np.random.uniform(99, 101, 30),  # Low price cluster
+                np.random.uniform(100, 102, 40),  # Middle price cluster (most volume)
+                np.random.uniform(101, 103, 30),  # High price cluster
+            ]
+        )
         # Volume distribution favoring middle cluster
-        volumes = np.concatenate([
-            np.random.uniform(1000, 2000, 30),   # Low volume
-            np.random.uniform(5000, 10000, 40),  # High volume (should be POC)
-            np.random.uniform(1000, 2000, 30),   # Low volume
-        ])
+        volumes = np.concatenate(
+            [
+                np.random.uniform(1000, 2000, 30),  # Low volume
+                np.random.uniform(5000, 10000, 40),  # High volume (should be POC)
+                np.random.uniform(1000, 2000, 30),  # Low volume
+            ]
+        )
         return prices, volumes
 
     def test_basic_calculation(self, sample_data):
         """Test basic volume profile calculation."""
         prices, volumes = sample_data
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=10, engine='cpu'
+            prices, volumes, num_bins=10, engine="cpu"
         )
 
         # Validate output shapes
@@ -59,10 +63,10 @@ class TestVolumeProfile:
         prices, volumes = sample_data
 
         cpu_price_levels, cpu_volume_profile, cpu_poc = calculate_volume_profile(
-            prices, volumes, num_bins=20, engine='cpu'
+            prices, volumes, num_bins=20, engine="cpu"
         )
         gpu_price_levels, gpu_volume_profile, gpu_poc = calculate_volume_profile(
-            prices, volumes, num_bins=20, engine='gpu'
+            prices, volumes, num_bins=20, engine="gpu"
         )
 
         # Should match within floating point tolerance
@@ -102,7 +106,7 @@ class TestVolumeProfile:
         volumes = np.array([1000, 2000, 1500, 2500])
 
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=10, engine='cpu'
+            prices, volumes, num_bins=10, engine="cpu"
         )
 
         # Should return single bin with all volume
@@ -120,7 +124,7 @@ class TestVolumeProfile:
         volumes = np.array([1000, 2000, 5000, 1500, 500])  # POC should be at 102.0
 
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=5, engine='cpu'
+            prices, volumes, num_bins=5, engine="cpu"
         )
 
         # POC should be around 102.0 (bin with highest volume)
@@ -143,7 +147,7 @@ class TestVolumeProfile:
 
         # Auto should select GPU for large dataset (if available)
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=100, engine='auto'
+            prices, volumes, num_bins=100, engine="auto"
         )
 
         assert len(price_levels) == 100
@@ -156,18 +160,14 @@ class TestVolumeProfile:
 
         for num_bins in [10, 25, 50, 100]:
             price_levels, volume_profile, poc = calculate_volume_profile(
-                prices, volumes, num_bins=num_bins, engine='cpu'
+                prices, volumes, num_bins=num_bins, engine="cpu"
             )
 
             assert len(price_levels) == num_bins
             assert len(volume_profile) == num_bins
 
             # Total volume should be preserved
-            np.testing.assert_allclose(
-                np.sum(volume_profile),
-                np.sum(volumes),
-                rtol=1e-10
-            )
+            np.testing.assert_allclose(np.sum(volume_profile), np.sum(volumes), rtol=1e-10)
 
     def test_poc_location(self):
         """Test that POC is correctly identified as max volume level."""
@@ -176,7 +176,7 @@ class TestVolumeProfile:
         volumes = np.array([100, 150, 120, 500, 600, 550, 580, 520, 110, 130])
 
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=3, engine='cpu'
+            prices, volumes, num_bins=3, engine="cpu"
         )
 
         # POC should be in the middle bin (around 101)
@@ -189,7 +189,7 @@ class TestVolumeProfile:
 
         # Should handle NaN values gracefully
         price_levels, volume_profile, poc = calculate_volume_profile(
-            prices, volumes, num_bins=5, engine='cpu'
+            prices, volumes, num_bins=5, engine="cpu"
         )
 
         # Should still produce valid output
@@ -202,19 +202,21 @@ class TestVolumeProfile:
         import polars as pl
 
         # Create Polars DataFrame
-        df = pl.DataFrame({
-            'High': [102, 105, 104, 107, 106],
-            'Low': [100, 101, 102, 104, 103],
-            'Close': [101, 103, 102, 106, 104],
-            'Volume': [10000, 15000, 12000, 20000, 18000],
-        })
+        df = pl.DataFrame(
+            {
+                "High": [102, 105, 104, 107, 106],
+                "Low": [100, 101, 102, 104, 103],
+                "Close": [101, 103, 102, 106, 104],
+                "Volume": [10000, 15000, 12000, 20000, 18000],
+            }
+        )
 
         # Calculate typical price
-        typical_price = (df['High'] + df['Low'] + df['Close']) / 3
+        typical_price = (df["High"] + df["Low"] + df["Close"]) / 3
 
         # Calculate volume profile
         price_levels, volume_profile, poc = calculate_volume_profile(
-            typical_price, df['Volume'], num_bins=5, engine='cpu'
+            typical_price, df["Volume"], num_bins=5, engine="cpu"
         )
 
         assert len(price_levels) == 5
@@ -232,12 +234,12 @@ class TestVolumeProfile:
 
         # CPU
         start = time.perf_counter()
-        cpu_result = calculate_volume_profile(prices, volumes, num_bins=50, engine='cpu')
+        cpu_result = calculate_volume_profile(prices, volumes, num_bins=50, engine="cpu")
         cpu_time = time.perf_counter() - start
 
         # GPU
         start = time.perf_counter()
-        gpu_result = calculate_volume_profile(prices, volumes, num_bins=50, engine='gpu')
+        gpu_result = calculate_volume_profile(prices, volumes, num_bins=50, engine="gpu")
         gpu_time = time.perf_counter() - start
 
         # Verify results match

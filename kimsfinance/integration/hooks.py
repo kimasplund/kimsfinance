@@ -13,7 +13,7 @@ import numpy as np
 import polars as pl
 
 # Import our operations
-from ..ops.moving_averages import calculate_sma, calculate_ema
+from ..ops.indicators.moving_averages import calculate_sma, calculate_ema
 from ..ops.nan_ops import nanmin_gpu, nanmax_gpu, nan_bounds
 from ..core.engine import EngineManager
 

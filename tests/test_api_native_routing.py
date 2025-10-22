@@ -23,13 +23,15 @@ def sample_ohlcv_df():
 
     close_prices = 100 + np.cumsum(np.random.randn(n) * 2)
 
-    df = pl.DataFrame({
-        'Open': close_prices + np.random.randn(n) * 0.5,
-        'High': close_prices + abs(np.random.randn(n)) * 2,
-        'Low': close_prices - abs(np.random.randn(n)) * 2,
-        'Close': close_prices,
-        'Volume': np.random.randint(800, 1200, size=n),
-    })
+    df = pl.DataFrame(
+        {
+            "Open": close_prices + np.random.randn(n) * 0.5,
+            "High": close_prices + abs(np.random.randn(n)) * 2,
+            "Low": close_prices - abs(np.random.randn(n)) * 2,
+            "Close": close_prices,
+            "Volume": np.random.randint(800, 1200, size=n),
+        }
+    )
 
     return df
 
@@ -40,6 +42,7 @@ class TestAPINativeRouting:
     def test_api_imports(self):
         """Test that API functions can be imported."""
         from kimsfinance.api import plot, make_addplot, plot_with_indicators
+
         assert plot is not None
         assert make_addplot is not None
         assert plot_with_indicators is not None
@@ -53,7 +56,7 @@ class TestAPINativeRouting:
         # Should use native renderer (no mav/ema/addplot)
         result = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             volume=True,
             savefig=str(output_path),
             width=800,
@@ -72,7 +75,7 @@ class TestAPINativeRouting:
 
         result = plot(
             sample_ohlcv_df,
-            type='ohlc',
+            type="ohlc",
             volume=True,
             savefig=str(output_path),
             width=800,
@@ -91,7 +94,7 @@ class TestAPINativeRouting:
 
         result = plot(
             sample_ohlcv_df,
-            type='line',
+            type="line",
             volume=True,
             savefig=str(output_path),
             width=800,
@@ -110,7 +113,7 @@ class TestAPINativeRouting:
 
         result = plot(
             sample_ohlcv_df,
-            type='hollow_and_filled',
+            type="hollow_and_filled",
             volume=True,
             savefig=str(output_path),
             width=800,
@@ -129,7 +132,7 @@ class TestAPINativeRouting:
 
         result = plot(
             sample_ohlcv_df,
-            type='renko',
+            type="renko",
             volume=True,
             box_size=2.0,
             savefig=str(output_path),
@@ -149,7 +152,7 @@ class TestAPINativeRouting:
 
         result = plot(
             sample_ohlcv_df,
-            type='pnf',
+            type="pnf",
             volume=True,
             box_size=2.0,
             reversal_boxes=3,
@@ -169,7 +172,7 @@ class TestAPINativeRouting:
 
         img = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             returnfig=True,
             width=400,
             height=300,
@@ -177,7 +180,7 @@ class TestAPINativeRouting:
 
         assert isinstance(img, Image.Image)
         assert img.size == (400, 300)
-        assert img.mode in ['RGB', 'RGBA']
+        assert img.mode in ["RGB", "RGBA"]
 
     def test_custom_colors(self, sample_ohlcv_df):
         """Test custom color overrides work."""
@@ -185,11 +188,11 @@ class TestAPINativeRouting:
 
         img = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             returnfig=True,
-            up_color='#00FF00',
-            down_color='#FF0000',
-            bg_color='#000000',
+            up_color="#00FF00",
+            down_color="#FF0000",
+            bg_color="#000000",
             width=400,
             height=300,
         )
@@ -201,12 +204,12 @@ class TestAPINativeRouting:
         """Test all theme options work."""
         from kimsfinance.api import plot
 
-        themes = ['classic', 'modern', 'tradingview', 'light']
+        themes = ["classic", "modern", "tradingview", "light"]
 
         for theme in themes:
             img = plot(
                 sample_ohlcv_df,
-                type='candle',
+                type="candle",
                 style=theme,
                 returnfig=True,
                 width=400,
@@ -222,24 +225,24 @@ class TestAPINativeRouting:
         # RGBA mode (antialiasing on)
         img_rgba = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             enable_antialiasing=True,
             returnfig=True,
             width=400,
             height=300,
         )
-        assert img_rgba.mode == 'RGBA'
+        assert img_rgba.mode == "RGBA"
 
         # RGB mode (antialiasing off)
         img_rgb = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             enable_antialiasing=False,
             returnfig=True,
             width=400,
             height=300,
         )
-        assert img_rgb.mode == 'RGB'
+        assert img_rgb.mode == "RGB"
 
     def test_grid_option(self, sample_ohlcv_df):
         """Test grid on/off works."""
@@ -248,7 +251,7 @@ class TestAPINativeRouting:
         # Grid on
         img_grid = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             show_grid=True,
             returnfig=True,
             width=400,
@@ -259,7 +262,7 @@ class TestAPINativeRouting:
         # Grid off
         img_nogrid = plot(
             sample_ohlcv_df,
-            type='candle',
+            type="candle",
             show_grid=False,
             returnfig=True,
             width=400,
@@ -273,7 +276,7 @@ class TestAPINativeRouting:
 
         img = plot(
             sample_ohlcv_df,
-            type='line',
+            type="line",
             fill_area=True,
             returnfig=True,
             width=400,
@@ -288,7 +291,7 @@ class TestAPINativeRouting:
         from kimsfinance.api import plot
 
         with pytest.raises(ValueError, match="Unknown chart type"):
-            plot(sample_ohlcv_df, type='invalid_type', returnfig=True)
+            plot(sample_ohlcv_df, type="invalid_type", returnfig=True)
 
     def test_binance_style_alias(self, sample_ohlcv_df):
         """Test binance/binancedark style alias maps to tradingview."""
@@ -296,8 +299,8 @@ class TestAPINativeRouting:
 
         img = plot(
             sample_ohlcv_df,
-            type='candle',
-            style='binance',
+            type="candle",
+            style="binance",
             returnfig=True,
             width=400,
             height=300,
@@ -321,7 +324,7 @@ class TestAPIFallback:
             # This should fallback to mplfinance
             result = plot(
                 sample_ohlcv_df,
-                type='candle',
+                type="candle",
                 mav=(20, 50),  # Triggers fallback
                 returnfig=True,
             )

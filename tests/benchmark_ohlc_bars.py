@@ -1,6 +1,7 @@
 """
 Quick performance benchmark for OHLC bars renderer.
 """
+
 import time
 import numpy as np
 from kimsfinance.plotting.renderer import render_ohlc_bars
@@ -11,10 +12,10 @@ def benchmark_ohlc_bars():
     # Create test data
     num_bars = 50
     ohlc = {
-        'open': np.random.uniform(90, 110, num_bars),
-        'high': np.random.uniform(110, 120, num_bars),
-        'low': np.random.uniform(80, 90, num_bars),
-        'close': np.random.uniform(90, 110, num_bars),
+        "open": np.random.uniform(90, 110, num_bars),
+        "high": np.random.uniform(110, 120, num_bars),
+        "low": np.random.uniform(80, 90, num_bars),
+        "close": np.random.uniform(90, 110, num_bars),
     }
     volume = np.random.uniform(500, 2000, num_bars)
 
@@ -52,5 +53,5 @@ def benchmark_ohlc_bars():
     return charts_per_sec
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     benchmark_ohlc_bars()

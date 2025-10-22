@@ -71,7 +71,7 @@ from .core import (
 )
 
 # Moving Averages
-from .ops.moving_averages import (
+from .ops.indicators.moving_averages import (
     calculate_sma,
     calculate_ema,
     calculate_multiple_mas,
