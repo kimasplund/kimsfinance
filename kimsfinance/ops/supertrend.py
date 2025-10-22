@@ -43,13 +43,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from ..core.decorators import get_array_module
 from .indicators import calculate_atr
 from .indicator_utils import validate_period, validate_positive
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_supertrend(
     high: ArrayLike,
     low: ArrayLike,
@@ -225,9 +226,9 @@ def calculate_supertrend(
             direction[i] = -1
             supertrend[i] = final_upper_band[i]
 
-    # Set first 'period' values to NaN
-    supertrend[:period] = xp.nan
-    direction[:period] = xp.nan
+    # Set first 'period' values to NaN using np.copyto for efficiency
+    xp.copyto(supertrend[:period], xp.nan)
+    xp.copyto(direction[:period], xp.nan)
 
     return supertrend, direction
 

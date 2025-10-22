@@ -155,9 +155,9 @@ def _calculate_aroon_cpu(
     aroon_up_values = ((period - periods_since_high) / period) * 100.0
     aroon_down_values = ((period - periods_since_low) / period) * 100.0
 
-    # Place results in correct positions (starting at period-1)
-    aroon_up[period - 1 :] = aroon_up_values
-    aroon_down[period - 1 :] = aroon_down_values
+    # Place results in correct positions (starting at period-1) using np.copyto for efficiency
+    np.copyto(aroon_up[period - 1 :], aroon_up_values)
+    np.copyto(aroon_down[period - 1 :], aroon_down_values)
 
     return (aroon_up, aroon_down)
 

@@ -33,12 +33,13 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from .rolling import rolling_sum
 from .indicator_utils import typical_price, positive_negative_money_flow, validate_period, EPSILON
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_mfi(
     high: ArrayLike,
     low: ArrayLike,

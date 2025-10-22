@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from .rolling import rolling_max, rolling_min
 from .indicator_utils import validate_period, validate_non_negative
@@ -56,7 +57,7 @@ def _calculate_midpoint(high: np.ndarray, low: np.ndarray, period: int) -> np.nd
     return (highest + lowest) / 2.0
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_ichimoku(
     high: ArrayLike,
     low: ArrayLike,
@@ -211,7 +212,7 @@ def calculate_ichimoku(
     # Displace forward by adding NaN at the end
     senkou_a = xp.full(n, xp.nan, dtype=xp.float64)
     if n > displacement:
-        senkou_a[displacement:] = senkou_a_base[:-displacement]
+        xp.copyto(senkou_a[displacement:], senkou_a_base[:-displacement])
 
     # 4. Calculate Senkou Span B: 52-period midpoint, displaced forward
     senkou_b_base = _calculate_midpoint(high, low, senkou_b)
@@ -219,12 +220,12 @@ def calculate_ichimoku(
     # Displace forward by adding NaN at the end
     senkou_b_line = xp.full(n, xp.nan, dtype=xp.float64)
     if n > displacement:
-        senkou_b_line[displacement:] = senkou_b_base[:-displacement]
+        xp.copyto(senkou_b_line[displacement:], senkou_b_base[:-displacement])
 
     # 5. Calculate Chikou Span: Close price displaced backward
     chikou = xp.full(n, xp.nan, dtype=xp.float64)
     if n > displacement:
-        chikou[:-displacement] = close[displacement:]
+        xp.copyto(chikou[:-displacement], close[displacement:])
 
     return {
         "tenkan": tenkan_line,

@@ -37,6 +37,7 @@ from __future__ import annotations
 import numpy as np
 from typing import Any
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from ..core.decorators import get_array_module
 from .indicator_utils import (
@@ -48,7 +49,7 @@ from .indicator_utils import (
 )
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_adx(
     high: ArrayLike, low: ArrayLike, close: ArrayLike, period: int = 14, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult, ArrayResult]:

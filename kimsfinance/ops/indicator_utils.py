@@ -284,7 +284,7 @@ def percentage_change(arr: np.ndarray | Any, periods: int = 1) -> np.ndarray | A
     result = xp.full(len(arr), xp.nan, dtype=xp.float64)
 
     if len(arr) > periods:
-        result[periods:] = (arr[periods:] - arr[:-periods]) / arr[:-periods] * 100.0
+        xp.copyto(result[periods:], (arr[periods:] - arr[:-periods]) / arr[:-periods] * 100.0)
 
     return result
 

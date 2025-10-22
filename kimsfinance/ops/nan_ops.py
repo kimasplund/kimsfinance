@@ -25,6 +25,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import (
     ArrayLike,
     ArrayResult,
@@ -83,7 +84,9 @@ def nanmin_gpu(data: ArrayLike, *, engine: Engine = "auto") -> float:
     exec_engine = EngineManager.select_engine(engine)
 
     # For small arrays, always use CPU (overhead dominates)
-    if len(arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -136,7 +139,9 @@ def nanmax_gpu(data: ArrayLike, *, engine: Engine = "auto") -> float:
     arr = _to_numpy_array(data)
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -185,7 +190,9 @@ def nan_bounds(highs: ArrayLike, lows: ArrayLike, *, engine: Engine = "auto") ->
 
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(highs_arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(highs_arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -240,7 +247,9 @@ def isnan_gpu(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     arr = _to_numpy_array(data)
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -284,7 +293,9 @@ def nan_indices(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     arr = _to_numpy_array(data)
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -325,7 +336,9 @@ def replace_nan(data: ArrayLike, value: float = 0.0, *, engine: Engine = "auto")
     arr = _to_numpy_array(data)
     exec_engine = EngineManager.select_engine(engine)
 
-    if len(arr) < 1_000:
+    # Use nan_ops threshold for NaN operations
+    nan_ops_threshold = get_threshold("nan_ops")
+    if len(arr) < nan_ops_threshold:
         exec_engine = "cpu"
 
     if exec_engine == "gpu":
@@ -360,11 +373,12 @@ def should_use_gpu_for_nan_ops(data_size: int) -> bool:
         True if GPU is recommended, False otherwise
 
     Heuristic:
-        - < 1K elements: CPU (overhead dominates)
-        - 1K-10K elements: CPU (marginal benefit)
-        - > 10K elements: GPU (40-80x speedup)
+        - < threshold: CPU (overhead dominates)
+        - >= threshold: GPU (40-80x speedup)
+        - Threshold dynamically loaded from gpu_thresholds.py config
     """
-    return data_size >= 10_000 and EngineManager.check_gpu_available()
+    nan_ops_threshold = get_threshold("nan_ops")
+    return data_size >= nan_ops_threshold and EngineManager.check_gpu_available()
 
 
 if __name__ == "__main__":
