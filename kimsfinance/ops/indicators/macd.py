@@ -69,7 +69,41 @@ def calculate_macd(
     macd_line = ema_fast - ema_slow
 
     # Calculate signal line (EMA of MACD)
-    signal_line = calculate_ema(macd_line, period=signal_period, engine=engine)
+    # IMPORTANT: Need to handle NaN values at the start of MACD line
+    # The EMA calculation via Polars propagates NaN values, so we need to
+    # calculate the signal line only on valid MACD values and reconstruct
+
+    # Find first valid MACD value
+    macd_series = pl.Series(macd_line, dtype=pl.Float64)
+    nan_mask = macd_series.is_nan()
+    first_valid_idx = 0
+
+    # Find first non-NaN index
+    for i, is_nan in enumerate(nan_mask):
+        if not is_nan:
+            first_valid_idx = i
+            break
+
+    # Extract valid (non-NaN) portion of MACD line
+    valid_macd = macd_series.filter(~nan_mask)
+
+    if len(valid_macd) < signal_period:
+        # Not enough valid data for signal calculation - return all NaN
+        signal_line = np.full_like(macd_line, np.nan)
+    else:
+        # Calculate signal on valid MACD values
+        signal_valid = valid_macd.ewm_mean(span=signal_period, adjust=False, min_samples=signal_period)
+
+        # Reconstruct full-length signal line with NaN prefix
+        signal_line_values = [np.nan] * first_valid_idx + signal_valid.to_list()
+
+        # Pad or truncate to match original length
+        if len(signal_line_values) < len(macd_line):
+            signal_line_values.extend([np.nan] * (len(macd_line) - len(signal_line_values)))
+        elif len(signal_line_values) > len(macd_line):
+            signal_line_values = signal_line_values[:len(macd_line)]
+
+        signal_line = np.array(signal_line_values, dtype=np.float64)
 
     # Calculate histogram
     histogram = macd_line - signal_line
