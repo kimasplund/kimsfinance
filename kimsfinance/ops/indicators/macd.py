@@ -62,20 +62,14 @@ def calculate_macd(
     prices_arr = to_numpy_array(prices)
 
     # Calculate fast and slow EMAs in one pass
-    ema_fast = calculate_ema(
-        prices_arr, period=fast_period, engine=engine
-    )
-    ema_slow = calculate_ema(
-        prices_arr, period=slow_period, engine=engine
-    )
+    ema_fast = calculate_ema(prices_arr, period=fast_period, engine=engine)
+    ema_slow = calculate_ema(prices_arr, period=slow_period, engine=engine)
 
     # Calculate MACD line
     macd_line = ema_fast - ema_slow
 
     # Calculate signal line (EMA of MACD)
-    signal_line = calculate_ema(
-        macd_line, period=signal_period, engine=engine
-    )
+    signal_line = calculate_ema(macd_line, period=signal_period, engine=engine)
 
     # Calculate histogram
     histogram = macd_line - signal_line

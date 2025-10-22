@@ -23,12 +23,7 @@ from ...utils.array_utils import to_numpy_array
 from .moving_averages import calculate_wma
 
 
-def calculate_hma(
-    prices: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_hma(prices: ArrayLike, period: int = 20, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Hull Moving Average (HMA).
 

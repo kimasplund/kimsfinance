@@ -343,14 +343,15 @@ def calculate_indicators_batch(
     ema_fast = pl.col("close").ewm_mean(span=12, adjust=False, min_samples=12)
     ema_slow = pl.col("close").ewm_mean(span=26, adjust=False, min_samples=26)
     expressions["macd_line"] = ema_fast - ema_slow
-    expressions["macd_signal"] = expressions["macd_line"].ewm_mean(span=9, adjust=False, min_samples=9)
+    expressions["macd_signal"] = expressions["macd_line"].ewm_mean(
+        span=9, adjust=False, min_samples=9
+    )
 
     # ========================================================================
     # Execute all indicators in single GPU pass
     # ========================================================================
 
     # Smart engine selection (GPU beneficial at 15K+ rows for batch)
-
 
     # Streaming decision (auto-enable at 500K+ rows)
     use_streaming = _should_use_streaming(data_size, streaming)

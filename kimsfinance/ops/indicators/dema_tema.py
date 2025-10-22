@@ -9,12 +9,7 @@ from ...core import (
 from .moving_averages import calculate_ema
 
 
-def calculate_dema(
-    prices: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_dema(prices: ArrayLike, period: int = 20, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Double Exponential Moving Average (DEMA).
 
@@ -49,12 +44,7 @@ def calculate_dema(
     return dema
 
 
-def calculate_tema(
-    prices: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_tema(prices: ArrayLike, period: int = 20, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Triple Exponential Moving Average (TEMA).
 

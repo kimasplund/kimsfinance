@@ -73,8 +73,8 @@ def test_both_values_calculated():
     assert not np.all(np.isnan(aroon_down[warmup:]))
 
     # Should have NaN values at start (warmup period)
-    assert np.all(np.isnan(aroon_up[:warmup-1]))
-    assert np.all(np.isnan(aroon_down[:warmup-1]))
+    assert np.all(np.isnan(aroon_up[: warmup - 1]))
+    assert np.all(np.isnan(aroon_down[: warmup - 1]))
 
 
 def test_value_ranges():
@@ -107,15 +107,19 @@ def test_uptrend_detection():
 
     # In strong uptrend:
     # 1. Aroon Up should be high (near 100)
-    assert np.mean(aroon_up_valid) > 70, \
-        f"Expected Aroon Up > 70 in uptrend, got {np.mean(aroon_up_valid):.2f}"
+    assert (
+        np.mean(aroon_up_valid) > 70
+    ), f"Expected Aroon Up > 70 in uptrend, got {np.mean(aroon_up_valid):.2f}"
 
     # 2. Aroon Up should be > Aroon Down
-    assert np.mean(aroon_up_valid) > np.mean(aroon_down_valid), \
-        f"Aroon Up ({np.mean(aroon_up_valid):.2f}) should be > Aroon Down ({np.mean(aroon_down_valid):.2f})"
+    assert np.mean(aroon_up_valid) > np.mean(
+        aroon_down_valid
+    ), f"Aroon Up ({np.mean(aroon_up_valid):.2f}) should be > Aroon Down ({np.mean(aroon_down_valid):.2f})"
 
     # 3. Most recent value should be 100 (just made new high)
-    assert aroon_up[-1] == 100.0, f"Expected Aroon Up = 100 at end of uptrend, got {aroon_up[-1]:.2f}"
+    assert (
+        aroon_up[-1] == 100.0
+    ), f"Expected Aroon Up = 100 at end of uptrend, got {aroon_up[-1]:.2f}"
 
 
 def test_downtrend_detection():
@@ -131,15 +135,19 @@ def test_downtrend_detection():
 
     # In strong downtrend:
     # 1. Aroon Down should be high (near 100)
-    assert np.mean(aroon_down_valid) > 70, \
-        f"Expected Aroon Down > 70 in downtrend, got {np.mean(aroon_down_valid):.2f}"
+    assert (
+        np.mean(aroon_down_valid) > 70
+    ), f"Expected Aroon Down > 70 in downtrend, got {np.mean(aroon_down_valid):.2f}"
 
     # 2. Aroon Down should be > Aroon Up
-    assert np.mean(aroon_down_valid) > np.mean(aroon_up_valid), \
-        f"Aroon Down ({np.mean(aroon_down_valid):.2f}) should be > Aroon Up ({np.mean(aroon_up_valid):.2f})"
+    assert np.mean(aroon_down_valid) > np.mean(
+        aroon_up_valid
+    ), f"Aroon Down ({np.mean(aroon_down_valid):.2f}) should be > Aroon Up ({np.mean(aroon_up_valid):.2f})"
 
     # 3. Most recent value should be 100 (just made new low)
-    assert aroon_down[-1] == 100.0, f"Expected Aroon Down = 100 at end of downtrend, got {aroon_down[-1]:.2f}"
+    assert (
+        aroon_down[-1] == 100.0
+    ), f"Expected Aroon Down = 100 at end of downtrend, got {aroon_down[-1]:.2f}"
 
 
 def test_crossover_signals():
@@ -160,16 +168,12 @@ def test_crossover_signals():
 
     # Find where Aroon Up crosses above Aroon Down (bullish)
     bullish_cross = (
-        (aroon_up[1:] > aroon_down[1:]) &
-        (aroon_up[:-1] <= aroon_down[:-1]) &
-        valid_idx[1:]
+        (aroon_up[1:] > aroon_down[1:]) & (aroon_up[:-1] <= aroon_down[:-1]) & valid_idx[1:]
     )
 
     # Find where Aroon Down crosses above Aroon Up (bearish)
     bearish_cross = (
-        (aroon_down[1:] > aroon_up[1:]) &
-        (aroon_down[:-1] <= aroon_up[:-1]) &
-        valid_idx[1:]
+        (aroon_down[1:] > aroon_up[1:]) & (aroon_down[:-1] <= aroon_up[:-1]) & valid_idx[1:]
     )
 
     # Should detect at least one crossover in this data
@@ -192,7 +196,9 @@ def test_edge_cases():
     if np.any(valid_idx):
         # All values should be 100 (every point is the "most recent" high/low)
         assert np.allclose(aroon_up[valid_idx], 100.0), "Constant price should give Aroon Up = 100"
-        assert np.allclose(aroon_down[valid_idx], 100.0), "Constant price should give Aroon Down = 100"
+        assert np.allclose(
+            aroon_down[valid_idx], 100.0
+        ), "Constant price should give Aroon Down = 100"
 
     # Test 2: Minimal data (exactly period length)
     highs, lows, closes = generate_ohlc_data(n=25)
@@ -417,6 +423,6 @@ if __name__ == "__main__":
     test_performance()
     print("✓ Passed")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("All Aroon tests passed! ✓")
-    print("="*50)
+    print("=" * 50)

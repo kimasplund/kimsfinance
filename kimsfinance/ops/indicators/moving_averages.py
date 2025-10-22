@@ -36,12 +36,7 @@ from kimsfinance.core.exceptions import DataValidationError
 from kimsfinance.core.types import ArrayLike, ArrayResult, Engine, MovingAverageResult, ShiftPeriods
 
 
-def calculate_sma(
-    prices: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_sma(prices: ArrayLike, period: int = 20, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Simple Moving Average(s) using Polars.
 
@@ -77,12 +72,7 @@ def calculate_sma(
     return sma_series.to_numpy()
 
 
-def calculate_ema(
-    prices: ArrayLike,
-    period: int = 12,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_ema(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Exponential Moving Average (EMA) using Polars.
 
@@ -267,12 +257,7 @@ def from_pandas_series(series: object, window: int, ma_type: str = "sma") -> Mov
     return result[0]
 
 
-def calculate_wma(
-    prices: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_wma(prices: ArrayLike, period: int = 20, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Weighted Moving Average(s) using Polars.
     """
@@ -297,19 +282,14 @@ def calculate_wma(
     # Calculate WMA using a UDF in rolling_map
     # The lambda must return a scalar float, not a Polars expression
     wma_series = s.rolling_map(
-        window_size=period,
-        function=lambda s: (s * weights).sum() / weights_sum
+        window_size=period, function=lambda s: (s * weights).sum() / weights_sum
     )
 
     return wma_series.to_numpy()
 
 
 def calculate_vwma(
-    prices: ArrayLike,
-    volumes: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
+    prices: ArrayLike, volumes: ArrayLike, period: int = 20, *, engine: Engine = "auto"
 ) -> ArrayResult:
     """
     Calculate Volume Weighted Moving Average(s) using Polars.
@@ -319,13 +299,15 @@ def calculate_vwma(
 
     # Calculate VWMA using Polars' built-in functions
     df = df.with_columns(
-        (pl.col("price") * pl.col("volume")).rolling_sum(window_size=period) /
-        pl.col("volume").rolling_sum(window_size=period)
+        (pl.col("price") * pl.col("volume")).rolling_sum(window_size=period)
+        / pl.col("volume").rolling_sum(window_size=period)
     )
     return df["price"].to_numpy()
 
+
 def calculate_hma(*args, **kwargs):
     raise NotImplementedError
+
 
 if __name__ == "__main__":
     # Quick test

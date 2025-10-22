@@ -23,11 +23,7 @@ from ...utils.array_utils import to_numpy_array
 
 
 def calculate_aroon(
-    highs: ArrayLike,
-    lows: ArrayLike,
-    period: int = 25,
-    *,
-    engine: Engine = "auto"
+    highs: ArrayLike, lows: ArrayLike, period: int = 25, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate Aroon Indicator (Aroon Up and Aroon Down).
@@ -93,7 +89,9 @@ def calculate_aroon(
     lows_arr = to_numpy_array(lows)
 
     if len(highs_arr) != len(lows_arr):
-        raise ValueError(f"highs and lows must have same length: got {len(highs_arr)} and {len(lows_arr)}")
+        raise ValueError(
+            f"highs and lows must have same length: got {len(highs_arr)} and {len(lows_arr)}"
+        )
 
     if len(highs_arr) < period:
         raise ValueError(f"Insufficient data: need {period}, got {len(highs_arr)}")
@@ -116,9 +114,7 @@ def calculate_aroon(
 
 
 def _calculate_aroon_cpu(
-    highs: np.ndarray,
-    lows: np.ndarray,
-    period: int
+    highs: np.ndarray, lows: np.ndarray, period: int
 ) -> tuple[np.ndarray, np.ndarray]:
     """CPU implementation of Aroon using NumPy."""
 
@@ -129,8 +125,8 @@ def _calculate_aroon_cpu(
     # Calculate Aroon for each valid position
     for i in range(period - 1, n):
         window_start = i - period + 1
-        high_window = highs[window_start:i + 1]
-        low_window = lows[window_start:i + 1]
+        high_window = highs[window_start : i + 1]
+        low_window = lows[window_start : i + 1]
 
         # Find periods since highest high (most recent occurrence)
         max_val = np.max(high_window)
@@ -150,9 +146,7 @@ def _calculate_aroon_cpu(
 
 
 def _calculate_aroon_gpu(
-    highs: np.ndarray,
-    lows: np.ndarray,
-    period: int
+    highs: np.ndarray, lows: np.ndarray, period: int
 ) -> tuple[np.ndarray, np.ndarray]:
     """GPU implementation of Aroon using CuPy."""
 
@@ -175,8 +169,8 @@ def _calculate_aroon_gpu(
     # For large datasets, the memory bandwidth benefits still provide speedup
     for i in range(period - 1, n):
         window_start = i - period + 1
-        high_window = highs_gpu[window_start:i + 1]
-        low_window = lows_gpu[window_start:i + 1]
+        high_window = highs_gpu[window_start : i + 1]
+        low_window = lows_gpu[window_start : i + 1]
 
         # Find periods since highest high
         max_val = cp.max(high_window)

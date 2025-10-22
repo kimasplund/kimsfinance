@@ -3,6 +3,7 @@ import numpy as np
 from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
 
+
 def calculate_renko_bricks(
     ohlc: dict[str, ArrayLike],
     box_size: float | None = None,

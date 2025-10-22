@@ -52,7 +52,9 @@ def test_basic_calculation():
     # First (period-1) values should be NaN
     expected_nans = 19  # period - 1
     actual_nans = np.sum(np.isnan(cmf))
-    assert actual_nans >= expected_nans, f"Expected at least {expected_nans} NaN values, got {actual_nans}"
+    assert (
+        actual_nans >= expected_nans
+    ), f"Expected at least {expected_nans} NaN values, got {actual_nans}"
 
     # Rest should be valid numbers
     valid_values = cmf[~np.isnan(cmf)]
@@ -112,8 +114,7 @@ def test_volume_requirement():
     valid_cmf_zero = cmf_zero[~np.isnan(cmf_zero)]
     if len(valid_cmf_zero) > 0:
         # Should be very close to 0 (0/0 = NaN, but we add epsilon)
-        assert np.all(np.abs(valid_cmf_zero) < 0.01), \
-            "Zero volume should produce CMF values near 0"
+        assert np.all(np.abs(valid_cmf_zero) < 0.01), "Zero volume should produce CMF values near 0"
         print(f"✓ Zero volume produces CMF values near 0: {valid_cmf_zero[:5]}")
 
 
@@ -128,14 +129,18 @@ def test_buying_selling_pressure():
     lows_high = closes_high - 1.0  # Low far from close
     volumes_high = np.full(n, 1_000_000.0)
 
-    cmf_buying = calculate_cmf(highs_high, lows_high, closes_high, volumes_high, period=20, engine="cpu")
+    cmf_buying = calculate_cmf(
+        highs_high, lows_high, closes_high, volumes_high, period=20, engine="cpu"
+    )
     valid_cmf_buying = cmf_buying[~np.isnan(cmf_buying)]
 
     print(f"Buying pressure CMF (last 5): {valid_cmf_buying[-5:]}")
     # When closes are near highs, CMF should be positive
     positive_count = np.sum(valid_cmf_buying > 0)
     print(f"✓ Buying pressure: {positive_count}/{len(valid_cmf_buying)} values > 0")
-    assert positive_count > len(valid_cmf_buying) * 0.5, "Most CMF values should be positive with buying pressure"
+    assert (
+        positive_count > len(valid_cmf_buying) * 0.5
+    ), "Most CMF values should be positive with buying pressure"
 
     # Create data with strong selling pressure (closes near lows)
     closes_low = np.linspace(110, 100, n)
@@ -143,14 +148,18 @@ def test_buying_selling_pressure():
     lows_low = closes_low - 0.1  # Close near low
     volumes_low = np.full(n, 1_000_000.0)
 
-    cmf_selling = calculate_cmf(highs_low, lows_low, closes_low, volumes_low, period=20, engine="cpu")
+    cmf_selling = calculate_cmf(
+        highs_low, lows_low, closes_low, volumes_low, period=20, engine="cpu"
+    )
     valid_cmf_selling = cmf_selling[~np.isnan(cmf_selling)]
 
     print(f"Selling pressure CMF (last 5): {valid_cmf_selling[-5:]}")
     # When closes are near lows, CMF should be negative
     negative_count = np.sum(valid_cmf_selling < 0)
     print(f"✓ Selling pressure: {negative_count}/{len(valid_cmf_selling)} values < 0")
-    assert negative_count > len(valid_cmf_selling) * 0.5, "Most CMF values should be negative with selling pressure"
+    assert (
+        negative_count > len(valid_cmf_selling) * 0.5
+    ), "Most CMF values should be negative with selling pressure"
 
 
 def test_zero_crossing():
@@ -159,10 +168,12 @@ def test_zero_crossing():
 
     # Create data that transitions from buying to selling pressure
     n = 100
-    closes = np.concatenate([
-        np.linspace(100, 110, 50),  # Rising (buying pressure)
-        np.linspace(110, 100, 50)   # Falling (selling pressure)
-    ])
+    closes = np.concatenate(
+        [
+            np.linspace(100, 110, 50),  # Rising (buying pressure)
+            np.linspace(110, 100, 50),  # Falling (selling pressure)
+        ]
+    )
     highs = closes + 0.2
     lows = closes - 0.2
     volumes = np.full(n, 1_000_000.0)
@@ -176,7 +187,9 @@ def test_zero_crossing():
     print(f"✓ Found {len(crossings)} zero crossings")
     if len(crossings) > 0:
         print(f"  - Crossing indices: {crossings}")
-        print(f"  - CMF values around first crossing: {valid_cmf[max(0, crossings[0]-2):crossings[0]+3]}")
+        print(
+            f"  - CMF values around first crossing: {valid_cmf[max(0, crossings[0]-2):crossings[0]+3]}"
+        )
 
 
 def test_edge_cases():
@@ -199,8 +212,7 @@ def test_edge_cases():
     constant_volumes = np.full(50, 1_000_000.0)
 
     cmf_constant = calculate_cmf(
-        constant_highs, constant_lows, constant_closes, constant_volumes,
-        period=20, engine="cpu"
+        constant_highs, constant_lows, constant_closes, constant_volumes, period=20, engine="cpu"
     )
 
     # With constant typical price at midpoint, Money Flow Multiplier should be 0
@@ -233,7 +245,9 @@ def test_edge_cases():
     doji_lows = doji_closes
     doji_volumes = np.full(50, 1_000_000.0)
 
-    cmf_doji = calculate_cmf(doji_highs, doji_lows, doji_closes, doji_volumes, period=20, engine="cpu")
+    cmf_doji = calculate_cmf(
+        doji_highs, doji_lows, doji_closes, doji_volumes, period=20, engine="cpu"
+    )
     valid_cmf_doji = cmf_doji[~np.isnan(cmf_doji)]
 
     if len(valid_cmf_doji) > 0:
@@ -269,7 +283,9 @@ def test_parameter_validation():
         short_lows = np.array([99, 100, 101])
         short_closes = np.array([100, 101, 102])
         short_volumes = np.array([1000, 1000, 1000])
-        cmf = calculate_cmf(short_highs, short_lows, short_closes, short_volumes, period=20, engine="cpu")
+        cmf = calculate_cmf(
+            short_highs, short_lows, short_closes, short_volumes, period=20, engine="cpu"
+        )
         assert False, "Should raise ValueError for insufficient data"
     except ValueError as e:
         print(f"✓ Correctly raises ValueError for insufficient data: {e}")
@@ -315,8 +331,9 @@ def test_known_values():
     print(f"  - Actual CMF[2]: {actual_cmf_2:.4f}")
 
     # Allow small tolerance for floating point arithmetic
-    assert np.abs(actual_cmf_2 - expected_cmf_2) < 0.01, \
-        f"CMF[2] mismatch: expected {expected_cmf_2}, got {actual_cmf_2}"
+    assert (
+        np.abs(actual_cmf_2 - expected_cmf_2) < 0.01
+    ), f"CMF[2] mismatch: expected {expected_cmf_2}, got {actual_cmf_2}"
 
     print("✓ Known value test passed")
 
@@ -379,6 +396,7 @@ def main():
         print("=" * 80)
         print(f"AssertionError: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -388,6 +406,7 @@ def main():
         print("=" * 80)
         print(f"Error: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

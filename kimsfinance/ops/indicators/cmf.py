@@ -29,7 +29,7 @@ def calculate_cmf(
     volumes: ArrayLike,
     period: int = 20,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     Calculate Chaikin Money Flow (CMF).
@@ -113,39 +113,35 @@ def calculate_cmf(
         raise ValueError(f"Insufficient data: need {period}, got {len(closes_arr)}")
 
     # Create Polars DataFrame
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-        "volume": volumes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+            "volume": volumes_arr,
+        }
+    )
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine(
-        engine, operation="cmf", data_size=len(closes_arr)
-    )
+    exec_engine = EngineManager.select_engine(engine, operation="cmf", data_size=len(closes_arr))
 
     # Calculate Money Flow Multiplier
     # MF Multiplier = ((Close - Low) - (High - Close)) / (High - Low)
     # Simplified: = (2*Close - High - Low) / (High - Low)
-    mf_multiplier = (
-        (2 * pl.col("close") - pl.col("high") - pl.col("low")) /
-        (pl.col("high") - pl.col("low") + 1e-10)  # Add small epsilon to avoid division by zero
-    )
+    mf_multiplier = (2 * pl.col("close") - pl.col("high") - pl.col("low")) / (
+        pl.col("high") - pl.col("low") + 1e-10
+    )  # Add small epsilon to avoid division by zero
 
     # Calculate Money Flow Volume
     mf_volume = mf_multiplier * pl.col("volume")
 
     # Calculate CMF
     # CMF = Sum(MF Volume, period) / Sum(Volume, period)
-    cmf_expr = (
-        mf_volume.rolling_sum(window_size=period) /
-        (pl.col("volume").rolling_sum(window_size=period) + 1e-10)
+    cmf_expr = mf_volume.rolling_sum(window_size=period) / (
+        pl.col("volume").rolling_sum(window_size=period) + 1e-10
     )
 
     # Execute calculation
-    result = df.lazy().select(
-        cmf=cmf_expr
-    ).collect(engine=exec_engine)
+    result = df.lazy().select(cmf=cmf_expr).collect(engine=exec_engine)
 
     return result["cmf"].to_numpy()

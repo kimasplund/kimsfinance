@@ -6,6 +6,7 @@ import pandas as pd
 
 from ..core.types import ArrayLike
 
+
 def to_numpy_array(data: ArrayLike) -> np.ndarray:
     """
     Convert various array-like types to NumPy array.
