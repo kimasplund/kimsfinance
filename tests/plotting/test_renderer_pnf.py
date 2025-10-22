@@ -100,8 +100,8 @@ class TestCalculatePNFColumns:
 
         # Check alternation (if multiple columns)
         if len(columns) >= 2:
-            for i in range(len(columns) - 1):
-                assert columns[i]["type"] != columns[i + 1]["type"]
+            for current, next_col in zip(columns[:-1], columns[1:]):
+                assert current["type"] != next_col["type"]
 
     def test_insufficient_movement(self):
         """Test PNF with insufficient price movement"""

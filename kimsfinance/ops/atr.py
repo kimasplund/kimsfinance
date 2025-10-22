@@ -17,12 +17,13 @@ Interpretation:
 
 from __future__ import annotations
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from ..core.decorators import get_array_module
 from .indicator_utils import true_range, _wilder_smoothing
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_atr(
     high: ArrayLike, low: ArrayLike, close: ArrayLike, period: int = 14, *, engine: Engine = "auto"
 ) -> ArrayResult:

@@ -18,14 +18,16 @@ import numpy as np
 import polars as pl
 
 from .types import Engine
+from ..config.gpu_thresholds import GPU_THRESHOLDS
 
 
+# Default thresholds now sourced from gpu_thresholds.py for consistency
 DEFAULT_THRESHOLDS = {
-    "atr": 100_000,
-    "rsi": 100_000,
-    "stochastic": 500_000,
-    "default": 100_000,
-    "batch_indicators": 15_000,
+    "atr": GPU_THRESHOLDS["rolling"],  # ATR uses rolling window operations
+    "rsi": GPU_THRESHOLDS["vectorizable_simple"],  # RSI is simple vectorizable
+    "stochastic": GPU_THRESHOLDS["iterative"],  # Stochastic is iterative
+    "default": GPU_THRESHOLDS["default"],
+    "batch_indicators": GPU_THRESHOLDS["batch_indicators"],
 }
 
 CACHE_FILE = Path.home() / ".kimsfinance" / "threshold_cache.json"

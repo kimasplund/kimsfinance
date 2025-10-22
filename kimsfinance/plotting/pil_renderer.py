@@ -22,6 +22,22 @@ except ImportError:
 from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
 from ..config.chart_settings import SPEED_PRESETS
+from ..config.layout_constants import (
+    BOX_SIZE_ATR_MULTIPLIER,
+    CENTER_OFFSET,
+    CHART_HEIGHT_RATIO,
+    GRID_ALPHA,
+    GRID_LINE_WIDTH,
+    HORIZONTAL_GRID_DIVISIONS,
+    MAX_VERTICAL_GRID_LINES,
+    MIN_WICK_WIDTH,
+    QUARTER_OFFSET,
+    SPACING_RATIO,
+    THREE_QUARTER_OFFSET,
+    TICK_LENGTH_RATIO,
+    VOLUME_HEIGHT_RATIO,
+    WICK_WIDTH_RATIO,
+)
 from ..config.themes import THEMES, THEMES_RGBA, THEMES_RGB
 from ..data.pnf import calculate_pnf_columns
 from ..data.renko import calculate_renko_bricks
@@ -395,8 +411,8 @@ def render_ohlc_bars(
     draw = ImageDraw.Draw(img)
 
     # Define chart areas (70% for OHLC bars, 30% for volume)
-    chart_height = int(height * 0.7)
-    volume_height = int(height * 0.3)
+    chart_height = int(height * CHART_HEIGHT_RATIO)
+    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Price and volume scaling
     price_min = np.min(low_prices)
@@ -409,7 +425,7 @@ def render_ohlc_bars(
     # Bar width calculations
     num_bars = len(open_prices)
     bar_width = width / (num_bars + 1)
-    tick_length = bar_width * 0.4  # 40% of bar width for ticks
+    tick_length = bar_width * TICK_LENGTH_RATIO  # 40% of bar width for ticks
 
     # Draw grid lines (background layer - before bars)
     if show_grid:
@@ -425,7 +441,7 @@ def render_ohlc_bars(
 
     # Vectorized coordinate calculation for performance
     indices = np.arange(num_bars)
-    x_centers = ((indices + 0.5) * bar_width).astype(np.int32, copy=False)
+    x_centers = ((indices + CENTER_OFFSET) * bar_width).astype(np.int32, copy=False)
     x_lefts = (x_centers - tick_length).astype(np.int32, copy=False)
     x_rights = (x_centers + tick_length).astype(np.int32, copy=False)
 
@@ -447,8 +463,8 @@ def render_ohlc_bars(
     vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32, copy=False)
 
     # Pre-compute volume bar X coordinates (optimization for 5-10% speedup)
-    vol_start_x = ((indices + 0.25) * bar_width).astype(np.int32, copy=False)
-    vol_end_x = ((indices + 0.75) * bar_width).astype(np.int32, copy=False)
+    vol_start_x = ((indices + QUARTER_OFFSET) * bar_width).astype(np.int32, copy=False)
+    vol_end_x = ((indices + THREE_QUARTER_OFFSET) * bar_width).astype(np.int32, copy=False)
 
     # Determine bullish/bearish for each bar
     is_bullish = close_prices >= open_prices
@@ -588,8 +604,8 @@ def render_renko_chart(
     draw = ImageDraw.Draw(img)
 
     # Define chart areas (70% for bricks, 30% for volume)
-    chart_height = int(height * 0.7)
-    volume_height = int(height * 0.3)
+    chart_height = int(height * CHART_HEIGHT_RATIO)
+    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Calculate price range for all bricks
     brick_prices = np.array([b["price"] for b in bricks])
@@ -604,7 +620,7 @@ def render_renko_chart(
     # Calculate brick dimensions
     num_bricks = len(bricks)
     brick_width = width / (num_bricks + 1)
-    spacing = brick_width * 0.1
+    spacing = brick_width * SPACING_RATIO
     bar_width = brick_width - spacing
 
     # Calculate brick height based on box_size
@@ -612,7 +628,7 @@ def render_renko_chart(
         from ..ops.indicators import calculate_atr
 
         atr = calculate_atr(ohlc["high"], ohlc["low"], ohlc["close"], period=14, engine="cpu")
-        box_size = float(np.nanmedian(atr)) * 0.75
+        box_size = float(np.nanmedian(atr)) * BOX_SIZE_ATR_MULTIPLIER
 
     brick_height = int((box_size / price_range) * chart_height)
     brick_height = max(brick_height, 1)  # Minimum 1 pixel
@@ -624,17 +640,17 @@ def render_renko_chart(
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price lines
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
-            draw.line([(0, y), (width, y)], fill=grid_color_final, width=1)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
+            draw.line([(0, y), (width, y)], fill=grid_color_final, width=int(GRID_LINE_WIDTH))
 
         # Vertical brick lines
-        num_vertical_lines = min(20, num_bricks // 10 + 1)
+        num_vertical_lines = min(MAX_VERTICAL_GRID_LINES, num_bricks // 10 + 1)
         if num_vertical_lines > 1:
             interval = num_bricks / num_vertical_lines
             for i in range(num_vertical_lines):
                 x = int(i * interval * brick_width)
-                draw.line([(x, 0), (x, height)], fill=grid_color_final, width=1)
+                draw.line([(x, 0), (x, height)], fill=grid_color_final, width=int(GRID_LINE_WIDTH))
 
     # Draw bricks
     for i, brick in enumerate(bricks):
@@ -1040,8 +1056,8 @@ def render_line_chart(
     draw = ImageDraw.Draw(img)
 
     # Define chart areas (70% for price chart, 30% for volume)
-    chart_height = int(height * 0.7)
-    volume_height = int(height * 0.3)
+    chart_height = int(height * CHART_HEIGHT_RATIO)
+    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Price and volume scaling
     price_min = np.min(low_prices)
@@ -1071,7 +1087,7 @@ def render_line_chart(
 
     # Vectorize all coordinate calculations
     indices = np.arange(num_points)
-    x_coords = ((indices + 0.5) * point_spacing).astype(np.int32, copy=False)
+    x_coords = ((indices + CENTER_OFFSET) * point_spacing).astype(np.int32, copy=False)
 
     # Vectorized price scaling
     y_coords = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
@@ -1112,7 +1128,7 @@ def render_line_chart(
 
     # Draw volume bars using vectorized calculations
     # Calculate bar width and positions
-    bar_spacing = point_spacing * 0.2
+    bar_spacing = point_spacing * SPACING_RATIO
     bar_width_val = point_spacing - bar_spacing
 
     # Vectorized volume bar coordinate calculation
@@ -1140,7 +1156,7 @@ def render_hollow_candles(
     bg_color: str | None = None,
     up_color: str | None = None,
     down_color: str | None = None,
-    wick_width_ratio: float = 0.1,
+    wick_width_ratio: float = WICK_WIDTH_RATIO,
     enable_antialiasing: bool = True,
     show_grid: bool = True,
     use_batch_drawing: bool | None = None,
@@ -1217,8 +1233,8 @@ def render_hollow_candles(
     draw = ImageDraw.Draw(img)
 
     # Define chart areas (70% for candlestick, 30% for volume)
-    chart_height = int(height * 0.7)
-    volume_height = int(height * 0.3)
+    chart_height = int(height * CHART_HEIGHT_RATIO)
+    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Price and volume scaling
     price_min = np.min(low_prices)
@@ -1231,11 +1247,11 @@ def render_hollow_candles(
     # Candlestick width
     num_candles = len(open_prices)
     candle_width = width / (num_candles + 1)
-    spacing = candle_width * 0.2
+    spacing = candle_width * SPACING_RATIO
     bar_width = candle_width - spacing
 
     # Calculate wick width: minimum 1px, maximum 10% of bar_width
-    wick_width = max(1, min(int(bar_width * wick_width_ratio), int(bar_width * 0.1)))
+    wick_width = max(MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO)))
 
     # Draw grid lines (background layer - before candles)
     if show_grid:
@@ -1461,21 +1477,21 @@ def _draw_grid(
 
     # Draw horizontal price level lines (10 divisions)
     # Vectorize coordinate calculations for better performance
-    horizontal_indices = np.arange(1, 10)
-    y_coords = (horizontal_indices * chart_height // 10).astype(int, copy=False)
+    horizontal_indices = np.arange(1, HORIZONTAL_GRID_DIVISIONS)
+    y_coords = (horizontal_indices * chart_height // HORIZONTAL_GRID_DIVISIONS).astype(int, copy=False)
 
     for y in y_coords:
-        draw.line([(0, y), (width, y)], fill=color, width=1)
+        draw.line([(0, y), (width, y)], fill=color, width=int(GRID_LINE_WIDTH))
 
     # Draw vertical time marker lines
     # Space them out to max 20 lines for readability
-    step = max(1, num_candles // 20)
+    step = max(1, num_candles // MAX_VERTICAL_GRID_LINES)
     vertical_indices = np.arange(0, num_candles, step)
     x_coords = (vertical_indices * candle_width).astype(int, copy=False)
 
     for x in x_coords:
         # Draw from top to bottom of chart area only
-        draw.line([(x, 0), (x, chart_height)], fill=color, width=1)
+        draw.line([(x, 0), (x, chart_height)], fill=color, width=int(GRID_LINE_WIDTH))
 
 
 @jit(nopython=True, cache=True)
@@ -1737,7 +1753,7 @@ def render_ohlcv_chart(
     bg_color: str | None = None,
     up_color: str | None = None,
     down_color: str | None = None,
-    wick_width_ratio: float = 0.1,
+    wick_width_ratio: float = WICK_WIDTH_RATIO,
     enable_antialiasing: bool = True,
     show_grid: bool = True,
     use_batch_drawing: bool | None = None,
@@ -1835,8 +1851,8 @@ def render_ohlcv_chart(
     draw = ImageDraw.Draw(img)
 
     # Define chart areas (70% for candlestick, 30% for volume)
-    chart_height = int(height * 0.7)
-    volume_height = int(height * 0.3)
+    chart_height = int(height * CHART_HEIGHT_RATIO)
+    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Price and volume scaling
     price_min = np.min(low_prices)
@@ -1855,11 +1871,11 @@ def render_ohlcv_chart(
     # Candlestick width
     num_candles = len(open_prices)
     candle_width = width / (num_candles + 1)
-    spacing = candle_width * 0.2
+    spacing = candle_width * SPACING_RATIO
     bar_width = candle_width - spacing
 
     # Calculate wick width: minimum 1px, maximum 10% of bar_width
-    wick_width = max(1, min(int(bar_width * wick_width_ratio), int(bar_width * 0.1)))
+    wick_width = max(MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO)))
 
     # Draw grid lines (background layer - before candles)
     if show_grid:

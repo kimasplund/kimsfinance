@@ -84,7 +84,7 @@ def render_charts_parallel(
         ...     {'ohlc': ohlc2, 'volume': vol2},
         ...     {'ohlc': ohlc3, 'volume': vol3},
         ... ]
-        >>> paths = [f"chart_{i}.webp" for i in range(len(datasets))]
+        >>> paths = [f"chart_{i}.webp" for i, _ in enumerate(datasets)]
         >>> result = render_charts_parallel(datasets, paths, speed='fast')
         >>> # Returns: ['chart_0.webp', 'chart_1.webp', 'chart_2.webp']
 

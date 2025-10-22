@@ -13,6 +13,26 @@ except ImportError:
 
 from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
+from ..config.layout_constants import (
+    BOX_SIZE_ATR_MULTIPLIER,
+    BOX_SIZE_FALLBACK_RATIO,
+    BRICK_SPACING_RATIO,
+    CENTER_OFFSET,
+    CHART_HEIGHT_RATIO,
+    COLUMN_BOX_WIDTH_RATIO,
+    GRID_ALPHA,
+    GRID_LINE_WIDTH,
+    HORIZONTAL_GRID_DIVISIONS,
+    MAX_VERTICAL_GRID_LINES,
+    MIN_BODY_HEIGHT,
+    MIN_BOX_HEIGHT,
+    QUARTER_OFFSET,
+    SPACING_RATIO,
+    TICK_LENGTH_RATIO,
+    VOLUME_ALPHA,
+    VOLUME_HEIGHT_RATIO,
+    WICK_WIDTH_RATIO,
+)
 from ..config.themes import THEMES
 from ..data.pnf import calculate_pnf_columns
 from ..data.renko import calculate_renko_bricks
@@ -168,8 +188,8 @@ def render_candlestick_svg(
     has_volume = volume is not None
     if has_volume:
         volume_data = np.ascontiguousarray(to_numpy_array(volume))
-        chart_height = int(height * 0.7)
-        volume_height = int(height * 0.3)
+        chart_height = int(height * CHART_HEIGHT_RATIO)
+        volume_height = int(height * VOLUME_HEIGHT_RATIO)
     else:
         chart_height = height
         volume_height = 0
@@ -186,24 +206,24 @@ def render_candlestick_svg(
     # Candlestick width calculation
     num_candles = len(open_prices)
     candle_width = width / (num_candles + 1)
-    spacing = candle_width * 0.2
+    spacing = candle_width * SPACING_RATIO
     bar_width = candle_width - spacing
 
     # Wick width (scaled for SVG, minimum 1px)
-    wick_width = max(1.0, bar_width * 0.1)
+    wick_width = max(1.0, bar_width * WICK_WIDTH_RATIO)
 
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
 
         # Vertical time grid lines (max 20 lines)
-        num_vertical_lines = min(20, num_candles // 10 + 1)
+        num_vertical_lines = min(MAX_VERTICAL_GRID_LINES, num_candles // 10 + 1)
         if num_vertical_lines > 1:
             interval = num_candles / num_vertical_lines
             for i in range(num_vertical_lines):
@@ -233,7 +253,7 @@ def render_candlestick_svg(
     body_bottoms = np.maximum(y_opens, y_closes)
     body_heights = body_bottoms - body_tops
     # Ensure minimum body height for visibility (doji candles)
-    body_heights = np.maximum(body_heights, 1.0)
+    body_heights = np.maximum(body_heights, MIN_BODY_HEIGHT)
 
     # Vectorized volume calculations (if needed)
     if has_volume:
@@ -271,7 +291,7 @@ def render_candlestick_svg(
                     insert=(x_coords[i], vol_ys[i]),
                     size=(bar_width, vol_heights[i]),
                     fill=color,
-                    opacity=0.5
+                    opacity=VOLUME_ALPHA
                 )
             )
 
@@ -363,8 +383,8 @@ def render_ohlc_bars_svg(
     has_volume = volume is not None
     if has_volume:
         volume_data = np.ascontiguousarray(to_numpy_array(volume))
-        chart_height = int(height * 0.7)
-        volume_height = int(height * 0.3)
+        chart_height = int(height * CHART_HEIGHT_RATIO)
+        volume_height = int(height * VOLUME_HEIGHT_RATIO)
     else:
         chart_height = height
         volume_height = 0
@@ -381,16 +401,16 @@ def render_ohlc_bars_svg(
     # Bar width calculations
     num_bars = len(open_prices)
     bar_width = width / (num_bars + 1)
-    tick_length = bar_width * 0.4  # 40% of bar width for ticks
+    tick_length = bar_width * TICK_LENGTH_RATIO  # 40% of bar width for ticks
 
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
 
         # Vertical time grid lines (max 20 lines)
@@ -418,7 +438,7 @@ def render_ohlc_bars_svg(
         color = up_color_final if is_bullish else down_color_final
 
         # Calculate positions
-        x_center = (i + 0.5) * bar_width
+        x_center = (i + CENTER_OFFSET) * bar_width
         x_left = x_center - tick_length
         x_right = x_center + tick_length
 
@@ -450,8 +470,8 @@ def render_ohlc_bars_svg(
             vol = float(volume_data[i])
             vol_height = (vol / volume_range) * volume_height
             vol_y = height - vol_height
-            vol_x = (i + 0.25) * bar_width
-            vol_width = bar_width * 0.5
+            vol_x = (i + QUARTER_OFFSET) * bar_width
+            vol_width = bar_width * CENTER_OFFSET
 
             volume_group.add(
                 dwg.rect(
@@ -549,8 +569,8 @@ def render_line_chart_svg(
     has_volume = volume is not None
     if has_volume:
         volume_data = np.ascontiguousarray(to_numpy_array(volume))
-        chart_height = int(height * 0.7)
-        volume_height = int(height * 0.3)
+        chart_height = int(height * CHART_HEIGHT_RATIO)
+        volume_height = int(height * VOLUME_HEIGHT_RATIO)
     else:
         chart_height = height
         volume_height = 0
@@ -572,10 +592,10 @@ def render_line_chart_svg(
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
 
         # Vertical time grid lines (max 20 lines)
@@ -597,7 +617,7 @@ def render_line_chart_svg(
         c = float(close_prices[i])
 
         # X coordinate
-        x = (i + 0.5) * point_spacing
+        x = (i + CENTER_OFFSET) * point_spacing
 
         # Y coordinate (inverted: 0 is top of chart)
         y = chart_height - ((c - price_min) / price_range) * chart_height
@@ -631,7 +651,7 @@ def render_line_chart_svg(
 
     # Draw volume bars if volume data provided
     if has_volume:
-        bar_spacing = point_spacing * 0.2
+        bar_spacing = point_spacing * SPACING_RATIO
         bar_width_val = point_spacing - bar_spacing
 
         for i in range(num_points):
@@ -646,7 +666,7 @@ def render_line_chart_svg(
                     insert=(x_start, vol_y),
                     size=(bar_width_val, vol_height),
                     fill=line_color_final,
-                    opacity=0.5,
+                    opacity=VOLUME_ALPHA,
                 )
             )
 
@@ -742,7 +762,7 @@ def render_renko_chart_svg(
         low_prices = to_numpy_array(ohlc["low"])
         close_prices = to_numpy_array(ohlc["close"])
         atr = calculate_atr(high_prices, low_prices, close_prices, period=14, engine="cpu")
-        box_size = float(np.nanmedian(atr)) * 0.75
+        box_size = float(np.nanmedian(atr)) * BOX_SIZE_ATR_MULTIPLIER
 
     # Get theme colors
     theme_colors = THEMES.get(theme, THEMES["classic"])
@@ -774,7 +794,7 @@ def render_renko_chart_svg(
     # Calculate brick dimensions
     num_bricks = len(bricks)
     brick_width = width / (num_bricks + 1)
-    spacing = brick_width * 0.1  # 10% spacing between bricks
+    spacing = brick_width * BRICK_SPACING_RATIO  # 10% spacing between bricks
     bar_width = brick_width - spacing
 
     # Calculate brick height (fixed for all bricks)
@@ -789,12 +809,12 @@ def render_renko_chart_svg(
     # Draw grid lines (background layer)
     if show_grid:
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
 
         # Horizontal price grid lines (10 divisions)
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
 
         # Vertical time grid lines (max 20 lines)
@@ -846,7 +866,7 @@ def render_renko_chart_svg(
                     insert=(x_start, height - volume_bar_height),
                     size=(bar_width, volume_bar_height),
                     fill=color,
-                    opacity=0.5,
+                    opacity=VOLUME_ALPHA,
                 )
             )
 
@@ -973,16 +993,16 @@ def render_pnf_chart_svg(
     # Calculate column dimensions
     num_columns = len(columns)
     column_width = width / (num_columns + 1)
-    box_width = column_width * 0.8
+    box_width = column_width * COLUMN_BOX_WIDTH_RATIO
 
     # Calculate box height based on box_size
     box_height = (box_size / price_range) * height
-    box_height = max(box_height, 10.0)
+    box_height = max(box_height, MIN_BOX_HEIGHT)
 
     # Draw grid lines (background layer)
     if show_grid:
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
 
         # Horizontal price lines (10 divisions)
@@ -1124,8 +1144,8 @@ def render_hollow_candles_svg(
     has_volume = volume is not None
     if has_volume:
         volume_data = np.ascontiguousarray(to_numpy_array(volume))
-        chart_height = int(height * 0.7)
-        volume_height = int(height * 0.3)
+        chart_height = int(height * CHART_HEIGHT_RATIO)
+        volume_height = int(height * VOLUME_HEIGHT_RATIO)
     else:
         chart_height = height
         volume_height = 0
@@ -1142,24 +1162,24 @@ def render_hollow_candles_svg(
     # Candlestick width calculation
     num_candles = len(open_prices)
     candle_width = width / (num_candles + 1)
-    spacing = candle_width * 0.2
+    spacing = candle_width * SPACING_RATIO
     bar_width = candle_width - spacing
 
     # Wick width (scaled for SVG, minimum 1px)
-    wick_width = max(1.0, bar_width * 0.1)
+    wick_width = max(1.0, bar_width * WICK_WIDTH_RATIO)
 
     # Draw grid lines (background layer)
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=1, opacity=0.25)
+            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
         )
-        for i in range(1, 10):
-            y = int(i * chart_height / 10)
+        for i in range(1, HORIZONTAL_GRID_DIVISIONS):
+            y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
             grid_group.add(dwg.line(start=(0, y), end=(width, y)))
 
         # Vertical time grid lines (max 20 lines)
-        num_vertical_lines = min(20, num_candles // 10 + 1)
+        num_vertical_lines = min(MAX_VERTICAL_GRID_LINES, num_candles // 10 + 1)
         if num_vertical_lines > 1:
             interval = num_candles / num_vertical_lines
             for i in range(num_vertical_lines):
@@ -1189,7 +1209,7 @@ def render_hollow_candles_svg(
     body_bottoms = np.maximum(y_opens, y_closes)
     body_heights = body_bottoms - body_tops
     # Ensure minimum body height for visibility (doji candles)
-    body_heights = np.maximum(body_heights, 1.0)
+    body_heights = np.maximum(body_heights, MIN_BODY_HEIGHT)
 
     # Vectorized volume calculations (if needed)
     if has_volume:
@@ -1242,7 +1262,7 @@ def render_hollow_candles_svg(
                     insert=(x_coords[i], vol_ys[i]),
                     size=(bar_width, vol_heights[i]),
                     fill=color,
-                    opacity=0.5
+                    opacity=VOLUME_ALPHA
                 )
             )
 
