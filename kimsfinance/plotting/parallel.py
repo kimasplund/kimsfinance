@@ -34,9 +34,12 @@ def _render_one_chart(args: tuple[Any, ...]) -> str | bytes:
         return str(output_path)
     else:
         # Return as PNG bytes for in-memory processing
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        return buf.getvalue()
+        # Use context manager to ensure buffer is properly closed
+        with io.BytesIO() as buf:
+            img.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        # Buffer automatically closed here
+        return image_data
 
 
 def render_charts_parallel(

@@ -8,7 +8,11 @@ crossover points for CPU vs. GPU execution for various operations.
 
 import json
 import timeit
+import threading
+import tempfile
+import shutil
 from pathlib import Path
+from typing import Callable, Any
 
 import numpy as np
 import polars as pl
@@ -26,6 +30,9 @@ DEFAULT_THRESHOLDS = {
 
 CACHE_FILE = Path.home() / ".kimsfinance" / "threshold_cache.json"
 
+# Global lock for file I/O operations
+_autotune_lock = threading.Lock()
+
 
 def _get_test_data(size: int) -> pl.DataFrame:
     """Generate a sample OHLCV DataFrame for benchmarking."""
@@ -40,7 +47,9 @@ def _get_test_data(size: int) -> pl.DataFrame:
     )
 
 
-def _benchmark_operation(func, data: pl.DataFrame, engine: Engine, number: int = 10) -> float:
+def _benchmark_operation(
+    func: Callable[[pl.DataFrame, Engine], Any], data: pl.DataFrame, engine: Engine, number: int = 10
+) -> float:
     """Benchmark a given function on a specific engine."""
     from .engine import EngineManager  # Local import to avoid circular dependency
 
@@ -48,7 +57,7 @@ def _benchmark_operation(func, data: pl.DataFrame, engine: Engine, number: int =
     return timer.timeit(number=number) / number
 
 
-def _get_operation_func(operation: str):
+def _get_operation_func(operation: str) -> Callable[[pl.DataFrame, Engine], Any]:
     """Return a real indicator function for a given operation."""
     from kimsfinance.ops.indicators import (
         calculate_atr,
@@ -69,7 +78,7 @@ def _get_operation_func(operation: str):
         return lambda df, engine: df.select(pl.mean("close")).collect(engine=engine)
 
 
-def find_crossover(operation: str, sizes=None) -> int:
+def find_crossover(operation: str, sizes: list[int] | None = None) -> int:
     """
     Find the crossover point for a given operation by benchmarking.
     """
@@ -95,7 +104,16 @@ def find_crossover(operation: str, sizes=None) -> int:
 
 def run_autotune(operations: list[str] | None = None, save: bool = True) -> dict[str, int]:
     """
-    Run the auto-tuning process to find the optimal crossover thresholds.
+    Run the auto-tuning process to find the optimal crossover thresholds (thread-safe).
+
+    Thread-safe: Yes (uses lock for file operations)
+
+    Args:
+        operations: List of operations to tune (None = all)
+        save: If True, save results to cache file
+
+    Returns:
+        dict: Tuned threshold values
     """
     if operations is None:
         operations = list(DEFAULT_THRESHOLDS.keys())
@@ -107,21 +125,69 @@ def run_autotune(operations: list[str] | None = None, save: bool = True) -> dict
         print(f"  -> Found crossover at: {tuned_thresholds[op]}")
 
     if save:
-        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(tuned_thresholds, f, indent=4)
-        print(f"Saved tuned thresholds to: {CACHE_FILE}")
+        _save_tuned_thresholds(tuned_thresholds)
 
     return tuned_thresholds
 
 
-def load_tuned_thresholds() -> dict[str, int]:
-    """Load tuned thresholds from the cache file."""
-    if not CACHE_FILE.exists():
-        return DEFAULT_THRESHOLDS
+def _save_tuned_thresholds(thresholds: dict[str, int]) -> None:
+    """
+    Save thresholds with atomic write (thread-safe).
 
-    with open(CACHE_FILE, "r") as f:
+    Uses atomic file operations:
+    1. Write to temp file
+    2. Atomic rename (POSIX guarantees atomicity)
+    3. Set secure permissions (user read/write only)
+
+    Thread-safe: Yes (uses global lock + atomic rename)
+    """
+    with _autotune_lock:
+        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        # Atomic write using temp file + rename
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=CACHE_FILE.parent, delete=False, suffix=".tmp", prefix=".threshold_"
+        ) as tf:
+            json.dump(thresholds, tf, indent=4)
+            temp_path = tf.name
+
         try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return DEFAULT_THRESHOLDS
+            # Atomic rename (POSIX guarantees atomicity)
+            shutil.move(temp_path, CACHE_FILE)
+
+            # Set permissions (user read/write only)
+            CACHE_FILE.chmod(0o600)
+
+            print(f"Saved tuned thresholds to: {CACHE_FILE}")
+        except Exception as e:
+            # Cleanup temp file on error
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+            raise RuntimeError(f"Failed to save tuned thresholds: {e}") from e
+
+
+def load_tuned_thresholds() -> dict[str, int]:
+    """
+    Load tuned thresholds from the cache file (thread-safe).
+
+    Thread-safe: Yes (uses lock for file read)
+
+    Returns:
+        dict: Tuned thresholds or default if not available
+    """
+    with _autotune_lock:
+        if not CACHE_FILE.exists():
+            return DEFAULT_THRESHOLDS.copy()
+
+        try:
+            with open(CACHE_FILE, "r") as f:
+                loaded = json.load(f)
+                # Validate loaded data
+                if not isinstance(loaded, dict):
+                    return DEFAULT_THRESHOLDS.copy()
+                # Return copy to prevent external modification
+                return loaded
+        except (json.JSONDecodeError, OSError, IOError):
+            return DEFAULT_THRESHOLDS.copy()

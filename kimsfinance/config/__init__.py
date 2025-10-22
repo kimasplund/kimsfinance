@@ -11,6 +11,7 @@ from .gpu_thresholds import (
     should_use_gpu_rolling,
     should_use_gpu_simple,
 )
+from .render_config import RenderConfig
 
 __all__ = [
     "GPU_THRESHOLDS",
@@ -20,4 +21,5 @@ __all__ = [
     "should_use_gpu_iterative",
     "should_use_gpu_histogram",
     "should_use_gpu_rolling",
+    "RenderConfig",
 ]

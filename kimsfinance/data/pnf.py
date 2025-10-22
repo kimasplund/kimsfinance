@@ -71,9 +71,10 @@ def calculate_pnf_columns(
     # Round reference price to nearest box
     reference_price = round(reference_price / box_size) * box_size
 
-    for i in range(len(close_prices)):
-        high = high_prices[i]
-        low = low_prices[i]
+    # Use enumerate with zip instead of range(len()) anti-pattern
+    for i, (high, low) in enumerate(zip(high_prices, low_prices)):
+        high = float(high)
+        low = float(low)
 
         # How many boxes can we go up from reference?
         boxes_up = int((high - reference_price) / box_size)

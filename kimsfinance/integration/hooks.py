@@ -8,65 +8,80 @@ Monkey-patches mplfinance internal functions with GPU-accelerated versions.
 from __future__ import annotations
 
 import sys
-from typing import Any
+from typing import Any, Callable
 import numpy as np
 import polars as pl
+import threading
+import warnings
 
 # Import our operations
 from ..ops.indicators.moving_averages import calculate_sma, calculate_ema
 from ..ops.nan_ops import nanmin_gpu, nanmax_gpu, nan_bounds
 from ..core.engine import EngineManager
 
-# Store original functions for restoration
-_original_functions = {}
-_config = {}
+# Global state with lock protection
+_lock = threading.RLock()  # Reentrant lock for nested calls
+_original_functions: dict[str, Callable] = {}
+_config: dict[str, Any] = {}
 
 
 def patch_plotting_functions(config: dict[str, Any]) -> None:
     """
-    Patch mplfinance plotting functions with accelerated versions.
+    Patch mplfinance plotting functions with accelerated versions (thread-safe).
 
     Args:
         config: Configuration dictionary from adapter
+
+    Thread-safe: Yes (uses global lock)
     """
-    global _config
-    _config = config
+    with _lock:
+        global _config
+        _config = config.copy()  # Store copy to avoid external modification
 
-    try:
-        import mplfinance.plotting as mpf_plotting
-        import mplfinance._utils as mpf_utils
-    except ImportError:
-        raise ImportError("mplfinance not installed or incompatible version")
+        try:
+            import mplfinance.plotting as mpf_plotting
+            import mplfinance._utils as mpf_utils
+        except ImportError:
+            raise ImportError("mplfinance not installed or incompatible version")
 
-    # Store original functions
-    _original_functions["_plot_mav"] = mpf_plotting._plot_mav
-    _original_functions["_plot_ema"] = mpf_plotting._plot_ema
+        # Store original functions (only if not already patched)
+        if "_plot_mav" not in _original_functions:
+            _original_functions["_plot_mav"] = mpf_plotting._plot_mav
+        if "_plot_ema" not in _original_functions:
+            _original_functions["_plot_ema"] = mpf_plotting._plot_ema
 
-    # Patch plotting functions
-    mpf_plotting._plot_mav = _plot_mav_accelerated
-    mpf_plotting._plot_ema = _plot_ema_accelerated
+        # Patch plotting functions
+        mpf_plotting._plot_mav = _plot_mav_accelerated
+        mpf_plotting._plot_ema = _plot_ema_accelerated
 
-    # Note: We don't patch _utils functions as they might break internal logic
-    # Instead, we optimize at the plotting layer where data flows through
+        # Note: We don't patch _utils functions as they might break internal logic
+        # Instead, we optimize at the plotting layer where data flows through
 
 
 def unpatch_plotting_functions() -> None:
-    """Restore original mplfinance functions."""
-    if not _original_functions:
-        return
+    """
+    Restore original mplfinance functions (thread-safe).
 
-    try:
-        import mplfinance.plotting as mpf_plotting
-    except ImportError:
-        return
+    Thread-safe: Yes (uses global lock)
+    """
+    with _lock:
+        if not _original_functions:
+            warnings.warn("No functions to unpatch", UserWarning)
+            return
 
-    # Restore original functions
-    if "_plot_mav" in _original_functions:
-        mpf_plotting._plot_mav = _original_functions["_plot_mav"]
-    if "_plot_ema" in _original_functions:
-        mpf_plotting._plot_ema = _original_functions["_plot_ema"]
+        try:
+            import mplfinance.plotting as mpf_plotting
+        except ImportError:
+            warnings.warn("mplfinance not available for unpatching", UserWarning)
+            return
 
-    _original_functions.clear()
+        # Restore original functions
+        if "_plot_mav" in _original_functions:
+            mpf_plotting._plot_mav = _original_functions["_plot_mav"]
+            del _original_functions["_plot_mav"]
+        if "_plot_ema" in _original_functions:
+            mpf_plotting._plot_ema = _original_functions["_plot_ema"]
+            del _original_functions["_plot_ema"]
 
 
 def _plot_mav_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):

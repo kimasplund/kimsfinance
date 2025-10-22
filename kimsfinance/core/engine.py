@@ -9,6 +9,7 @@ performance heuristics.
 from __future__ import annotations
 
 import functools
+import threading
 from collections.abc import Callable
 from typing import Literal, TypeVar, ParamSpec
 
@@ -48,32 +49,54 @@ OPERATION_HEURISTICS = {
 
 class EngineManager:
     """
-    Manages execution engine selection and GPU availability detection.
+    Manages execution engine selection and GPU availability detection (thread-safe).
     """
 
     _gpu_available: bool | None = None  # Cache GPU availability check
+    _gpu_check_lock = threading.Lock()  # Lock for GPU availability check
 
     @classmethod
     def check_gpu_available(cls) -> bool:
         """
-        Check if GPU acceleration is available (lightweight check).
+        Check if GPU acceleration is available (thread-safe, double-checked locking).
+
+        Thread-safe: Yes (double-checked locking pattern)
+
+        Returns:
+            bool: True if GPU is available, False otherwise
         """
+        # Fast path: already checked (no lock needed)
         if cls._gpu_available is not None:
             return cls._gpu_available
 
-        try:
-            import cudf
+        # Slow path: need to check (acquire lock)
+        with cls._gpu_check_lock:
+            # Double-check inside lock (another thread may have already checked)
+            if cls._gpu_available is not None:
+                return cls._gpu_available
 
-            cls._gpu_available = True
-            return True
-        except ImportError:
-            cls._gpu_available = False
-            return False
+            # Perform actual GPU check
+            try:
+                import cudf
+                import cupy as cp
+
+                # Test GPU functionality (ensure it actually works)
+                _ = cp.array([1, 2, 3])
+                cls._gpu_available = True
+            except (ImportError, Exception):
+                cls._gpu_available = False
+
+            return cls._gpu_available
 
     @classmethod
     def reset_gpu_cache(cls) -> None:
-        """Reset the GPU availability cache."""
-        cls._gpu_available = None
+        """
+        Reset the GPU availability cache (thread-safe).
+
+        Thread-safe: Yes (uses lock)
+        """
+        with cls._gpu_check_lock:
+            cls._gpu_available = None
 
     @classmethod
     def select_engine(

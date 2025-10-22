@@ -10,7 +10,6 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
-from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -71,20 +70,15 @@ def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto
     if len(data_array) < period + 1:
         raise ValueError(f"Insufficient data: need {period + 1}, got {len(data_array)}")
 
-    # 3. ENGINE ROUTING
-    threshold = get_threshold("vectorizable_simple")
-    match engine:
-        case "auto":
-            use_gpu = len(data_array) >= threshold and CUPY_AVAILABLE
-        case "gpu":
-            use_gpu = CUPY_AVAILABLE
-        case "cpu":
-            use_gpu = False
-        case _:
-            raise ValueError(f"Invalid engine: {engine}")
+    # 3. ENGINE ROUTING using EngineManager (standardized pattern)
+    exec_engine = EngineManager.select_engine(
+        engine,
+        operation="roc_indicator",
+        data_size=len(data_array)
+    )
 
-    # 4. DISPATCH TO CPU OR GPU
-    if use_gpu:
+    # 4. DISPATCH TO CPU OR GPU based on selected engine
+    if exec_engine == "gpu":
         return _calculate_roc_gpu(data_array, period)
     else:
         return _calculate_roc_cpu(data_array, period)

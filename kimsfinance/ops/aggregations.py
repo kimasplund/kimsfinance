@@ -256,6 +256,9 @@ def rolling_sum(data: ArrayLike, window: int, *, engine: Engine = "auto") -> Arr
 
     result = df.select(pl.col("data").rolling_sum(window_size=window))["data"].to_numpy()
 
+    # Explicitly delete large intermediate DataFrame
+    del df
+
     return result
 
 
@@ -278,6 +281,9 @@ def rolling_mean(data: ArrayLike, window: int, *, engine: Engine = "auto") -> Ar
     df = pl.DataFrame({"data": data_arr})
 
     result = df.select(pl.col("data").rolling_mean(window_size=window))["data"].to_numpy()
+
+    # Explicitly delete large intermediate DataFrame
+    del df
 
     return result
 
@@ -623,9 +629,10 @@ def range_to_ohlc(
         "volume": 0,
     }
 
-    for i in range(len(prices)):
-        price = prices[i]
-        volume = volumes[i]
+    # Use enumerate with zip instead of range(len()) anti-pattern
+    for i, (timestamp, price, volume) in enumerate(zip(timestamps, prices, volumes)):
+        price = float(price)
+        volume = float(volume)
 
         # Update bar
         current_bar["high"] = max(current_bar["high"], price)
