@@ -4,7 +4,7 @@ Quick performance benchmark for OHLC bars renderer.
 
 import time
 import numpy as np
-from kimsfinance.plotting.renderer import render_ohlc_bars
+from kimsfinance.plotting.pil_renderer import render_ohlc_bars
 
 
 def benchmark_ohlc_bars():

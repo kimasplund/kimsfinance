@@ -57,7 +57,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # by reading and executing it with necessary dependencies mocked
 def load_renderer_module():
     """Load the renderer module with minimal dependencies."""
-    renderer_path = Path(__file__).parent.parent / "kimsfinance" / "plotting" / "renderer.py"
+    renderer_path = Path(__file__).parent.parent / "kimsfinance" / "plotting" / "pil_renderer.py"
 
     # Read the renderer source
     renderer_code = renderer_path.read_text()

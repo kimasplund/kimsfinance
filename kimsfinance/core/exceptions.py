@@ -11,7 +11,7 @@ from __future__ import annotations
 class KimsFinanceError(Exception):
     """Base exception for all kimsfinance errors."""
 
-    pass
+    __slots__ = ()
 
 
 class GPUNotAvailableError(KimsFinanceError):
@@ -23,6 +23,8 @@ class GPUNotAvailableError(KimsFinanceError):
     - No CUDA-capable GPU is present
     - GPU drivers are not properly configured
     """
+
+    __slots__ = ()
 
     def __init__(self, message: str | None = None):
         if message is None:
@@ -45,7 +47,7 @@ class DataValidationError(KimsFinanceError):
     - NaN values in critical columns
     """
 
-    pass
+    __slots__ = ()
 
 
 class EngineError(KimsFinanceError):
@@ -55,7 +57,7 @@ class EngineError(KimsFinanceError):
     This is typically caught internally for fallback to CPU.
     """
 
-    pass
+    __slots__ = ()
 
 
 class OperationNotSupportedError(KimsFinanceError):
@@ -65,7 +67,7 @@ class OperationNotSupportedError(KimsFinanceError):
     Example: Certain complex operations may not have GPU implementations yet.
     """
 
-    pass
+    __slots__ = ()
 
 
 class ConfigurationError(KimsFinanceError):
@@ -77,4 +79,4 @@ class ConfigurationError(KimsFinanceError):
     - Conflicting settings
     """
 
-    pass
+    __slots__ = ()

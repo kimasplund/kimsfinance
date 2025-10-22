@@ -113,28 +113,28 @@ def check_dependencies() -> Dict[str, bool]:
         pynvml.nvmlInit()
         pynvml.nvmlShutdown()
         deps["pynvml"] = True
-    except:
+    except ImportError:
         deps["pynvml"] = False
 
     # Check torch CUDA
     try:
         import torch
         deps["torch_cuda"] = torch.cuda.is_available()
-    except:
+    except ImportError:
         deps["torch_cuda"] = False
 
     # Check cudf
     try:
         import cudf
         deps["cudf"] = True
-    except:
+    except ImportError:
         deps["cudf"] = False
 
     # Check cupy
     try:
         import cupy
         deps["cupy"] = True
-    except:
+    except ImportError:
         deps["cupy"] = False
 
     # Check polars GPU
@@ -143,7 +143,7 @@ def check_dependencies() -> Dict[str, bool]:
         deps["polars"] = True
         # Check if GPU engine is available
         deps["polars_gpu"] = hasattr(polars, "GPUEngine")
-    except:
+    except ImportError:
         deps["polars"] = False
         deps["polars_gpu"] = False
 

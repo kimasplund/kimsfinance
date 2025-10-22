@@ -10,6 +10,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -22,21 +23,11 @@ from ...core import (
 from ...utils.array_utils import to_numpy_array
 
 
-def _should_use_gpu(data: np.ndarray, threshold: int = 500_000) -> bool:
-    """Determine if GPU should be used based on data size."""
-    try:
-        import cupy as cp
-
-        return len(data) >= threshold
-    except ImportError:
-        return False
-
-
 def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Rate of Change (ROC).
 
-    Automatically uses GPU for datasets > 500,000 rows when engine="auto".
+    Automatically uses GPU for datasets > 50,000 rows when engine="auto".
 
     ROC is a momentum oscillator that measures the percentage change in price
     between the current price and the price N periods ago. It oscillates above
@@ -81,14 +72,16 @@ def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto
         raise ValueError(f"Insufficient data: need {period + 1}, got {len(data_array)}")
 
     # 3. ENGINE ROUTING
-    if engine == "auto":
-        use_gpu = _should_use_gpu(data_array)
-    elif engine == "gpu":
-        use_gpu = True
-    elif engine == "cpu":
-        use_gpu = False
-    else:
-        raise ValueError(f"Invalid engine: {engine}")
+    threshold = get_threshold("vectorizable_simple")
+    match engine:
+        case "auto":
+            use_gpu = len(data_array) >= threshold and CUPY_AVAILABLE
+        case "gpu":
+            use_gpu = CUPY_AVAILABLE
+        case "cpu":
+            use_gpu = False
+        case _:
+            raise ValueError(f"Invalid engine: {engine}")
 
     # 4. DISPATCH TO CPU OR GPU
     if use_gpu:
@@ -98,22 +91,23 @@ def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto
 
 
 def _calculate_roc_cpu(data: np.ndarray, period: int) -> np.ndarray:
-    """CPU implementation of ROC using NumPy."""
+    """CPU implementation of ROC using NumPy (vectorized)."""
 
     # Initialize result array with NaN
     result = np.full(len(data), np.nan, dtype=np.float64)
 
-    # Calculate ROC for each position starting at period
-    # ROC = ((Price[i] - Price[i-period]) / Price[i-period]) * 100
-    for i in range(period, len(data)):
-        prev_price = data[i - period]
-        current_price = data[i]
+    # Get current and previous prices using array slicing (vectorized)
+    current_prices = data[period:]
+    prev_prices = data[:-period]
 
-        # Avoid division by zero
-        if prev_price != 0:
-            result[i] = ((current_price - prev_price) / prev_price) * 100.0
-        else:
-            result[i] = np.nan
+    # Calculate ROC: ((current - prev) / prev) * 100
+    # Use where to avoid division by zero
+    roc_values = np.where(
+        prev_prices != 0, ((current_prices - prev_prices) / prev_prices) * 100.0, np.nan
+    )
+
+    # Place results in correct positions (starting at period)
+    result[period:] = roc_values
 
     return result
 
