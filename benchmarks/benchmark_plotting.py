@@ -450,7 +450,9 @@ def run_comprehensive_benchmarks(
 
 
 def format_results_markdown(
-    results: list[BenchmarkResult], export_perf: dict[str, dict[str, float]]
+    results: list[BenchmarkResult],
+    export_perf: dict[str, dict[str, float]],
+    comparison_results: dict[str, Any] = None
 ) -> str:
     """
     Format benchmark results as markdown tables.
@@ -458,6 +460,7 @@ def format_results_markdown(
     Args:
         results: List of BenchmarkResult objects
         export_perf: Export performance data from benchmark_export_performance()
+        comparison_results: Optional mplfinance comparison results
 
     Returns:
         Markdown-formatted string with all results
@@ -514,6 +517,51 @@ def format_results_markdown(
         pass
 
     md.append("")
+
+    # mplfinance Comparison Section (if available)
+    if comparison_results and len(comparison_results) > 1:  # Has more than just 'summary'
+        md.append("## 🚀 kimsfinance vs mplfinance Comparison")
+        md.append("")
+        md.append("Direct side-by-side comparison validating the speedup claims.")
+        md.append("")
+
+        # Comparison table
+        md.append("| Candles | kimsfinance | mplfinance | Speedup |")
+        md.append("|---------|-------------|------------|---------|")
+
+        for size in sorted([k for k in comparison_results.keys() if isinstance(k, int)]):
+            data = comparison_results[size]
+            md.append(
+                f"| {size:>7,} | "
+                f"{data['kimsfinance_ms']:>10.2f} ms | "
+                f"{data['mplfinance_ms']:>9.2f} ms | "
+                f"**{data['speedup']:>6.1f}x** |"
+            )
+
+        md.append("")
+
+        # Summary statistics
+        if 'summary' in comparison_results:
+            summary = comparison_results['summary']
+            md.append("### Summary")
+            md.append("")
+            md.append(f"- **Average Speedup:** {summary['average_speedup']:.1f}x faster")
+            md.append(f"- **Speedup Range:** {summary['min_speedup']:.1f}x - {summary['max_speedup']:.1f}x")
+            md.append("")
+
+            # Highlight if average speedup is over 100x
+            if summary['average_speedup'] >= 100:
+                md.append(f"✅ **kimsfinance is {summary['average_speedup']:.0f}x faster than mplfinance on average!**")
+            else:
+                md.append(f"✅ **kimsfinance is {summary['average_speedup']:.1f}x faster than mplfinance!**")
+            md.append("")
+
+        md.append("**Benchmark Configuration:**")
+        md.append("- Resolution: 1280x720 (720p)")
+        md.append("- Chart type: Candlestick with volume panel")
+        md.append("- Format: PNG (same for both)")
+        md.append("- Runs: 5 iterations (median reported)")
+        md.append("")
 
     # Dataset Size Scaling
     md.append("## 1. Dataset Size Scaling")
@@ -761,6 +809,134 @@ def format_results_markdown(
     return "\n".join(md)
 
 
+def benchmark_mplfinance_comparison(
+    dataset_sizes: list[int] = [100, 1000, 10000, 100000], n_runs: int = 5
+) -> dict[str, Any]:
+    """
+    Benchmark kimsfinance vs mplfinance side-by-side to validate speedup claims.
+
+    Args:
+        dataset_sizes: List of candle counts to test
+        n_runs: Number of iterations per benchmark
+
+    Returns:
+        Dictionary with comparison results for each dataset size
+    """
+    print("\n" + "=" * 80)
+    print("KIMSFINANCE VS MPLFINANCE COMPARISON BENCHMARK")
+    print("=" * 80)
+
+    # Try to import mplfinance
+    try:
+        import mplfinance as mpf
+        import pandas as pd
+        import matplotlib
+        matplotlib.use('Agg')  # Non-interactive backend
+        import matplotlib.pyplot as plt
+        mplfinance_available = True
+        print("✓ mplfinance available - running comparison")
+    except ImportError:
+        print("✗ mplfinance not installed - skipping comparison")
+        print("  Install with: pip install mplfinance")
+        return {}
+
+    results = {}
+
+    for size in dataset_sizes:
+        print(f"\n[{size:>6,} candles]")
+
+        # Generate test data
+        data = generate_realistic_ohlcv_data(num_candles=size)
+
+        # Benchmark kimsfinance
+        kf_times = []
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Warm-up
+            _ = render_ohlcv_chart(
+                data["ohlc"], data["volume"],
+                width=1280, height=720,
+                theme="classic", enable_antialiasing=False
+            )
+
+            # Benchmark
+            for _ in range(n_runs):
+                start = time.perf_counter()
+                img = render_ohlcv_chart(
+                    data["ohlc"], data["volume"],
+                    width=1280, height=720,
+                    theme="classic", enable_antialiasing=False
+                )
+                filepath = os.path.join(tmpdir, "test_kf.png")
+                save_chart(img, filepath, format="png", quality=95)
+                end = time.perf_counter()
+                kf_times.append((end - start) * 1000)
+
+        kf_median = float(np.median(kf_times))
+
+        # Benchmark mplfinance
+        mpf_times = []
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Convert to pandas DataFrame for mplfinance
+            df = pd.DataFrame({
+                'Open': data['ohlc']['open'],
+                'High': data['ohlc']['high'],
+                'Low': data['ohlc']['low'],
+                'Close': data['ohlc']['close'],
+                'Volume': data['volume'],
+            }, index=pd.date_range('2020-01-01', periods=size, freq='1min'))
+
+            # Warm-up
+            filepath = os.path.join(tmpdir, "warmup_mpf.png")
+            mpf.plot(df, type='candle', volume=True, style='charles',
+                    figsize=(12.8, 7.2), savefig=filepath, show_nontrading=False)
+            plt.close('all')
+
+            # Benchmark
+            for i in range(n_runs):
+                start = time.perf_counter()
+                filepath = os.path.join(tmpdir, f"test_mpf_{i}.png")
+                mpf.plot(df, type='candle', volume=True, style='charles',
+                        figsize=(12.8, 7.2), savefig=filepath, show_nontrading=False)
+                plt.close('all')
+                end = time.perf_counter()
+                mpf_times.append((end - start) * 1000)
+
+        mpf_median = float(np.median(mpf_times))
+        speedup = mpf_median / kf_median
+
+        print(f"  kimsfinance: {kf_median:>8.2f} ms  ({1000/kf_median:>6.1f} charts/sec)")
+        print(f"  mplfinance:  {mpf_median:>8.2f} ms  ({1000/mpf_median:>6.1f} charts/sec)")
+        print(f"  Speedup:     {speedup:>8.1f}x faster")
+
+        results[size] = {
+            'kimsfinance_ms': kf_median,
+            'mplfinance_ms': mpf_median,
+            'speedup': speedup,
+            'kimsfinance_ops_per_sec': 1000 / kf_median,
+            'mplfinance_ops_per_sec': 1000 / mpf_median,
+        }
+
+    # Calculate overall statistics
+    if results:
+        all_speedups = [r['speedup'] for r in results.values()]
+        avg_speedup = float(np.mean(all_speedups))
+        min_speedup = float(np.min(all_speedups))
+        max_speedup = float(np.max(all_speedups))
+
+        print("\n" + "-" * 80)
+        print(f"Average speedup: {avg_speedup:.1f}x")
+        print(f"Range: {min_speedup:.1f}x - {max_speedup:.1f}x")
+        print("=" * 80)
+
+        results['summary'] = {
+            'average_speedup': avg_speedup,
+            'min_speedup': min_speedup,
+            'max_speedup': max_speedup,
+        }
+
+    return results
+
+
 def main():
     """Main benchmark execution."""
     import argparse
@@ -836,9 +1012,12 @@ def main():
     for fmt, data in sorted(export_perf.items()):
         print(f"  {fmt:5s}: {data['encode_time_ms']:>7.2f} ms, {data['file_size_kb']:>7.1f} KB")
 
+    # Benchmark mplfinance comparison
+    comparison_results = benchmark_mplfinance_comparison(dataset_sizes=args.sizes, n_runs=args.n_runs)
+
     # Format and save results
     print(f"\nGenerating markdown report...")
-    markdown = format_results_markdown(results, export_perf)
+    markdown = format_results_markdown(results, export_perf, comparison_results)
 
     output_path = Path(args.output)
     output_path.write_text(markdown)
