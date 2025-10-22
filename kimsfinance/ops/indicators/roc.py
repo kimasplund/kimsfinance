@@ -26,17 +26,13 @@ def _should_use_gpu(data: np.ndarray, threshold: int = 500_000) -> bool:
     """Determine if GPU should be used based on data size."""
     try:
         import cupy as cp
+
         return len(data) >= threshold
     except ImportError:
         return False
 
 
-def calculate_roc(
-    prices: ArrayLike,
-    period: int = 12,
-    *,
-    engine: Engine = "auto"
-) -> ArrayResult:
+def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto") -> ArrayResult:
     """
     Calculate Rate of Change (ROC).
 
@@ -101,10 +97,7 @@ def calculate_roc(
         return _calculate_roc_cpu(data_array, period)
 
 
-def _calculate_roc_cpu(
-    data: np.ndarray,
-    period: int
-) -> np.ndarray:
+def _calculate_roc_cpu(data: np.ndarray, period: int) -> np.ndarray:
     """CPU implementation of ROC using NumPy."""
 
     # Initialize result array with NaN
@@ -125,10 +118,7 @@ def _calculate_roc_cpu(
     return result
 
 
-def _calculate_roc_gpu(
-    data: np.ndarray,
-    period: int
-) -> np.ndarray:
+def _calculate_roc_gpu(data: np.ndarray, period: int) -> np.ndarray:
     """GPU implementation of ROC using CuPy."""
 
     try:
@@ -150,9 +140,7 @@ def _calculate_roc_gpu(
     # Calculate ROC: ((current - prev) / prev) * 100
     # Use where to avoid division by zero
     roc_values = cp.where(
-        prev_prices != 0,
-        ((current_prices - prev_prices) / prev_prices) * 100.0,
-        cp.nan
+        prev_prices != 0, ((current_prices - prev_prices) / prev_prices) * 100.0, cp.nan
     )
 
     # Place results in correct positions (starting at period)

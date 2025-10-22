@@ -21,6 +21,7 @@ def gpu_available() -> bool:
     """Check if GPU is available."""
     try:
         import cupy
+
         cupy.cuda.runtime.getDeviceCount()
         return True
     except (ImportError, Exception):
@@ -30,6 +31,7 @@ def gpu_available() -> bool:
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_ohlc_data():
@@ -57,6 +59,7 @@ def large_ohlc_data():
 # Basic Functionality Tests
 # ============================================================================
 
+
 class TestDonchianChannelsBasic:
     """Test basic Donchian Channels calculation."""
 
@@ -64,9 +67,7 @@ class TestDonchianChannelsBasic:
         """Test basic Donchian Channels calculation returns correct structure."""
         highs, lows = sample_ohlc_data
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=20, engine="cpu")
 
         # Check all three bands are returned
         assert len(upper) == len(highs)
@@ -93,16 +94,16 @@ class TestDonchianChannelsBasic:
         """Test that upper >= middle >= lower at all valid points."""
         highs, lows = sample_ohlc_data
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=20, engine="cpu")
 
         # Check ordering at valid points (skip NaN values)
         valid_mask = ~np.isnan(upper)
-        assert np.all(upper[valid_mask] >= middle[valid_mask]), \
-            "Upper channel should be >= middle line"
-        assert np.all(middle[valid_mask] >= lower[valid_mask]), \
-            "Middle line should be >= lower channel"
+        assert np.all(
+            upper[valid_mask] >= middle[valid_mask]
+        ), "Upper channel should be >= middle line"
+        assert np.all(
+            middle[valid_mask] >= lower[valid_mask]
+        ), "Middle line should be >= lower channel"
 
     def test_default_parameters(self, sample_ohlc_data):
         """Test that default parameters work correctly."""
@@ -120,12 +121,12 @@ class TestDonchianChannelsBasic:
 
         # Test period=10
         upper_10, middle_10, lower_10 = calculate_donchian_channels(
-            highs, lows, period=10, engine='cpu'
+            highs, lows, period=10, engine="cpu"
         )
 
         # Test period=50
         upper_50, middle_50, lower_50 = calculate_donchian_channels(
-            highs, lows, period=50, engine='cpu'
+            highs, lows, period=50, engine="cpu"
         )
 
         # Both should have valid values after warmup
@@ -134,15 +135,18 @@ class TestDonchianChannelsBasic:
 
         # Results should be different (different periods produce different results)
         # Compare after both have valid values
-        assert not np.allclose(upper_10[49:], upper_50[49:]), \
-            "Different periods should produce different results"
-        assert not np.allclose(middle_10[49:], middle_50[49:]), \
-            "Different periods should produce different results"
+        assert not np.allclose(
+            upper_10[49:], upper_50[49:]
+        ), "Different periods should produce different results"
+        assert not np.allclose(
+            middle_10[49:], middle_50[49:]
+        ), "Different periods should produce different results"
 
 
 # ============================================================================
 # GPU/CPU Equivalence Tests
 # ============================================================================
+
 
 @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
 class TestDonchianChannelsGPUCPU:
@@ -154,12 +158,12 @@ class TestDonchianChannelsGPUCPU:
 
         # CPU calculation
         upper_cpu, middle_cpu, lower_cpu = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
+            highs, lows, period=20, engine="cpu"
         )
 
         # GPU calculation (may fallback to CPU if GPU not available)
         upper_gpu, middle_gpu, lower_gpu = calculate_donchian_channels(
-            highs, lows, period=20, engine='gpu'
+            highs, lows, period=20, engine="gpu"
         )
 
         # Should match within floating point tolerance
@@ -173,12 +177,12 @@ class TestDonchianChannelsGPUCPU:
 
         # CPU calculation
         upper_cpu, middle_cpu, lower_cpu = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
+            highs, lows, period=20, engine="cpu"
         )
 
         # GPU calculation
         upper_gpu, middle_gpu, lower_gpu = calculate_donchian_channels(
-            highs, lows, period=20, engine='gpu'
+            highs, lows, period=20, engine="gpu"
         )
 
         # Should match within floating point tolerance
@@ -192,12 +196,12 @@ class TestDonchianChannelsGPUCPU:
 
         # Auto should select GPU for large datasets
         upper_auto, middle_auto, lower_auto = calculate_donchian_channels(
-            highs, lows, period=20, engine='auto'
+            highs, lows, period=20, engine="auto"
         )
 
         # Explicit CPU
         upper_cpu, middle_cpu, lower_cpu = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
+            highs, lows, period=20, engine="cpu"
         )
 
         # Results should match
@@ -210,6 +214,7 @@ class TestDonchianChannelsGPUCPU:
 # Algorithm Correctness Tests
 # ============================================================================
 
+
 class TestDonchianChannelsAlgorithm:
     """Test algorithm correctness against known values and properties."""
 
@@ -218,16 +223,13 @@ class TestDonchianChannelsAlgorithm:
         highs, lows = sample_ohlc_data
         period = 20
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=period, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=period, engine="cpu")
 
         # Calculate rolling max manually using Polars
         import polars as pl
+
         df = pl.DataFrame({"high": highs})
-        rolling_max = df.select(
-            pl.col("high").rolling_max(window_size=period)
-        )["high"].to_numpy()
+        rolling_max = df.select(pl.col("high").rolling_max(window_size=period))["high"].to_numpy()
 
         # Upper channel should match rolling max
         np.testing.assert_allclose(upper, rolling_max, rtol=1e-10, equal_nan=True)
@@ -237,16 +239,13 @@ class TestDonchianChannelsAlgorithm:
         highs, lows = sample_ohlc_data
         period = 20
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=period, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=period, engine="cpu")
 
         # Calculate rolling min manually using Polars
         import polars as pl
+
         df = pl.DataFrame({"low": lows})
-        rolling_min = df.select(
-            pl.col("low").rolling_min(window_size=period)
-        )["low"].to_numpy()
+        rolling_min = df.select(pl.col("low").rolling_min(window_size=period))["low"].to_numpy()
 
         # Lower channel should match rolling min
         np.testing.assert_allclose(lower, rolling_min, rtol=1e-10, equal_nan=True)
@@ -256,9 +255,7 @@ class TestDonchianChannelsAlgorithm:
         highs, lows = sample_ohlc_data
         period = 20
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=period, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=period, engine="cpu")
 
         # Middle should be (upper + lower) / 2
         expected_middle = (upper + lower) / 2
@@ -269,14 +266,58 @@ class TestDonchianChannelsAlgorithm:
     def test_known_values_simple_case(self):
         """Test against hand-calculated values for simple case."""
         # Simple test data: monotonically increasing prices
-        highs = np.array([101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
-                          111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121])
-        lows = np.array([99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
-                         109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119])
-
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=10, engine='cpu'
+        highs = np.array(
+            [
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+                120,
+                121,
+            ]
         )
+        lows = np.array(
+            [
+                99,
+                100,
+                101,
+                102,
+                103,
+                104,
+                105,
+                106,
+                107,
+                108,
+                109,
+                110,
+                111,
+                112,
+                113,
+                114,
+                115,
+                116,
+                117,
+                118,
+                119,
+            ]
+        )
+
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=10, engine="cpu")
 
         # For monotonically increasing data:
         # At index 9 (first valid point with period=10):
@@ -301,9 +342,7 @@ class TestDonchianChannelsAlgorithm:
         highs = np.full(n, 101.0)
         lows = np.full(n, 99.0)
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=10, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=10, engine="cpu")
 
         # For constant prices:
         # - Upper = 101.0 (constant high)
@@ -318,6 +357,7 @@ class TestDonchianChannelsAlgorithm:
 # ============================================================================
 # Edge Cases and Error Handling
 # ============================================================================
+
 
 class TestDonchianChannelsEdgeCases:
     """Test edge cases and error handling."""
@@ -359,9 +399,7 @@ class TestDonchianChannelsEdgeCases:
         highs = 102 + np.cumsum(np.random.randn(n) * 0.5)
         lows = 98 + np.cumsum(np.random.randn(n) * 0.5)
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=period, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=period, engine="cpu")
 
         # Should complete without error
         assert len(upper) == n
@@ -373,14 +411,54 @@ class TestDonchianChannelsEdgeCases:
 
     def test_handles_list_input(self):
         """Test that function handles list inputs (not just numpy arrays)."""
-        highs = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
-                 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
-        lows = [99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
-                109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119]
+        highs = [
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+        ]
+        lows = [
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+        ]
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=10, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=10, engine="cpu")
 
         # Should complete without error
         assert isinstance(upper, np.ndarray)
@@ -391,9 +469,7 @@ class TestDonchianChannelsEdgeCases:
         """Test with period=1 (edge case, should return input values)."""
         highs, lows = sample_ohlc_data
 
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=1, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=1, engine="cpu")
 
         # With period=1:
         # - Upper = current high
@@ -409,6 +485,7 @@ class TestDonchianChannelsEdgeCases:
 # Type and API Tests
 # ============================================================================
 
+
 class TestDonchianChannelsAPI:
     """Test API correctness and return types."""
 
@@ -416,7 +493,7 @@ class TestDonchianChannelsAPI:
         """Test that function returns tuple of three arrays."""
         highs, lows = sample_ohlc_data
 
-        result = calculate_donchian_channels(highs, lows, engine='cpu')
+        result = calculate_donchian_channels(highs, lows, engine="cpu")
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -429,9 +506,7 @@ class TestDonchianChannelsAPI:
         highs, lows = sample_ohlc_data
 
         # Should be able to unpack
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, engine="cpu")
 
         assert isinstance(upper, np.ndarray)
         assert isinstance(middle, np.ndarray)
@@ -443,12 +518,13 @@ class TestDonchianChannelsAPI:
 
         # Invalid engine should raise error
         with pytest.raises(Exception):  # Could be ConfigurationError or ValueError
-            calculate_donchian_channels(highs, lows, engine='invalid')
+            calculate_donchian_channels(highs, lows, engine="invalid")
 
 
 # ============================================================================
 # Performance Characteristics Tests
 # ============================================================================
+
 
 class TestDonchianChannelsPerformance:
     """Test performance characteristics (not strict benchmarks)."""
@@ -456,37 +532,34 @@ class TestDonchianChannelsPerformance:
     def test_completes_in_reasonable_time_small_data(self, sample_ohlc_data):
         """Test that calculation completes quickly on small dataset."""
         import time
+
         highs, lows = sample_ohlc_data
 
         start = time.time()
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=20, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
-        assert elapsed < 1.0, \
-            f"Small dataset took {elapsed:.3f}s - should be <1s"
+        assert elapsed < 1.0, f"Small dataset took {elapsed:.3f}s - should be <1s"
 
     def test_completes_in_reasonable_time_large_data(self, large_ohlc_data):
         """Test that calculation completes in reasonable time on large dataset."""
         import time
+
         highs, lows = large_ohlc_data
 
         start = time.time()
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=20, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 10 seconds on CPU
-        assert elapsed < 10.0, \
-            f"Large dataset took {elapsed:.3f}s - should be <10s"
+        assert elapsed < 10.0, f"Large dataset took {elapsed:.3f}s - should be <10s"
 
 
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestDonchianChannelsIntegration:
     """Test integration with other components."""
@@ -494,16 +567,12 @@ class TestDonchianChannelsIntegration:
     def test_works_with_polars_series(self, sample_ohlc_data):
         """Test that function works with Polars Series input."""
         import polars as pl
+
         highs, lows = sample_ohlc_data
 
-        df = pl.DataFrame({
-            "high": highs,
-            "low": lows
-        })
+        df = pl.DataFrame({"high": highs, "low": lows})
 
-        upper, middle, lower = calculate_donchian_channels(
-            df['high'], df['low'], engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(df["high"], df["low"], engine="cpu")
 
         assert len(upper) == len(highs)
         assert not np.all(np.isnan(upper))
@@ -514,12 +583,12 @@ class TestDonchianChannelsIntegration:
 
         # Entry channels (20-period)
         entry_upper, _, entry_lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
+            highs, lows, period=20, engine="cpu"
         )
 
         # Exit channels (10-period)
         exit_upper, _, exit_lower = calculate_donchian_channels(
-            highs, lows, period=10, engine='cpu'
+            highs, lows, period=10, engine="cpu"
         )
 
         # Both should have same structure
@@ -537,6 +606,7 @@ class TestDonchianChannelsIntegration:
 # Turtle Traders System Tests
 # ============================================================================
 
+
 class TestTurtleTradersSystem:
     """Test Turtle Traders specific scenarios."""
 
@@ -552,9 +622,7 @@ class TestTurtleTradersSystem:
         closes = 100 + trend + noise
 
         # Calculate Donchian Channels (20-period for entry)
-        upper, middle, lower = calculate_donchian_channels(
-            highs, lows, period=20, engine='cpu'
-        )
+        upper, middle, lower = calculate_donchian_channels(highs, lows, period=20, engine="cpu")
 
         # Simulate breakout signals
         # Long entry: price breaks above upper channel

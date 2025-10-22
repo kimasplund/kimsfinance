@@ -21,6 +21,7 @@ def gpu_available() -> bool:
     """Check if GPU is available."""
     try:
         import cupy
+
         cupy.cuda.runtime.getDeviceCount()
         return True
     except (ImportError, Exception):
@@ -30,6 +31,7 @@ def gpu_available() -> bool:
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def sample_ohlc_data():
@@ -57,6 +59,7 @@ def large_ohlc_data():
 # Basic Functionality Tests
 # ============================================================================
 
+
 class TestKeltnerChannelsBasic:
     """Test basic Keltner Channels calculation."""
 
@@ -65,7 +68,7 @@ class TestKeltnerChannelsBasic:
         highs, lows, closes = sample_ohlc_data
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, multiplier=2.0, engine='cpu'
+            highs, lows, closes, period=20, multiplier=2.0, engine="cpu"
         )
 
         # Check all three bands are returned
@@ -89,15 +92,17 @@ class TestKeltnerChannelsBasic:
         highs, lows, closes = sample_ohlc_data
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, multiplier=2.0, engine='cpu'
+            highs, lows, closes, period=20, multiplier=2.0, engine="cpu"
         )
 
         # Check ordering at valid points (skip NaN values)
         valid_mask = ~np.isnan(upper)
-        assert np.all(upper[valid_mask] >= middle[valid_mask]), \
-            "Upper channel should be >= middle line"
-        assert np.all(middle[valid_mask] >= lower[valid_mask]), \
-            "Middle line should be >= lower channel"
+        assert np.all(
+            upper[valid_mask] >= middle[valid_mask]
+        ), "Upper channel should be >= middle line"
+        assert np.all(
+            middle[valid_mask] >= lower[valid_mask]
+        ), "Middle line should be >= lower channel"
 
     def test_default_parameters(self, sample_ohlc_data):
         """Test that default parameters work correctly."""
@@ -115,12 +120,12 @@ class TestKeltnerChannelsBasic:
 
         # Test period=10
         upper_10, middle_10, lower_10 = calculate_keltner_channels(
-            highs, lows, closes, period=10, engine='cpu'
+            highs, lows, closes, period=10, engine="cpu"
         )
 
         # Test period=50
         upper_50, middle_50, lower_50 = calculate_keltner_channels(
-            highs, lows, closes, period=50, engine='cpu'
+            highs, lows, closes, period=50, engine="cpu"
         )
 
         # Both should have all finite values (Polars EMA doesn't produce NaN)
@@ -128,10 +133,12 @@ class TestKeltnerChannelsBasic:
         assert np.all(np.isfinite(upper_50))
 
         # Results should be different (different periods produce different smoothing)
-        assert not np.allclose(upper_10, upper_50), \
-            "Different periods should produce different results"
-        assert not np.allclose(middle_10, middle_50), \
-            "Different periods should produce different results"
+        assert not np.allclose(
+            upper_10, upper_50
+        ), "Different periods should produce different results"
+        assert not np.allclose(
+            middle_10, middle_50
+        ), "Different periods should produce different results"
 
     def test_different_multipliers(self, sample_ohlc_data):
         """Test with different multiplier values."""
@@ -139,12 +146,12 @@ class TestKeltnerChannelsBasic:
 
         # Test multiplier=1.0
         upper_1, middle_1, lower_1 = calculate_keltner_channels(
-            highs, lows, closes, period=20, multiplier=1.0, engine='cpu'
+            highs, lows, closes, period=20, multiplier=1.0, engine="cpu"
         )
 
         # Test multiplier=3.0
         upper_3, middle_3, lower_3 = calculate_keltner_channels(
-            highs, lows, closes, period=20, multiplier=3.0, engine='cpu'
+            highs, lows, closes, period=20, multiplier=3.0, engine="cpu"
         )
 
         # Middle line should be the same (it's just EMA)
@@ -154,13 +161,13 @@ class TestKeltnerChannelsBasic:
         valid_mask = ~np.isnan(upper_1)
         width_1 = upper_1[valid_mask] - lower_1[valid_mask]
         width_3 = upper_3[valid_mask] - lower_3[valid_mask]
-        assert np.all(width_3 > width_1), \
-            "Larger multiplier should produce wider channels"
+        assert np.all(width_3 > width_1), "Larger multiplier should produce wider channels"
 
 
 # ============================================================================
 # GPU/CPU Equivalence Tests
 # ============================================================================
+
 
 @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
 class TestKeltnerChannelsGPUCPU:
@@ -172,12 +179,12 @@ class TestKeltnerChannelsGPUCPU:
 
         # CPU calculation
         upper_cpu, middle_cpu, lower_cpu = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
 
         # GPU calculation (may fallback to CPU if GPU not available)
         upper_gpu, middle_gpu, lower_gpu = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='gpu'
+            highs, lows, closes, period=20, engine="gpu"
         )
 
         # Should match within floating point tolerance
@@ -191,12 +198,12 @@ class TestKeltnerChannelsGPUCPU:
 
         # CPU calculation
         upper_cpu, middle_cpu, lower_cpu = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
 
         # GPU calculation
         upper_gpu, middle_gpu, lower_gpu = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='gpu'
+            highs, lows, closes, period=20, engine="gpu"
         )
 
         # Should match within floating point tolerance
@@ -210,12 +217,12 @@ class TestKeltnerChannelsGPUCPU:
 
         # Auto should select GPU for large datasets
         upper_auto, middle_auto, lower_auto = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='auto'
+            highs, lows, closes, period=20, engine="auto"
         )
 
         # Explicit CPU
         upper_cpu, middle_cpu, lower_cpu = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
 
         # Results should match
@@ -228,6 +235,7 @@ class TestKeltnerChannelsGPUCPU:
 # Algorithm Correctness Tests
 # ============================================================================
 
+
 class TestKeltnerChannelsAlgorithm:
     """Test algorithm correctness against known values and properties."""
 
@@ -237,15 +245,14 @@ class TestKeltnerChannelsAlgorithm:
         period = 20
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=period, engine='cpu'
+            highs, lows, closes, period=period, engine="cpu"
         )
 
         # Calculate EMA manually using Polars
         import polars as pl
+
         df = pl.DataFrame({"close": closes})
-        ema = df.select(
-            pl.col("close").ewm_mean(span=period, adjust=False)
-        )["close"].to_numpy()
+        ema = df.select(pl.col("close").ewm_mean(span=period, adjust=False))["close"].to_numpy()
 
         # Middle line should match EMA
         np.testing.assert_allclose(middle, ema, rtol=1e-10)
@@ -257,11 +264,11 @@ class TestKeltnerChannelsAlgorithm:
         multiplier = 2.0
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=period, multiplier=multiplier, engine='cpu'
+            highs, lows, closes, period=period, multiplier=multiplier, engine="cpu"
         )
 
         # Calculate ATR separately
-        atr = calculate_atr(highs, lows, closes, period=period, engine='cpu')
+        atr = calculate_atr(highs, lows, closes, period=period, engine="cpu")
 
         # Upper channel should be middle + (multiplier * atr)
         expected_upper = middle + (multiplier * atr)
@@ -269,12 +276,8 @@ class TestKeltnerChannelsAlgorithm:
 
         # Check within reasonable tolerance (accounting for EMA differences)
         valid_mask = ~np.isnan(upper) & ~np.isnan(atr)
-        np.testing.assert_allclose(
-            upper[valid_mask], expected_upper[valid_mask], rtol=1e-8
-        )
-        np.testing.assert_allclose(
-            lower[valid_mask], expected_lower[valid_mask], rtol=1e-8
-        )
+        np.testing.assert_allclose(upper[valid_mask], expected_upper[valid_mask], rtol=1e-8)
+        np.testing.assert_allclose(lower[valid_mask], expected_lower[valid_mask], rtol=1e-8)
 
     def test_known_values_simple_case(self):
         """Test against hand-calculated values for simple case."""
@@ -285,13 +288,12 @@ class TestKeltnerChannelsAlgorithm:
         lows = np.full(n, 99.0)
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=10, multiplier=2.0, engine='cpu'
+            highs, lows, closes, period=10, multiplier=2.0, engine="cpu"
         )
 
         # For constant prices, EMA should converge to the constant value
         # After warmup, middle should be close to 100
-        assert np.abs(middle[-1] - 100.0) < 0.1, \
-            "Middle line should converge to constant price"
+        assert np.abs(middle[-1] - 100.0) < 0.1, "Middle line should converge to constant price"
 
         # Bands should be symmetric around middle
         valid_mask = ~np.isnan(upper)
@@ -303,6 +305,7 @@ class TestKeltnerChannelsAlgorithm:
 # ============================================================================
 # Edge Cases and Error Handling
 # ============================================================================
+
 
 class TestKeltnerChannelsEdgeCases:
     """Test edge cases and error handling."""
@@ -355,7 +358,7 @@ class TestKeltnerChannelsEdgeCases:
         lows = closes - 1
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=period, engine='cpu'
+            highs, lows, closes, period=period, engine="cpu"
         )
 
         # Should complete without error
@@ -368,7 +371,7 @@ class TestKeltnerChannelsEdgeCases:
         highs, lows, closes = sample_ohlc_data
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, multiplier=0.0, engine='cpu'
+            highs, lows, closes, period=20, multiplier=0.0, engine="cpu"
         )
 
         # With multiplier=0, all three lines should be equal
@@ -378,15 +381,78 @@ class TestKeltnerChannelsEdgeCases:
 
     def test_handles_list_input(self):
         """Test that function handles list inputs (not just numpy arrays)."""
-        highs = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
-                 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121]
-        lows = [99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
-                109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119]
-        closes = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-                  110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120]
+        highs = [
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+        ]
+        lows = [
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+        ]
+        closes = [
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+        ]
 
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=10, engine='cpu'
+            highs, lows, closes, period=10, engine="cpu"
         )
 
         # Should complete without error
@@ -399,6 +465,7 @@ class TestKeltnerChannelsEdgeCases:
 # Type and API Tests
 # ============================================================================
 
+
 class TestKeltnerChannelsAPI:
     """Test API correctness and return types."""
 
@@ -406,7 +473,7 @@ class TestKeltnerChannelsAPI:
         """Test that function returns tuple of three arrays."""
         highs, lows, closes = sample_ohlc_data
 
-        result = calculate_keltner_channels(highs, lows, closes, engine='cpu')
+        result = calculate_keltner_channels(highs, lows, closes, engine="cpu")
 
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -419,9 +486,7 @@ class TestKeltnerChannelsAPI:
         highs, lows, closes = sample_ohlc_data
 
         # Should be able to unpack
-        upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, engine='cpu'
-        )
+        upper, middle, lower = calculate_keltner_channels(highs, lows, closes, engine="cpu")
 
         assert isinstance(upper, np.ndarray)
         assert isinstance(middle, np.ndarray)
@@ -435,12 +500,13 @@ class TestKeltnerChannelsAPI:
         # This depends on the actual implementation in EngineManager
         # If it raises a different error type, this test should be adjusted
         with pytest.raises(Exception):  # Could be ConfigurationError or ValueError
-            calculate_keltner_channels(highs, lows, closes, engine='invalid')
+            calculate_keltner_channels(highs, lows, closes, engine="invalid")
 
 
 # ============================================================================
 # Performance Characteristics Tests
 # ============================================================================
+
 
 class TestKeltnerChannelsPerformance:
     """Test performance characteristics (not strict benchmarks)."""
@@ -448,37 +514,38 @@ class TestKeltnerChannelsPerformance:
     def test_completes_in_reasonable_time_small_data(self, sample_ohlc_data):
         """Test that calculation completes quickly on small dataset."""
         import time
+
         highs, lows, closes = sample_ohlc_data
 
         start = time.time()
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
-        assert elapsed < 1.0, \
-            f"Small dataset took {elapsed:.3f}s - should be <1s"
+        assert elapsed < 1.0, f"Small dataset took {elapsed:.3f}s - should be <1s"
 
     def test_completes_in_reasonable_time_large_data(self, large_ohlc_data):
         """Test that calculation completes in reasonable time on large dataset."""
         import time
+
         highs, lows, closes = large_ohlc_data
 
         start = time.time()
         upper, middle, lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
         elapsed = time.time() - start
 
         # 600K rows should complete in under 10 seconds on CPU
-        assert elapsed < 10.0, \
-            f"Large dataset took {elapsed:.3f}s - should be <10s"
+        assert elapsed < 10.0, f"Large dataset took {elapsed:.3f}s - should be <10s"
 
 
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestKeltnerChannelsIntegration:
     """Test integration with other components."""
@@ -486,16 +553,13 @@ class TestKeltnerChannelsIntegration:
     def test_works_with_polars_series(self, sample_ohlc_data):
         """Test that function works with Polars Series input."""
         import polars as pl
+
         highs, lows, closes = sample_ohlc_data
 
-        df = pl.DataFrame({
-            "high": highs,
-            "low": lows,
-            "close": closes
-        })
+        df = pl.DataFrame({"high": highs, "low": lows, "close": closes})
 
         upper, middle, lower = calculate_keltner_channels(
-            df['high'], df['low'], df['close'], engine='cpu'
+            df["high"], df["low"], df["close"], engine="cpu"
         )
 
         assert len(upper) == len(closes)
@@ -504,17 +568,16 @@ class TestKeltnerChannelsIntegration:
     def test_consistent_with_bollinger_bands_behavior(self, sample_ohlc_data):
         """Test that Keltner behaves similarly to Bollinger (structure-wise)."""
         from kimsfinance.ops.indicators import calculate_bollinger_bands
+
         highs, lows, closes = sample_ohlc_data
 
         # Calculate Keltner Channels
         kc_upper, kc_middle, kc_lower = calculate_keltner_channels(
-            highs, lows, closes, period=20, engine='cpu'
+            highs, lows, closes, period=20, engine="cpu"
         )
 
         # Calculate Bollinger Bands (similar channel indicator)
-        bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(
-            closes, period=20, engine='cpu'
-        )
+        bb_upper, bb_middle, bb_lower = calculate_bollinger_bands(closes, period=20, engine="cpu")
 
         # Both should have same structure (3 bands, same length)
         assert len(kc_upper) == len(bb_upper)

@@ -29,7 +29,7 @@ def calculate_keltner_channels(
     period: int = 20,
     multiplier: float = 2.0,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult, ArrayResult]:
     """
     GPU-accelerated Keltner Channels.
@@ -112,11 +112,13 @@ def calculate_keltner_channels(
         raise ValueError(f"Insufficient data: need {period}, got {len(closes_arr)}")
 
     # Create Polars DataFrame
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-        "close": closes_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+            "close": closes_arr,
+        }
+    )
 
     # Select execution engine
     exec_engine = EngineManager.select_engine(
@@ -142,14 +144,10 @@ def calculate_keltner_channels(
     lower_expr = middle_expr - (multiplier * atr_expr)
 
     # Execute all calculations in single pass
-    result = df.lazy().select(
-        upper=upper_expr,
-        middle=middle_expr,
-        lower=lower_expr
-    ).collect(engine=exec_engine)
-
-    return (
-        result["upper"].to_numpy(),
-        result["middle"].to_numpy(),
-        result["lower"].to_numpy()
+    result = (
+        df.lazy()
+        .select(upper=upper_expr, middle=middle_expr, lower=lower_expr)
+        .collect(engine=exec_engine)
     )
+
+    return (result["upper"].to_numpy(), result["middle"].to_numpy(), result["lower"].to_numpy())

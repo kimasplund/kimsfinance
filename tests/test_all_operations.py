@@ -57,7 +57,11 @@ def test_moving_averages():
 
     # Test combined
     mas = mfp.calculate_multiple_mas(
-        pl.DataFrame({"close": prices}), "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="cpu"
+        pl.DataFrame({"close": prices}),
+        "close",
+        sma_windows=[3, 5],
+        ema_windows=[3, 5],
+        engine="cpu",
     )
     print(f"✓ Combined MAs: {len(mas['sma'])} SMAs, {len(mas['ema'])} EMAs")
 

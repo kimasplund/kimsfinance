@@ -15,7 +15,7 @@ def calculate_elder_ray(
     closes: ArrayLike,
     period: int = 13,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> tuple[ArrayResult, ArrayResult]:
     """
     Calculate Elder Ray (Bull Power and Bear Power).

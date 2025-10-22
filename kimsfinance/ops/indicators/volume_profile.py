@@ -23,11 +23,7 @@ from ...utils.array_utils import to_numpy_array
 
 
 def calculate_volume_profile(
-    prices: ArrayLike,
-    volumes: ArrayLike,
-    num_bins: int = 50,
-    *,
-    engine: Engine = "auto"
+    prices: ArrayLike, volumes: ArrayLike, num_bins: int = 50, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult, float]:
     """
     Calculate Volume Profile Visible Range (VPVR).
@@ -119,9 +115,7 @@ def calculate_volume_profile(
 
 
 def _calculate_volume_profile_cpu(
-    prices: np.ndarray,
-    volumes: np.ndarray,
-    num_bins: int
+    prices: np.ndarray, volumes: np.ndarray, num_bins: int
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """CPU implementation of Volume Profile using NumPy."""
 
@@ -153,9 +147,7 @@ def _calculate_volume_profile_cpu(
 
 
 def _calculate_volume_profile_gpu(
-    prices: np.ndarray,
-    volumes: np.ndarray,
-    num_bins: int
+    prices: np.ndarray, volumes: np.ndarray, num_bins: int
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """GPU implementation of Volume Profile using CuPy."""
 

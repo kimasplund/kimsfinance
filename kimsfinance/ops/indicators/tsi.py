@@ -11,11 +11,7 @@ from .moving_averages import calculate_ema
 
 
 def calculate_tsi(
-    prices: ArrayLike,
-    long_period: int = 25,
-    short_period: int = 13,
-    *,
-    engine: Engine = "auto"
+    prices: ArrayLike, long_period: int = 25, short_period: int = 13, *, engine: Engine = "auto"
 ) -> ArrayResult:
     """
     Calculate True Strength Index (TSI).

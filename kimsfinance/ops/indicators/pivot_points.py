@@ -23,11 +23,7 @@ from ...utils.array_utils import to_numpy_array
 
 
 def calculate_pivot_points(
-    high: float,
-    low: float,
-    close: float,
-    *,
-    engine: Engine = "auto"
+    high: float, low: float, close: float, *, engine: Engine = "auto"
 ) -> dict[str, float]:
     """
     Calculate Pivot Points and support/resistance levels.

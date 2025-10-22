@@ -17,6 +17,7 @@ except ImportError:
 
         return decorator
 
+
 from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
 from ..config.chart_settings import SPEED_PRESETS
@@ -492,6 +493,7 @@ def render_renko_chart(
     # Calculate brick height based on box_size
     if box_size is None:
         from ..ops.indicators import calculate_atr
+
         atr = calculate_atr(ohlc["high"], ohlc["low"], ohlc["close"], period=14, engine="cpu")
         box_size = float(np.nanmedian(atr)) * 0.75
 

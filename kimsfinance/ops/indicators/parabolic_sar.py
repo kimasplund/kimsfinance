@@ -29,7 +29,7 @@ def calculate_parabolic_sar(
     af_increment: float = 0.02,
     af_max: float = 0.2,
     *,
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> ArrayResult:
     """
     Calculate Parabolic SAR (Stop and Reverse).
@@ -89,7 +89,9 @@ def calculate_parabolic_sar(
     lows_arr = to_numpy_array(lows)
 
     if len(highs_arr) != len(lows_arr):
-        raise ValueError(f"highs and lows must have same length: {len(highs_arr)} != {len(lows_arr)}")
+        raise ValueError(
+            f"highs and lows must have same length: {len(highs_arr)} != {len(lows_arr)}"
+        )
 
     if len(highs_arr) < 2:
         raise ValueError(f"Insufficient data: need at least 2, got {len(highs_arr)}")
@@ -113,11 +115,7 @@ def calculate_parabolic_sar(
 
 
 def _calculate_parabolic_sar_cpu(
-    highs: np.ndarray,
-    lows: np.ndarray,
-    af_start: float,
-    af_increment: float,
-    af_max: float
+    highs: np.ndarray, lows: np.ndarray, af_start: float, af_increment: float, af_max: float
 ) -> np.ndarray:
     """
     CPU implementation of Parabolic SAR using NumPy.
@@ -142,16 +140,16 @@ def _calculate_parabolic_sar_cpu(
     # Iterate through each bar
     for i in range(1, n):
         # Calculate new SAR
-        sar[i] = sar[i-1] + af * (ep - sar[i-1])
+        sar[i] = sar[i - 1] + af * (ep - sar[i - 1])
 
         # Check for trend reversal
         if is_uptrend:
             # In uptrend: SAR should be below price
             # Adjust SAR to not exceed prior two lows
             if i >= 2:
-                sar[i] = min(sar[i], lows[i-1], lows[i-2])
+                sar[i] = min(sar[i], lows[i - 1], lows[i - 2])
             elif i >= 1:
-                sar[i] = min(sar[i], lows[i-1])
+                sar[i] = min(sar[i], lows[i - 1])
 
             # Check if price crossed below SAR (reversal to downtrend)
             if lows[i] < sar[i]:
@@ -168,9 +166,9 @@ def _calculate_parabolic_sar_cpu(
             # In downtrend: SAR should be above price
             # Adjust SAR to not exceed prior two highs
             if i >= 2:
-                sar[i] = max(sar[i], highs[i-1], highs[i-2])
+                sar[i] = max(sar[i], highs[i - 1], highs[i - 2])
             elif i >= 1:
-                sar[i] = max(sar[i], highs[i-1])
+                sar[i] = max(sar[i], highs[i - 1])
 
             # Check if price crossed above SAR (reversal to uptrend)
             if highs[i] > sar[i]:
@@ -188,11 +186,7 @@ def _calculate_parabolic_sar_cpu(
 
 
 def _calculate_parabolic_sar_gpu(
-    highs: np.ndarray,
-    lows: np.ndarray,
-    af_start: float,
-    af_increment: float,
-    af_max: float
+    highs: np.ndarray, lows: np.ndarray, af_start: float, af_increment: float, af_max: float
 ) -> np.ndarray:
     """
     GPU implementation of Parabolic SAR using CuPy.

@@ -56,13 +56,7 @@ def test_render_line_chart_filled_area():
     """
     Tests line chart with filled area under the line.
     """
-    img = render_line_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        width=800,
-        height=600,
-        fill_area=True
-    )
+    img = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, width=800, height=600, fill_area=True)
 
     assert isinstance(img, Image.Image)
     assert img.size == (800, 600)
@@ -74,13 +68,7 @@ def test_render_line_chart_all_themes():
     Tests that all color themes render successfully.
     """
     for theme_name in THEMES.keys():
-        img = render_line_chart(
-            SAMPLE_OHLC,
-            SAMPLE_VOLUME,
-            theme=theme_name,
-            width=640,
-            height=480
-        )
+        img = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, theme=theme_name, width=640, height=480)
 
         # Verify image was created
         assert isinstance(img, Image.Image)
@@ -98,7 +86,7 @@ def test_render_line_chart_custom_colors():
         bg_color="#000000",
         line_color="#FFFF00",  # Yellow line
         width=800,
-        height=600
+        height=600,
     )
 
     assert isinstance(img, Image.Image)
@@ -110,24 +98,12 @@ def test_render_line_chart_custom_line_width():
     Tests line chart with custom line width.
     """
     # Thin line
-    img_thin = render_line_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        line_width=1,
-        width=800,
-        height=600
-    )
+    img_thin = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, line_width=1, width=800, height=600)
 
     assert isinstance(img_thin, Image.Image)
 
     # Thick line
-    img_thick = render_line_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        line_width=5,
-        width=800,
-        height=600
-    )
+    img_thick = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, line_width=5, width=800, height=600)
 
     assert isinstance(img_thick, Image.Image)
 
@@ -136,13 +112,7 @@ def test_render_line_chart_no_grid():
     """
     Tests line chart without grid lines.
     """
-    img = render_line_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        show_grid=False,
-        width=800,
-        height=600
-    )
+    img = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, show_grid=False, width=800, height=600)
 
     assert isinstance(img, Image.Image)
     assert img.size == (800, 600)
@@ -153,11 +123,7 @@ def test_render_line_chart_rgb_mode():
     Tests line chart in RGB mode (no antialiasing).
     """
     img = render_line_chart(
-        SAMPLE_OHLC,
-        SAMPLE_VOLUME,
-        enable_antialiasing=False,
-        width=800,
-        height=600
+        SAMPLE_OHLC, SAMPLE_VOLUME, enable_antialiasing=False, width=800, height=600
     )
 
     assert isinstance(img, Image.Image)
@@ -176,7 +142,7 @@ def test_render_line_chart_rgb_mode_no_fill():
         enable_antialiasing=False,
         fill_area=True,  # Should be ignored in RGB mode
         width=800,
-        height=600
+        height=600,
     )
 
     assert isinstance(img, Image.Image)
@@ -295,11 +261,11 @@ def test_render_line_chart_save_webp():
     """
     img = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, width=800, height=600)
 
-    with tempfile.NamedTemporaryFile(suffix='.webp', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".webp", delete=False) as f:
         output_path = f.name
 
     try:
-        save_chart(img, output_path, speed='fast')
+        save_chart(img, output_path, speed="fast")
         assert os.path.exists(output_path)
         assert os.path.getsize(output_path) > 0
 
@@ -317,11 +283,11 @@ def test_render_line_chart_save_png():
     """
     img = render_line_chart(SAMPLE_OHLC, SAMPLE_VOLUME, width=800, height=600)
 
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         output_path = f.name
 
     try:
-        save_chart(img, output_path, speed='fast')
+        save_chart(img, output_path, speed="fast")
         assert os.path.exists(output_path)
         assert os.path.getsize(output_path) > 0
 
@@ -339,10 +305,7 @@ def test_generate_sample_line_charts():
 
     This test creates sample charts in the tests/fixtures/ directory.
     """
-    fixtures_dir = os.path.join(
-        os.path.dirname(__file__),
-        'fixtures'
-    )
+    fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures")
     os.makedirs(fixtures_dir, exist_ok=True)
 
     # Generate sample data with realistic trend
@@ -362,66 +325,39 @@ def test_generate_sample_line_charts():
     volume = np.random.uniform(1000, 3000, num_points)
 
     # Basic line chart
-    img_basic = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='modern'
-    )
-    basic_path = os.path.join(fixtures_dir, 'line_chart_basic.webp')
-    save_chart(img_basic, basic_path, speed='fast')
+    img_basic = render_line_chart(ohlc, volume, width=800, height=600, theme="modern")
+    basic_path = os.path.join(fixtures_dir, "line_chart_basic.webp")
+    save_chart(img_basic, basic_path, speed="fast")
     assert os.path.exists(basic_path)
 
     # Line chart with filled area
     img_filled = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='modern',
-        fill_area=True
+        ohlc, volume, width=800, height=600, theme="modern", fill_area=True
     )
-    filled_path = os.path.join(fixtures_dir, 'line_chart_filled.webp')
-    save_chart(img_filled, filled_path, speed='fast')
+    filled_path = os.path.join(fixtures_dir, "line_chart_filled.webp")
+    save_chart(img_filled, filled_path, speed="fast")
     assert os.path.exists(filled_path)
 
     # Classic theme
-    img_classic = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='classic'
-    )
-    classic_path = os.path.join(fixtures_dir, 'line_chart_classic.webp')
-    save_chart(img_classic, classic_path, speed='fast')
+    img_classic = render_line_chart(ohlc, volume, width=800, height=600, theme="classic")
+    classic_path = os.path.join(fixtures_dir, "line_chart_classic.webp")
+    save_chart(img_classic, classic_path, speed="fast")
     assert os.path.exists(classic_path)
 
     # TradingView theme with filled area
     img_tradingview = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='tradingview',
-        fill_area=True
+        ohlc, volume, width=800, height=600, theme="tradingview", fill_area=True
     )
-    tradingview_path = os.path.join(fixtures_dir, 'line_chart_tradingview.webp')
-    save_chart(img_tradingview, tradingview_path, speed='fast')
+    tradingview_path = os.path.join(fixtures_dir, "line_chart_tradingview.webp")
+    save_chart(img_tradingview, tradingview_path, speed="fast")
     assert os.path.exists(tradingview_path)
 
     # Light theme
     img_light = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='light',
-        fill_area=True
+        ohlc, volume, width=800, height=600, theme="light", fill_area=True
     )
-    light_path = os.path.join(fixtures_dir, 'line_chart_light.webp')
-    save_chart(img_light, light_path, speed='fast')
+    light_path = os.path.join(fixtures_dir, "line_chart_light.webp")
+    save_chart(img_light, light_path, speed="fast")
     assert os.path.exists(light_path)
 
     # Custom colors
@@ -430,37 +366,25 @@ def test_generate_sample_line_charts():
         volume,
         width=800,
         height=600,
-        bg_color='#1A1A1A',
-        line_color='#FF6B35',
+        bg_color="#1A1A1A",
+        line_color="#FF6B35",
         line_width=3,
-        fill_area=True
+        fill_area=True,
     )
-    custom_path = os.path.join(fixtures_dir, 'line_chart_custom_colors.webp')
-    save_chart(img_custom, custom_path, speed='fast')
+    custom_path = os.path.join(fixtures_dir, "line_chart_custom_colors.webp")
+    save_chart(img_custom, custom_path, speed="fast")
     assert os.path.exists(custom_path)
 
     # No grid
     img_nogrid = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='modern',
-        show_grid=False
+        ohlc, volume, width=800, height=600, theme="modern", show_grid=False
     )
-    nogrid_path = os.path.join(fixtures_dir, 'line_chart_no_grid.webp')
-    save_chart(img_nogrid, nogrid_path, speed='fast')
+    nogrid_path = os.path.join(fixtures_dir, "line_chart_no_grid.webp")
+    save_chart(img_nogrid, nogrid_path, speed="fast")
     assert os.path.exists(nogrid_path)
 
     # Thick line
-    img_thick = render_line_chart(
-        ohlc,
-        volume,
-        width=800,
-        height=600,
-        theme='modern',
-        line_width=4
-    )
-    thick_path = os.path.join(fixtures_dir, 'line_chart_thick_line.webp')
-    save_chart(img_thick, thick_path, speed='fast')
+    img_thick = render_line_chart(ohlc, volume, width=800, height=600, theme="modern", line_width=4)
+    thick_path = os.path.join(fixtures_dir, "line_chart_thick_line.webp")
+    save_chart(img_thick, thick_path, speed="fast")
     assert os.path.exists(thick_path)

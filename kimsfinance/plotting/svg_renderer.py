@@ -5,6 +5,7 @@ import numpy as np
 
 try:
     import svgwrite
+
     SVGWRITE_AVAILABLE = True
 except ImportError:
     SVGWRITE_AVAILABLE = False

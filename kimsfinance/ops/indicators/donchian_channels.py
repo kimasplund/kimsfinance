@@ -23,11 +23,7 @@ from ...utils.array_utils import to_numpy_array
 
 
 def calculate_donchian_channels(
-    highs: ArrayLike,
-    lows: ArrayLike,
-    period: int = 20,
-    *,
-    engine: Engine = "auto"
+    highs: ArrayLike, lows: ArrayLike, period: int = 20, *, engine: Engine = "auto"
 ) -> tuple[ArrayResult, ArrayResult, ArrayResult]:
     """
     Calculate Donchian Channels.
@@ -120,10 +116,12 @@ def calculate_donchian_channels(
         raise ValueError(f"Insufficient data: need {period}, got {len(highs_arr)}")
 
     # Create Polars DataFrame
-    df = pl.DataFrame({
-        "high": highs_arr,
-        "low": lows_arr,
-    })
+    df = pl.DataFrame(
+        {
+            "high": highs_arr,
+            "low": lows_arr,
+        }
+    )
 
     # Select execution engine
     exec_engine = EngineManager.select_engine(
@@ -138,14 +136,10 @@ def calculate_donchian_channels(
     middle_expr = (upper_expr + lower_expr) / 2
 
     # Execute all calculations in single pass
-    result = df.lazy().select(
-        upper=upper_expr,
-        middle=middle_expr,
-        lower=lower_expr
-    ).collect(engine=exec_engine)
-
-    return (
-        result["upper"].to_numpy(),
-        result["middle"].to_numpy(),
-        result["lower"].to_numpy()
+    result = (
+        df.lazy()
+        .select(upper=upper_expr, middle=middle_expr, lower=lower_expr)
+        .collect(engine=exec_engine)
     )
+
+    return (result["upper"].to_numpy(), result["middle"].to_numpy(), result["lower"].to_numpy())

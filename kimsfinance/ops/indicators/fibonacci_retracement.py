@@ -23,10 +23,7 @@ from ...utils.array_utils import to_numpy_array
 
 
 def calculate_fibonacci_retracement(
-    high: float,
-    low: float,
-    *,
-    engine: Engine = "auto"
+    high: float, low: float, *, engine: Engine = "auto"
 ) -> dict[str, float]:
     """
     Calculate Fibonacci Retracement levels.
@@ -88,12 +85,12 @@ def calculate_fibonacci_retracement(
 
     # Standard Fibonacci retracement ratios
     ratios = {
-        '0.0%': 0.0,
-        '23.6%': 0.236,
-        '38.2%': 0.382,
-        '50.0%': 0.500,
-        '61.8%': 0.618,
-        '100.0%': 1.0
+        "0.0%": 0.0,
+        "23.6%": 0.236,
+        "38.2%": 0.382,
+        "50.0%": 0.500,
+        "61.8%": 0.618,
+        "100.0%": 1.0,
     }
 
     # Calculate retracement levels

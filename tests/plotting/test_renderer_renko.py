@@ -17,6 +17,7 @@ from kimsfinance.config.themes import THEMES
 # Check if svgwrite is available
 try:
     import svgwrite
+
     SVGWRITE_AVAILABLE = True
 except ImportError:
     SVGWRITE_AVAILABLE = False
@@ -49,10 +50,10 @@ def test_calculate_renko_bricks_basic():
     Test basic Renko brick calculation with fixed box size.
     """
     ohlc = {
-        'open': np.array([100, 102, 105, 103, 100, 98]),
-        'high': np.array([101, 104, 107, 104, 101, 99]),
-        'low': np.array([99, 101, 104, 102, 99, 97]),
-        'close': np.array([100, 103, 106, 103, 100, 98]),
+        "open": np.array([100, 102, 105, 103, 100, 98]),
+        "high": np.array([101, 104, 107, 104, 101, 99]),
+        "low": np.array([99, 101, 104, 102, 99, 97]),
+        "close": np.array([100, 103, 106, 103, 100, 98]),
     }
 
     bricks = calculate_renko_bricks(ohlc, box_size=2.0, reversal_boxes=1)
@@ -62,15 +63,15 @@ def test_calculate_renko_bricks_basic():
 
     # Verify brick structure
     for brick in bricks:
-        assert 'price' in brick, "Brick should have 'price' key"
-        assert 'direction' in brick, "Brick should have 'direction' key"
-        assert brick['direction'] in [1, -1], "Direction should be 1 (up) or -1 (down)"
-        assert isinstance(brick['price'], (int, float)), "Price should be numeric"
+        assert "price" in brick, "Brick should have 'price' key"
+        assert "direction" in brick, "Brick should have 'direction' key"
+        assert brick["direction"] in [1, -1], "Direction should be 1 (up) or -1 (down)"
+        assert isinstance(brick["price"], (int, float)), "Price should be numeric"
 
     # Print bricks for manual inspection
     print(f"\nGenerated {len(bricks)} bricks:")
     for i, brick in enumerate(bricks):
-        direction_str = "UP" if brick['direction'] == 1 else "DOWN"
+        direction_str = "UP" if brick["direction"] == 1 else "DOWN"
         print(f"  Brick {i+1}: {direction_str} at ${brick['price']:.2f}")
 
 
@@ -79,18 +80,18 @@ def test_calculate_renko_bricks_uptrend():
     Test Renko bricks with strong uptrend.
     """
     ohlc = {
-        'open': np.array([100, 102, 104, 106, 108]),
-        'high': np.array([102, 104, 106, 108, 110]),
-        'low': np.array([100, 102, 104, 106, 108]),
-        'close': np.array([102, 104, 106, 108, 110]),
+        "open": np.array([100, 102, 104, 106, 108]),
+        "high": np.array([102, 104, 106, 108, 110]),
+        "low": np.array([100, 102, 104, 106, 108]),
+        "close": np.array([102, 104, 106, 108, 110]),
     }
 
     bricks = calculate_renko_bricks(ohlc, box_size=2.0, reversal_boxes=1)
 
     # Should generate mostly up bricks (may have 1 initial down brick)
     assert len(bricks) > 0
-    up_bricks = [b for b in bricks if b['direction'] == 1]
-    down_bricks = [b for b in bricks if b['direction'] == -1]
+    up_bricks = [b for b in bricks if b["direction"] == 1]
+    down_bricks = [b for b in bricks if b["direction"] == -1]
     assert len(up_bricks) >= len(down_bricks), "Uptrend should have more up bricks than down"
 
 
@@ -99,18 +100,18 @@ def test_calculate_renko_bricks_downtrend():
     Test Renko bricks with strong downtrend.
     """
     ohlc = {
-        'open': np.array([110, 108, 106, 104, 102]),
-        'high': np.array([110, 108, 106, 104, 102]),
-        'low': np.array([108, 106, 104, 102, 100]),
-        'close': np.array([108, 106, 104, 102, 100]),
+        "open": np.array([110, 108, 106, 104, 102]),
+        "high": np.array([110, 108, 106, 104, 102]),
+        "low": np.array([108, 106, 104, 102, 100]),
+        "close": np.array([108, 106, 104, 102, 100]),
     }
 
     bricks = calculate_renko_bricks(ohlc, box_size=2.0, reversal_boxes=1)
 
     # Should generate mostly down bricks (may have 1 initial up brick)
     assert len(bricks) > 0
-    up_bricks = [b for b in bricks if b['direction'] == 1]
-    down_bricks = [b for b in bricks if b['direction'] == -1]
+    up_bricks = [b for b in bricks if b["direction"] == 1]
+    down_bricks = [b for b in bricks if b["direction"] == -1]
     assert len(down_bricks) >= len(up_bricks), "Downtrend should have more down bricks than up"
 
 
@@ -133,10 +134,10 @@ def test_calculate_renko_bricks_reversal_filter():
     Test reversal_boxes parameter for noise filtering.
     """
     ohlc = {
-        'open': np.array([100, 102, 104, 103, 105, 107]),
-        'high': np.array([102, 104, 106, 104, 107, 109]),
-        'low': np.array([100, 102, 103, 102, 105, 107]),
-        'close': np.array([102, 104, 103, 104, 107, 109]),
+        "open": np.array([100, 102, 104, 103, 105, 107]),
+        "high": np.array([102, 104, 106, 104, 107, 109]),
+        "low": np.array([100, 102, 103, 102, 105, 107]),
+        "close": np.array([102, 104, 103, 104, 107, 109]),
     }
 
     # Test with reversal_boxes=1 (default, responsive)
@@ -155,10 +156,10 @@ def test_calculate_renko_bricks_empty_data():
     Test handling of empty data.
     """
     ohlc = {
-        'open': np.array([]),
-        'high': np.array([]),
-        'low': np.array([]),
-        'close': np.array([]),
+        "open": np.array([]),
+        "high": np.array([]),
+        "low": np.array([]),
+        "close": np.array([]),
     }
 
     bricks = calculate_renko_bricks(ohlc, box_size=2.0)
@@ -202,10 +203,7 @@ def test_render_renko_chart_all_themes():
 
     for theme_name in THEMES.keys():
         img = render_renko_chart(
-            ohlc, volume,
-            width=800, height=600,
-            theme=theme_name,
-            box_size=1.5
+            ohlc, volume, width=800, height=600, theme=theme_name, box_size=1.5
         )
 
         assert isinstance(img, Image.Image)
@@ -221,12 +219,14 @@ def test_render_renko_chart_custom_colors():
     volume = np.random.randint(800, 1200, size=50)
 
     img = render_renko_chart(
-        ohlc, volume,
-        width=1000, height=700,
+        ohlc,
+        volume,
+        width=1000,
+        height=700,
         bg_color="#1A1A1A",
         up_color="#00FF00",
         down_color="#FF0000",
-        box_size=2.0
+        box_size=2.0,
     )
 
     assert isinstance(img, Image.Image)
@@ -241,10 +241,7 @@ def test_render_renko_chart_no_antialiasing():
     volume = np.random.randint(800, 1200, size=50)
 
     img = render_renko_chart(
-        ohlc, volume,
-        width=800, height=600,
-        enable_antialiasing=False,
-        box_size=2.0
+        ohlc, volume, width=800, height=600, enable_antialiasing=False, box_size=2.0
     )
 
     assert isinstance(img, Image.Image)
@@ -258,12 +255,7 @@ def test_render_renko_chart_no_grid():
     ohlc = create_trending_data()
     volume = np.random.randint(800, 1200, size=50)
 
-    img = render_renko_chart(
-        ohlc, volume,
-        width=800, height=600,
-        show_grid=False,
-        box_size=2.0
-    )
+    img = render_renko_chart(ohlc, volume, width=800, height=600, show_grid=False, box_size=2.0)
 
     assert isinstance(img, Image.Image)
 
@@ -277,9 +269,7 @@ def test_render_renko_chart_auto_box_size():
 
     # Render with auto box size (None)
     img = render_renko_chart(
-        ohlc, volume,
-        width=1200, height=800,
-        box_size=None  # Auto-calculate using ATR
+        ohlc, volume, width=1200, height=800, box_size=None  # Auto-calculate using ATR
     )
 
     assert isinstance(img, Image.Image)
@@ -295,30 +285,15 @@ def test_render_renko_chart_different_reversal_thresholds():
     volume = np.random.randint(800, 1200, size=80)
 
     # Test reversal_boxes=1 (default, responsive)
-    img1 = render_renko_chart(
-        ohlc, volume,
-        width=1000, height=700,
-        box_size=1.5,
-        reversal_boxes=1
-    )
+    img1 = render_renko_chart(ohlc, volume, width=1000, height=700, box_size=1.5, reversal_boxes=1)
     assert isinstance(img1, Image.Image)
 
     # Test reversal_boxes=2 (more filtering)
-    img2 = render_renko_chart(
-        ohlc, volume,
-        width=1000, height=700,
-        box_size=1.5,
-        reversal_boxes=2
-    )
+    img2 = render_renko_chart(ohlc, volume, width=1000, height=700, box_size=1.5, reversal_boxes=2)
     assert isinstance(img2, Image.Image)
 
     # Test reversal_boxes=3 (aggressive filtering)
-    img3 = render_renko_chart(
-        ohlc, volume,
-        width=1000, height=700,
-        box_size=1.5,
-        reversal_boxes=3
-    )
+    img3 = render_renko_chart(ohlc, volume, width=1000, height=700, box_size=1.5, reversal_boxes=3)
     assert isinstance(img3, Image.Image)
 
 
@@ -328,10 +303,10 @@ def test_render_renko_chart_empty_bricks():
     """
     # Create data with very small movements (no bricks with large box size)
     ohlc = {
-        'open': np.array([100.0, 100.1, 100.05, 100.08]),
-        'high': np.array([100.15, 100.15, 100.12, 100.12]),
-        'low': np.array([99.95, 100.0, 100.0, 100.05]),
-        'close': np.array([100.1, 100.05, 100.08, 100.1]),
+        "open": np.array([100.0, 100.1, 100.05, 100.08]),
+        "high": np.array([100.15, 100.15, 100.12, 100.12]),
+        "low": np.array([99.95, 100.0, 100.0, 100.05]),
+        "close": np.array([100.1, 100.05, 100.08, 100.1]),
     }
     volume = np.array([1000, 1100, 1050, 1080])
 
@@ -357,7 +332,7 @@ def test_render_and_save_renko_chart():
         img = render_renko_chart(ohlc, volume, width=1200, height=800, box_size=2.0)
 
         # Save chart
-        save_chart(img, output_path, speed='fast')
+        save_chart(img, output_path, speed="fast")
 
         # Verify file was created
         assert os.path.exists(output_path)
@@ -379,21 +354,23 @@ def test_render_renko_chart_sample_output():
 
     # Render Renko chart with classic theme
     img = render_renko_chart(
-        ohlc, volume,
-        width=1920, height=1080,
+        ohlc,
+        volume,
+        width=1920,
+        height=1080,
         theme="classic",
         box_size=2.0,
         reversal_boxes=1,
         enable_antialiasing=True,
-        show_grid=True
+        show_grid=True,
     )
 
     # Save to fixtures directory for visual verification
-    output_dir = os.path.join(os.path.dirname(__file__), 'fixtures')
+    output_dir = os.path.join(os.path.dirname(__file__), "fixtures")
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, 'renko_chart_sample.webp')
+    output_path = os.path.join(output_dir, "renko_chart_sample.webp")
 
-    save_chart(img, output_path, speed='fast')
+    save_chart(img, output_path, speed="fast")
     print(f"\nSample Renko chart saved to: {output_path}")
 
     assert os.path.exists(output_path)
@@ -441,14 +418,15 @@ def test_renko_bricks_price_consistency():
     if len(bricks) > 1:
         # Check that consecutive bricks differ by box_size
         for i in range(1, len(bricks)):
-            prev_brick = bricks[i-1]
+            prev_brick = bricks[i - 1]
             curr_brick = bricks[i]
 
-            price_diff = abs(curr_brick['price'] - prev_brick['price'])
+            price_diff = abs(curr_brick["price"] - prev_brick["price"])
 
             # Consecutive bricks should differ by box_size
-            assert abs(price_diff - box_size) < 0.01, \
-                f"Brick price difference {price_diff} should be close to box_size {box_size}"
+            assert (
+                abs(price_diff - box_size) < 0.01
+            ), f"Brick price difference {price_diff} should be close to box_size {box_size}"
 
 
 def test_renko_chart_dimensions():
@@ -466,11 +444,7 @@ def test_renko_chart_dimensions():
     ]
 
     for width, height in dimensions:
-        img = render_renko_chart(
-            ohlc, volume,
-            width=width, height=height,
-            box_size=2.0
-        )
+        img = render_renko_chart(ohlc, volume, width=width, height=height, box_size=2.0)
 
         assert img.size == (width, height), f"Image size should be {width}x{height}"
 
@@ -478,6 +452,7 @@ def test_renko_chart_dimensions():
 # ============================================================================
 # SVG Export Tests
 # ============================================================================
+
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
 def test_render_renko_chart_svg_basic():
@@ -487,16 +462,12 @@ def test_render_renko_chart_svg_basic():
     ohlc = create_trending_data(start=100, end=130, num_points=50)
     volume = np.random.randint(800, 1200, size=50)
 
-    svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        width=1200, height=800,
-        box_size=2.0
-    )
+    svg_content = render_renko_chart_svg(ohlc, volume, width=1200, height=800, box_size=2.0)
 
     # Verify SVG content
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
-    assert '</svg>' in svg_content
+    assert "<svg" in svg_content
+    assert "</svg>" in svg_content
     assert 'id="bricks"' in svg_content
     assert 'id="volume"' in svg_content
 
@@ -511,14 +482,11 @@ def test_render_renko_chart_svg_all_themes():
 
     for theme_name in THEMES.keys():
         svg_content = render_renko_chart_svg(
-            ohlc, volume,
-            width=800, height=600,
-            theme=theme_name,
-            box_size=1.5
+            ohlc, volume, width=800, height=600, theme=theme_name, box_size=1.5
         )
 
         assert isinstance(svg_content, str)
-        assert '<svg' in svg_content
+        assert "<svg" in svg_content
         print(f"SVG Theme '{theme_name}': OK")
 
 
@@ -531,20 +499,22 @@ def test_render_renko_chart_svg_custom_colors():
     volume = np.random.randint(800, 1200, size=50)
 
     svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        width=1000, height=700,
+        ohlc,
+        volume,
+        width=1000,
+        height=700,
         bg_color="#1A1A1A",
         up_color="#00FF00",
         down_color="#FF0000",
-        box_size=2.0
+        box_size=2.0,
     )
 
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
     # Check custom colors are in the SVG
-    assert '#1A1A1A' in svg_content or '#1a1a1a' in svg_content
-    assert '#00FF00' in svg_content or '#00ff00' in svg_content
-    assert '#FF0000' in svg_content or '#ff0000' in svg_content
+    assert "#1A1A1A" in svg_content or "#1a1a1a" in svg_content
+    assert "#00FF00" in svg_content or "#00ff00" in svg_content
+    assert "#FF0000" in svg_content or "#ff0000" in svg_content
 
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
@@ -556,14 +526,11 @@ def test_render_renko_chart_svg_no_grid():
     volume = np.random.randint(800, 1200, size=50)
 
     svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        width=800, height=600,
-        show_grid=False,
-        box_size=2.0
+        ohlc, volume, width=800, height=600, show_grid=False, box_size=2.0
     )
 
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
     # Should not have grid group
     assert 'id="grid"' not in svg_content
 
@@ -578,13 +545,11 @@ def test_render_renko_chart_svg_auto_box_size():
 
     # Render with auto box size (None)
     svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        width=1200, height=800,
-        box_size=None  # Auto-calculate using ATR
+        ohlc, volume, width=1200, height=800, box_size=None  # Auto-calculate using ATR
     )
 
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
     print("\nRendered SVG Renko chart with auto box size")
 
 
@@ -595,22 +560,19 @@ def test_render_renko_chart_svg_empty_bricks():
     """
     # Create data with very small movements (no bricks with large box size)
     ohlc = {
-        'open': np.array([100.0, 100.1, 100.05, 100.08]),
-        'high': np.array([100.15, 100.15, 100.12, 100.12]),
-        'low': np.array([99.95, 100.0, 100.0, 100.05]),
-        'close': np.array([100.1, 100.05, 100.08, 100.1]),
+        "open": np.array([100.0, 100.1, 100.05, 100.08]),
+        "high": np.array([100.15, 100.15, 100.12, 100.12]),
+        "low": np.array([99.95, 100.0, 100.0, 100.05]),
+        "close": np.array([100.1, 100.05, 100.08, 100.1]),
     }
     volume = np.array([1000, 1100, 1050, 1080])
 
     # Use very large box size that won't generate any bricks
-    svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        box_size=10.0
-    )
+    svg_content = render_renko_chart_svg(ohlc, volume, box_size=10.0)
 
     # Should return empty chart SVG (background only)
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
 
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
@@ -626,10 +588,7 @@ def test_render_and_save_renko_chart_svg():
 
         # Render and save SVG
         svg_content = render_renko_chart_svg(
-            ohlc, volume,
-            width=1200, height=800,
-            box_size=2.0,
-            output_path=output_path
+            ohlc, volume, width=1200, height=800, box_size=2.0, output_path=output_path
         )
 
         # Verify file was created
@@ -638,7 +597,7 @@ def test_render_and_save_renko_chart_svg():
 
         # Verify SVG structure
         assert isinstance(svg_content, str)
-        assert '<svg' in svg_content
+        assert "<svg" in svg_content
 
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
@@ -653,28 +612,32 @@ def test_render_renko_chart_svg_sample_output():
 
     # Render Renko chart SVG with classic theme
     svg_content = render_renko_chart_svg(
-        ohlc, volume,
-        width=1920, height=1080,
-        theme="classic",
-        box_size=2.0,
-        reversal_boxes=1,
-        show_grid=True
-    )
-
-    # Save to fixtures directory for visual verification
-    output_dir = os.path.join(os.path.dirname(__file__), 'fixtures')
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, 'renko_chart_sample.svg')
-
-    # Save SVG
-    render_renko_chart_svg(
-        ohlc, volume,
-        width=1920, height=1080,
+        ohlc,
+        volume,
+        width=1920,
+        height=1080,
         theme="classic",
         box_size=2.0,
         reversal_boxes=1,
         show_grid=True,
-        output_path=output_path
+    )
+
+    # Save to fixtures directory for visual verification
+    output_dir = os.path.join(os.path.dirname(__file__), "fixtures")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "renko_chart_sample.svg")
+
+    # Save SVG
+    render_renko_chart_svg(
+        ohlc,
+        volume,
+        width=1920,
+        height=1080,
+        theme="classic",
+        box_size=2.0,
+        reversal_boxes=1,
+        show_grid=True,
+        output_path=output_path,
     )
 
     print(f"\nSample SVG Renko chart saved to: {output_path}")
@@ -682,7 +645,7 @@ def test_render_renko_chart_svg_sample_output():
 
     # Verify SVG structure
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
 
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
@@ -701,15 +664,11 @@ def test_render_renko_chart_svg_dimensions():
     ]
 
     for width, height in dimensions:
-        svg_content = render_renko_chart_svg(
-            ohlc, volume,
-            width=width, height=height,
-            box_size=2.0
-        )
+        svg_content = render_renko_chart_svg(ohlc, volume, width=width, height=height, box_size=2.0)
 
         assert isinstance(svg_content, str)
-        assert f'width="{width}"' in svg_content or f'width=\"{width}\"' in svg_content
-        assert f'height="{height}"' in svg_content or f'height=\"{height}\"' in svg_content
+        assert f'width="{width}"' in svg_content or f'width="{width}"' in svg_content
+        assert f'height="{height}"' in svg_content or f'height="{height}"' in svg_content
 
 
 @pytest.mark.skipif(not SVGWRITE_AVAILABLE, reason="svgwrite not installed")
@@ -719,14 +678,10 @@ def test_render_renko_chart_svg_no_volume():
     """
     ohlc = create_trending_data()
 
-    svg_content = render_renko_chart_svg(
-        ohlc, volume=None,
-        width=1200, height=800,
-        box_size=2.0
-    )
+    svg_content = render_renko_chart_svg(ohlc, volume=None, width=1200, height=800, box_size=2.0)
 
     assert isinstance(svg_content, str)
-    assert '<svg' in svg_content
+    assert "<svg" in svg_content
     # Should not have volume group when volume is None
     assert 'id="volume"' not in svg_content
 

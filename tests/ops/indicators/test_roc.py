@@ -21,6 +21,7 @@ from kimsfinance.core import EngineManager
 # Test Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_data():
     """Generate sample price data for testing."""
@@ -43,12 +44,13 @@ def large_data():
 # Basic Functionality Tests
 # ============================================================================
 
+
 class TestROCBasic:
     """Test basic ROC calculation."""
 
     def test_basic_calculation(self, sample_data):
         """Test basic ROC calculation returns correct structure."""
-        result = calculate_roc(sample_data, period=12, engine='cpu')
+        result = calculate_roc(sample_data, period=12, engine="cpu")
 
         # Check length matches input
         assert len(result) == len(sample_data)
@@ -67,7 +69,7 @@ class TestROCBasic:
         # Create data with clear uptrend then downtrend
         prices = np.array([100, 102, 104, 106, 108, 110, 108, 106, 104, 102, 100])
 
-        result = calculate_roc(prices, period=2, engine='cpu')
+        result = calculate_roc(prices, period=2, engine="cpu")
 
         # After period=2, we should have values
         # Index 2: (104 - 100) / 100 * 100 = 4.0
@@ -92,10 +94,10 @@ class TestROCBasic:
     def test_different_periods(self, sample_data):
         """Test with different period values."""
         # Test period=5
-        result_5 = calculate_roc(sample_data, period=5, engine='cpu')
+        result_5 = calculate_roc(sample_data, period=5, engine="cpu")
 
         # Test period=20
-        result_20 = calculate_roc(sample_data, period=20, engine='cpu')
+        result_20 = calculate_roc(sample_data, period=20, engine="cpu")
 
         # Shorter period should have fewer NaN values at start
         assert np.sum(np.isnan(result_5)) < np.sum(np.isnan(result_20))
@@ -104,13 +106,15 @@ class TestROCBasic:
         valid_mask_5 = ~np.isnan(result_5)
         valid_mask_20 = ~np.isnan(result_20)
         common_valid = valid_mask_5 & valid_mask_20
-        assert not np.allclose(result_5[common_valid], result_20[common_valid]), \
-            "Different periods should produce different results"
+        assert not np.allclose(
+            result_5[common_valid], result_20[common_valid]
+        ), "Different periods should produce different results"
 
 
 # ============================================================================
 # GPU/CPU Equivalence Tests
 # ============================================================================
+
 
 class TestROCGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
@@ -118,10 +122,10 @@ class TestROCGPUCPU:
     def test_gpu_cpu_match_small_data(self, sample_data):
         """Test GPU and CPU produce identical results on small dataset."""
         # CPU calculation
-        result_cpu = calculate_roc(sample_data, period=12, engine='cpu')
+        result_cpu = calculate_roc(sample_data, period=12, engine="cpu")
 
         # GPU calculation (may fallback to CPU if GPU not available)
-        result_gpu = calculate_roc(sample_data, period=12, engine='gpu')
+        result_gpu = calculate_roc(sample_data, period=12, engine="gpu")
 
         # Should match within floating point tolerance
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-10)
@@ -129,10 +133,10 @@ class TestROCGPUCPU:
     def test_gpu_cpu_match_large_data(self, large_data):
         """Test GPU and CPU produce identical results on large dataset."""
         # CPU calculation
-        result_cpu = calculate_roc(large_data, period=12, engine='cpu')
+        result_cpu = calculate_roc(large_data, period=12, engine="cpu")
 
         # GPU calculation
-        result_gpu = calculate_roc(large_data, period=12, engine='gpu')
+        result_gpu = calculate_roc(large_data, period=12, engine="gpu")
 
         # Should match within floating point tolerance
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-10)
@@ -140,10 +144,10 @@ class TestROCGPUCPU:
     def test_auto_engine_selection(self, large_data):
         """Test that auto engine selects appropriately based on data size."""
         # Auto should select GPU for large datasets
-        result_auto = calculate_roc(large_data, period=12, engine='auto')
+        result_auto = calculate_roc(large_data, period=12, engine="auto")
 
         # Explicit CPU
-        result_cpu = calculate_roc(large_data, period=12, engine='cpu')
+        result_cpu = calculate_roc(large_data, period=12, engine="cpu")
 
         # Results should match
         np.testing.assert_allclose(result_auto, result_cpu, rtol=1e-10)
@@ -153,6 +157,7 @@ class TestROCGPUCPU:
 # Algorithm Correctness Tests
 # ============================================================================
 
+
 class TestROCAlgorithm:
     """Test algorithm correctness against known values and properties."""
 
@@ -161,7 +166,7 @@ class TestROCAlgorithm:
         # Simple test data with known ROC values
         prices = np.array([100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0])
 
-        result = calculate_roc(prices, period=3, engine='cpu')
+        result = calculate_roc(prices, period=3, engine="cpu")
 
         # First 3 values should be NaN (warmup)
         assert np.all(np.isnan(result[:3]))
@@ -186,7 +191,7 @@ class TestROCAlgorithm:
         # Constant prices
         prices = np.full(50, 100.0)
 
-        result = calculate_roc(prices, period=10, engine='cpu')
+        result = calculate_roc(prices, period=10, engine="cpu")
 
         # All valid values should be 0 (no change)
         valid_mask = ~np.isnan(result)
@@ -197,7 +202,7 @@ class TestROCAlgorithm:
         prices = np.array([100, 110, 120, 130, 140, 150])
         period = 2
 
-        result = calculate_roc(prices, period=period, engine='cpu')
+        result = calculate_roc(prices, period=period, engine="cpu")
 
         # Manually calculate expected ROC values
         for i in range(period, len(prices)):
@@ -205,22 +210,23 @@ class TestROCAlgorithm:
             current_price = prices[i]
             expected = ((current_price - prev_price) / prev_price) * 100.0
 
-            assert np.isclose(result[i], expected, rtol=1e-10), \
-                f"ROC mismatch at index {i}: got {result[i]}, expected {expected}"
+            assert np.isclose(
+                result[i], expected, rtol=1e-10
+            ), f"ROC mismatch at index {i}: got {result[i]}, expected {expected}"
 
     def test_percentage_interpretation(self):
         """Test that ROC correctly represents percentage change."""
         # Price increases by exactly 10%
         prices = np.array([100.0, 100.0, 110.0])
 
-        result = calculate_roc(prices, period=1, engine='cpu')
+        result = calculate_roc(prices, period=1, engine="cpu")
 
         # ROC at index 2 should be 10.0 (10% increase)
         assert np.isclose(result[2], 10.0, rtol=1e-6)
 
         # Price decreases by exactly 10%
         prices = np.array([100.0, 100.0, 90.0])
-        result = calculate_roc(prices, period=1, engine='cpu')
+        result = calculate_roc(prices, period=1, engine="cpu")
 
         # ROC at index 2 should be -10.0 (10% decrease)
         assert np.isclose(result[2], -10.0, rtol=1e-6)
@@ -229,6 +235,7 @@ class TestROCAlgorithm:
 # ============================================================================
 # Edge Cases and Error Handling
 # ============================================================================
+
 
 class TestROCEdgeCases:
     """Test edge cases and error handling."""
@@ -257,7 +264,7 @@ class TestROCEdgeCases:
         np.random.seed(42)
         prices = 100 + np.cumsum(np.random.randn(n) * 0.5)
 
-        result = calculate_roc(prices, period=period, engine='cpu')
+        result = calculate_roc(prices, period=period, engine="cpu")
 
         # Should complete without error
         assert len(result) == n
@@ -267,10 +274,9 @@ class TestROCEdgeCases:
 
     def test_handles_list_input(self):
         """Test that function handles list inputs (not just numpy arrays)."""
-        prices = [100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120,
-                  122, 124, 126, 128]
+        prices = [100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128]
 
-        result = calculate_roc(prices, period=5, engine='cpu')
+        result = calculate_roc(prices, period=5, engine="cpu")
 
         # Should complete without error
         assert isinstance(result, np.ndarray)
@@ -281,7 +287,7 @@ class TestROCEdgeCases:
         # Include a zero price (which would cause division by zero)
         prices = np.array([100, 110, 120, 0, 140, 150, 160])
 
-        result = calculate_roc(prices, period=3, engine='cpu')
+        result = calculate_roc(prices, period=3, engine="cpu")
 
         # Should not raise an error
         # Index 6 would try to divide by 0 (price at index 3)
@@ -296,7 +302,7 @@ class TestROCEdgeCases:
         # Some commodities or spreads can have negative values
         prices = np.array([-100, -105, -110, -115, -120, -125])
 
-        result = calculate_roc(prices, period=2, engine='cpu')
+        result = calculate_roc(prices, period=2, engine="cpu")
 
         # Should calculate correctly
         # Index 2: (-110 - (-100)) / (-100) * 100 = -10 / -100 * 100 = 10.0
@@ -307,31 +313,33 @@ class TestROCEdgeCases:
 # Type and API Tests
 # ============================================================================
 
+
 class TestROCAPI:
     """Test API correctness and return types."""
 
     def test_return_type_is_ndarray(self, sample_data):
         """Test that function returns numpy array."""
-        result = calculate_roc(sample_data, period=12, engine='cpu')
+        result = calculate_roc(sample_data, period=12, engine="cpu")
 
         assert isinstance(result, np.ndarray)
         assert result.dtype == np.float64
 
     def test_result_length_matches_input(self, sample_data):
         """Test that result length matches input length."""
-        result = calculate_roc(sample_data, period=12, engine='cpu')
+        result = calculate_roc(sample_data, period=12, engine="cpu")
 
         assert len(result) == len(sample_data)
 
     def test_invalid_engine_raises_error(self, sample_data):
         """Test that invalid engine parameter raises error."""
         with pytest.raises(ValueError, match="Invalid engine"):
-            calculate_roc(sample_data, period=12, engine='invalid')
+            calculate_roc(sample_data, period=12, engine="invalid")
 
 
 # ============================================================================
 # Performance Characteristics Tests
 # ============================================================================
+
 
 class TestROCPerformance:
     """Test performance characteristics (not strict benchmarks)."""
@@ -341,29 +349,28 @@ class TestROCPerformance:
         import time
 
         start = time.time()
-        result = calculate_roc(sample_data, period=12, engine='cpu')
+        result = calculate_roc(sample_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
-        assert elapsed < 1.0, \
-            f"Small dataset took {elapsed:.3f}s - should be <1s"
+        assert elapsed < 1.0, f"Small dataset took {elapsed:.3f}s - should be <1s"
 
     def test_completes_in_reasonable_time_large_data(self, large_data):
         """Test that calculation completes in reasonable time on large dataset."""
         import time
 
         start = time.time()
-        result = calculate_roc(large_data, period=12, engine='cpu')
+        result = calculate_roc(large_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 5 seconds on CPU
-        assert elapsed < 5.0, \
-            f"Large dataset took {elapsed:.3f}s - should be <5s"
+        assert elapsed < 5.0, f"Large dataset took {elapsed:.3f}s - should be <5s"
 
 
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestROCIntegration:
     """Test integration with other components."""
@@ -374,7 +381,7 @@ class TestROCIntegration:
 
         df = pl.DataFrame({"price": sample_data})
 
-        result = calculate_roc(df['price'], period=12, engine='cpu')
+        result = calculate_roc(df["price"], period=12, engine="cpu")
 
         assert len(result) == len(sample_data)
         assert not np.all(np.isnan(result))
@@ -384,8 +391,8 @@ class TestROCIntegration:
         from kimsfinance.ops.indicators import calculate_rsi
 
         # Calculate ROC and RSI
-        roc = calculate_roc(sample_data, period=14, engine='cpu')
-        rsi = calculate_rsi(sample_data, period=14, engine='cpu')
+        roc = calculate_roc(sample_data, period=14, engine="cpu")
+        rsi = calculate_rsi(sample_data, period=14, engine="cpu")
 
         # Both should have same structure (same length)
         assert len(roc) == len(rsi)
@@ -410,6 +417,7 @@ class TestROCIntegration:
 # Statistical Properties Tests
 # ============================================================================
 
+
 class TestROCStatisticalProperties:
     """Test statistical properties of ROC indicator."""
 
@@ -419,7 +427,7 @@ class TestROCStatisticalProperties:
         prices = np.array([100, 110, 100, 110, 100])
         period = 2
 
-        result = calculate_roc(prices, period=period, engine='cpu')
+        result = calculate_roc(prices, period=period, engine="cpu")
 
         # ROC at index 2: (100 - 100) / 100 * 100 = 0
         assert np.isclose(result[2], 0.0, atol=1e-10)
@@ -432,7 +440,7 @@ class TestROCStatisticalProperties:
         prices = np.array([100, 105, 110, 115, 120])
 
         # Calculate ROC with period=1 (consecutive changes)
-        roc_1 = calculate_roc(prices, period=1, engine='cpu')
+        roc_1 = calculate_roc(prices, period=1, engine="cpu")
 
         # Each consecutive ROC should reflect the percentage change
         # Index 1: (105 - 100) / 100 * 100 = 5.0
