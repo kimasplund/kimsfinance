@@ -10,6 +10,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,

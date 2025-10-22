@@ -10,6 +10,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -97,15 +98,17 @@ def calculate_volume_profile(
         raise ValueError("Input arrays cannot be empty")
 
     # Engine routing
-    if engine == "auto":
-        # GPU beneficial for large datasets due to histogram computation
-        use_gpu = len(prices_arr) >= 100_000 and CUPY_AVAILABLE
-    elif engine == "gpu":
-        use_gpu = CUPY_AVAILABLE
-    elif engine == "cpu":
-        use_gpu = False
-    else:
-        raise ValueError(f"Invalid engine: {engine}")
+    threshold = get_threshold("histogram")
+    match engine:
+        case "auto":
+            # GPU beneficial for large datasets due to histogram computation
+            use_gpu = len(prices_arr) >= threshold and CUPY_AVAILABLE
+        case "gpu":
+            use_gpu = CUPY_AVAILABLE
+        case "cpu":
+            use_gpu = False
+        case _:
+            raise ValueError(f"Invalid engine: {engine}")
 
     # Dispatch to CPU or GPU implementation
     if use_gpu:

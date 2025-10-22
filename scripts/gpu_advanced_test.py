@@ -33,7 +33,7 @@ def run_cmd(cmd: List[str]) -> Tuple[str, int]:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         return result.stdout.strip(), result.returncode
-    except:
+    except Exception as e:
         return "", 1
 
 def get_gpu_stats() -> Dict[str, Any]:
@@ -168,12 +168,12 @@ def test_pynvml() -> Dict[str, Any]:
 
         try:
             power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000  # mW to W
-        except:
+        except Exception:
             power = 0
 
         try:
             power_limit = pynvml.nvmlDeviceGetPowerManagementLimit(handle) / 1000
-        except:
+        except Exception:
             power_limit = 0
 
         pynvml.nvmlShutdown()
@@ -232,7 +232,7 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
                 "speedup": speedup,
                 "winner": "GPU" if speedup > 1 else "CPU"
             }
-    except:
+    except Exception:
         pass
 
     return {
@@ -323,7 +323,7 @@ def test_financial_indicators() -> Dict[str, Any]:
             "indicators": results
         }
 
-    except:
+    except Exception:
         return {"available": False}
 
 def main() -> None:

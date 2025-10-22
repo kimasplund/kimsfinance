@@ -1,6 +1,6 @@
 import timeit
 import numpy as np
-from kimsfinance.plotting.renderer import render_ohlcv_chart
+from kimsfinance.plotting.pil_renderer import render_ohlcv_chart
 
 
 def generate_data(num_candles):

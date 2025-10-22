@@ -93,25 +93,28 @@ class EngineManager:
         if engine not in ("cpu", "gpu", "auto"):
             raise ConfigurationError(f"Invalid engine: {engine!r}")
 
-        if engine == "cpu":
-            return "cpu"
+        match engine:
+            case "cpu":
+                return "cpu"
+            case "gpu":
+                gpu_available = cls.check_gpu_available()
+                if not gpu_available:
+                    raise GPUNotAvailableError()
+                return "gpu"
+            case "auto":
+                # Auto selection
+                gpu_available = cls.check_gpu_available()
+                if not gpu_available:
+                    return "cpu"
 
-        gpu_available = cls.check_gpu_available()
+                if operation and data_size is not None:
+                    threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, GPU_CROSSOVER_THRESHOLDS["default"])
+                    return "gpu" if data_size >= threshold else "cpu"
 
-        if engine == "gpu":
-            if not gpu_available:
-                raise GPUNotAvailableError()
-            return "gpu"
-
-        # Auto selection
-        if not gpu_available:
-            return "cpu"
-
-        if operation and data_size is not None:
-            threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, GPU_CROSSOVER_THRESHOLDS["default"])
-            return "gpu" if data_size >= threshold else "cpu"
-
-        return "cpu"  # Conservative default for "auto"
+                return "cpu"  # Conservative default for "auto"
+            case _:
+                # This should never be reached due to validation above
+                raise ConfigurationError(f"Invalid engine: {engine!r}")
 
     @classmethod
     def get_optimal_engine(

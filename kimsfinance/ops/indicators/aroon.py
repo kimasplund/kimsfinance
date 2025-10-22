@@ -10,6 +10,7 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
+from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -97,14 +98,16 @@ def calculate_aroon(
         raise ValueError(f"Insufficient data: need {period}, got {len(highs_arr)}")
 
     # Engine routing
-    if engine == "auto":
-        use_gpu = len(highs_arr) >= 500_000 and CUPY_AVAILABLE
-    elif engine == "gpu":
-        use_gpu = CUPY_AVAILABLE
-    elif engine == "cpu":
-        use_gpu = False
-    else:
-        raise ValueError(f"Invalid engine: {engine}")
+    threshold = get_threshold("iterative")
+    match engine:
+        case "auto":
+            use_gpu = len(highs_arr) >= threshold and CUPY_AVAILABLE
+        case "gpu":
+            use_gpu = CUPY_AVAILABLE
+        case "cpu":
+            use_gpu = False
+        case _:
+            raise ValueError(f"Invalid engine: {engine}")
 
     # Dispatch to CPU or GPU
     if use_gpu:
@@ -116,31 +119,51 @@ def calculate_aroon(
 def _calculate_aroon_cpu(
     highs: np.ndarray, lows: np.ndarray, period: int
 ) -> tuple[np.ndarray, np.ndarray]:
-    """CPU implementation of Aroon using NumPy."""
+    """CPU implementation of Aroon using NumPy (fully vectorized with sliding windows)."""
 
     n = len(highs)
     aroon_up = np.full(n, np.nan, dtype=np.float64)
     aroon_down = np.full(n, np.nan, dtype=np.float64)
 
-    # Calculate Aroon for each valid position
-    for i in range(period - 1, n):
-        window_start = i - period + 1
-        high_window = highs[window_start : i + 1]
-        low_window = lows[window_start : i + 1]
+    # Create rolling windows using stride tricks (zero-copy views)
+    from numpy.lib.stride_tricks import sliding_window_view
 
-        # Find periods since highest high (most recent occurrence)
-        max_val = np.max(high_window)
-        # argmax returns first occurrence, but we want the last (most recent)
-        # So we find all occurrences and take the last one
-        periods_since_high = period - 1 - np.where(high_window == max_val)[0][-1]
+    high_windows = sliding_window_view(highs, period)
+    low_windows = sliding_window_view(lows, period)
 
-        # Find periods since lowest low (most recent occurrence)
-        min_val = np.min(low_window)
-        periods_since_low = period - 1 - np.where(low_window == min_val)[0][-1]
+    # Find maximum/minimum values in each window (vectorized)
+    max_values = np.max(high_windows, axis=1)
+    min_values = np.min(low_windows, axis=1)
 
-        # Convert to Aroon values (0-100)
-        aroon_up[i] = ((period - periods_since_high) / period) * 100.0
-        aroon_down[i] = ((period - periods_since_low) / period) * 100.0
+    # Find the LAST (most recent) occurrence of max/min in each window
+    # Strategy: reverse each window, find first occurrence, then convert back to original index
+    # This is fully vectorized using broadcasting
+    high_windows_reversed = high_windows[:, ::-1]
+    low_windows_reversed = low_windows[:, ::-1]
+
+    # Create boolean masks for matches
+    high_matches = high_windows_reversed == max_values[:, np.newaxis]
+    low_matches = low_windows_reversed == min_values[:, np.newaxis]
+
+    # Find first True in each row (argmax on boolean returns first occurrence)
+    reversed_max_indices = np.argmax(high_matches, axis=1)
+    reversed_min_indices = np.argmax(low_matches, axis=1)
+
+    # Convert reversed indices back to original window indices
+    max_indices = period - 1 - reversed_max_indices
+    min_indices = period - 1 - reversed_min_indices
+
+    # Calculate periods since high/low
+    periods_since_high = period - 1 - max_indices
+    periods_since_low = period - 1 - min_indices
+
+    # Calculate Aroon values (0-100) - fully vectorized
+    aroon_up_values = ((period - periods_since_high) / period) * 100.0
+    aroon_down_values = ((period - periods_since_low) / period) * 100.0
+
+    # Place results in correct positions (starting at period-1)
+    aroon_up[period - 1 :] = aroon_up_values
+    aroon_down[period - 1 :] = aroon_down_values
 
     return (aroon_up, aroon_down)
 
