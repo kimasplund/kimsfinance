@@ -2046,7 +2046,7 @@ def test_render_charts_parallel_basic():
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        output_paths = [os.path.join(tmpdir, f"chart_{i}.webp") for i in range(len(datasets))]
+        output_paths = [os.path.join(tmpdir, f"chart_{i}.webp") for i, _ in enumerate(datasets)]
 
         # Render in parallel
         results = render_charts_parallel(datasets, output_paths, speed="fast")

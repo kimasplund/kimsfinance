@@ -28,11 +28,12 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
 from .rolling import rolling_max, rolling_min, rolling_mean
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_stochastic(
     high: ArrayLike,
     low: ArrayLike,
@@ -131,7 +132,7 @@ def calculate_stochastic(
     return k_percent, d_percent
 
 
-@gpu_accelerated(operation_type="rolling_window", min_gpu_size=100_000)
+@gpu_accelerated(operation_type="rolling_window", min_gpu_size=get_threshold("rolling"))
 def calculate_stochastic_rsi(
     prices: ArrayLike,
     rsi_period: int = 14,

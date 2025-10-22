@@ -100,8 +100,8 @@ def _calculate_roc_cpu(data: np.ndarray, period: int) -> np.ndarray:
         prev_prices != 0, ((current_prices - prev_prices) / prev_prices) * 100.0, np.nan
     )
 
-    # Place results in correct positions (starting at period)
-    result[period:] = roc_values
+    # Place results in correct positions (starting at period) using np.copyto for efficiency
+    np.copyto(result[period:], roc_values)
 
     return result
 
@@ -131,8 +131,8 @@ def _calculate_roc_gpu(data: np.ndarray, period: int) -> np.ndarray:
         prev_prices != 0, ((current_prices - prev_prices) / prev_prices) * 100.0, cp.nan
     )
 
-    # Place results in correct positions (starting at period)
-    result_gpu[period:] = roc_values
+    # Place results in correct positions (starting at period) using cp.copyto for efficiency
+    cp.copyto(result_gpu[period:], roc_values)
 
     # Transfer back to CPU
     return cp.asnumpy(result_gpu)

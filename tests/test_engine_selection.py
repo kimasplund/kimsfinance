@@ -35,10 +35,11 @@ class TestGPUCrossoverThresholds:
 
     def test_specific_threshold_values(self):
         """Verify specific threshold values match expected empirical values."""
-        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 100_000
-        assert GPU_CROSSOVER_THRESHOLDS["rsi"] == 100_000
-        assert GPU_CROSSOVER_THRESHOLDS["stochastic"] == 500_000
-        assert GPU_CROSSOVER_THRESHOLDS["default"] == 100_000
+        # Updated after Phase 1: GPU thresholds moved to centralized config
+        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 50_000  # rolling window threshold
+        assert GPU_CROSSOVER_THRESHOLDS["rsi"] == 50_000  # vectorizable_simple threshold
+        assert GPU_CROSSOVER_THRESHOLDS["stochastic"] == 500_000  # iterative threshold (unchanged)
+        assert GPU_CROSSOVER_THRESHOLDS["default"] == 100_000  # default threshold (unchanged)
 
 
 class TestExplicitEngineSelection:
@@ -96,8 +97,8 @@ class TestAutoEngineSelection:
     @pytest.mark.parametrize(
         "operation,threshold",
         [
-            ("atr", 100_000),
-            ("rsi", 100_000),
+            ("atr", 50_000),  # Updated: rolling window threshold
+            ("rsi", 50_000),  # Updated: vectorizable_simple threshold
             ("stochastic", 500_000),
         ],
     )
@@ -111,8 +112,8 @@ class TestAutoEngineSelection:
     @pytest.mark.parametrize(
         "operation,threshold",
         [
-            ("atr", 100_000),
-            ("rsi", 100_000),
+            ("atr", 50_000),  # Updated: rolling window threshold
+            ("rsi", 50_000),  # Updated: vectorizable_simple threshold
             ("stochastic", 500_000),
         ],
     )
@@ -184,13 +185,15 @@ class TestEdgeCases:
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_exactly_at_threshold(self, mock_gpu):
         """Test behavior at the exact threshold."""
-        result = EngineManager.select_engine("auto", "atr", 100_000)
+        # Updated: ATR uses rolling window threshold (50_000)
+        result = EngineManager.select_engine("auto", "atr", 50_000)
         assert result == "gpu"
 
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_one_row_below_threshold(self, mock_gpu):
         """Test behavior one row below the threshold."""
-        result = EngineManager.select_engine("auto", "atr", 99_999)
+        # Updated: ATR uses rolling window threshold (50_000)
+        result = EngineManager.select_engine("auto", "atr", 49_999)
         assert result == "cpu"
 
     def test_zero_data_size(self):
