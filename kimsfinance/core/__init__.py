@@ -33,8 +33,6 @@ from .decorators import (
     to_cpu,
 )
 
-from .utils import to_numpy_array
-
 __all__ = [
     # Types
     "ArrayResult",
@@ -64,6 +62,4 @@ __all__ = [
     "get_array_module",
     "to_gpu",
     "to_cpu",
-    # Utils
-    "to_numpy_array",
 ]

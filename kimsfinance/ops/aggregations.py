@@ -34,8 +34,8 @@ from ..core import (
     Engine,
     EngineManager,
     GPUNotAvailableError,
-    to_numpy_array,
 )
+from ..utils.array_utils import to_numpy_array
 
 
 def volume_sum(volume: ArrayLike, *, engine: Engine = "auto") -> float:
@@ -383,7 +383,7 @@ def tick_to_ohlc(
     timestamp_col: str = "timestamp",
     price_col: str = "price",
     volume_col: str = "volume",
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     Convert tick data to tick-based OHLC bars.
@@ -444,19 +444,19 @@ def tick_to_ohlc(
     total_ticks = len(polars_df)
     bar_numbers = np.arange(total_ticks) // tick_size
 
-    polars_df = polars_df.with_columns([
-        pl.Series("bar_id", bar_numbers)
-    ])
+    polars_df = polars_df.with_columns([pl.Series("bar_id", bar_numbers)])
 
     # Aggregate to OHLC
-    ohlc_df = polars_df.group_by("bar_id").agg([
-        pl.col(timestamp_col).first().alias("timestamp"),
-        pl.col(price_col).first().alias("open"),
-        pl.col(price_col).max().alias("high"),
-        pl.col(price_col).min().alias("low"),
-        pl.col(price_col).last().alias("close"),
-        pl.col(volume_col).sum().alias("volume"),
-    ])
+    ohlc_df = polars_df.group_by("bar_id").agg(
+        [
+            pl.col(timestamp_col).first().alias("timestamp"),
+            pl.col(price_col).first().alias("open"),
+            pl.col(price_col).max().alias("high"),
+            pl.col(price_col).min().alias("low"),
+            pl.col(price_col).last().alias("close"),
+            pl.col(volume_col).sum().alias("volume"),
+        ]
+    )
 
     # Sort by bar_id and remove it
     ohlc_df = ohlc_df.sort("bar_id").drop("bar_id")
@@ -471,7 +471,7 @@ def volume_to_ohlc(
     timestamp_col: str = "timestamp",
     price_col: str = "price",
     volume_col: str = "volume",
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     Convert tick data to volume-based OHLC bars.
@@ -525,19 +525,19 @@ def volume_to_ohlc(
     cumsum_vol = polars_df[volume_col].cum_sum()
     bar_numbers = (cumsum_vol / volume_size).cast(pl.Int64)
 
-    polars_df = polars_df.with_columns([
-        pl.Series("bar_id", bar_numbers)
-    ])
+    polars_df = polars_df.with_columns([pl.Series("bar_id", bar_numbers)])
 
     # Aggregate to OHLC
-    ohlc_df = polars_df.group_by("bar_id").agg([
-        pl.col(timestamp_col).first().alias("timestamp"),
-        pl.col(price_col).first().alias("open"),
-        pl.col(price_col).max().alias("high"),
-        pl.col(price_col).min().alias("low"),
-        pl.col(price_col).last().alias("close"),
-        pl.col(volume_col).sum().alias("volume"),
-    ])
+    ohlc_df = polars_df.group_by("bar_id").agg(
+        [
+            pl.col(timestamp_col).first().alias("timestamp"),
+            pl.col(price_col).first().alias("open"),
+            pl.col(price_col).max().alias("high"),
+            pl.col(price_col).min().alias("low"),
+            pl.col(price_col).last().alias("close"),
+            pl.col(volume_col).sum().alias("volume"),
+        ]
+    )
 
     # Sort and clean
     ohlc_df = ohlc_df.sort("bar_id").drop("bar_id")
@@ -552,7 +552,7 @@ def range_to_ohlc(
     timestamp_col: str = "timestamp",
     price_col: str = "price",
     volume_col: str = "volume",
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     Convert tick data to range-based OHLC bars (constant range bars).
@@ -615,12 +615,12 @@ def range_to_ohlc(
 
     bars = []
     current_bar = {
-        'timestamp': timestamps[0],
-        'open': prices[0],
-        'high': prices[0],
-        'low': prices[0],
-        'close': prices[0],
-        'volume': 0,
+        "timestamp": timestamps[0],
+        "open": prices[0],
+        "high": prices[0],
+        "low": prices[0],
+        "close": prices[0],
+        "volume": 0,
     }
 
     for i in range(len(prices)):
@@ -628,28 +628,28 @@ def range_to_ohlc(
         volume = volumes[i]
 
         # Update bar
-        current_bar['high'] = max(current_bar['high'], price)
-        current_bar['low'] = min(current_bar['low'], price)
-        current_bar['close'] = price
-        current_bar['volume'] += volume
+        current_bar["high"] = max(current_bar["high"], price)
+        current_bar["low"] = min(current_bar["low"], price)
+        current_bar["close"] = price
+        current_bar["volume"] += volume
 
         # Check if bar is complete
-        if (current_bar['high'] - current_bar['low']) >= range_size:
+        if (current_bar["high"] - current_bar["low"]) >= range_size:
             bars.append(current_bar.copy())
 
             # Start new bar
             if i + 1 < len(prices):
                 current_bar = {
-                    'timestamp': timestamps[i + 1],
-                    'open': prices[i + 1],
-                    'high': prices[i + 1],
-                    'low': prices[i + 1],
-                    'close': prices[i + 1],
-                    'volume': 0,
+                    "timestamp": timestamps[i + 1],
+                    "open": prices[i + 1],
+                    "high": prices[i + 1],
+                    "low": prices[i + 1],
+                    "close": prices[i + 1],
+                    "volume": 0,
                 }
 
     # Add final bar if it has data
-    if current_bar['volume'] > 0:
+    if current_bar["volume"] > 0:
         bars.append(current_bar)
 
     # Convert to Polars DataFrame
@@ -666,7 +666,7 @@ def kagi_to_ohlc(
     timestamp_col: str = "timestamp",
     price_col: str = "price",
     volume_col: str = "volume",
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     Convert tick data to Kagi chart lines.
@@ -739,114 +739,120 @@ def kagi_to_ohlc(
     volumes = polars_df[volume_col].to_numpy()
 
     if len(prices) == 0:
-        return pl.DataFrame({
-            'timestamp': [],
-            'open': [],
-            'high': [],
-            'low': [],
-            'close': [],
-            'volume': [],
-        })
+        return pl.DataFrame(
+            {
+                "timestamp": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": [],
+            }
+        )
 
     # Kagi algorithm
     lines = []
     current_line = {
-        'timestamp': timestamps[0],
-        'start_price': prices[0],
-        'end_price': prices[0],
-        'direction': None,  # 1 for up, -1 for down
-        'volume': volumes[0],
-        'high': prices[0],
-        'low': prices[0],
+        "timestamp": timestamps[0],
+        "start_price": prices[0],
+        "end_price": prices[0],
+        "direction": None,  # 1 for up, -1 for down
+        "volume": volumes[0],
+        "high": prices[0],
+        "low": prices[0],
     }
 
     for i in range(1, len(prices)):
         price = prices[i]
-        current_line['high'] = max(current_line['high'], price)
-        current_line['low'] = min(current_line['low'], price)
+        current_line["high"] = max(current_line["high"], price)
+        current_line["low"] = min(current_line["low"], price)
 
-        if current_line['direction'] is None:
-            current_line['volume'] += volumes[i]
+        if current_line["direction"] is None:
+            current_line["volume"] += volumes[i]
             # First line - determine initial direction
-            if price > current_line['start_price']:
-                current_line['direction'] = 1
-                current_line['end_price'] = price
-            elif price < current_line['start_price']:
-                current_line['direction'] = -1
-                current_line['end_price'] = price
+            if price > current_line["start_price"]:
+                current_line["direction"] = 1
+                current_line["end_price"] = price
+            elif price < current_line["start_price"]:
+                current_line["direction"] = -1
+                current_line["end_price"] = price
             continue
 
         # Calculate reversal threshold
         if reversal_pct is not None:
-            threshold = abs(current_line['end_price']) * reversal_pct
+            threshold = abs(current_line["end_price"]) * reversal_pct
         else:
             threshold = reversal_amount
 
         # Check for reversal
-        if current_line['direction'] == 1:  # Currently going up
-            if price > current_line['end_price']:
+        if current_line["direction"] == 1:  # Currently going up
+            if price > current_line["end_price"]:
                 # Continue up
-                current_line['end_price'] = price
-                current_line['volume'] += volumes[i]
-            elif (current_line['end_price'] - price) >= threshold:
+                current_line["end_price"] = price
+                current_line["volume"] += volumes[i]
+            elif (current_line["end_price"] - price) >= threshold:
                 # Reverse down
                 lines.append(current_line.copy())
                 current_line = {
-                    'timestamp': timestamps[i],
-                    'start_price': current_line['end_price'],
-                    'end_price': price,
-                    'direction': -1,
-                    'volume': volumes[i],
-                    'high': max(current_line['end_price'], price),
-                    'low': min(current_line['end_price'], price),
+                    "timestamp": timestamps[i],
+                    "start_price": current_line["end_price"],
+                    "end_price": price,
+                    "direction": -1,
+                    "volume": volumes[i],
+                    "high": max(current_line["end_price"], price),
+                    "low": min(current_line["end_price"], price),
                 }
             else:
                 # Price moving against direction but not enough for reversal
-                current_line['volume'] += volumes[i]
+                current_line["volume"] += volumes[i]
         else:  # Currently going down
-            if price < current_line['end_price']:
+            if price < current_line["end_price"]:
                 # Continue down
-                current_line['end_price'] = price
-                current_line['volume'] += volumes[i]
-            elif (price - current_line['end_price']) >= threshold:
+                current_line["end_price"] = price
+                current_line["volume"] += volumes[i]
+            elif (price - current_line["end_price"]) >= threshold:
                 # Reverse up
                 lines.append(current_line.copy())
                 current_line = {
-                    'timestamp': timestamps[i],
-                    'start_price': current_line['end_price'],
-                    'end_price': price,
-                    'direction': 1,
-                    'volume': volumes[i],
-                    'high': max(current_line['end_price'], price),
-                    'low': min(current_line['end_price'], price),
+                    "timestamp": timestamps[i],
+                    "start_price": current_line["end_price"],
+                    "end_price": price,
+                    "direction": 1,
+                    "volume": volumes[i],
+                    "high": max(current_line["end_price"], price),
+                    "low": min(current_line["end_price"], price),
                 }
             else:
                 # Price moving against direction but not enough for reversal
-                current_line['volume'] += volumes[i]
+                current_line["volume"] += volumes[i]
 
     # Add final line
-    if current_line['direction'] is not None:
+    if current_line["direction"] is not None:
         lines.append(current_line)
 
     if not lines:
-        return pl.DataFrame({
-            'timestamp': [],
-            'open': [],
-            'high': [],
-            'low': [],
-            'close': [],
-            'volume': [],
-        })
+        return pl.DataFrame(
+            {
+                "timestamp": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": [],
+            }
+        )
 
     # Convert to OHLC format
-    ohlc_df = pl.DataFrame({
-        'timestamp': pl.Series([line['timestamp'] for line in lines], dtype=pl.Datetime),
-        'open': [line['start_price'] for line in lines],
-        'high': [line['high'] for line in lines],
-        'low': [line['low'] for line in lines],
-        'close': [line['end_price'] for line in lines],
-        'volume': [line['volume'] for line in lines],
-    })
+    ohlc_df = pl.DataFrame(
+        {
+            "timestamp": pl.Series([line["timestamp"] for line in lines], dtype=pl.Datetime),
+            "open": [line["start_price"] for line in lines],
+            "high": [line["high"] for line in lines],
+            "low": [line["low"] for line in lines],
+            "close": [line["end_price"] for line in lines],
+            "volume": [line["volume"] for line in lines],
+        }
+    )
 
     return ohlc_df
 
@@ -858,7 +864,7 @@ def three_line_break_to_ohlc(
     timestamp_col: str = "timestamp",
     price_col: str = "price",
     volume_col: str = "volume",
-    engine: Engine = "auto"
+    engine: Engine = "auto",
 ) -> pl.DataFrame:
     """
     Convert tick data to Three-Line Break chart.
@@ -923,14 +929,16 @@ def three_line_break_to_ohlc(
     volumes = polars_df[volume_col].to_numpy()
 
     if len(prices) == 0:
-        return pl.DataFrame({
-            'timestamp': [],
-            'open': [],
-            'high': [],
-            'low': [],
-            'close': [],
-            'volume': [],
-        })
+        return pl.DataFrame(
+            {
+                "timestamp": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": [],
+            }
+        )
 
     # Three-line break algorithm
     lines = []
@@ -938,20 +946,20 @@ def three_line_break_to_ohlc(
     # First line
     first_price = prices[0]
     current_line = {
-        'timestamp': timestamps[0],
-        'open': first_price,
-        'high': first_price,
-        'low': first_price,
-        'close': first_price,
-        'volume': volumes[0],
-        'direction': 0,  # Unknown initially
+        "timestamp": timestamps[0],
+        "open": first_price,
+        "high": first_price,
+        "low": first_price,
+        "close": first_price,
+        "volume": volumes[0],
+        "direction": 0,  # Unknown initially
     }
 
     for i in range(1, len(prices)):
         price = prices[i]
-        current_line['high'] = max(current_line['high'], price)
-        current_line['low'] = min(current_line['low'], price)
-        current_line['volume'] += volumes[i]
+        current_line["high"] = max(current_line["high"], price)
+        current_line["low"] = min(current_line["low"], price)
+        current_line["volume"] += volumes[i]
 
         # Determine if we need a new line
         need_new_line = False
@@ -959,26 +967,26 @@ def three_line_break_to_ohlc(
 
         if len(lines) == 0:
             # Still building first line
-            if price > current_line['close']:
-                current_line['close'] = price
-                current_line['direction'] = 1
-            elif price < current_line['close']:
-                current_line['close'] = price
-                current_line['direction'] = -1
+            if price > current_line["close"]:
+                current_line["close"] = price
+                current_line["direction"] = 1
+            elif price < current_line["close"]:
+                current_line["close"] = price
+                current_line["direction"] = -1
         else:
             # Check for continuation or reversal
-            recent_lines = lines[-min(num_lines, len(lines)):]
+            recent_lines = lines[-min(num_lines, len(lines)) :]
 
             # Get extreme of recent lines
-            recent_highs = [line['high'] for line in recent_lines]
-            recent_lows = [line['low'] for line in recent_lines]
+            recent_highs = [line["high"] for line in recent_lines]
+            recent_lows = [line["low"] for line in recent_lines]
             highest = max(recent_highs)
             lowest = min(recent_lows)
 
-            current_direction = lines[-1]['direction']
+            current_direction = lines[-1]["direction"]
 
             if current_direction >= 0:  # White/bullish trend
-                if price > lines[-1]['high']:
+                if price > lines[-1]["high"]:
                     # Continue white - new white line
                     need_new_line = True
                     new_direction = 1
@@ -987,7 +995,7 @@ def three_line_break_to_ohlc(
                     need_new_line = True
                     new_direction = -1
             else:  # Black/bearish trend
-                if price < lines[-1]['low']:
+                if price < lines[-1]["low"]:
                     # Continue black - new black line
                     need_new_line = True
                     new_direction = -1
@@ -1002,38 +1010,42 @@ def three_line_break_to_ohlc(
 
             # Start new line
             current_line = {
-                'timestamp': timestamps[i],
-                'open': price,
-                'high': price,
-                'low': price,
-                'close': price,
-                'volume': volumes[i],
-                'direction': new_direction,
+                "timestamp": timestamps[i],
+                "open": price,
+                "high": price,
+                "low": price,
+                "close": price,
+                "volume": volumes[i],
+                "direction": new_direction,
             }
 
     # Add final line if it has a direction
-    if current_line['direction'] != 0 or len(lines) == 0:
+    if current_line["direction"] != 0 or len(lines) == 0:
         lines.append(current_line)
 
     if not lines:
-        return pl.DataFrame({
-            'timestamp': [],
-            'open': [],
-            'high': [],
-            'low': [],
-            'close': [],
-            'volume': [],
-        })
+        return pl.DataFrame(
+            {
+                "timestamp": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": [],
+            }
+        )
 
     # Convert to OHLC format
-    ohlc_df = pl.DataFrame({
-        'timestamp': pl.Series([line['timestamp'] for line in lines], dtype=pl.Datetime),
-        'open': [line['open'] for line in lines],
-        'high': [line['high'] for line in lines],
-        'low': [line['low'] for line in lines],
-        'close': [line['close'] for line in lines],
-        'volume': [line['volume'] for line in lines],
-    })
+    ohlc_df = pl.DataFrame(
+        {
+            "timestamp": pl.Series([line["timestamp"] for line in lines], dtype=pl.Datetime),
+            "open": [line["open"] for line in lines],
+            "high": [line["high"] for line in lines],
+            "low": [line["low"] for line in lines],
+            "close": [line["close"] for line in lines],
+            "volume": [line["volume"] for line in lines],
+        }
+    )
 
     return ohlc_df
 

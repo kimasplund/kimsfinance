@@ -21,7 +21,7 @@ def _render_one_chart(args: tuple[Any, ...]) -> str | bytes:
     Returns:
         Output path if file was saved, or PNG bytes if in-memory rendering
     """
-    from .renderer import render_ohlcv_chart, save_chart
+    from kimsfinance.plotting import render_ohlcv_chart, save_chart
 
     ohlc, volume, output_path, save_kwargs, render_kwargs = args
 
