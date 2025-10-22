@@ -10,7 +10,6 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
-from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -113,21 +112,15 @@ def calculate_parabolic_sar(
     if len(highs_arr) < 2:
         raise ValueError(f"Insufficient data: need at least 2, got {len(highs_arr)}")
 
-    # 3. ENGINE ROUTING
-    threshold = get_threshold("iterative")
-    match engine:
-        case "auto":
-            # Parabolic SAR is iterative, GPU benefit threshold is higher
-            use_gpu = len(highs_arr) >= threshold and CUPY_AVAILABLE
-        case "gpu":
-            use_gpu = CUPY_AVAILABLE
-        case "cpu":
-            use_gpu = False
-        case _:
-            raise ValueError(f"Invalid engine: {engine}")
+    # 3. ENGINE ROUTING using EngineManager (standardized pattern)
+    exec_engine = EngineManager.select_engine(
+        engine,
+        operation="parabolic_sar",
+        data_size=len(highs_arr)
+    )
 
-    # 4. DISPATCH TO CPU OR GPU
-    if use_gpu:
+    # 4. DISPATCH TO CPU OR GPU based on selected engine
+    if exec_engine == "gpu":
         return _calculate_parabolic_sar_gpu(highs_arr, lows_arr, af_start, af_increment, af_max)
     else:
         # Use JIT-compiled version if Numba is available (2-3x faster)

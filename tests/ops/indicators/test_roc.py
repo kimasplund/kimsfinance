@@ -14,7 +14,9 @@ import numpy as np
 from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_roc
+from kimsfinance.ops.indicators.roc import CUPY_AVAILABLE
 from kimsfinance.core import EngineManager
+from kimsfinance.core.exceptions import ConfigurationError
 
 
 # ============================================================================
@@ -119,6 +121,7 @@ class TestROCBasic:
 class TestROCGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
+    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
     def test_gpu_cpu_match_small_data(self, sample_data):
         """Test GPU and CPU produce identical results on small dataset."""
         # CPU calculation
@@ -130,6 +133,7 @@ class TestROCGPUCPU:
         # Should match within floating point tolerance
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-10)
 
+    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
     def test_gpu_cpu_match_large_data(self, large_data):
         """Test GPU and CPU produce identical results on large dataset."""
         # CPU calculation
@@ -332,7 +336,7 @@ class TestROCAPI:
 
     def test_invalid_engine_raises_error(self, sample_data):
         """Test that invalid engine parameter raises error."""
-        with pytest.raises(ValueError, match="Invalid engine"):
+        with pytest.raises(ConfigurationError, match="Invalid engine"):
             calculate_roc(sample_data, period=12, engine="invalid")
 
 

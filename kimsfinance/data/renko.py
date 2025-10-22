@@ -93,11 +93,11 @@ def calculate_renko_bricks(
     reference_price = float(close_prices[0])
     current_direction: int | None = None  # 1=up, -1=down, None=initial
 
-    # Process each candle
-    for i in range(len(close_prices)):
-        close = float(close_prices[i])
-        high = float(high_prices[i])
-        low = float(low_prices[i])
+    # Process each candle using zip instead of range(len()) anti-pattern
+    for close, high, low in zip(close_prices, high_prices, low_prices):
+        close = float(close)
+        high = float(high)
+        low = float(low)
 
         # Use high/low for better brick detection (captures intra-candle movements)
         # Check upward movement first using high price

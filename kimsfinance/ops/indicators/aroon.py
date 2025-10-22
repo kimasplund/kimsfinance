@@ -10,7 +10,6 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
-from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
@@ -97,20 +96,15 @@ def calculate_aroon(
     if len(highs_arr) < period:
         raise ValueError(f"Insufficient data: need {period}, got {len(highs_arr)}")
 
-    # Engine routing
-    threshold = get_threshold("iterative")
-    match engine:
-        case "auto":
-            use_gpu = len(highs_arr) >= threshold and CUPY_AVAILABLE
-        case "gpu":
-            use_gpu = CUPY_AVAILABLE
-        case "cpu":
-            use_gpu = False
-        case _:
-            raise ValueError(f"Invalid engine: {engine}")
+    # Engine routing using EngineManager (standardized pattern)
+    exec_engine = EngineManager.select_engine(
+        engine,
+        operation="aroon_indicator",
+        data_size=len(highs_arr)
+    )
 
-    # Dispatch to CPU or GPU
-    if use_gpu:
+    # Dispatch to CPU or GPU based on selected engine
+    if exec_engine == "gpu":
         return _calculate_aroon_gpu(highs_arr, lows_arr, period)
     else:
         return _calculate_aroon_cpu(highs_arr, lows_arr, period)

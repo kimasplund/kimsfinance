@@ -9,6 +9,8 @@ Validates correctness of Parabolic SAR calculation across CPU and GPU engines.
 import numpy as np
 import pytest
 from kimsfinance.ops.indicators import calculate_parabolic_sar
+from kimsfinance.ops.indicators.parabolic_sar import CUPY_AVAILABLE
+from kimsfinance.core.exceptions import ConfigurationError
 
 
 class TestParabolicSAR:
@@ -132,6 +134,7 @@ class TestParabolicSAR:
             valid_sar <= max_price + 0.2 * price_range
         ), "SAR values should not be too far above price range"
 
+    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
     def test_gpu_cpu_match(self, sample_data):
         """Test GPU and CPU implementations produce identical results."""
         highs, lows = sample_data
@@ -270,6 +273,7 @@ class TestParabolicSAR:
         assert len(result) == 5
         assert isinstance(result, np.ndarray)
 
+    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
     def test_engine_parameter(self, sample_data):
         """Test different engine parameters."""
         highs, lows = sample_data
@@ -290,10 +294,10 @@ class TestParabolicSAR:
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-10, equal_nan=True)
 
     def test_invalid_engine(self, sample_data):
-        """Test that invalid engine parameter raises ValueError."""
+        """Test that invalid engine parameter raises ConfigurationError."""
         highs, lows = sample_data
 
-        with pytest.raises(ValueError, match="Invalid engine"):
+        with pytest.raises(ConfigurationError, match="Invalid engine"):
             calculate_parabolic_sar(highs, lows, engine="invalid")
 
     def test_large_dataset_performance(self):

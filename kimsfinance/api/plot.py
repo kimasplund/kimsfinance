@@ -12,9 +12,10 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 import warnings
 import numpy as np
+from pathlib import Path
 
 try:
     import mplfinance as mpf
@@ -22,6 +23,206 @@ try:
     MPLFINANCE_AVAILABLE = True
 except ImportError:
     MPLFINANCE_AVAILABLE = False
+
+
+def _validate_save_path(path: str) -> Path:
+    """
+    Validate output path to prevent directory traversal attacks.
+
+    Args:
+        path: User-provided file path
+
+    Returns:
+        Validated absolute Path object
+
+    Raises:
+        ValueError: If path attempts directory traversal or is invalid
+    """
+    if not path:
+        raise ValueError("savefig path cannot be empty")
+
+    # Convert to Path object and resolve to absolute path
+    try:
+        file_path = Path(path).resolve()
+    except (OSError, RuntimeError) as e:
+        raise ValueError(f"Invalid file path '{path}': {e}")
+
+    # Get current working directory as base
+    cwd = Path.cwd().resolve()
+
+    # Check if resolved path is within or below cwd
+    # This prevents ../../etc/passwd style attacks
+    try:
+        file_path.relative_to(cwd)
+    except ValueError:
+        # Path is outside cwd - allow only if user explicitly provides absolute path
+        # but still validate it's not a system directory
+        system_dirs = ['/etc', '/sys', '/proc', '/dev', '/root', '/boot']
+        if any(str(file_path).startswith(sd) for sd in system_dirs):
+            raise ValueError(
+                f"Cannot write to system directory: {file_path}. "
+                f"Provide a path within project directory or user home."
+            )
+
+    # Create parent directory if it doesn't exist
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    return file_path
+
+
+def _validate_numeric_params(width: int, height: int, **kwargs) -> None:
+    """Validate numeric parameters for rendering."""
+
+    # Width/height bounds
+    if not (100 <= width <= 8192):
+        raise ValueError(
+            f"width must be between 100 and 8192 pixels, got {width}. "
+            f"Common values: 1920 (HD), 3840 (4K)"
+        )
+
+    if not (100 <= height <= 8192):
+        raise ValueError(
+            f"height must be between 100 and 8192 pixels, got {height}. "
+            f"Common values: 1080 (HD), 2160 (4K)"
+        )
+
+    # Line width validation
+    line_width = kwargs.get('line_width', 1.0)
+    if not (0.1 <= line_width <= 20.0):
+        raise ValueError(
+            f"line_width must be between 0.1 and 20.0, got {line_width}"
+        )
+
+    # Box size for PnF charts
+    if 'box_size' in kwargs:
+        box_size = kwargs['box_size']
+        if box_size is not None and box_size <= 0:
+            raise ValueError(f"box_size must be positive, got {box_size}")
+
+    # Reversal boxes for PnF charts
+    if 'reversal_boxes' in kwargs:
+        reversal_boxes = kwargs['reversal_boxes']
+        if not (1 <= reversal_boxes <= 10):
+            raise ValueError(
+                f"reversal_boxes must be between 1 and 10, got {reversal_boxes}"
+            )
+
+
+def _render_svg_chart(
+    type: str,
+    ohlc_dict: dict,
+    volume_array: np.ndarray,
+    width: int,
+    height: int,
+    theme: str,
+    savefig: str,
+    bg_color: str | None,
+    up_color: str | None,
+    down_color: str | None,
+    show_grid: bool,
+    kwargs: dict,
+) -> None:
+    """
+    Unified SVG rendering using dispatch table.
+
+    Replaces 7 duplicate if/elif blocks with single dispatcher.
+
+    Args:
+        type: Chart type ('candle', 'ohlc', 'line', etc.)
+        ohlc_dict: OHLC data dictionary
+        volume_array: Volume data array
+        width: Image width
+        height: Image height
+        theme: Theme name
+        savefig: Output file path
+        bg_color: Background color override
+        up_color: Bullish color override
+        down_color: Bearish color override
+        show_grid: Show grid lines
+        kwargs: Additional chart-specific parameters
+
+    Returns:
+        None (saves file directly)
+
+    Raises:
+        ValueError: If chart type not supported for SVG rendering
+    """
+    # Import SVG renderers
+    from ..plotting import (
+        render_candlestick_svg,
+        render_ohlc_bars_svg,
+        render_line_chart_svg,
+        render_hollow_candles_svg,
+        render_renko_chart_svg,
+        render_pnf_chart_svg,
+    )
+
+    # SVG renderer dispatch table
+    SVG_RENDERERS: dict[str, Callable] = {
+        'candle': render_candlestick_svg,
+        'candlestick': render_candlestick_svg,
+        'ohlc': render_ohlc_bars_svg,
+        'line': render_line_chart_svg,
+        'hollow_and_filled': render_hollow_candles_svg,
+        'hollow': render_hollow_candles_svg,
+        'renko': render_renko_chart_svg,
+        'pnf': render_pnf_chart_svg,
+        'p&f': render_pnf_chart_svg,
+        'pointandfigure': render_pnf_chart_svg,
+    }
+
+    # Normalize chart type
+    chart_type = type.lower().strip()
+
+    # Get renderer from dispatch table
+    renderer = SVG_RENDERERS.get(chart_type)
+    if renderer is None:
+        # Not supported for SVG - warn and fallback to PNG
+        warnings.warn(
+            f"SVG export is not supported for chart type '{type}'. "
+            f"Supported types: {', '.join(SVG_RENDERERS.keys())}. "
+            f"Will render as PNG instead.",
+            UserWarning,
+        )
+        import os
+        # Return modified savefig path to trigger PNG rendering
+        return os.path.splitext(savefig)[0] + ".png"
+
+    # Build common parameters
+    common_params = {
+        'width': width,
+        'height': height,
+        'theme': theme,
+        'bg_color': bg_color,
+        'show_grid': show_grid,
+        'output_path': savefig,
+    }
+
+    # Add chart-specific parameters based on type
+    if chart_type == 'line':
+        common_params.update({
+            'line_color': kwargs.get('line_color', None),
+            'line_width': kwargs.get('line_width', 2),
+            'fill_area': kwargs.get('fill_area', False),
+        })
+    elif chart_type in ['renko', 'pnf', 'p&f', 'pointandfigure']:
+        common_params.update({
+            'up_color': up_color,
+            'down_color': down_color,
+            'box_size': kwargs.get('box_size', None),
+            'reversal_boxes': kwargs.get('reversal_boxes', 3 if chart_type in ['pnf', 'p&f', 'pointandfigure'] else 1),
+        })
+    else:
+        # Candlestick, OHLC, hollow candles
+        common_params.update({
+            'up_color': up_color,
+            'down_color': down_color,
+        })
+
+    # Call renderer with validated parameters
+    renderer(ohlc_dict, volume_array, **common_params)
+
+    return None  # File saved, return None like other savefig calls
 
 
 def plot(
@@ -101,6 +302,20 @@ def plot(
         - For multi-panel charts with indicators, use the native renderer directly
         - Falls back to mplfinance only if addplot is specified (requires matplotlib)
     """
+    # Extract and validate rendering parameters early
+    width = kwargs.get("width", 1920)
+    height = kwargs.get("height", 1080)
+
+    # Validate numeric parameters (create filtered kwargs without width/height to avoid duplication)
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k not in ['width', 'height']}
+    _validate_numeric_params(width, height, **filtered_kwargs)
+
+    # Validate output path if provided
+    if savefig:
+        validated_path = _validate_save_path(savefig)
+        # Convert back to string for consistency with rest of code
+        savefig = str(validated_path)
+
     # Check for unsupported features that require mplfinance
     has_addplot = "addplot" in kwargs
     has_advanced_features = mav is not None or ema is not None
@@ -135,12 +350,6 @@ def plot(
         render_renko_chart,
         render_pnf_chart,
         save_chart,
-        render_candlestick_svg,
-        render_ohlc_bars_svg,
-        render_line_chart_svg,
-        render_hollow_candles_svg,
-        render_renko_chart_svg,
-        render_pnf_chart_svg,
     )
 
     # Prepare data
@@ -149,9 +358,7 @@ def plot(
     # Map style aliases
     style = _map_style(style)
 
-    # Extract renderer parameters
-    width = kwargs.get("width", 1920)
-    height = kwargs.get("height", 1080)
+    # Extract renderer parameters (width and height already validated above)
     theme = kwargs.get("theme", style)
     bg_color = kwargs.get("bg_color", None)
     up_color = kwargs.get("up_color", None)
@@ -164,128 +371,27 @@ def plot(
         savefig.lower().endswith(".svg") or savefig.lower().endswith(".svgz")
     )
 
-    # SVG rendering path (for candlestick and OHLC charts)
-    if is_svg_format and type == "candle":
-        # Route directly to candlestick SVG renderer
-        svg_content = render_candlestick_svg(
-            ohlc_dict,
-            volume_array,
+    # SVG rendering path - use unified dispatch function
+    if is_svg_format:
+        result = _render_svg_chart(
+            type=type,
+            ohlc_dict=ohlc_dict,
+            volume_array=volume_array,
             width=width,
             height=height,
             theme=theme,
+            savefig=savefig,
             bg_color=bg_color,
             up_color=up_color,
             down_color=down_color,
             show_grid=show_grid,
-            output_path=savefig,
+            kwargs=kwargs,
         )
-        return None  # File saved, return None like other savefig calls
-
-    if is_svg_format and type == "ohlc":
-        # Route directly to OHLC SVG renderer
-        svg_content = render_ohlc_bars_svg(
-            ohlc_dict,
-            volume_array,
-            width=width,
-            height=height,
-            theme=theme,
-            bg_color=bg_color,
-            up_color=up_color,
-            down_color=down_color,
-            show_grid=show_grid,
-            output_path=savefig,
-        )
-        return None  # File saved, return None like other savefig calls
-
-    if is_svg_format and type == "line":
-        # Route directly to line chart SVG renderer
-        svg_content = render_line_chart_svg(
-            ohlc_dict,
-            volume_array,
-            width=width,
-            height=height,
-            theme=theme,
-            bg_color=bg_color,
-            line_color=kwargs.get("line_color", None),
-            line_width=kwargs.get("line_width", 2),
-            fill_area=kwargs.get("fill_area", False),
-            show_grid=show_grid,
-            output_path=savefig,
-        )
-        return None  # File saved, return None like other savefig calls
-
-    if is_svg_format and (type == "hollow_and_filled" or type == "hollow"):
-        # Route directly to hollow candles SVG renderer
-        svg_content = render_hollow_candles_svg(
-            ohlc_dict,
-            volume_array,
-            width=width,
-            height=height,
-            theme=theme,
-            bg_color=bg_color,
-            up_color=up_color,
-            down_color=down_color,
-            show_grid=show_grid,
-            output_path=savefig,
-        )
-        return None  # File saved, return None like other savefig calls
-
-    if is_svg_format and type == "renko":
-        # Route directly to Renko SVG renderer
-        svg_content = render_renko_chart_svg(
-            ohlc_dict,
-            volume_array,
-            width=width,
-            height=height,
-            theme=theme,
-            bg_color=bg_color,
-            up_color=up_color,
-            down_color=down_color,
-            box_size=kwargs.get("box_size", None),
-            reversal_boxes=kwargs.get("reversal_boxes", 1),
-            show_grid=show_grid,
-            output_path=savefig,
-        )
-        return None  # File saved, return None like other savefig calls
-
-    if is_svg_format and (type == "pnf" or type == "pointandfigure"):
-        # Route directly to Point & Figure SVG renderer
-        svg_content = render_pnf_chart_svg(
-            ohlc_dict,
-            volume_array,
-            width=width,
-            height=height,
-            theme=theme,
-            bg_color=bg_color,
-            up_color=up_color,
-            down_color=down_color,
-            box_size=kwargs.get("box_size", None),
-            reversal_boxes=kwargs.get("reversal_boxes", 3),
-            show_grid=show_grid,
-            output_path=savefig,
-        )
-        return None  # File saved, return None like other savefig calls
-
-    # Warn if SVG requested for non-supported chart types
-    if is_svg_format and type not in [
-        "candle",
-        "ohlc",
-        "line",
-        "hollow_and_filled",
-        "hollow",
-        "renko",
-        "pnf",
-        "pointandfigure",
-    ]:
-        warnings.warn(
-            f"SVG export is currently only supported for candlestick, OHLC, line, hollow candles, Renko, and Point & Figure charts. "
-            f"Chart type '{type}' will be rendered as raster PNG instead.",
-            UserWarning,
-        )
-        # Convert .svg to .png for the actual rendering
-        import os
-
-        savefig = os.path.splitext(savefig)[0] + ".png"
+        # If result is None, file was saved successfully
+        if result is None:
+            return None
+        # Otherwise, result is modified savefig path for PNG fallback
+        savefig = result
 
     # Route to appropriate renderer
     if type == "candle":

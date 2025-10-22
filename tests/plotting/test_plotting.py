@@ -144,8 +144,8 @@ def test_wick_width_edge_cases():
     }
     volume = np.array([1000])
 
-    # Single candle with very small width
-    img = render_ohlcv_chart(ohlc, volume, width=50, height=50, wick_width_ratio=0.0)
+    # Single candle with small width (minimum valid size)
+    img = render_ohlcv_chart(ohlc, volume, width=100, height=100, wick_width_ratio=0.0)
     assert isinstance(img, Image.Image)
 
     # Single candle with maximum ratio

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import numpy as np
+from pathlib import Path
 
 try:
     import svgwrite
@@ -17,6 +18,51 @@ from ..data.pnf import calculate_pnf_columns
 from ..data.renko import calculate_renko_bricks
 
 
+def _validate_save_path(path: str) -> Path:
+    """
+    Validate output path to prevent directory traversal attacks.
+
+    Args:
+        path: User-provided file path
+
+    Returns:
+        Validated absolute Path object
+
+    Raises:
+        ValueError: If path attempts directory traversal or is invalid
+    """
+    if not path:
+        raise ValueError("output_path cannot be empty")
+
+    # Convert to Path object and resolve to absolute path
+    try:
+        file_path = Path(path).resolve()
+    except (OSError, RuntimeError) as e:
+        raise ValueError(f"Invalid file path '{path}': {e}")
+
+    # Get current working directory as base
+    cwd = Path.cwd().resolve()
+
+    # Check if resolved path is within or below cwd
+    # This prevents ../../etc/passwd style attacks
+    try:
+        file_path.relative_to(cwd)
+    except ValueError:
+        # Path is outside cwd - allow only if user explicitly provides absolute path
+        # but still validate it's not a system directory
+        system_dirs = ['/etc', '/sys', '/proc', '/dev', '/root', '/boot']
+        if any(str(file_path).startswith(sd) for sd in system_dirs):
+            raise ValueError(
+                f"Cannot write to system directory: {file_path}. "
+                f"Provide a path within project directory or user home."
+            )
+
+    # Create parent directory if it doesn't exist
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    return file_path
+
+
 def _save_svg_or_svgz(dwg: "svgwrite.Drawing", output_path: str) -> None:
     """
     Save SVG drawing to file, with automatic SVGZ compression if path ends with .svgz.
@@ -29,6 +75,10 @@ def _save_svg_or_svgz(dwg: "svgwrite.Drawing", output_path: str) -> None:
         >>> _save_svg_or_svgz(dwg, 'chart.svg')   # Saves uncompressed SVG
         >>> _save_svg_or_svgz(dwg, 'chart.svgz')  # Saves gzipped SVGZ (75-85% smaller)
     """
+    # Validate and sanitize output path
+    validated_path = _validate_save_path(output_path)
+    output_path = str(validated_path)
+
     if output_path.endswith(".svgz"):
         # Save as compressed SVGZ (gzipped SVG)
         svg_string = dwg.tostring()

@@ -112,8 +112,8 @@ class TestTickToOHLC:
         """Test that high >= open, close and low <= open, close."""
         ohlc = tick_to_ohlc(sample_tick_data, tick_size=50)
 
-        for i in range(len(ohlc)):
-            row = ohlc.row(i)
+        # Use enumerate instead of range(len()) anti-pattern
+        for i, row in enumerate(ohlc.iter_rows()):
             open_price = row[ohlc.columns.index("open")]
             high = row[ohlc.columns.index("high")]
             low = row[ohlc.columns.index("low")]
@@ -152,9 +152,8 @@ class TestTickToOHLC:
 
         timestamps = ohlc["timestamp"].to_numpy()
 
-        # Check monotonic increasing
-        for i in range(1, len(timestamps)):
-            assert timestamps[i] >= timestamps[i - 1]
+        # Check monotonic increasing using numpy comparison (vectorized, more Pythonic)
+        assert np.all(timestamps[1:] >= timestamps[:-1]), "Timestamps not monotonically increasing"
 
     def test_small_tick_size(self, sample_tick_data):
         """Test very small tick size (more bars)."""
@@ -315,13 +314,13 @@ class TestRangeToOHLC:
         ohlc = range_to_ohlc(high_volatility_tick_data, range_size=range_size)
 
         # Each complete bar (except possibly the last) should have range >= range_size
-        for i in range(len(ohlc) - 1):  # Exclude last bar
-            high = ohlc["high"][i]
-            low = ohlc["low"][i]
-            bar_range = high - low
+        # Use vectorized numpy operations instead of range(len()) loop
+        highs = ohlc["high"][:-1].to_numpy()  # Exclude last bar
+        lows = ohlc["low"][:-1].to_numpy()
+        bar_ranges = highs - lows
 
-            # Should be at least range_size
-            assert bar_range >= range_size * 0.95  # Allow small tolerance
+        # Should be at least range_size
+        assert np.all(bar_ranges >= range_size * 0.95), "Bar ranges below threshold"  # Allow small tolerance
 
     def test_volume_conservation(self, high_volatility_tick_data):
         """Test that total volume is conserved."""
@@ -657,8 +656,8 @@ class TestThreeLineBreak:
         """Test OHLC relationships."""
         ohlc = three_line_break_to_ohlc(sample_tick_data, num_lines=3)
 
-        for i in range(len(ohlc)):
-            row = ohlc.row(i)
+        # Use enumerate instead of range(len()) anti-pattern
+        for i, row in enumerate(ohlc.iter_rows()):
             open_price = row[ohlc.columns.index("open")]
             high = row[ohlc.columns.index("high")]
             low = row[ohlc.columns.index("low")]
