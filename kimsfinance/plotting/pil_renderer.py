@@ -18,6 +18,12 @@ except ImportError:
 
         return decorator
 
+try:
+    import svgwrite
+
+    SVGWRITE_AVAILABLE = True
+except ImportError:
+    SVGWRITE_AVAILABLE = False
 
 from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
