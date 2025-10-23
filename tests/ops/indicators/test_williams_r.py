@@ -220,8 +220,8 @@ class TestWilliamsRAlgorithm:
         # Manually calculate expected Williams %R values
         for i in range(period - 1, len(close)):
             window_start = max(0, i - period + 1)
-            highest_high = np.max(high[window_start:i + 1])
-            lowest_low = np.min(low[window_start:i + 1])
+            highest_high = np.max(high[window_start : i + 1])
+            lowest_low = np.min(low[window_start : i + 1])
             current_close = close[i]
 
             expected = -100.0 * (highest_high - current_close) / (highest_high - lowest_low)
@@ -247,8 +247,9 @@ class TestWilliamsRAlgorithm:
         valid_top = result_top[~np.isnan(result_top)]
         valid_bottom = result_bottom[~np.isnan(result_bottom)]
 
-        assert np.mean(valid_top) > np.mean(valid_bottom), \
-            "Price near top should give higher %R (closer to 0)"
+        assert np.mean(valid_top) > np.mean(
+            valid_bottom
+        ), "Price near top should give higher %R (closer to 0)"
 
     def test_comparison_with_stochastic(self):
         """Test relationship between Williams %R and Stochastic %K."""
@@ -292,8 +293,9 @@ class TestWilliamsRSignals:
         valid_values = result[~np.isnan(result)]
         overbought_count = np.sum(valid_values > -20)
 
-        assert overbought_count > len(valid_values) * 0.8, \
-            "Price near high should show overbought condition"
+        assert (
+            overbought_count > len(valid_values) * 0.8
+        ), "Price near high should show overbought condition"
 
     def test_oversold_condition(self):
         """Test oversold condition detection (%R < -80)."""
@@ -308,8 +310,9 @@ class TestWilliamsRSignals:
         valid_values = result[~np.isnan(result)]
         oversold_count = np.sum(valid_values < -80)
 
-        assert oversold_count > len(valid_values) * 0.8, \
-            "Price near low should show oversold condition"
+        assert (
+            oversold_count > len(valid_values) * 0.8
+        ), "Price near low should show oversold condition"
 
     def test_momentum_shifts(self, trending_data):
         """Test that Williams %R responds to momentum shifts."""
@@ -323,8 +326,9 @@ class TestWilliamsRSignals:
         # During downtrend (second half), %R should generally be lower (closer to -100)
         downtrend_values = result[-7:]  # During downtrend
 
-        assert np.mean(uptrend_values) > np.mean(downtrend_values), \
-            "Uptrend should have higher %R than downtrend"
+        assert np.mean(uptrend_values) > np.mean(
+            downtrend_values
+        ), "Uptrend should have higher %R than downtrend"
 
     def test_volatility_response(self):
         """Test Williams %R response to volatility changes."""
@@ -386,8 +390,7 @@ class TestWilliamsREdgeCases:
 
         # Close is at middle, so %R should be around -50
         assert np.all(valid_values >= -100) and np.all(valid_values <= 0)
-        assert np.allclose(valid_values, -50.505050, atol=5), \
-            "Middle price should give %R near -50"
+        assert np.allclose(valid_values, -50.505050, atol=5), "Middle price should give %R near -50"
 
     def test_nan_handling(self):
         """Test handling of NaN values in input."""
@@ -581,6 +584,7 @@ class TestWilliamsRPerformance:
     def test_completes_in_reasonable_time_small_data(self, sample_ohlc_data):
         """Test that calculation completes quickly on small dataset."""
         import time
+
         high, low, close = sample_ohlc_data
 
         start = time.time()
@@ -593,6 +597,7 @@ class TestWilliamsRPerformance:
     def test_completes_in_reasonable_time_large_data(self, large_ohlc_data):
         """Test that calculation completes in reasonable time on large dataset."""
         import time
+
         high, low, close = large_ohlc_data
 
         start = time.time()
@@ -605,6 +610,7 @@ class TestWilliamsRPerformance:
     def test_rolling_operations_efficiency(self, sample_ohlc_data):
         """Test that rolling operations are efficient."""
         import time
+
         high, low, close = sample_ohlc_data
 
         # Multiple periods should scale linearly
@@ -632,18 +638,12 @@ class TestWilliamsRIntegration:
     def test_works_with_polars_series(self, sample_ohlc_data):
         """Test that function works with Polars Series input."""
         import polars as pl
+
         high, low, close = sample_ohlc_data
 
-        df = pl.DataFrame({
-            "high": high,
-            "low": low,
-            "close": close
-        })
+        df = pl.DataFrame({"high": high, "low": low, "close": close})
 
-        result = calculate_williams_r(
-            df["high"], df["low"], df["close"],
-            period=14, engine="cpu"
-        )
+        result = calculate_williams_r(df["high"], df["low"], df["close"], period=14, engine="cpu")
 
         assert len(result) == len(close)
         assert not np.all(np.isnan(result))
@@ -651,6 +651,7 @@ class TestWilliamsRIntegration:
     def test_consistent_with_other_momentum_indicators(self, sample_ohlc_data):
         """Test that Williams %R behaves consistently with other momentum indicators."""
         from kimsfinance.ops.indicators import calculate_rsi
+
         high, low, close = sample_ohlc_data
 
         # Calculate Williams %R and RSI
@@ -710,18 +711,21 @@ class TestWilliamsRStatisticalProperties:
         valid_mask = ~np.isnan(result_short) & ~np.isnan(result_long)
 
         # Short period should have higher variance (more responsive)
-        assert np.std(result_short[valid_mask]) >= np.std(result_long[valid_mask]), \
-            "Shorter period should have higher variance"
+        assert np.std(result_short[valid_mask]) >= np.std(
+            result_long[valid_mask]
+        ), "Shorter period should have higher variance"
 
     def test_williams_r_mean_reversion(self):
         """Test Williams %R mean reversion properties."""
         # Create oscillating price pattern
         n_cycles = 10
         cycle_length = 20
-        close = np.tile(np.concatenate([
-            np.linspace(100, 120, cycle_length // 2),
-            np.linspace(120, 100, cycle_length // 2)
-        ]), n_cycles)
+        close = np.tile(
+            np.concatenate(
+                [np.linspace(100, 120, cycle_length // 2), np.linspace(120, 100, cycle_length // 2)]
+            ),
+            n_cycles,
+        )
 
         high = close + 2
         low = close - 2
@@ -733,8 +737,9 @@ class TestWilliamsRStatisticalProperties:
 
         # Mean should be somewhere in the middle range
         mean_wr = np.mean(valid_values)
-        assert -70 < mean_wr < -30, \
-            f"Mean Williams %R should be near middle of range, got {mean_wr}"
+        assert (
+            -70 < mean_wr < -30
+        ), f"Mean Williams %R should be near middle of range, got {mean_wr}"
 
 
 if __name__ == "__main__":

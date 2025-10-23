@@ -57,16 +57,8 @@ for phase_name, start, end in phases:
 
 # Detect crossovers
 valid_idx = ~(np.isnan(aroon_up) | np.isnan(aroon_down))
-bullish_cross = (
-    (aroon_up[1:] > aroon_down[1:]) &
-    (aroon_up[:-1] <= aroon_down[:-1]) &
-    valid_idx[1:]
-)
-bearish_cross = (
-    (aroon_down[1:] > aroon_up[1:]) &
-    (aroon_down[:-1] <= aroon_up[:-1]) &
-    valid_idx[1:]
-)
+bullish_cross = (aroon_up[1:] > aroon_down[1:]) & (aroon_up[:-1] <= aroon_down[:-1]) & valid_idx[1:]
+bearish_cross = (aroon_down[1:] > aroon_up[1:]) & (aroon_down[:-1] <= aroon_up[:-1]) & valid_idx[1:]
 
 bullish_signals = np.where(bullish_cross)[0] + 1
 bearish_signals = np.where(bearish_cross)[0] + 1
@@ -80,9 +72,9 @@ print(f"  Bearish crossovers (Aroon Down crosses above Up): {len(bearish_signals
 if len(bearish_signals) > 0:
     print(f"    At bars: {bearish_signals[:5]}")  # Show first 5
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Aroon Indicator Summary")
-print("="*60)
+print("=" * 60)
 print("Aroon measures time since highest high (Up) and lowest low (Down)")
 print("Values range from 0-100:")
 print("  - Aroon Up = 100: Just made new high (strong uptrend)")
@@ -93,4 +85,4 @@ print("  - Aroon Up > 70 & Down < 30: Strong uptrend")
 print("  - Aroon Down > 70 & Up < 30: Strong downtrend")
 print("  - Up crosses above Down: Bullish signal")
 print("  - Down crosses above Up: Bearish signal")
-print("="*60)
+print("=" * 60)

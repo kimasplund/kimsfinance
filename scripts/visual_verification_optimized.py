@@ -23,17 +23,21 @@ def generate_test_data(num_candles: int = 100):
     open_prices = np.roll(close_prices, 1)
     open_prices[0] = base_price
 
-    high_prices = np.maximum(open_prices, close_prices) * (1 + np.abs(np.random.normal(0, 0.01, num_candles)))
-    low_prices = np.minimum(open_prices, close_prices) * (1 - np.abs(np.random.normal(0, 0.01, num_candles)))
+    high_prices = np.maximum(open_prices, close_prices) * (
+        1 + np.abs(np.random.normal(0, 0.01, num_candles))
+    )
+    low_prices = np.minimum(open_prices, close_prices) * (
+        1 - np.abs(np.random.normal(0, 0.01, num_candles))
+    )
 
     # Generate volume
     volume = np.random.randint(1000, 10000, num_candles)
 
     ohlc = {
-        'open': open_prices,
-        'high': high_prices,
-        'low': low_prices,
-        'close': close_prices,
+        "open": open_prices,
+        "high": high_prices,
+        "low": low_prices,
+        "close": close_prices,
     }
 
     return ohlc, volume
@@ -54,9 +58,9 @@ def main():
         volume=volume,
         width=1920,
         height=1080,
-        theme='classic',
+        theme="classic",
     )
-    save_chart(img, '/tmp/test_ohlc_bars_optimized.webp', speed='fast')
+    save_chart(img, "/tmp/test_ohlc_bars_optimized.webp", speed="fast")
     print("   ✓ Saved to /tmp/test_ohlc_bars_optimized.webp")
 
     # Test PIL hollow candles
@@ -66,9 +70,9 @@ def main():
         volume=volume,
         width=1920,
         height=1080,
-        theme='classic',
+        theme="classic",
     )
-    save_chart(img, '/tmp/test_hollow_candles_optimized.webp', speed='fast')
+    save_chart(img, "/tmp/test_hollow_candles_optimized.webp", speed="fast")
     print("   ✓ Saved to /tmp/test_hollow_candles_optimized.webp")
 
     # Test SVG candlesticks
@@ -78,8 +82,8 @@ def main():
         volume=volume,
         width=1920,
         height=1080,
-        theme='classic',
-        output_path='/tmp/test_candlestick_svg_optimized.svg',
+        theme="classic",
+        output_path="/tmp/test_candlestick_svg_optimized.svg",
     )
     print("   ✓ Saved to /tmp/test_candlestick_svg_optimized.svg")
 
@@ -90,8 +94,8 @@ def main():
         volume=volume,
         width=1920,
         height=1080,
-        theme='classic',
-        output_path='/tmp/test_hollow_svg_optimized.svg',
+        theme="classic",
+        output_path="/tmp/test_hollow_svg_optimized.svg",
     )
     print("   ✓ Saved to /tmp/test_hollow_svg_optimized.svg")
 
@@ -106,5 +110,5 @@ def main():
     print("\nPlease verify visually that charts render correctly.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -114,9 +114,7 @@ def calculate_parabolic_sar(
 
     # 3. ENGINE ROUTING using EngineManager (standardized pattern)
     exec_engine = EngineManager.select_engine(
-        engine,
-        operation="parabolic_sar",
-        data_size=len(highs_arr)
+        engine, operation="parabolic_sar", data_size=len(highs_arr)
     )
 
     # 4. DISPATCH TO CPU OR GPU based on selected engine

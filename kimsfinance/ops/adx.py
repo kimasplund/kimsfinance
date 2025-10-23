@@ -209,7 +209,7 @@ def calculate_adx(
     di_diff = xp.abs(plus_di - minus_di)
 
     # Avoid division by zero when both DIs are zero
-    dx = xp.where(di_sum > EPSILON, 100 * di_diff / di_sum, 0.0)
+    dx = xp.where(di_sum > EPSILON, 100 * di_diff / (di_sum + EPSILON), 0.0)
 
     # Step 6: Calculate ADX (smoothed DX)
     adx = _wilder_smoothing(dx, period)

@@ -419,7 +419,7 @@ class TestStochasticSignals:
 
         # Remove first value (from roll) and warmup period
         bullish_cross[0] = False
-        bullish_cross[: 13] = False  # Warmup period
+        bullish_cross[:13] = False  # Warmup period
 
         # Should have at least one crossover in uptrend
         assert np.any(bullish_cross)
@@ -439,7 +439,7 @@ class TestStochasticSignals:
 
         # Remove first value (from roll) and warmup period
         bearish_cross[0] = False
-        bearish_cross[: 13] = False
+        bearish_cross[:13] = False
 
         # Should have at least one crossover in downtrend
         assert np.any(bearish_cross)
@@ -693,14 +693,10 @@ class TestStochasticGPUCPU:
         highs, lows, closes = sample_ohlc
 
         # CPU calculation
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
 
         # GPU calculation
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         # Should match within floating point tolerance
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
@@ -712,14 +708,10 @@ class TestStochasticGPUCPU:
         highs, lows, closes = large_ohlc
 
         # CPU calculation
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
 
         # GPU calculation
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         # Should match within floating point tolerance
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
@@ -730,12 +722,8 @@ class TestStochasticGPUCPU:
         """Test GPU/CPU parity with short period."""
         highs, lows, closes = sample_ohlc
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=5, engine="cpu"
-        )
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=5, engine="gpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=5, engine="cpu")
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=5, engine="gpu")
 
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
@@ -745,12 +733,8 @@ class TestStochasticGPUCPU:
         """Test GPU/CPU parity with long period."""
         highs, lows, closes = sample_ohlc
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=30, engine="cpu"
-        )
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=30, engine="gpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=30, engine="cpu")
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=30, engine="gpu")
 
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
@@ -760,12 +744,8 @@ class TestStochasticGPUCPU:
         """Test GPU/CPU parity on uptrend data."""
         highs, lows, closes = uptrend_ohlc
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
@@ -775,12 +755,8 @@ class TestStochasticGPUCPU:
         """Test GPU/CPU parity on downtrend data."""
         highs, lows, closes = downtrend_ohlc
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
@@ -790,12 +766,8 @@ class TestStochasticGPUCPU:
         """Test GPU/CPU parity on flat prices."""
         highs, lows, closes = flat_ohlc
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
@@ -831,9 +803,7 @@ class TestStochasticGPUCPU:
             highs, lows, closes, period=14, engine="auto"
         )
 
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
 
         # Auto should match CPU for small data
         np.testing.assert_allclose(k_auto, k_cpu, rtol=1e-10, equal_nan=True)
@@ -848,9 +818,7 @@ class TestStochasticGPUCPU:
             highs, lows, closes, period=14, engine="auto"
         )
 
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
 
         # Auto should match GPU for large data
         np.testing.assert_allclose(k_auto, k_gpu, rtol=1e-10, equal_nan=True)
@@ -879,7 +847,9 @@ class TestStochasticPerformance:
         # Should complete 100 iterations in reasonable time
         assert elapsed < 5.0  # 5 seconds for 100 iterations
 
-        print(f"\nCPU baseline: {elapsed:.4f}s for 100 iterations ({elapsed/100*1000:.2f}ms per call)")
+        print(
+            f"\nCPU baseline: {elapsed:.4f}s for 100 iterations ({elapsed/100*1000:.2f}ms per call)"
+        )
 
     @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
     def test_performance_gpu_comparison(self, large_ohlc):
@@ -890,16 +860,12 @@ class TestStochasticPerformance:
 
         # CPU timing
         start_cpu = time.perf_counter()
-        k_cpu, d_cpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="cpu"
-        )
+        k_cpu, d_cpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="cpu")
         cpu_time = time.perf_counter() - start_cpu
 
         # GPU timing
         start_gpu = time.perf_counter()
-        k_gpu, d_gpu = calculate_stochastic_oscillator(
-            highs, lows, closes, period=14, engine="gpu"
-        )
+        k_gpu, d_gpu = calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
         gpu_time = time.perf_counter() - start_gpu
 
         speedup = cpu_time / gpu_time
@@ -1078,7 +1044,11 @@ class TestStochasticRSI:
         d_smooth = 3
 
         k, d = calculate_stochastic_rsi(
-            closes, rsi_period=rsi_period, stoch_period=stoch_period, k_smooth=k_smooth, d_smooth=d_smooth
+            closes,
+            rsi_period=rsi_period,
+            stoch_period=stoch_period,
+            k_smooth=k_smooth,
+            d_smooth=d_smooth,
         )
 
         # Count leading NaN values

@@ -17,10 +17,10 @@ def _hex_to_rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:
         ValueError: If hex_color format is invalid
     """
     # Remove # prefix if present
-    hex_color = hex_color.lstrip('#')
+    hex_color = hex_color.lstrip("#")
 
     # Validate format: must be 6 or 8 hex characters
-    if not re.match(r'^[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$', hex_color):
+    if not re.match(r"^[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$", hex_color):
         raise ValueError(
             f"Invalid hex color format: '{hex_color}'. "
             f"Expected format: '#RRGGBB' or '#RRGGBBAA' (e.g., '#FF0000')"

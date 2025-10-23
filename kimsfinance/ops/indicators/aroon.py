@@ -98,9 +98,7 @@ def calculate_aroon(
 
     # Engine routing using EngineManager (standardized pattern)
     exec_engine = EngineManager.select_engine(
-        engine,
-        operation="aroon_indicator",
-        data_size=len(highs_arr)
+        engine, operation="aroon_indicator", data_size=len(highs_arr)
     )
 
     # Dispatch to CPU or GPU based on selected engine

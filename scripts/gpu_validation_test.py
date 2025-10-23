@@ -11,16 +11,18 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 import numpy as np
 
+
 # Color codes for terminal output
 class Colors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+
 
 def print_header(text: str) -> None:
     """Print a formatted header"""
@@ -29,23 +31,20 @@ def print_header(text: str) -> None:
     print(f"{Colors.BOLD}│ {text:<{width - 4}} │{Colors.ENDC}")
     print(f"{Colors.BOLD}{'└' + '─' * (width - 2) + '┘'}{Colors.ENDC}\n")
 
+
 def print_status(label: str, value: str, status: str = "info") -> None:
     """Print a status line with color coding"""
     color = {
         "pass": Colors.GREEN,
         "fail": Colors.RED,
         "warn": Colors.YELLOW,
-        "info": Colors.CYAN
+        "info": Colors.CYAN,
     }.get(status, Colors.ENDC)
 
-    symbol = {
-        "pass": "✓",
-        "fail": "✗",
-        "warn": "⚠",
-        "info": "•"
-    }.get(status, "•")
+    symbol = {"pass": "✓", "fail": "✗", "warn": "⚠", "info": "•"}.get(status, "•")
 
     print(f"  {color}{symbol} {label}: {value}{Colors.ENDC}")
+
 
 def check_gpu_available() -> bool:
     """Check if GPU and nvidia-smi are available"""
@@ -54,54 +53,67 @@ def check_gpu_available() -> bool:
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         return bool(result.stdout.strip())
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
+
 def get_gpu_info() -> Dict[str, Any]:
     """Get detailed GPU information using nvidia-smi"""
     try:
-        result = subprocess.run([
-            "nvidia-smi",
-            "--query-gpu=name,driver_version,memory.total,compute_cap,power.limit",
-            "--format=csv,noheader,nounits"
-        ], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,driver_version,memory.total,compute_cap,power.limit",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
-        parts = [p.strip() for p in result.stdout.strip().split(',')]
+        parts = [p.strip() for p in result.stdout.strip().split(",")]
 
         return {
             "name": parts[0],
             "driver": parts[1],
             "memory_mb": int(parts[2]),
             "compute_cap": parts[3],
-            "power_limit": parts[4] if len(parts) > 4 else "N/A"
+            "power_limit": parts[4] if len(parts) > 4 else "N/A",
         }
     except Exception as e:
         print_status("GPU info error", str(e), "fail")
         return {}
 
+
 def get_gpu_utilization() -> Dict[str, float]:
     """Get current GPU utilization metrics"""
     try:
-        result = subprocess.run([
-            "nvidia-smi",
-            "--query-gpu=utilization.gpu,utilization.memory,memory.used,power.draw,temperature.gpu",
-            "--format=csv,noheader,nounits"
-        ], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=utilization.gpu,utilization.memory,memory.used,power.draw,temperature.gpu",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
-        parts = [p.strip() for p in result.stdout.strip().split(',')]
+        parts = [p.strip() for p in result.stdout.strip().split(",")]
 
         return {
             "gpu_util": float(parts[0]),
             "mem_util": float(parts[1]),
             "mem_used_mb": float(parts[2]),
             "power_w": float(parts[3]) if parts[3] != "[N/A]" else 0.0,
-            "temp_c": float(parts[4])
+            "temp_c": float(parts[4]),
         }
     except Exception as e:
         return {"error": str(e)}
+
 
 def check_dependencies() -> Dict[str, bool]:
     """Check which GPU dependencies are installed"""
@@ -110,6 +122,7 @@ def check_dependencies() -> Dict[str, bool]:
     # Check pynvml
     try:
         import pynvml
+
         pynvml.nvmlInit()
         pynvml.nvmlShutdown()
         deps["pynvml"] = True
@@ -119,6 +132,7 @@ def check_dependencies() -> Dict[str, bool]:
     # Check torch CUDA
     try:
         import torch
+
         deps["torch_cuda"] = torch.cuda.is_available()
     except ImportError:
         deps["torch_cuda"] = False
@@ -126,6 +140,7 @@ def check_dependencies() -> Dict[str, bool]:
     # Check cudf
     try:
         import cudf
+
         deps["cudf"] = True
     except ImportError:
         deps["cudf"] = False
@@ -133,6 +148,7 @@ def check_dependencies() -> Dict[str, bool]:
     # Check cupy
     try:
         import cupy
+
         deps["cupy"] = True
     except ImportError:
         deps["cupy"] = False
@@ -140,6 +156,7 @@ def check_dependencies() -> Dict[str, bool]:
     # Check polars GPU
     try:
         import polars
+
         deps["polars"] = True
         # Check if GPU engine is available
         deps["polars_gpu"] = hasattr(polars, "GPUEngine")
@@ -148,6 +165,7 @@ def check_dependencies() -> Dict[str, bool]:
         deps["polars_gpu"] = False
 
     return deps
+
 
 def install_missing_dependencies(deps: Dict[str, bool]) -> None:
     """Install missing GPU dependencies"""
@@ -170,15 +188,15 @@ def install_missing_dependencies(deps: Dict[str, bool]) -> None:
         to_install.append("cupy-cuda12x")
 
     if to_install:
-        print(f"\n{Colors.CYAN}Installing missing dependencies: {', '.join(to_install)}{Colors.ENDC}")
+        print(
+            f"\n{Colors.CYAN}Installing missing dependencies: {', '.join(to_install)}{Colors.ENDC}"
+        )
         try:
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install"] + to_install,
-                check=True
-            )
+            subprocess.run([sys.executable, "-m", "pip", "install"] + to_install, check=True)
             print_status("Installation", "Success", "pass")
         except subprocess.CalledProcessError as e:
             print_status("Installation", f"Failed: {e}", "fail")
+
 
 def test_gpu_utilization_numpy(iterations: int = 100) -> Dict[str, Any]:
     """Test GPU utilization with numpy operations (CPU baseline)"""
@@ -198,8 +216,8 @@ def test_gpu_utilization_numpy(iterations: int = 100) -> Dict[str, Any]:
 
         # Moving averages
         window = 14
-        avg_gains = np.convolve(gains, np.ones(window)/window, mode='valid')
-        avg_losses = np.convolve(losses, np.ones(window)/window, mode='valid')
+        avg_gains = np.convolve(gains, np.ones(window) / window, mode="valid")
+        avg_losses = np.convolve(losses, np.ones(window) / window, mode="valid")
 
         # Sample GPU util during compute
         if i % 10 == 0:
@@ -216,8 +234,9 @@ def test_gpu_utilization_numpy(iterations: int = 100) -> Dict[str, Any]:
         "elapsed_ms": elapsed * 1000,
         "iterations": iterations,
         "ms_per_iter": (elapsed * 1000) / iterations,
-        "gpu_utils": utils
+        "gpu_utils": utils,
     }
+
 
 def test_memory_bandwidth_estimate() -> Dict[str, float]:
     """Estimate memory bandwidth using numpy (system RAM)"""
@@ -244,6 +263,7 @@ def test_memory_bandwidth_estimate() -> Dict[str, float]:
         del data
 
     return results
+
 
 def test_memory_leak_detection(iterations: int = 100) -> Dict[str, Any]:
     """Test for memory leaks using numpy operations"""
@@ -291,8 +311,9 @@ def test_memory_leak_detection(iterations: int = 100) -> Dict[str, Any]:
         "growth_per_iter": growth_per_iter,
         "slope": slope,
         "timeline": memory_timeline,
-        "leak_detected": abs(slope) > 0.1  # >0.1 MB/iteration indicates leak
+        "leak_detected": abs(slope) > 0.1,  # >0.1 MB/iteration indicates leak
     }
+
 
 def generate_recommendations(results: Dict[str, Any]) -> List[str]:
     """Generate actionable recommendations based on test results"""
@@ -314,8 +335,7 @@ def generate_recommendations(results: Dict[str, Any]) -> List[str]:
 
     if not deps.get("pynvml"):
         recommendations.append(
-            "Install pynvml for detailed GPU monitoring:\n"
-            "  pip install pynvml"
+            "Install pynvml for detailed GPU monitoring:\n" "  pip install pynvml"
         )
 
     # Check for memory leaks
@@ -342,6 +362,7 @@ def generate_recommendations(results: Dict[str, Any]) -> List[str]:
 
     return recommendations
 
+
 def main(auto_install: bool = False) -> None:
     """Run GPU validation test suite
 
@@ -359,7 +380,9 @@ def main(auto_install: bool = False) -> None:
 
     if not check_gpu_available():
         print_status("GPU", "Not detected", "fail")
-        print(f"\n{Colors.RED}No NVIDIA GPU found. This test requires CUDA-capable hardware.{Colors.ENDC}")
+        print(
+            f"\n{Colors.RED}No NVIDIA GPU found. This test requires CUDA-capable hardware.{Colors.ENDC}"
+        )
         sys.exit(1)
 
     gpu_info = get_gpu_info()
@@ -377,16 +400,27 @@ def main(auto_install: bool = False) -> None:
     deps = check_dependencies()
     results["dependencies"] = deps
 
-    print_status("pynvml", "Installed" if deps["pynvml"] else "Not installed",
-                 "pass" if deps["pynvml"] else "warn")
-    print_status("PyTorch CUDA", "Available" if deps["torch_cuda"] else "Not available",
-                 "pass" if deps["torch_cuda"] else "warn")
-    print_status("cuDF", "Installed" if deps["cudf"] else "Not installed",
-                 "pass" if deps["cudf"] else "warn")
-    print_status("CuPy", "Installed" if deps["cupy"] else "Not installed",
-                 "pass" if deps["cupy"] else "warn")
-    print_status("Polars", "Installed" if deps["polars"] else "Not installed",
-                 "pass" if deps["polars"] else "info")
+    print_status(
+        "pynvml",
+        "Installed" if deps["pynvml"] else "Not installed",
+        "pass" if deps["pynvml"] else "warn",
+    )
+    print_status(
+        "PyTorch CUDA",
+        "Available" if deps["torch_cuda"] else "Not available",
+        "pass" if deps["torch_cuda"] else "warn",
+    )
+    print_status(
+        "cuDF", "Installed" if deps["cudf"] else "Not installed", "pass" if deps["cudf"] else "warn"
+    )
+    print_status(
+        "CuPy", "Installed" if deps["cupy"] else "Not installed", "pass" if deps["cupy"] else "warn"
+    )
+    print_status(
+        "Polars",
+        "Installed" if deps["polars"] else "Not installed",
+        "pass" if deps["polars"] else "info",
+    )
 
     # Offer to install missing dependencies
     missing = [k for k, v in deps.items() if not v and k != "polars_gpu"]
@@ -412,8 +446,11 @@ def main(auto_install: bool = False) -> None:
 
     if baseline["gpu_utils"]:
         avg_util = np.mean([u["gpu_util"] for u in baseline["gpu_utils"]])
-        print_status("GPU utilization", f"{avg_util:.1f}% (CPU workload)",
-                     "pass" if avg_util < 20 else "warn")
+        print_status(
+            "GPU utilization",
+            f"{avg_util:.1f}% (CPU workload)",
+            "pass" if avg_util < 20 else "warn",
+        )
 
     # Test 2: Memory Bandwidth
     print_header("Test 2: System Memory Bandwidth")
@@ -432,12 +469,21 @@ def main(auto_install: bool = False) -> None:
     print_status("Initial memory", f"{leak_test['initial_mb']:.0f} MB", "info")
     print_status("Final memory", f"{leak_test['final_mb']:.0f} MB", "info")
     print_status("Peak memory", f"{leak_test['peak_mb']:.0f} MB", "info")
-    print_status("Memory growth", f"{leak_test['growth_mb']:.1f} MB",
-                 "pass" if abs(leak_test['growth_mb']) < 50 else "warn")
-    print_status("Growth rate", f"{leak_test['slope']:.4f} MB/iter",
-                 "pass" if not leak_test['leak_detected'] else "fail")
-    print_status("Leak detected", "No" if not leak_test['leak_detected'] else "YES",
-                 "pass" if not leak_test['leak_detected'] else "fail")
+    print_status(
+        "Memory growth",
+        f"{leak_test['growth_mb']:.1f} MB",
+        "pass" if abs(leak_test["growth_mb"]) < 50 else "warn",
+    )
+    print_status(
+        "Growth rate",
+        f"{leak_test['slope']:.4f} MB/iter",
+        "pass" if not leak_test["leak_detected"] else "fail",
+    )
+    print_status(
+        "Leak detected",
+        "No" if not leak_test["leak_detected"] else "YES",
+        "pass" if not leak_test["leak_detected"] else "fail",
+    )
 
     # Summary and Recommendations
     print_header("Summary & Recommendations")
@@ -471,6 +517,7 @@ def main(auto_install: bool = False) -> None:
     # Duration
     print(f"{Colors.CYAN}Test suite completed{Colors.ENDC}\n")
 
+
 if __name__ == "__main__":
     import argparse
 
@@ -487,5 +534,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n{Colors.RED}Error: {e}{Colors.ENDC}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

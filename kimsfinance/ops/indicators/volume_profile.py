@@ -98,9 +98,7 @@ def calculate_volume_profile(
 
     # Engine routing using EngineManager (standardized pattern)
     exec_engine = EngineManager.select_engine(
-        engine,
-        operation="volume_profile",
-        data_size=len(prices_arr)
+        engine, operation="volume_profile", data_size=len(prices_arr)
     )
 
     # Dispatch to CPU or GPU implementation based on selected engine

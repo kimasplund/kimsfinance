@@ -170,8 +170,7 @@ class TestRSIBasicCalculation:
 
     def test_rsi_list_input(self):
         """RSI should accept list input."""
-        prices = [100, 102, 101, 105, 103, 107, 106, 110, 108, 112,
-                  111, 115, 113, 117, 116, 120]
+        prices = [100, 102, 101, 105, 103, 107, 106, 110, 108, 112, 111, 115, 113, 117, 116, 120]
         rsi = calculate_rsi(prices, period=5)
         assert isinstance(rsi, np.ndarray)
         assert len(rsi) == len(prices)
@@ -377,7 +376,9 @@ class TestRSIEdgeCases:
 
     def test_period_plus_one(self):
         """RSI should work with data length = period + 1."""
-        prices = np.array([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114])
+        prices = np.array(
+            [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114]
+        )
         rsi = calculate_rsi(prices, period=14)
         assert len(rsi) == len(prices)
 
@@ -550,8 +551,7 @@ class TestRSIGPUCPU:
             rsi_gpu = calculate_rsi(prices, period=period, engine="gpu")
 
             np.testing.assert_allclose(
-                rsi_cpu, rsi_gpu, rtol=1e-6, equal_nan=True,
-                err_msg=f"Failed for period={period}"
+                rsi_cpu, rsi_gpu, rtol=1e-6, equal_nan=True, err_msg=f"Failed for period={period}"
             )
 
     def test_auto_engine_selection(self):

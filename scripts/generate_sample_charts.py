@@ -14,8 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import kimsfinance as kf
 
 
-def load_data(csv_path: str, n_candles: int = 50, warmup_candles: int = 50,
-              start_row: int = 600) -> pl.DataFrame:
+def load_data(
+    csv_path: str, n_candles: int = 50, warmup_candles: int = 50, start_row: int = 600
+) -> pl.DataFrame:
     """Load and prepare OHLCV data with warmup period for indicators
 
     Args:
@@ -37,14 +38,16 @@ def load_data(csv_path: str, n_candles: int = 50, warmup_candles: int = 50,
     df = df.slice(slice_start, slice_end - slice_start)
 
     # Rename columns to match kimsfinance expectations
-    df = df.rename({
-        "timestamp": "date",
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume"
-    })
+    df = df.rename(
+        {
+            "timestamp": "date",
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }
+    )
 
     return df
 
@@ -237,8 +240,13 @@ def style_high_quality_print() -> dict:
     }
 
 
-def generate_chart(df: pl.DataFrame, style_name: str, style_config: dict, output_path: Path,
-                   display_candles: int = 50) -> None:
+def generate_chart(
+    df: pl.DataFrame,
+    style_name: str,
+    style_config: dict,
+    output_path: Path,
+    display_candles: int = 50,
+) -> None:
     """Generate a single chart with given style
 
     Args:
@@ -257,12 +265,12 @@ def generate_chart(df: pl.DataFrame, style_name: str, style_config: dict, output
         df_pandas = df.to_pandas()
 
         # Parse date and set as index
-        df_pandas['date'] = pd.to_datetime(df_pandas['date'])
-        df_pandas.set_index('date', inplace=True)
+        df_pandas["date"] = pd.to_datetime(df_pandas["date"])
+        df_pandas.set_index("date", inplace=True)
 
         # For charts with indicators (mav), use full data for calculation
         # but only display the last N candles
-        if style_config.get('mav') is not None:
+        if style_config.get("mav") is not None:
             # Keep all data for indicator calculation
             # mplfinance will calculate indicators on full data
             # We'll use xlim or data slicing to show only last N candles
@@ -275,11 +283,7 @@ def generate_chart(df: pl.DataFrame, style_name: str, style_config: dict, output
         plot_config = {k: v for k, v in style_config.items() if v is not None}
 
         # Save the chart
-        kf.plot(
-            df_display,
-            **plot_config,
-            savefig=str(output_path)
-        )
+        kf.plot(df_display, **plot_config, savefig=str(output_path))
 
         # Check file size
         size_kb = output_path.stat().st_size / 1024
@@ -331,12 +335,10 @@ def main():
         ("07_professional_trading.webp", style_professional()),
         ("08_hollow_candles.webp", style_hollow_candles()),
         ("09_renko_chart.webp", style_renko()),
-
         # With indicators
         ("10_with_sma_indicators.webp", style_with_sma()),
         ("11_tradingview_with_ema.webp", style_with_ema()),
         ("12_binance_with_bollinger.webp", style_with_bollinger_addplot()),
-
         # High resolution variants
         ("13_hd_720p_tradingview.webp", style_720p_standard()),
         ("14_fullhd_1080p_binance_dark.webp", style_1080p_high_quality()),
@@ -377,5 +379,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

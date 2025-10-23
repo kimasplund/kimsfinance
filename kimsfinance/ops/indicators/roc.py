@@ -72,9 +72,7 @@ def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto
 
     # 3. ENGINE ROUTING using EngineManager (standardized pattern)
     exec_engine = EngineManager.select_engine(
-        engine,
-        operation="roc_indicator",
-        data_size=len(data_array)
+        engine, operation="roc_indicator", data_size=len(data_array)
     )
 
     # 4. DISPATCH TO CPU OR GPU based on selected engine
@@ -97,7 +95,7 @@ def _calculate_roc_cpu(data: np.ndarray, period: int) -> np.ndarray:
     # Calculate ROC: ((current - prev) / prev) * 100
     # Use where to avoid division by zero
     roc_values = np.where(
-        prev_prices != 0, ((current_prices - prev_prices) / prev_prices) * 100.0, np.nan
+        prev_prices != 0, ((current_prices - prev_prices) / (prev_prices + 1e-9)) * 100.0, np.nan
     )
 
     # Place results in correct positions (starting at period) using np.copyto for efficiency

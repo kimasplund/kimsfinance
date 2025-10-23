@@ -57,7 +57,7 @@ def _validate_save_path(path: str) -> Path:
     except ValueError:
         # Path is outside cwd - allow only if user explicitly provides absolute path
         # but still validate it's not a system directory
-        system_dirs = ['/etc', '/sys', '/proc', '/dev', '/root', '/boot']
+        system_dirs = ["/etc", "/sys", "/proc", "/dev", "/root", "/boot"]
         if any(str(file_path).startswith(sd) for sd in system_dirs):
             raise ValueError(
                 f"Cannot write to system directory: {file_path}. "
@@ -87,25 +87,21 @@ def _validate_numeric_params(width: int, height: int, **kwargs) -> None:
         )
 
     # Line width validation
-    line_width = kwargs.get('line_width', 1.0)
+    line_width = kwargs.get("line_width", 1.0)
     if not (0.1 <= line_width <= 20.0):
-        raise ValueError(
-            f"line_width must be between 0.1 and 20.0, got {line_width}"
-        )
+        raise ValueError(f"line_width must be between 0.1 and 20.0, got {line_width}")
 
     # Box size for PnF charts
-    if 'box_size' in kwargs:
-        box_size = kwargs['box_size']
+    if "box_size" in kwargs:
+        box_size = kwargs["box_size"]
         if box_size is not None and box_size <= 0:
             raise ValueError(f"box_size must be positive, got {box_size}")
 
     # Reversal boxes for PnF charts
-    if 'reversal_boxes' in kwargs:
-        reversal_boxes = kwargs['reversal_boxes']
+    if "reversal_boxes" in kwargs:
+        reversal_boxes = kwargs["reversal_boxes"]
         if not (1 <= reversal_boxes <= 10):
-            raise ValueError(
-                f"reversal_boxes must be between 1 and 10, got {reversal_boxes}"
-            )
+            raise ValueError(f"reversal_boxes must be between 1 and 10, got {reversal_boxes}")
 
 
 def _render_svg_chart(
@@ -159,16 +155,16 @@ def _render_svg_chart(
 
     # SVG renderer dispatch table
     SVG_RENDERERS: dict[str, Callable] = {
-        'candle': render_candlestick_svg,
-        'candlestick': render_candlestick_svg,
-        'ohlc': render_ohlc_bars_svg,
-        'line': render_line_chart_svg,
-        'hollow_and_filled': render_hollow_candles_svg,
-        'hollow': render_hollow_candles_svg,
-        'renko': render_renko_chart_svg,
-        'pnf': render_pnf_chart_svg,
-        'p&f': render_pnf_chart_svg,
-        'pointandfigure': render_pnf_chart_svg,
+        "candle": render_candlestick_svg,
+        "candlestick": render_candlestick_svg,
+        "ohlc": render_ohlc_bars_svg,
+        "line": render_line_chart_svg,
+        "hollow_and_filled": render_hollow_candles_svg,
+        "hollow": render_hollow_candles_svg,
+        "renko": render_renko_chart_svg,
+        "pnf": render_pnf_chart_svg,
+        "p&f": render_pnf_chart_svg,
+        "pointandfigure": render_pnf_chart_svg,
     }
 
     # Normalize chart type
@@ -185,39 +181,48 @@ def _render_svg_chart(
             UserWarning,
         )
         import os
+
         # Return modified savefig path to trigger PNG rendering
         return os.path.splitext(savefig)[0] + ".png"
 
     # Build common parameters
     common_params = {
-        'width': width,
-        'height': height,
-        'theme': theme,
-        'bg_color': bg_color,
-        'show_grid': show_grid,
-        'output_path': savefig,
+        "width": width,
+        "height": height,
+        "theme": theme,
+        "bg_color": bg_color,
+        "show_grid": show_grid,
+        "output_path": savefig,
     }
 
     # Add chart-specific parameters based on type
-    if chart_type == 'line':
-        common_params.update({
-            'line_color': kwargs.get('line_color', None),
-            'line_width': kwargs.get('line_width', 2),
-            'fill_area': kwargs.get('fill_area', False),
-        })
-    elif chart_type in ['renko', 'pnf', 'p&f', 'pointandfigure']:
-        common_params.update({
-            'up_color': up_color,
-            'down_color': down_color,
-            'box_size': kwargs.get('box_size', None),
-            'reversal_boxes': kwargs.get('reversal_boxes', 3 if chart_type in ['pnf', 'p&f', 'pointandfigure'] else 1),
-        })
+    if chart_type == "line":
+        common_params.update(
+            {
+                "line_color": kwargs.get("line_color", None),
+                "line_width": kwargs.get("line_width", 2),
+                "fill_area": kwargs.get("fill_area", False),
+            }
+        )
+    elif chart_type in ["renko", "pnf", "p&f", "pointandfigure"]:
+        common_params.update(
+            {
+                "up_color": up_color,
+                "down_color": down_color,
+                "box_size": kwargs.get("box_size", None),
+                "reversal_boxes": kwargs.get(
+                    "reversal_boxes", 3 if chart_type in ["pnf", "p&f", "pointandfigure"] else 1
+                ),
+            }
+        )
     else:
         # Candlestick, OHLC, hollow candles
-        common_params.update({
-            'up_color': up_color,
-            'down_color': down_color,
-        })
+        common_params.update(
+            {
+                "up_color": up_color,
+                "down_color": down_color,
+            }
+        )
 
     # Call renderer with validated parameters
     renderer(ohlc_dict, volume_array, **common_params)
@@ -307,7 +312,7 @@ def plot(
     height = kwargs.get("height", 1080)
 
     # Validate numeric parameters (create filtered kwargs without width/height to avoid duplication)
-    filtered_kwargs = {k: v for k, v in kwargs.items() if k not in ['width', 'height']}
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k not in ["width", "height"]}
     _validate_numeric_params(width, height, **filtered_kwargs)
 
     # Validate output path if provided

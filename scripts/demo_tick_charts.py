@@ -49,7 +49,7 @@ def generate_realistic_tick_data(n_ticks=10000, seed=42):
     # Add volatility clustering
     volatility = np.ones(n_ticks)
     for i in range(1, n_ticks):
-        volatility[i] = 0.95 * volatility[i-1] + 0.05 * abs(price_changes[i-1])
+        volatility[i] = 0.95 * volatility[i - 1] + 0.05 * abs(price_changes[i - 1])
 
     price_changes = price_changes * volatility
 
@@ -69,23 +69,24 @@ def generate_realistic_tick_data(n_ticks=10000, seed=42):
     # Average 1 tick per second, with exponential inter-arrival times
     start_time = datetime(2025, 1, 1, 9, 30, 0)
     time_deltas = np.random.exponential(scale=1.0, size=n_ticks)
-    timestamps = [start_time + timedelta(seconds=sum(time_deltas[:i]))
-                 for i in range(n_ticks)]
+    timestamps = [start_time + timedelta(seconds=sum(time_deltas[:i])) for i in range(n_ticks)]
 
-    tick_df = pl.DataFrame({
-        'timestamp': timestamps,
-        'price': prices,
-        'volume': volumes,
-    })
+    tick_df = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price": prices,
+            "volume": volumes,
+        }
+    )
 
     return tick_df
 
 
 def demo_tick_charts():
     """Demonstrate tick-based OHLC charts."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 1: Tick Charts (Fixed Number of Trades per Bar)")
-    print("="*70)
+    print("=" * 70)
 
     # Generate tick data
     print("\nGenerating 10,000 ticks...")
@@ -108,7 +109,7 @@ def demo_tick_charts():
         output_path = OUTPUT_DIR / f"tick_{tick_size}_candles.webp"
         plot(
             ohlc,
-            type='candle',
+            type="candle",
             volume=True,
             savefig=str(output_path),
             width=1920,
@@ -120,7 +121,7 @@ def demo_tick_charts():
     print(f"\nCreating tick chart with all 6 chart types...")
     ohlc = tick_to_ohlc(ticks, tick_size=100)
 
-    chart_types = ['candle', 'ohlc', 'line', 'hollow_and_filled', 'renko', 'pnf']
+    chart_types = ["candle", "ohlc", "line", "hollow_and_filled", "renko", "pnf"]
 
     for chart_type in chart_types:
         output_path = OUTPUT_DIR / f"tick_100_{chart_type}.webp"
@@ -137,9 +138,9 @@ def demo_tick_charts():
 
 def demo_volume_charts():
     """Demonstrate volume-based OHLC charts."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 2: Volume Charts (Fixed Cumulative Volume per Bar)")
-    print("="*70)
+    print("=" * 70)
 
     # Generate tick data
     print("\nGenerating 10,000 ticks...")
@@ -159,7 +160,7 @@ def demo_volume_charts():
         output_path = OUTPUT_DIR / f"volume_{volume_size//1000}k_hollow.webp"
         plot(
             ohlc,
-            type='hollow_and_filled',
+            type="hollow_and_filled",
             volume=True,
             savefig=str(output_path),
             width=1920,
@@ -175,9 +176,9 @@ def demo_volume_charts():
 
 def demo_range_charts():
     """Demonstrate range-based OHLC charts."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 3: Range Charts (Constant Price Range per Bar)")
-    print("="*70)
+    print("=" * 70)
 
     # Generate tick data with high volatility
     print("\nGenerating 5,000 high-volatility ticks...")
@@ -192,11 +193,13 @@ def demo_range_charts():
     start_time = datetime(2025, 1, 1, 9, 30, 0)
     timestamps = [start_time + timedelta(seconds=i) for i in range(n_ticks)]
 
-    ticks = pl.DataFrame({
-        'timestamp': timestamps,
-        'price': prices,
-        'volume': volumes,
-    })
+    ticks = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price": prices,
+            "volume": volumes,
+        }
+    )
 
     # Create range charts with different range sizes
     range_sizes = [1.0, 2.0, 5.0]
@@ -212,7 +215,7 @@ def demo_range_charts():
         output_path = OUTPUT_DIR / f"range_{range_size:.1f}_ohlc.webp"
         plot(
             ohlc,
-            type='ohlc',
+            type="ohlc",
             volume=True,
             savefig=str(output_path),
             width=1920,
@@ -228,9 +231,9 @@ def demo_range_charts():
 
 def demo_comparison():
     """Compare time-based vs alternative aggregations."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 4: Comparison - Time vs Tick vs Volume vs Range")
-    print("="*70)
+    print("=" * 70)
 
     # Generate same tick data
     print("\nGenerating 5,000 ticks...")
@@ -268,7 +271,7 @@ def demo_comparison():
         output_path = OUTPUT_DIR / f"{filename}.webp"
         plot(
             ohlc_data,
-            type='candle',
+            type="candle",
             volume=True,
             savefig=str(output_path),
             width=1600,
@@ -276,9 +279,9 @@ def demo_comparison():
         )
         print(f"   ✓ {title}: {output_path.name}")
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📊 Use Cases for Each Type:")
-    print("="*70)
+    print("=" * 70)
     print("TIME CHARTS:")
     print("  ✓ Standard analysis, backtesting")
     print("  ✓ Comparing across assets")
@@ -302,9 +305,9 @@ def demo_comparison():
 
 def demo_performance():
     """Benchmark performance of aggregation functions."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 5: Performance Benchmarks")
-    print("="*70)
+    print("=" * 70)
 
     import time
 
@@ -349,9 +352,9 @@ def demo_performance():
 
 def main():
     """Run all demonstrations."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("    KIMSFINANCE: Tick-Based Aggregation Demo")
-    print("="*70)
+    print("=" * 70)
     print(f"\nOutput directory: {OUTPUT_DIR}")
     print(f"Charts will be saved as WebP images (178x faster than mplfinance!)")
 
@@ -362,9 +365,9 @@ def main():
     demo_comparison()
     demo_performance()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ DEMO COMPLETE!")
-    print("="*70)
+    print("=" * 70)
     print(f"\nAll charts saved to: {OUTPUT_DIR}/")
     print(f"\nTotal charts generated: {len(list(OUTPUT_DIR.glob('*.webp')))}")
 

@@ -57,6 +57,14 @@ dev = [
     "black>=23.0",
     "mypy>=1.0",
 ]
+test = [
+    "kimsfinance[dev]",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "mplfinance>=0.12.10b0",
+    "pyarrow>=15.0",
+    "svgwrite>=1.4",
+]
 
 [project.urls]
 Homepage = "https://asplund.kim"

@@ -80,12 +80,14 @@ def test_typical_price_calculation():
     typical_prices = (highs + lows + closes) / 3
 
     # With equal volumes, VWAP should be cumulative average of typical prices
-    expected_vwap = np.array([
-        typical_prices[0],
-        np.mean(typical_prices[:2]),
-        np.mean(typical_prices[:3]),
-        np.mean(typical_prices[:4]),
-    ])
+    expected_vwap = np.array(
+        [
+            typical_prices[0],
+            np.mean(typical_prices[:2]),
+            np.mean(typical_prices[:3]),
+            np.mean(typical_prices[:4]),
+        ]
+    )
 
     print(f"Typical prices: {typical_prices}")
     print(f"Expected VWAP: {expected_vwap}")
@@ -113,10 +115,12 @@ def test_cumulative_weighted_average():
     expected_vwap_0 = tp[0]
 
     # VWAP[1] = (tp[0]*vol[0] + tp[1]*vol[1]) / (vol[0] + vol[1])
-    expected_vwap_1 = (tp[0]*volumes[0] + tp[1]*volumes[1]) / (volumes[0] + volumes[1])
+    expected_vwap_1 = (tp[0] * volumes[0] + tp[1] * volumes[1]) / (volumes[0] + volumes[1])
 
     # VWAP[2] = (tp[0]*vol[0] + tp[1]*vol[1] + tp[2]*vol[2]) / (vol[0] + vol[1] + vol[2])
-    expected_vwap_2 = (tp[0]*volumes[0] + tp[1]*volumes[1] + tp[2]*volumes[2]) / (volumes[0] + volumes[1] + volumes[2])
+    expected_vwap_2 = (tp[0] * volumes[0] + tp[1] * volumes[1] + tp[2] * volumes[2]) / (
+        volumes[0] + volumes[1] + volumes[2]
+    )
 
     expected = np.array([expected_vwap_0, expected_vwap_1, expected_vwap_2])
 
@@ -139,12 +143,13 @@ def test_vwap_between_high_and_low():
     typical_prices = (highs + lows + closes) / 3
 
     for i in range(len(vwap)):
-        min_tp = np.min(typical_prices[:i+1])
-        max_tp = np.max(typical_prices[:i+1])
+        min_tp = np.min(typical_prices[: i + 1])
+        max_tp = np.max(typical_prices[: i + 1])
 
         # Allow small floating point tolerance
-        assert min_tp - 1e-10 <= vwap[i] <= max_tp + 1e-10, \
-            f"VWAP[{i}]={vwap[i]:.2f} outside range [{min_tp:.2f}, {max_tp:.2f}]"
+        assert (
+            min_tp - 1e-10 <= vwap[i] <= max_tp + 1e-10
+        ), f"VWAP[{i}]={vwap[i]:.2f} outside range [{min_tp:.2f}, {max_tp:.2f}]"
 
     print(f"✓ All {len(vwap)} VWAP values within historical typical price range")
 
@@ -181,10 +186,9 @@ def test_two_data_points():
     vwap = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
 
     tp = (highs + lows + closes) / 3
-    expected = np.array([
-        tp[0],
-        (tp[0]*volumes[0] + tp[1]*volumes[1]) / (volumes[0] + volumes[1])
-    ])
+    expected = np.array(
+        [tp[0], (tp[0] * volumes[0] + tp[1] * volumes[1]) / (volumes[0] + volumes[1])]
+    )
 
     assert len(vwap) == 2
     np.testing.assert_allclose(vwap, expected, rtol=1e-5)
@@ -256,10 +260,7 @@ def test_vwap_lags_price():
 
     # Create sharp price movement
     n = 50
-    closes = np.concatenate([
-        np.full(25, 100.0),
-        np.full(25, 110.0)  # Sharp jump
-    ])
+    closes = np.concatenate([np.full(25, 100.0), np.full(25, 110.0)])  # Sharp jump
     highs = closes + 1.0
     lows = closes - 1.0
     volumes = np.full(n, 1000.0)
@@ -272,7 +273,9 @@ def test_vwap_lags_price():
     assert vwap[jump_idx] > typical_prices[0], "VWAP should be above old price"
     assert vwap[jump_idx] < typical_prices[jump_idx], "VWAP should lag behind new price"
 
-    print(f"✓ VWAP lags price: old={typical_prices[0]:.2f}, vwap[30]={vwap[30]:.2f}, new={typical_prices[30]:.2f}")
+    print(
+        f"✓ VWAP lags price: old={typical_prices[0]:.2f}, vwap[30]={vwap[30]:.2f}, new={typical_prices[30]:.2f}"
+    )
 
 
 def test_vwap_converges_to_mean():
@@ -315,7 +318,12 @@ def test_different_array_types():
     print("\n=== Test: Different Array Types ===")
 
     # Test data
-    h, l, c, v = [105.0, 110.0, 108.0], [95.0, 100.0, 98.0], [100.0, 105.0, 103.0], [1000.0, 2000.0, 1500.0]
+    h, l, c, v = (
+        [105.0, 110.0, 108.0],
+        [95.0, 100.0, 98.0],
+        [100.0, 105.0, 103.0],
+        [1000.0, 2000.0, 1500.0],
+    )
 
     # Test with lists
     vwap_list = calculate_vwap(h, l, c, v, engine="cpu")
@@ -339,7 +347,7 @@ def test_price_crosses_vwap():
 
     n = 50
     # Create oscillating prices
-    closes = 100 + 10 * np.sin(np.linspace(0, 4*np.pi, n))
+    closes = 100 + 10 * np.sin(np.linspace(0, 4 * np.pi, n))
     highs = closes + 1.0
     lows = closes - 1.0
     volumes = np.full(n, 1000.0)
@@ -419,8 +427,9 @@ def test_low_volume_has_less_influence():
     print(f"VWAP progression: {vwap}")
 
     # VWAP[2] should be much closer to 100 than to 110
-    assert abs(vwap[2] - 100.0) < abs(vwap[2] - 110.0), \
-        "Low volume spike should have minimal impact"
+    assert abs(vwap[2] - 100.0) < abs(
+        vwap[2] - 110.0
+    ), "Low volume spike should have minimal impact"
 
     print(f"✓ Low volume has less influence: VWAP={vwap[2]:.2f} stays near 100")
 
@@ -447,8 +456,9 @@ def test_volume_weighted_vs_simple_average():
     # VWAP is cumulative, so it should be between first and last typical price
     # But different from simple average due to volume weighting
     # The high volume at 110 should pull VWAP higher than simple average
-    assert vwap[-1] > simple_avg, \
-        f"VWAP {vwap[-1]:.2f} should be pulled higher by high-volume middle price (simple avg={simple_avg:.2f})"
+    assert (
+        vwap[-1] > simple_avg
+    ), f"VWAP {vwap[-1]:.2f} should be pulled higher by high-volume middle price (simple avg={simple_avg:.2f})"
 
     print("✓ VWAP properly weighted by volume")
 
@@ -467,12 +477,14 @@ def test_equal_volumes_equals_simple_average():
     typical_prices = (highs + lows + closes) / 3
 
     # With equal volumes, VWAP should be cumulative mean of typical prices
-    expected = np.array([
-        typical_prices[0],
-        np.mean(typical_prices[:2]),
-        np.mean(typical_prices[:3]),
-        np.mean(typical_prices[:4]),
-    ])
+    expected = np.array(
+        [
+            typical_prices[0],
+            np.mean(typical_prices[:2]),
+            np.mean(typical_prices[:3]),
+            np.mean(typical_prices[:4]),
+        ]
+    )
 
     np.testing.assert_allclose(vwap, expected, rtol=1e-5)
 
@@ -522,8 +534,9 @@ def test_extreme_volume_ratios():
 
     # VWAP should be dominated by the high-volume data point
     # Should be very close to 110
-    assert abs(vwap[-1] - 110.0) < 0.01, \
-        f"VWAP should be near 110 with extreme volume, got {vwap[-1]}"
+    assert (
+        abs(vwap[-1] - 110.0) < 0.01
+    ), f"VWAP should be near 110 with extreme volume, got {vwap[-1]}"
 
     print(f"✓ Extreme volume ratio handled: VWAP={vwap[-1]:.6f} (close to 110)")
 
@@ -591,10 +604,11 @@ def test_volume_distribution_effect():
     vwap_back = calculate_vwap(highs, lows, closes, volumes_back, engine="cpu")
 
     # Front-loaded should stay lower, back-loaded should end higher
-    assert vwap_front[-1] < vwap_back[-1], \
-        "Back-loaded volume should result in higher final VWAP"
+    assert vwap_front[-1] < vwap_back[-1], "Back-loaded volume should result in higher final VWAP"
 
-    print(f"✓ Volume distribution affects VWAP: front={vwap_front[-1]:.2f}, back={vwap_back[-1]:.2f}")
+    print(
+        f"✓ Volume distribution affects VWAP: front={vwap_front[-1]:.2f}, back={vwap_back[-1]:.2f}"
+    )
 
 
 # ============================================================================
@@ -903,8 +917,7 @@ def test_anchored_vwap_intraday_reset():
     vwap = calculate_vwap_anchored(highs, lows, closes, volumes, anchors, engine="cpu")
 
     # VWAP should reset to ~110 at gap, not blend with ~100
-    assert abs(vwap[10] - 110.0) < 1.0, \
-        f"VWAP should reset near 110 at gap, got {vwap[10]:.2f}"
+    assert abs(vwap[10] - 110.0) < 1.0, f"VWAP should reset near 110 at gap, got {vwap[10]:.2f}"
 
     print(f"✓ Intraday reset: before={vwap[9]:.2f}, at reset={vwap[10]:.2f}")
 
@@ -979,10 +992,9 @@ def test_anchored_vwap_mid_day_reset():
 
     n = 30
     # Price trends up, then resets, then trends down
-    closes = np.concatenate([
-        np.linspace(100, 110, 15),  # Uptrend
-        np.linspace(105, 95, 15)    # Downtrend
-    ])
+    closes = np.concatenate(
+        [np.linspace(100, 110, 15), np.linspace(105, 95, 15)]  # Uptrend  # Downtrend
+    )
     highs = closes + 1.0
     lows = closes - 1.0
     volumes = np.full(n, 1000.0)
@@ -1269,102 +1281,162 @@ def test_performance_comparison():
 
 
 if __name__ == "__main__":
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("COMPREHENSIVE VWAP TEST SUITE")
-    print("="*80)
+    print("=" * 80)
 
     test_count = 0
 
     # 1. Basic Calculation Tests (15 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("1. BASIC CALCULATION TESTS (15 tests)")
-    print("="*80)
-    test_basic_calculation(); test_count += 1
-    test_typical_price_calculation(); test_count += 1
-    test_cumulative_weighted_average(); test_count += 1
-    test_vwap_between_high_and_low(); test_count += 1
-    test_single_data_point(); test_count += 1
-    test_two_data_points(); test_count += 1
-    test_monotonic_increasing_prices(); test_count += 1
-    test_monotonic_decreasing_prices(); test_count += 1
-    test_constant_prices(); test_count += 1
-    test_vwap_lags_price(); test_count += 1
-    test_vwap_converges_to_mean(); test_count += 1
-    test_large_dataset(); test_count += 1
-    test_different_array_types(); test_count += 1
-    test_price_crosses_vwap(); test_count += 1
-    test_return_type_and_shape(); test_count += 1
+    print("=" * 80)
+    test_basic_calculation()
+    test_count += 1
+    test_typical_price_calculation()
+    test_count += 1
+    test_cumulative_weighted_average()
+    test_count += 1
+    test_vwap_between_high_and_low()
+    test_count += 1
+    test_single_data_point()
+    test_count += 1
+    test_two_data_points()
+    test_count += 1
+    test_monotonic_increasing_prices()
+    test_count += 1
+    test_monotonic_decreasing_prices()
+    test_count += 1
+    test_constant_prices()
+    test_count += 1
+    test_vwap_lags_price()
+    test_count += 1
+    test_vwap_converges_to_mean()
+    test_count += 1
+    test_large_dataset()
+    test_count += 1
+    test_different_array_types()
+    test_count += 1
+    test_price_crosses_vwap()
+    test_count += 1
+    test_return_type_and_shape()
+    test_count += 1
 
     # 2. Volume Weighting Tests (10 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("2. VOLUME WEIGHTING TESTS (10 tests)")
-    print("="*80)
-    test_high_volume_pulls_vwap(); test_count += 1
-    test_low_volume_has_less_influence(); test_count += 1
-    test_volume_weighted_vs_simple_average(); test_count += 1
-    test_equal_volumes_equals_simple_average(); test_count += 1
-    test_doubling_all_volumes(); test_count += 1
-    test_volume_scaling_invariance(); test_count += 1
-    test_extreme_volume_ratios(); test_count += 1
-    test_gradual_volume_increase(); test_count += 1
-    test_volume_spike_impact(); test_count += 1
-    test_volume_distribution_effect(); test_count += 1
+    print("=" * 80)
+    test_high_volume_pulls_vwap()
+    test_count += 1
+    test_low_volume_has_less_influence()
+    test_count += 1
+    test_volume_weighted_vs_simple_average()
+    test_count += 1
+    test_equal_volumes_equals_simple_average()
+    test_count += 1
+    test_doubling_all_volumes()
+    test_count += 1
+    test_volume_scaling_invariance()
+    test_count += 1
+    test_extreme_volume_ratios()
+    test_count += 1
+    test_gradual_volume_increase()
+    test_count += 1
+    test_volume_spike_impact()
+    test_count += 1
+    test_volume_distribution_effect()
+    test_count += 1
 
     # 3. Edge Cases (10 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("3. EDGE CASES (10 tests)")
-    print("="*80)
-    test_zero_volumes(); test_count += 1
-    test_mixed_zero_nonzero_volumes(); test_count += 1
-    test_very_small_volumes(); test_count += 1
-    test_very_large_volumes(); test_count += 1
-    test_negative_prices(); test_count += 1
-    test_price_precision(); test_count += 1
-    test_identical_prices(); test_count += 1
-    test_empty_input_handling(); test_count += 1
-    test_mismatched_array_lengths(); test_count += 1
-    test_extreme_price_ranges(); test_count += 1
+    print("=" * 80)
+    test_zero_volumes()
+    test_count += 1
+    test_mixed_zero_nonzero_volumes()
+    test_count += 1
+    test_very_small_volumes()
+    test_count += 1
+    test_very_large_volumes()
+    test_count += 1
+    test_negative_prices()
+    test_count += 1
+    test_price_precision()
+    test_count += 1
+    test_identical_prices()
+    test_count += 1
+    test_empty_input_handling()
+    test_count += 1
+    test_mismatched_array_lengths()
+    test_count += 1
+    test_extreme_price_ranges()
+    test_count += 1
 
     # 4. Anchored VWAP Tests (10 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("4. ANCHORED VWAP TESTS (10 tests)")
-    print("="*80)
-    test_anchored_vwap_basic(); test_count += 1
-    test_anchored_vwap_resets(); test_count += 1
-    test_anchored_vwap_no_anchors(); test_count += 1
-    test_anchored_vwap_every_point(); test_count += 1
-    test_anchored_vwap_sessions(); test_count += 1
-    test_anchored_vwap_intraday_reset(); test_count += 1
-    test_anchored_vwap_integer_anchors(); test_count += 1
-    test_anchored_vwap_consecutive_anchors(); test_count += 1
-    test_anchored_vwap_vs_regular(); test_count += 1
-    test_anchored_vwap_mid_day_reset(); test_count += 1
+    print("=" * 80)
+    test_anchored_vwap_basic()
+    test_count += 1
+    test_anchored_vwap_resets()
+    test_count += 1
+    test_anchored_vwap_no_anchors()
+    test_count += 1
+    test_anchored_vwap_every_point()
+    test_count += 1
+    test_anchored_vwap_sessions()
+    test_count += 1
+    test_anchored_vwap_intraday_reset()
+    test_count += 1
+    test_anchored_vwap_integer_anchors()
+    test_count += 1
+    test_anchored_vwap_consecutive_anchors()
+    test_count += 1
+    test_anchored_vwap_vs_regular()
+    test_count += 1
+    test_anchored_vwap_mid_day_reset()
+    test_count += 1
 
     # 5. GPU/CPU Parity Tests (10 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("5. GPU/CPU PARITY TESTS (10 tests)")
-    print("="*80)
-    test_cpu_engine(); test_count += 1
-    test_auto_engine(); test_count += 1
-    test_cpu_consistency(); test_count += 1
-    test_different_engines_same_result(); test_count += 1
-    test_large_dataset_engines(); test_count += 1
-    test_anchored_vwap_cpu(); test_count += 1
-    test_anchored_vwap_auto(); test_count += 1
-    test_numerical_precision_cpu(); test_count += 1
-    test_numerical_stability(); test_count += 1
-    test_engine_error_handling(); test_count += 1
+    print("=" * 80)
+    test_cpu_engine()
+    test_count += 1
+    test_auto_engine()
+    test_count += 1
+    test_cpu_consistency()
+    test_count += 1
+    test_different_engines_same_result()
+    test_count += 1
+    test_large_dataset_engines()
+    test_count += 1
+    test_anchored_vwap_cpu()
+    test_count += 1
+    test_anchored_vwap_auto()
+    test_count += 1
+    test_numerical_precision_cpu()
+    test_count += 1
+    test_numerical_stability()
+    test_count += 1
+    test_engine_error_handling()
+    test_count += 1
 
     # 6. Performance Tests (5 tests)
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("6. PERFORMANCE TESTS (5 tests)")
-    print("="*80)
-    test_performance_small_dataset(); test_count += 1
-    test_performance_medium_dataset(); test_count += 1
-    test_performance_large_dataset(); test_count += 1
-    test_performance_anchored_vwap(); test_count += 1
-    test_performance_comparison(); test_count += 1
+    print("=" * 80)
+    test_performance_small_dataset()
+    test_count += 1
+    test_performance_medium_dataset()
+    test_count += 1
+    test_performance_large_dataset()
+    test_count += 1
+    test_performance_anchored_vwap()
+    test_count += 1
+    test_performance_comparison()
+    test_count += 1
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(f"ALL {test_count} TESTS COMPLETED SUCCESSFULLY!")
-    print("="*80)
+    print("=" * 80)

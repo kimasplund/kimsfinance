@@ -36,6 +36,7 @@ def gpu_available() -> bool:
     """Check if GPU is available."""
     try:
         import cupy
+
         cupy.cuda.runtime.getDeviceCount()
         return True
     except (ImportError, Exception):
@@ -272,7 +273,9 @@ class TestElderRayBasicCalculation:
 
         # Just verify both calculations work and produce different results
         assert bull_9_std != bull_21_std, "Different periods should produce different volatility"
-        assert not np.allclose(bull_9, bull_21), "Different periods should produce different results"
+        assert not np.allclose(
+            bull_9, bull_21
+        ), "Different periods should produce different results"
 
     def test_returns_tuple_of_two_arrays(self, sample_prices):
         """Test returns tuple of exactly two arrays."""
@@ -419,9 +422,7 @@ class TestElderRaySignalGeneration:
         # Bear Power should be mostly positive (lows above EMA)
         assert np.mean(bear_valid > 0) > 0.5, "Bear Power should be positive in uptrend"
 
-    def test_bearish_signal_bear_power_falling_bull_negative(
-        self, trending_down_prices
-    ):
+    def test_bearish_signal_bear_power_falling_bull_negative(self, trending_down_prices):
         """Test bearish signal: Bear Power falling + Bull Power < 0."""
         bull_power, bear_power = calculate_elder_ray(
             trending_down_prices["high"],
@@ -478,9 +479,7 @@ class TestElderRaySignalGeneration:
         highs = closes + np.linspace(3, 0.5, n)
         lows = closes - 1
 
-        bull_power, _ = calculate_elder_ray(
-            highs, lows, closes, period=13, engine="cpu"
-        )
+        bull_power, _ = calculate_elder_ray(highs, lows, closes, period=13, engine="cpu")
 
         # Remove warmup NaNs
         valid_idx = ~np.isnan(bull_power)
@@ -491,9 +490,7 @@ class TestElderRaySignalGeneration:
             # Compare first half to second half
             first_half_mean = np.mean(bull_valid[: len(bull_valid) // 2])
             second_half_mean = np.mean(bull_valid[len(bull_valid) // 2 :])
-            assert (
-                second_half_mean < first_half_mean
-            ), "Bull Power should decline during divergence"
+            assert second_half_mean < first_half_mean, "Bull Power should decline during divergence"
 
     def test_extreme_bull_power_readings(self, trending_up_prices):
         """Test extreme Bull Power readings in strong trend."""
@@ -602,9 +599,7 @@ class TestElderRaySignalGeneration:
         both_positive = np.sum((bull_valid > 0) & (bear_valid > 0))
         total_valid = len(bull_valid)
 
-        assert (
-            both_positive / total_valid > 0.5
-        ), "Both should be positive in strong uptrend"
+        assert both_positive / total_valid > 0.5, "Both should be positive in strong uptrend"
 
     def test_both_negative_strong_bear_trend(self, trending_down_prices):
         """Test both Bull and Bear Power negative in strong downtrend."""
@@ -625,9 +620,7 @@ class TestElderRaySignalGeneration:
         both_negative = np.sum((bull_valid < 0) & (bear_valid < 0))
         total_valid = len(bull_valid)
 
-        assert (
-            both_negative / total_valid > 0.5
-        ), "Both should be negative in strong downtrend"
+        assert both_negative / total_valid > 0.5, "Both should be negative in strong downtrend"
 
 
 # ============================================================================
@@ -664,9 +657,7 @@ class TestElderRayEdgeCases:
         highs = closes.copy()  # No upper wick
         lows = closes.copy()  # No lower wick
 
-        bull_power, bear_power = calculate_elder_ray(
-            highs, lows, closes, period=13, engine="cpu"
-        )
+        bull_power, bear_power = calculate_elder_ray(highs, lows, closes, period=13, engine="cpu")
 
         # Remove warmup NaNs
         valid_idx = ~(np.isnan(bull_power) | np.isnan(bear_power))
@@ -683,9 +674,7 @@ class TestElderRayEdgeCases:
         closes = np.array([10.0, 11.0, 11.5, 12.0, 13.0])
 
         # Should handle NaN gracefully (propagate through EMA)
-        bull_power, bear_power = calculate_elder_ray(
-            highs, lows, closes, period=3, engine="cpu"
-        )
+        bull_power, bear_power = calculate_elder_ray(highs, lows, closes, period=3, engine="cpu")
 
         assert len(bull_power) == len(highs)
         assert len(bear_power) == len(lows)
@@ -720,9 +709,7 @@ class TestElderRayEdgeCases:
         lows = np.zeros(n)
         closes = np.zeros(n)
 
-        bull_power, bear_power = calculate_elder_ray(
-            highs, lows, closes, period=13, engine="cpu"
-        )
+        bull_power, bear_power = calculate_elder_ray(highs, lows, closes, period=13, engine="cpu")
 
         # Remove warmup NaNs
         valid_idx = ~(np.isnan(bull_power) | np.isnan(bear_power))
@@ -740,9 +727,7 @@ class TestElderRayEdgeCases:
         highs = closes + 2
         lows = closes - 2
 
-        bull_power, bear_power = calculate_elder_ray(
-            highs, lows, closes, period=13, engine="cpu"
-        )
+        bull_power, bear_power = calculate_elder_ray(highs, lows, closes, period=13, engine="cpu")
 
         # Should work with negative prices
         assert not np.all(np.isnan(bull_power))
@@ -1067,7 +1052,9 @@ class TestElderRayPerformance:
 
         # GPU should be faster or comparable for large datasets
         # (Allow 2x slower due to transfer overhead)
-        assert gpu_time < cpu_time * 2.0, f"GPU unexpectedly slow: {gpu_time:.3f}s vs {cpu_time:.3f}s"
+        assert (
+            gpu_time < cpu_time * 2.0
+        ), f"GPU unexpectedly slow: {gpu_time:.3f}s vs {cpu_time:.3f}s"
 
         # Results should match
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
