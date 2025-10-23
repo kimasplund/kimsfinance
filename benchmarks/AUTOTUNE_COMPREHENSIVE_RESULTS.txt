@@ -1,0 +1,176 @@
+
+[1m██████████████████████████████████████████████████████████████████████[0m
+[1mComprehensive GPU Crossover Threshold Auto-Tuning[0m
+[1m██████████████████████████████████████████████████████████████████████[0m
+
+[96mThis will benchmark:[0m
+  • All 9 indicators individually
+  • Batch indicator scenarios (6 indicators at once)
+  • Parallel execution (simulates real-world usage)
+  • Multiple CPU cores utilized
+
+[1m======================================================================[0m
+[1mPhase 1: Individual Indicators (Sequential)[0m
+[1m======================================================================[0m
+
+Tuning: atr
+  [92m→ Crossover: 1,000,000 rows[0m
+
+Tuning: rsi
+  [92m→ Crossover: 10,000 rows[0m
+
+Tuning: stochastic
+  [92m→ Crossover: 500,000 rows[0m
+
+Tuning: cci
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+Tuning: tsi
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+Tuning: roc
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+Tuning: aroon
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+Tuning: elder_ray
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+Tuning: hma
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+  [92m→ Crossover: 100,000 rows[0m
+
+[1m======================================================================[0m
+[1mPhase 2: Batch Indicator Calculation[0m
+[1m======================================================================[0m
+
+  [96mTesting batch indicator crossover...[0m
+      5,000 rows: CPU=   2.2ms, GPU=   2.7ms, Speedup=0.84x
+     10,000 rows: CPU=   2.5ms, GPU=   2.8ms, Speedup=0.91x
+     15,000 rows: CPU=   3.3ms, GPU=   4.0ms, Speedup=0.83x
+     25,000 rows: CPU=   5.4ms, GPU=   7.1ms, Speedup=0.77x
+     50,000 rows: CPU=  10.2ms, GPU=  11.2ms, Speedup=0.91x
+    100,000 rows: CPU=  19.6ms, GPU=  21.1ms, Speedup=0.93x
+
+  [92m→ Batch crossover: 15,000 rows[0m
+
+[1m======================================================================[0m
+[1mPhase 3: Parallel Execution (Simulates Real Usage)[0m
+[1m======================================================================[0m
+
+  [96mTesting indicators in parallel (simulates real-world usage)...[0m
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m atr            :     10,000 rows
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m cci            :    100,000 rows
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m tsi            :    100,000 rows
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m roc            :    100,000 rows
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m rsi            :    100,000 rows
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m aroon          :    100,000 rows
+  - Error benchmarking at size 10000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 50000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m elder_ray      :    100,000 rows
+  - Error benchmarking at size 100000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 200000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 500000: 'DataFrame' object has no attribute 'collect'
+  - Error benchmarking at size 1000000: 'DataFrame' object has no attribute 'collect'
+    [92m✓[0m hma            :    100,000 rows
+    [92m✓[0m stochastic     :    500,000 rows
+
+[1m======================================================================[0m
+[1mResults Comparison[0m
+[1m======================================================================[0m
+
+Indicator       |   Sequential |     Parallel |   Difference
+--------------- | ------------ | ------------ | ------------
+atr             |  1,000,000 |     10,000 | [92m     -99.0%[0m
+rsi             |     10,000 |    100,000 | [93m    +900.0%[0m
+stochastic      |    500,000 |    500,000 | [96m      +0.0%[0m
+cci             |    100,000 |    100,000 | [96m      +0.0%[0m
+tsi             |    100,000 |    100,000 | [96m      +0.0%[0m
+roc             |    100,000 |    100,000 | [96m      +0.0%[0m
+aroon           |    100,000 |    100,000 | [96m      +0.0%[0m
+elder_ray       |    100,000 |    100,000 | [96m      +0.0%[0m
+hma             |    100,000 |    100,000 | [96m      +0.0%[0m
+
+[1mKey Findings:[0m
+  • Batch threshold: [92m15,000 rows[0m (vs 1,000,000 individual)
+  • Batch GPU beneficial [92m66.7x earlier[0m than individual
+  • Parallel execution changes thresholds by [93m+89.0%[0m on average
+
+[92mResults saved to: /home/kim/.kimsfinance/threshold_cache_comprehensive.json[0m
+
+[1mRecommendations:[0m
+  • Use [92mcalculate_indicators_batch()[0m for computing multiple indicators
+  • Batch processing is [92m66.7x more efficient[0m on GPU
+  • Consider parallel execution patterns in your application
+  • Re-run after hardware/driver changes
+
+[1m======================================================================[0m
+[92mComprehensive auto-tune complete![0m
+[1m======================================================================[0m
+

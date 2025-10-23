@@ -1,0 +1,53 @@
+
+[1m██████████████████████████████████████████████████████████████████████[0m
+[1mGPU Crossover Threshold Auto-Tuning[0m
+[1m██████████████████████████████████████████████████████████████████████[0m
+
+[96mThis will benchmark CPU vs GPU performance at various data sizes
+to determine optimal crossover thresholds for your hardware.[0m
+
+[1mCurrent Default Thresholds:[0m
+  [93mvectorizable_simple      [0m: 50,000 rows
+  [93mvectorizable_complex     [0m: 100,000 rows
+  [93miterative                [0m: 500,000 rows
+  [93mhistogram                [0m: 100,000 rows
+  [93mrolling                  [0m: 50,000 rows
+  [93maggregation              [0m: 5,000 rows
+  [93mbatch_indicators         [0m: 15,000 rows
+  [93mnan_ops                  [0m: 10,000 rows
+  [93mlinear_algebra           [0m: 1,000 rows
+  [93mtransformation           [0m: 10,000 rows
+  [93mdefault                  [0m: 100,000 rows
+[1mStarting Auto-Tune for 3 operations...[0m
+
+[96mTest sizes: 10K, 50K, 100K, 200K, 500K, 1M rows[0m
+[96mThis may take 2-5 minutes...[0m
+
+[1m======================================================================[0m
+Tuning operation: atr...
+  -> Found crossover at: 100000
+Tuning operation: rsi...
+  -> Found crossover at: 500000
+Tuning operation: stochastic...
+  -> Found crossover at: 50000
+Saved tuned thresholds to: /home/kim/.kimsfinance/threshold_cache.json
+[1m======================================================================[0m
+
+[1mAuto-Tune Results:[0m
+
+  [96matr            :    100,000 rows (matches default)[0m
+  [93mrsi            :    500,000 rows (GPU beneficial at larger sizes)[0m
+  [92mstochastic     :     50,000 rows (GPU beneficial at smaller sizes)[0m
+
+[92mResults saved to: /home/kim/.kimsfinance/threshold_cache.json[0m
+
+[1mRecommendations:[0m
+  • Use engine='auto' to automatically apply these thresholds
+  • Re-run autotune if you change hardware or drivers
+  • Smaller thresholds = GPU is faster on your hardware
+  • Larger thresholds = CPU is more efficient for your use case
+
+[1m======================================================================[0m
+[92mAuto-tune complete![0m
+[1m======================================================================[0m
+
