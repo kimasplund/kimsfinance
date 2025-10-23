@@ -1,6 +1,6 @@
 # Getting Started with kimsfinance
 
-Welcome to **kimsfinance** - a high-performance financial charting library that is **178x faster** than mplfinance with optional GPU acceleration.
+Welcome to **kimsfinance** - a high-performance financial charting library that is **28.8x average speedup (up to 70.1x)** than mplfinance with optional GPU acceleration.
 
 This tutorial will guide you from installation to creating your first chart in just 5 minutes.
 
@@ -26,7 +26,7 @@ kimsfinance delivers **unprecedented performance** for financial chart generatio
 
 | Feature | kimsfinance | mplfinance | Advantage |
 |---------|-------------|------------|-----------|
-| **Speed** | 6,249 charts/sec | 35 charts/sec | **178x faster** 🔥 |
+| **Speed** | 6,249 charts/sec | 35 charts/sec | **28.8x average speedup (up to 70.1x)** 🔥 |
 | **File Size** | 0.50 KB | 2.57 KB | **79% smaller** |
 | **Quality** | OLED-level | Good | Superior clarity |
 | **Encoding** | 22 ms/image | 1,331 ms/image | **61x faster** |
@@ -333,7 +333,7 @@ plot(data, type='candle', savefig='best.webp', speed='best')
 
 ## Chart Types
 
-kimsfinance supports 6 chart types, all with the same 178x speedup.
+kimsfinance supports 6 chart types, all with the same 28.8x average speedup (validated: 7.3x - 70.1x).
 
 ### 1. Candlestick Charts
 
@@ -343,7 +343,7 @@ kimsfinance supports 6 chart types, all with the same 178x speedup.
 plot(data, type='candle', volume=True, savefig='candlestick.webp')
 ```
 
-**Performance**: 6,249 charts/sec (178x faster)
+**Performance**: 6,249 charts/sec (28.8x average speedup (up to 70.1x))
 
 **Use cases:**
 - Standard price action analysis
@@ -815,7 +815,7 @@ Topics covered:
 
 ### 6. Migration from mplfinance
 
-Migrate existing code for 178x speedup:
+Migrate existing code for 28.8x average speedup (validated: 7.3x - 70.1x):
 
 📖 **[Migration Guide](../MIGRATION_GUIDE.md)**
 
@@ -1000,7 +1000,7 @@ Congratulations! You now know how to:
 ✅ Customize charts with themes, colors, and visual features
 ✅ Use all 6 chart types (candle, OHLC, line, hollow, Renko, PnF)
 ✅ Load data from CSV, Parquet, APIs, and DataFrames
-✅ Optimize for maximum performance (178x speedup)
+✅ Optimize for maximum performance (28.8x average speedup (validated: 7.3x - 70.1x))
 ✅ Troubleshoot common issues
 
 ---
@@ -1043,4 +1043,4 @@ plot(df, bg_color='#000000', up_color='#00FF00', down_color='#FF0000', savefig='
 
 **Built with ⚡ for blazing-fast financial charting**
 
-*Generate 6,249 charts per second - 178x faster than mplfinance*
+*Generate 6,249 charts per second - 28.8x average speedup (up to 70.1x) than mplfinance*

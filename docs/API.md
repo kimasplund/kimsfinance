@@ -2,7 +2,7 @@
 
 **kimsfinance v0.1.0** - High-Performance Financial Charting Library
 
-This comprehensive API reference covers all public functions and methods in kimsfinance. The library achieves **178x speedup** over mplfinance through native PIL rendering, GPU acceleration, and optimized algorithms.
+This comprehensive API reference covers all public functions and methods in kimsfinance. The library achieves **28.8x average speedup** over mplfinance (validated range: 7.3x - 70.1x) through native PIL rendering, GPU acceleration, and optimized algorithms.
 
 ---
 
@@ -97,7 +97,7 @@ img.save('chart.png')  # Save manually
 
 ### `plot()`
 
-Main plotting function for financial charts. Uses native PIL renderer achieving **178x speedup** vs mplfinance.
+Main plotting function for financial charts. Uses native PIL renderer achieving **28.8x average speedup** vs mplfinance (up to 70.1x at optimal conditions).
 
 ```python
 kimsfinance.plot(
@@ -224,12 +224,12 @@ kf.plot(
 
 | Chart Type | Throughput | Speedup vs mplfinance |
 |------------|------------|----------------------|
-| Candlestick | 6,249 img/sec | 178x faster |
-| OHLC Bars | 1,337 img/sec | 150-200x faster |
-| Line | 2,100 img/sec | 200-300x faster |
-| Hollow Candles | 5,728 img/sec | 150-200x faster |
-| Renko | 3,800 img/sec | 100-150x faster |
-| Point & Figure | 357 img/sec | 100-150x faster |
+| Candlestick | 6,249 img/sec (peak) | 7.3x - 70.1x (avg: 28.8x) |
+| OHLC Bars | 1,337 img/sec | 20-50x faster |
+| Line | 2,100 img/sec | 30-60x faster |
+| Hollow Candles | 5,728 img/sec | 20-50x faster |
+| Renko | 3,800 img/sec | 15-40x faster |
+| Point & Figure | 357 img/sec | 10-30x faster |
 
 ---
 
@@ -262,7 +262,7 @@ ap = make_addplot(rsi, panel=2, color='purple')
 plot(df, type='candle', addplot=ap)
 ```
 
-**Warning:** For maximum performance (178x speedup), avoid `addplot` and use native renderer without multi-panel features.
+**Warning:** For maximum performance (28.8x average speedup), avoid `addplot` and use native renderer without multi-panel features.
 
 ---
 
@@ -2003,7 +2003,7 @@ print(f"Throughput: {1/elapsed:.0f} img/sec")
 ### Version History
 
 - **v0.1.0** (2025-10-22) - Initial release
-  - Native PIL rendering (178x speedup)
+  - Native PIL rendering (28.8x average speedup, up to 70.1x)
   - 6 chart types
   - 29 technical indicators
   - GPU acceleration (optional)

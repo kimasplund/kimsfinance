@@ -8,7 +8,7 @@ This comprehensive migration guide is currently being written and will be availa
 
 ## Overview
 
-Migrating from **mplfinance** to **kimsfinance** is straightforward. Most common use cases require only minor syntax changes while gaining **50-178x performance improvement**.
+Migrating from **mplfinance** to **kimsfinance** is straightforward. Most common use cases require only minor syntax changes while gaining **20-70x performance improvement (28.8x average)**.
 
 ---
 

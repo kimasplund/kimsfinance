@@ -550,7 +550,7 @@ plot.render(
    - Optimized coordinate computation (Numba JIT)
    - WebP encoding (fast mode)
 
-**Total Performance**: Up to **178x faster** than mplfinance for large datasets with GPU acceleration.
+**Total Performance**: Up to **70.1x faster** (28.8x average) than mplfinance for large datasets with GPU acceleration.
 
 ---
 

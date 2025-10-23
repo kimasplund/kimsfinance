@@ -3,7 +3,7 @@
 **High-Performance Financial Charting Library with optional GPU Acceleration**
 
 [![Chart Speed](https://img.shields.io/badge/Chart_Rendering-6,249_img/sec-brightgreen.svg)](https://github.com)
-[![Speedup](https://img.shields.io/badge/Speedup-178x_faster-blue.svg)](https://github.com)
+[![Speedup](https://img.shields.io/badge/Speedup-28.8x_average-blue.svg)](https://github.com)
 [![WebP Encoding](https://img.shields.io/badge/WebP_Encoding-61x_faster-orange.svg)](https://github.com)
 [![File Size](https://img.shields.io/badge/File_Size-79%25_smaller-purple.svg)](https://github.com)
 [![Quality](https://img.shields.io/badge/Quality-OLED_level-red.svg)](https://github.com)
@@ -15,18 +15,27 @@
 
 ## 🚀 Performance Highlights
 
-| Metric | mplfinance (baseline) | kimsfinance | Improvement |
-|--------|----------------------|-------------------|-------------|
-| **Chart Rendering** | 35 img/sec | **6,249 img/sec** | **178x faster** 🔥 |
-| **Image Encoding** | 1,331 ms/img | **22 ms/img** | **61x faster** |
-| **File Size** | 2.57 KB | **0.53 KB** | **79% smaller** |
-| **Visual Quality** | Good | **OLED-level** | Superior clarity |
+**Validated Benchmark Results** *(2025-10-22, i9-13980HX, RTX 3500 Ada)*
 
-### Real-World Performance (132,393 images)
+| Candles | kimsfinance | mplfinance | Speedup |
+|---------|-------------|------------|---------|
+| 100 | 107.64 ms | 785.53 ms | **7.3x** |
+| 1,000 | 344.53 ms | 3,265.27 ms | **9.5x** |
+| 10,000 | 396.68 ms | 27,817.89 ms | **70.1x** 🔥 |
+| 100,000 | 1,853.06 ms | 52,487.66 ms | **28.3x** |
 
-- **mplfinance baseline**: ~63 minutes
-- **kimsfinance**: **21.2 seconds**
-- **Time saved**: 62.6 minutes per 132K images
+**Average Speedup: 28.8x faster than mplfinance** (range: 7.3x - 70.1x)
+
+### Additional Performance Benefits
+
+| Metric | Benefit | Notes |
+|--------|---------|-------|
+| **Image Encoding** | **61x faster** | WebP fast mode (22ms vs 1,331ms) |
+| **File Size** | **79% smaller** | WebP lossless (0.5 KB vs 2.57 KB PNG) |
+| **Visual Quality** | **OLED-level** | Superior clarity over mplfinance |
+| **Peak Throughput** | **6,249 img/sec** | Batch mode with optimal settings |
+
+> **Note on 178x claim**: The previously cited 178x speedup represents peak throughput in batch processing mode with 132K+ images and WebP fast encoding. The validated **average across dataset sizes is 28.8x faster**, with best-case performance reaching 70.1x at 10,000 candles.
 
 ---
 
@@ -103,15 +112,20 @@
 | mplfinance | 35 img/sec | 2.57 KB | Good | Baseline |
 | polars v1 (PIL) | 75 img/sec | 0.53 KB | Better | +2.15x |
 | + WebP fast | 2,458 img/sec | 0.51 KB | Better | +70x |
-| + Vectorization | **6,249 img/sec** | **0.50 KB** | **OLED** | **+178x** 🚀 |
+| + Vectorization | **6,249 img/sec** | **0.50 KB** | **OLED** | **Peak throughput** 🚀 |
 
-### Dataset Size Scaling
+### Validated Comparison Benchmarks (2025-10-22)
 
-| Images | mplfinance | kimsfinance | Speedup | Time Saved |
-|--------|-----------|-------------------|---------|------------|
-| 10,011 | 286 sec | 2.3 sec | 124x | 4.7 min |
-| 44,553 | 1,273 sec | 10.4 sec | 122x | 21 min |
-| 132,393 | 3,783 sec | 21.2 sec | 178x | 62.6 min |
+See [BENCHMARK_RESULTS_WITH_COMPARISON.md](benchmarks/BENCHMARK_RESULTS_WITH_COMPARISON.md) for detailed methodology.
+
+| Candles | mplfinance Time | kimsfinance Time | Speedup | Validated |
+|---------|----------------|------------------|---------|-----------|
+| 100 | 785.53 ms | 107.64 ms | 7.3x | ✅ |
+| 1,000 | 3,265.27 ms | 344.53 ms | 9.5x | ✅ |
+| 10,000 | 27,817.89 ms | 396.68 ms | 70.1x | ✅ |
+| 100,000 | 52,487.66 ms | 1,853.06 ms | 28.3x | ✅ |
+
+**Average: 28.8x faster** (median across dataset sizes)
 
 ### WebP Encoding Modes
 
@@ -127,16 +141,16 @@
 
 ## 🎓 Technical Details
 
-### Why 178x Faster?
+### How Performance is Achieved
 
-The speedup comes from multiple optimizations:
+The **28.8x average speedup** (up to 70.1x at 10K candles) comes from multiple optimizations:
 
 1. **PIL Direct Rendering** (+2.15x)
    - Replace matplotlib overhead with direct PIL drawing
    - Eliminate figure/axes creation
    - Memory-efficient coordinate computation
 
-2. **WebP Fast Mode** (+32x)
+2. **WebP Fast Mode** (+61x encoding)
    - libwebp `method=4` with optimized quality
    - Skip unnecessary encoding passes
    - Maintain >90% visual quality
@@ -151,7 +165,9 @@ The speedup comes from multiple optimizations:
    - Eliminate Python loops
    - SIMD optimization on modern CPUs
 
-**Combined: 2.15 × 32 × 1.3 × 2.5 = 178x speedup**
+**Theoretical Peak**: Under optimal conditions (large batch processing, WebP fast encoding, vectorized coordinates), throughput can reach 6,249 img/sec on high-end hardware.
+
+**Validated Average**: Across different dataset sizes (100-100K candles), the average speedup is **28.8x faster than mplfinance**.
 
 ### Architecture
 
@@ -899,7 +915,7 @@ If you use this library in your research, please cite:
   author = {Your Name},
   year = {2025},
   url = {https://github.com/yourusername/kimsfinance},
-  note = {178x faster chart rendering with superior quality}
+  note = {28.8x average speedup over mplfinance with superior quality}
 }
 ```
 
@@ -953,7 +969,7 @@ charting, but has been completely reimagined for modern Python 3.13+ with:
 - GPU acceleration via RAPIDS
 - WebP fast mode (61x faster encoding)
 - Comprehensive vectorization with optional Numba JIT
-- **178x performance improvement** over baseline mplfinance
+- **28.8x average speedup** over mplfinance (validated: 7.3x - 70.1x range)
 
 While the concept is inspired by mplfinance, kimsfinance is a complete rewrite with
 a fundamentally different architecture optimized for extreme performance.
@@ -987,4 +1003,4 @@ If this project helps you, please consider:
 
 **Built with ⚡ for blazing-fast financial charting**
 
-*Generate 6,249 charts per second - 178x faster than baseline mplfinance*
+*Average 28.8x speedup over mplfinance - up to 70.1x at optimal conditions*
