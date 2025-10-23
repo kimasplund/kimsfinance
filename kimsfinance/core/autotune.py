@@ -7,6 +7,7 @@ crossover points for CPU vs. GPU execution for various operations.
 """
 
 import json
+import logging
 import timeit
 import threading
 import tempfile
@@ -19,6 +20,8 @@ import polars as pl
 
 from .types import Engine
 from ..config.gpu_thresholds import GPU_THRESHOLDS
+
+logger = logging.getLogger(__name__)
 
 
 # Default thresholds now sourced from gpu_thresholds.py for consistency
@@ -101,7 +104,7 @@ def find_crossover(operation: str, sizes: list[int] | None = None) -> int:
             if gpu_time < cpu_time:
                 return size
         except Exception as e:
-            print(f"  - Error benchmarking at size {size}: {e}")
+            logger.debug(f"Error benchmarking at size {size}: {e}")
             continue
 
     return DEFAULT_THRESHOLDS.get(operation, DEFAULT_THRESHOLDS["default"])
@@ -125,9 +128,9 @@ def run_autotune(operations: list[str] | None = None, save: bool = True) -> dict
 
     tuned_thresholds = {}
     for op in operations:
-        print(f"Tuning operation: {op}...")
+        logger.info(f"Tuning operation: {op}...")
         tuned_thresholds[op] = find_crossover(op)
-        print(f"  -> Found crossover at: {tuned_thresholds[op]}")
+        logger.info(f"Found crossover at {tuned_thresholds[op]} for operation {op}")
 
     if save:
         _save_tuned_thresholds(tuned_thresholds)
@@ -163,7 +166,7 @@ def _save_tuned_thresholds(thresholds: dict[str, int]) -> None:
             # Set permissions (user read/write only)
             CACHE_FILE.chmod(0o600)
 
-            print(f"Saved tuned thresholds to: {CACHE_FILE}")
+            logger.info(f"Saved tuned thresholds to: {CACHE_FILE}")
         except Exception as e:
             # Cleanup temp file on error
             try:
@@ -192,7 +195,10 @@ def load_tuned_thresholds() -> dict[str, int]:
                 # Validate loaded data
                 if not isinstance(loaded, dict):
                     return DEFAULT_THRESHOLDS.copy()
-                # Return copy to prevent external modification
-                return loaded
+                # Merge loaded cache with defaults to ensure all required keys exist
+                # This prevents KeyError if cache is incomplete (e.g., missing "default" key)
+                result = DEFAULT_THRESHOLDS.copy()
+                result.update(loaded)
+                return result
         except (json.JSONDecodeError, OSError, IOError):
             return DEFAULT_THRESHOLDS.copy()

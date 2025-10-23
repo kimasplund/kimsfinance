@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "AGPL-3.0-or-later"}
 authors = [
-    {name = "Kim Asplund"}
+    {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
 maintainers = [
-    {name = "Kim Asplund"}
+    {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
 keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency"]
 classifiers = [

@@ -412,54 +412,6 @@ def calculate_indicators_batch(
 
 if __name__ == "__main__":
     """Quick test of batch indicator calculation."""
-    print("Testing batch indicator calculation...")
-
-    # Generate test data
-    np.random.seed(42)
-    n = 10_000
-    closes = 100 + np.cumsum(np.random.randn(n) * 0.5)
-    highs = closes + np.abs(np.random.randn(n) * 0.3)
-    lows = closes - np.abs(np.random.randn(n) * 0.3)
-    volumes = np.abs(np.random.randn(n) * 1_000_000)
-
-    print(f"\nTest data: {n:,} rows")
-    print(f"GPU available: {EngineManager.check_gpu_available()}")
-
-    # Test batch calculation
-    print("\nCalculating all indicators in batch...")
-    results = calculate_indicators_batch(
-        highs, lows, closes, volumes, engine="cpu", streaming=False  # Small dataset
-    )
-
-    print("\n✓ Batch calculation complete:")
-    print(f"  ATR: {results['atr'].shape}")
-    print(f"  RSI: {results['rsi'].shape}")
-    print(f"  Stochastic: %K={results['stochastic'][0].shape}, %D={results['stochastic'][1].shape}")
-    print(
-        f"  Bollinger: upper={results['bollinger'][0].shape}, middle={results['bollinger'][1].shape}, lower={results['bollinger'][2].shape}"
-    )
-    print(f"  OBV: {results['obv'].shape if results['obv'] is not None else 'None'}")
-    print(
-        f"  MACD: macd={results['macd'][0].shape}, signal={results['macd'][1].shape}, histogram={results['macd'][2].shape}"
-    )
-
-    # Test streaming with large dataset
-    print(f"\n\nTesting streaming with large dataset...")
-    n_large = 600_000
-    print(f"Generating {n_large:,} rows...")
-    closes_large = 100 + np.cumsum(np.random.randn(n_large) * 0.5)
-    highs_large = closes_large + np.abs(np.random.randn(n_large) * 0.3)
-    lows_large = closes_large - np.abs(np.random.randn(n_large) * 0.3)
-
-    print("Calculating with auto-streaming (should enable at 500K+)...")
-    results_large = calculate_indicators_batch(
-        highs_large,
-        lows_large,
-        closes_large,
-        engine="cpu",
-        streaming=None,  # Should auto-enable at 500K+
-    )
-    print("✓ Streaming mode worked - no OOM")
-    print(f"  Result shape: {results_large['atr'].shape}")
-
-    print("\n✓ All tests passed!")
+    # Test code moved to tests/test_batch.py
+    # Run: pytest tests/test_batch.py
+    pass

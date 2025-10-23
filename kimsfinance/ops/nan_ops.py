@@ -382,33 +382,6 @@ def should_use_gpu_for_nan_ops(data_size: int) -> bool:
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("Testing NaN operations...")
-
-    # Test data
-    test_data = np.array([100.0, 102.0, np.nan, 105.0, np.nan, 103.0, 107.0])
-
-    print(f"\nTest data: {test_data}")
-    print(f"GPU available: {EngineManager.check_gpu_available()}")
-
-    # Test nanmin
-    min_val = nanmin_gpu(test_data, engine="auto")
-    print(f"\nnanmin_gpu: {min_val}")
-
-    # Test nanmax
-    max_val = nanmax_gpu(test_data, engine="auto")
-    print(f"nanmax_gpu: {max_val}")
-
-    # Test nan_bounds
-    bounds = nan_bounds(test_data, test_data, engine="auto")
-    print(f"nan_bounds: {bounds}")
-
-    # Test isnan
-    nan_mask = isnan_gpu(test_data, engine="auto")
-    print(f"isnan_gpu: {nan_mask}")
-
-    # Test nan_indices
-    nan_idx = nan_indices(test_data, engine="auto")
-    print(f"nan_indices: {nan_idx}")
-
-    print("\n✓ All NaN operations working correctly!")
+    # Test code moved to tests/test_nan_ops.py
+    # Run: pytest tests/test_nan_ops.py
+    pass

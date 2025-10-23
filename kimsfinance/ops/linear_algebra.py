@@ -325,28 +325,6 @@ def moving_linear_fit(
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("Testing linear algebra operations...")
-
-    # Test data
-    x_test = np.arange(100, dtype=np.float64)
-    y_test = 2.5 * x_test + 100 + np.random.randn(100) * 5  # y = 2.5x + 100 + noise
-
-    print(f"\nGPU available: {EngineManager.check_gpu_available()}")
-
-    # Test least squares
-    slope, intercept = least_squares_fit(x_test, y_test, engine="auto")
-    print(f"\nLeast squares fit:")
-    print(f"  Slope: {slope:.4f} (expected: ~2.5)")
-    print(f"  Intercept: {intercept:.4f} (expected: ~100)")
-
-    # Test trend line
-    trend = trend_line(x_test, y_test, engine="auto")
-    print(f"\nTrend line calculated: {len(trend)} points")
-    print(f"  First 5 values: {trend[:5]}")
-
-    # Test correlation
-    corr = correlation(x_test, y_test, engine="auto")
-    print(f"\nCorrelation: {corr:.4f} (expected: close to 1.0)")
-
-    print("\n✓ All linear algebra operations working correctly!")
+    # Test code moved to tests/test_linear_algebra.py
+    # Run: pytest tests/test_linear_algebra.py
+    pass

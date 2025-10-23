@@ -1065,29 +1065,6 @@ def three_line_break_to_ohlc(
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("Testing aggregation operations...")
-
-    # Test data
-    volume_data = np.array([1000, 2000, 1500, 3000, 2500, 4000], dtype=np.float64)
-    price_data = np.array([100, 102, 101, 105, 103, 107], dtype=np.float64)
-
-    print(f"\nGPU available: {EngineManager.check_gpu_available()}")
-
-    # Test volume sum
-    total_volume = volume_sum(volume_data, engine="auto")
-    print(f"\nTotal volume: {total_volume:.0f}")
-
-    # Test VWAP
-    vwap = volume_weighted_price(price_data, volume_data, engine="auto")
-    print(f"VWAP: {vwap:.2f}")
-
-    # Test rolling sum
-    rolling = rolling_sum(volume_data, window=3)
-    print(f"\nRolling sum (window=3): {rolling}")
-
-    # Test cumulative sum
-    cumsum = cumulative_sum(volume_data)
-    print(f"Cumulative sum: {cumsum}")
-
-    print("\n✓ All aggregation operations working correctly!")
+    # Test code moved to tests/test_aggregations.py
+    # Run: pytest tests/test_aggregations.py
+    pass

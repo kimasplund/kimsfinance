@@ -3,6 +3,8 @@ include README.md
 include LICENSE
 include LICENSING.md
 include COMMERCIAL-LICENSE.md
+include CHANGELOG.md
+include CONTRIBUTING.md
 
 # Include configuration files
 include pyproject.toml

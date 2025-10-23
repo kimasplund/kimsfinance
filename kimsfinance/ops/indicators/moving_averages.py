@@ -310,32 +310,6 @@ def calculate_hma(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("Testing Polars moving averages...")
-
-    # Create test data
-    test_df = pl.DataFrame({"close": [100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0]})
-
-    print(f"\nTest data:\n{test_df}")
-
-    # Test SMA
-    print("\nCalculating SMA (windows: 3, 5)...")
-    sma_results = calculate_sma(test_df, "close", windows=[3, 5], engine="auto")
-    print(f"SMA 3: {sma_results[0]}")
-    print(f"SMA 5: {sma_results[1]}")
-
-    # Test EMA
-    print("\nCalculating EMA (windows: 3, 5)...")
-    ema_results = calculate_ema(test_df, "close", windows=[3, 5], engine="auto")
-    print(f"EMA 3: {ema_results[0]}")
-    print(f"EMA 5: {ema_results[1]}")
-
-    # Test combined
-    print("\nCalculating multiple MAs in single pass...")
-    mas = calculate_multiple_mas(
-        test_df, "close", sma_windows=[3, 5], ema_windows=[3, 5], engine="auto"
-    )
-    print(f"Combined SMA results: {len(mas['sma'])} arrays")
-    print(f"Combined EMA results: {len(mas['ema'])} arrays")
-
-    print("\n✓ All tests passed!")
+    # Test code moved to tests/test_moving_averages.py
+    # Run: pytest tests/test_moving_averages.py
+    pass

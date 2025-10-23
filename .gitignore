@@ -1,9 +1,15 @@
+# ==============================================================================
 # Python
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -23,36 +29,121 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
-venv/
-env/
-ENV/
+# PyInstaller
+*.manifest
+*.spec
+
+# ==============================================================================
+# Virtual Environments
+# ==============================================================================
+.env
 .venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Testing
-.pytest_cache/
-.coverage
+# ==============================================================================
+# Testing / Coverage
+# ==============================================================================
 htmlcov/
 .tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+coverage.json
 
-# MyPy
+# ==============================================================================
+# Type Checkers
+# ==============================================================================
+
+# mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# ==============================================================================
+# Profiling Data
+# ==============================================================================
+*.prof
+*.nsys-rep
+*.sqlite
+*.qdrep
+
+# ==============================================================================
+# IDEs and Editors
+# ==============================================================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# Vim
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Operating System Files
+# ==============================================================================
+
 # macOS
 .DS_Store
 
-# Project specific
-*.log
-.ipynb_checkpoints/
-integrated-reasoning/
-.claude/
+# Windows
+Thumbs.db
+
+# ==============================================================================
+# Project-Specific
+# ==============================================================================
+
+# Archives (from cleanup)
 archive/
+
+# Temporary files
+*.backup
+*.bak
+*.tmp
+
+# Log files
+*.log
+
+# Benchmark outputs (keep source, ignore results)
+benchmarks/*.log
+benchmarks/benchmark_output.log
+
+# GPU profiling data
+# (already covered above: *.nsys-rep, *.sqlite, *.qdrep)
+
+# Claude Code workspace
+.claude/
+integrated-reasoning/
