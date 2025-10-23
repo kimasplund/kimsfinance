@@ -68,11 +68,7 @@ def benchmark_roc():
         print(f"  CPU (vectorized): {cpu_time*1000:.2f} ms")
         print(f"  Throughput: {size/cpu_time:,.0f} candles/sec")
 
-        results.append({
-            'size': size,
-            'cpu_time': cpu_time,
-            'throughput': size/cpu_time
-        })
+        results.append({"size": size, "cpu_time": cpu_time, "throughput": size / cpu_time})
 
     return results
 
@@ -100,11 +96,7 @@ def benchmark_aroon():
         print(f"  CPU (sliding windows): {cpu_time*1000:.2f} ms")
         print(f"  Throughput: {size/cpu_time:,.0f} candles/sec")
 
-        results.append({
-            'size': size,
-            'cpu_time': cpu_time,
-            'throughput': size/cpu_time
-        })
+        results.append({"size": size, "cpu_time": cpu_time, "throughput": size / cpu_time})
 
     return results
 

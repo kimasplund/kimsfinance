@@ -72,9 +72,7 @@ def calculate_roc(prices: ArrayLike, period: int = 12, *, engine: Engine = "auto
 
     # 3. ENGINE ROUTING using EngineManager (standardized pattern)
     exec_engine = EngineManager.select_engine(
-        engine,
-        operation="roc_indicator",
-        data_size=len(data_array)
+        engine, operation="roc_indicator", data_size=len(data_array)
     )
 
     # 4. DISPATCH TO CPU OR GPU based on selected engine

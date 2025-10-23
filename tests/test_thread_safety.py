@@ -379,7 +379,9 @@ class TestDeadlockPrevention:
             pytest.fail(f"Thread safety errors: {errors}")
 
         elapsed = time.time() - start_time
-        assert elapsed < timeout_seconds, f"Operations took too long ({elapsed:.2f}s), possible deadlock"
+        assert (
+            elapsed < timeout_seconds
+        ), f"Operations took too long ({elapsed:.2f}s), possible deadlock"
 
 
 class TestPerformanceOverhead:

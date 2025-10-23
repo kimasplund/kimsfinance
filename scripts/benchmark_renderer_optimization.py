@@ -32,17 +32,21 @@ def generate_test_data(num_candles: int = 500):
     open_prices = np.roll(close_prices, 1)
     open_prices[0] = base_price
 
-    high_prices = np.maximum(open_prices, close_prices) * (1 + np.abs(np.random.normal(0, 0.01, num_candles)))
-    low_prices = np.minimum(open_prices, close_prices) * (1 - np.abs(np.random.normal(0, 0.01, num_candles)))
+    high_prices = np.maximum(open_prices, close_prices) * (
+        1 + np.abs(np.random.normal(0, 0.01, num_candles))
+    )
+    low_prices = np.minimum(open_prices, close_prices) * (
+        1 - np.abs(np.random.normal(0, 0.01, num_candles))
+    )
 
     # Generate volume
     volume = np.random.randint(1000, 10000, num_candles)
 
     ohlc = {
-        'open': open_prices,
-        'high': high_prices,
-        'low': low_prices,
-        'close': close_prices,
+        "open": open_prices,
+        "high": high_prices,
+        "low": low_prices,
+        "close": close_prices,
     }
 
     return ohlc, volume
@@ -91,7 +95,7 @@ def main():
     for num_candles in sizes:
         print(f"\n{'=' * 70}")
         print(f"Dataset: {num_candles} candles")
-        print('=' * 70)
+        print("=" * 70)
 
         ohlc, volume = generate_test_data(num_candles)
 
@@ -106,7 +110,7 @@ def main():
             volume=volume,
             width=1920,
             height=1080,
-            theme='classic',
+            theme="classic",
         )
 
         mean_hollow, std_hollow = benchmark_renderer(
@@ -117,7 +121,7 @@ def main():
             volume=volume,
             width=1920,
             height=1080,
-            theme='classic',
+            theme="classic",
         )
 
         # Benchmark SVG renderers
@@ -131,7 +135,7 @@ def main():
             volume=volume,
             width=1920,
             height=1080,
-            theme='classic',
+            theme="classic",
         )
 
         mean_svg_hollow, std_svg_hollow = benchmark_renderer(
@@ -142,7 +146,7 @@ def main():
             volume=volume,
             width=1920,
             height=1080,
-            theme='classic',
+            theme="classic",
         )
 
     print("\n" + "=" * 70)
@@ -154,5 +158,5 @@ def main():
     print("\nNote: Improvements are more noticeable with larger datasets (500+ candles)")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

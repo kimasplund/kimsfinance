@@ -73,6 +73,7 @@ def load_renderer_module():
     # Check if svgwrite is available
     try:
         import svgwrite
+
         SVGWRITE_AVAILABLE = True
     except ImportError:
         SVGWRITE_AVAILABLE = False
@@ -103,6 +104,7 @@ THEMES = renderer["THEMES"]
 # Import SVG rendering functions
 try:
     from kimsfinance.plotting.svg_renderer import render_candlestick_svg
+
     SVG_AVAILABLE = True
 except ImportError:
     SVG_AVAILABLE = False
@@ -452,7 +454,7 @@ def run_comprehensive_benchmarks(
 def format_results_markdown(
     results: list[BenchmarkResult],
     export_perf: dict[str, dict[str, float]],
-    comparison_results: dict[str, Any] = None
+    comparison_results: dict[str, Any] = None,
 ) -> str:
     """
     Format benchmark results as markdown tables.
@@ -485,10 +487,10 @@ def format_results_markdown(
 
     # Enhanced CPU info
     try:
-        with open('/proc/cpuinfo', 'r') as f:
+        with open("/proc/cpuinfo", "r") as f:
             for line in f:
-                if 'model name' in line:
-                    cpu_model = line.split(':')[1].strip()
+                if "model name" in line:
+                    cpu_model = line.split(":")[1].strip()
                     md.append(f"- **CPU:** {cpu_model} ({os.cpu_count()} cores)")
                     break
     except:
@@ -497,8 +499,9 @@ def format_results_markdown(
     # Memory info
     try:
         import subprocess
-        mem_info = subprocess.check_output(['free', '-h'], text=True)
-        mem_total = mem_info.split('\n')[1].split()[1]
+
+        mem_info = subprocess.check_output(["free", "-h"], text=True)
+        mem_total = mem_info.split("\n")[1].split()[1]
         md.append(f"- **Memory:** {mem_total}")
     except:
         pass
@@ -506,12 +509,14 @@ def format_results_markdown(
     # GPU info
     try:
         import subprocess
+
         gpu_info = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=name,memory.total', '--format=csv,noheader'],
-            text=True, stderr=subprocess.DEVNULL
+            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+            text=True,
+            stderr=subprocess.DEVNULL,
         ).strip()
         if gpu_info:
-            gpu_name, gpu_mem = gpu_info.split(', ')
+            gpu_name, gpu_mem = gpu_info.split(", ")
             md.append(f"- **GPU:** {gpu_name} ({gpu_mem})")
     except:
         pass
@@ -541,19 +546,25 @@ def format_results_markdown(
         md.append("")
 
         # Summary statistics
-        if 'summary' in comparison_results:
-            summary = comparison_results['summary']
+        if "summary" in comparison_results:
+            summary = comparison_results["summary"]
             md.append("### Summary")
             md.append("")
             md.append(f"- **Average Speedup:** {summary['average_speedup']:.1f}x faster")
-            md.append(f"- **Speedup Range:** {summary['min_speedup']:.1f}x - {summary['max_speedup']:.1f}x")
+            md.append(
+                f"- **Speedup Range:** {summary['min_speedup']:.1f}x - {summary['max_speedup']:.1f}x"
+            )
             md.append("")
 
             # Highlight if average speedup is over 100x
-            if summary['average_speedup'] >= 100:
-                md.append(f"✅ **kimsfinance is {summary['average_speedup']:.0f}x faster than mplfinance on average!**")
+            if summary["average_speedup"] >= 100:
+                md.append(
+                    f"✅ **kimsfinance is {summary['average_speedup']:.0f}x faster than mplfinance on average!**"
+                )
             else:
-                md.append(f"✅ **kimsfinance is {summary['average_speedup']:.1f}x faster than mplfinance!**")
+                md.append(
+                    f"✅ **kimsfinance is {summary['average_speedup']:.1f}x faster than mplfinance!**"
+                )
             md.append("")
 
         md.append("**Benchmark Configuration:**")
@@ -568,7 +579,9 @@ def format_results_markdown(
     md.append("")
     md.append("Performance scaling with increasing number of candles (baseline configuration).")
     md.append("")
-    md.append("*Note: PIL raster formats only. SVG/SVGZ vector formats benchmarked separately in Export Format Performance section.*")
+    md.append(
+        "*Note: PIL raster formats only. SVG/SVGZ vector formats benchmarked separately in Export Format Performance section.*"
+    )
     md.append("")
     md.append("| Candles | Render Time (ms) | Ops/Sec | WebP (KB) | PNG (KB) | JPEG (KB) |")
     md.append("|---------|------------------|---------|-----------|----------|-----------|")
@@ -831,8 +844,10 @@ def benchmark_mplfinance_comparison(
         import mplfinance as mpf
         import pandas as pd
         import matplotlib
-        matplotlib.use('Agg')  # Non-interactive backend
+
+        matplotlib.use("Agg")  # Non-interactive backend
         import matplotlib.pyplot as plt
+
         mplfinance_available = True
         print("✓ mplfinance available - running comparison")
     except ImportError:
@@ -853,18 +868,24 @@ def benchmark_mplfinance_comparison(
         with tempfile.TemporaryDirectory() as tmpdir:
             # Warm-up
             _ = render_ohlcv_chart(
-                data["ohlc"], data["volume"],
-                width=1280, height=720,
-                theme="classic", enable_antialiasing=False
+                data["ohlc"],
+                data["volume"],
+                width=1280,
+                height=720,
+                theme="classic",
+                enable_antialiasing=False,
             )
 
             # Benchmark
             for _ in range(n_runs):
                 start = time.perf_counter()
                 img = render_ohlcv_chart(
-                    data["ohlc"], data["volume"],
-                    width=1280, height=720,
-                    theme="classic", enable_antialiasing=False
+                    data["ohlc"],
+                    data["volume"],
+                    width=1280,
+                    height=720,
+                    theme="classic",
+                    enable_antialiasing=False,
                 )
                 filepath = os.path.join(tmpdir, "test_kf.png")
                 save_chart(img, filepath, format="png", quality=95)
@@ -877,27 +898,44 @@ def benchmark_mplfinance_comparison(
         mpf_times = []
         with tempfile.TemporaryDirectory() as tmpdir:
             # Convert to pandas DataFrame for mplfinance
-            df = pd.DataFrame({
-                'Open': data['ohlc']['open'],
-                'High': data['ohlc']['high'],
-                'Low': data['ohlc']['low'],
-                'Close': data['ohlc']['close'],
-                'Volume': data['volume'],
-            }, index=pd.date_range('2020-01-01', periods=size, freq='1min'))
+            df = pd.DataFrame(
+                {
+                    "Open": data["ohlc"]["open"],
+                    "High": data["ohlc"]["high"],
+                    "Low": data["ohlc"]["low"],
+                    "Close": data["ohlc"]["close"],
+                    "Volume": data["volume"],
+                },
+                index=pd.date_range("2020-01-01", periods=size, freq="1min"),
+            )
 
             # Warm-up
             filepath = os.path.join(tmpdir, "warmup_mpf.png")
-            mpf.plot(df, type='candle', volume=True, style='charles',
-                    figsize=(12.8, 7.2), savefig=filepath, show_nontrading=False)
-            plt.close('all')
+            mpf.plot(
+                df,
+                type="candle",
+                volume=True,
+                style="charles",
+                figsize=(12.8, 7.2),
+                savefig=filepath,
+                show_nontrading=False,
+            )
+            plt.close("all")
 
             # Benchmark
             for i in range(n_runs):
                 start = time.perf_counter()
                 filepath = os.path.join(tmpdir, f"test_mpf_{i}.png")
-                mpf.plot(df, type='candle', volume=True, style='charles',
-                        figsize=(12.8, 7.2), savefig=filepath, show_nontrading=False)
-                plt.close('all')
+                mpf.plot(
+                    df,
+                    type="candle",
+                    volume=True,
+                    style="charles",
+                    figsize=(12.8, 7.2),
+                    savefig=filepath,
+                    show_nontrading=False,
+                )
+                plt.close("all")
                 end = time.perf_counter()
                 mpf_times.append((end - start) * 1000)
 
@@ -909,16 +947,16 @@ def benchmark_mplfinance_comparison(
         print(f"  Speedup:     {speedup:>8.1f}x faster")
 
         results[size] = {
-            'kimsfinance_ms': kf_median,
-            'mplfinance_ms': mpf_median,
-            'speedup': speedup,
-            'kimsfinance_ops_per_sec': 1000 / kf_median,
-            'mplfinance_ops_per_sec': 1000 / mpf_median,
+            "kimsfinance_ms": kf_median,
+            "mplfinance_ms": mpf_median,
+            "speedup": speedup,
+            "kimsfinance_ops_per_sec": 1000 / kf_median,
+            "mplfinance_ops_per_sec": 1000 / mpf_median,
         }
 
     # Calculate overall statistics
     if results:
-        all_speedups = [r['speedup'] for r in results.values()]
+        all_speedups = [r["speedup"] for r in results.values()]
         avg_speedup = float(np.mean(all_speedups))
         min_speedup = float(np.min(all_speedups))
         max_speedup = float(np.max(all_speedups))
@@ -928,10 +966,10 @@ def benchmark_mplfinance_comparison(
         print(f"Range: {min_speedup:.1f}x - {max_speedup:.1f}x")
         print("=" * 80)
 
-        results['summary'] = {
-            'average_speedup': avg_speedup,
-            'min_speedup': min_speedup,
-            'max_speedup': max_speedup,
+        results["summary"] = {
+            "average_speedup": avg_speedup,
+            "min_speedup": min_speedup,
+            "max_speedup": max_speedup,
         }
 
     return results
@@ -971,10 +1009,10 @@ def main():
 
     # Enhanced CPU info
     try:
-        with open('/proc/cpuinfo', 'r') as f:
+        with open("/proc/cpuinfo", "r") as f:
             for line in f:
-                if 'model name' in line:
-                    cpu_model = line.split(':')[1].strip()
+                if "model name" in line:
+                    cpu_model = line.split(":")[1].strip()
                     print(f"CPU: {cpu_model} ({os.cpu_count()} cores)")
                     break
     except:
@@ -983,8 +1021,9 @@ def main():
     # Memory info
     try:
         import subprocess
-        mem_info = subprocess.check_output(['free', '-h'], text=True)
-        mem_total = mem_info.split('\n')[1].split()[1]
+
+        mem_info = subprocess.check_output(["free", "-h"], text=True)
+        mem_total = mem_info.split("\n")[1].split()[1]
         print(f"Memory: {mem_total}")
     except:
         pass
@@ -992,9 +1031,11 @@ def main():
     # GPU info
     try:
         import subprocess
+
         gpu_info = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=name,memory.total', '--format=csv,noheader'],
-            text=True, stderr=subprocess.DEVNULL
+            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
+            text=True,
+            stderr=subprocess.DEVNULL,
         ).strip()
         if gpu_info:
             print(f"GPU: {gpu_info}")
@@ -1013,7 +1054,9 @@ def main():
         print(f"  {fmt:5s}: {data['encode_time_ms']:>7.2f} ms, {data['file_size_kb']:>7.1f} KB")
 
     # Benchmark mplfinance comparison
-    comparison_results = benchmark_mplfinance_comparison(dataset_sizes=args.sizes, n_runs=args.n_runs)
+    comparison_results = benchmark_mplfinance_comparison(
+        dataset_sizes=args.sizes, n_runs=args.n_runs
+    )
 
     # Format and save results
     print(f"\nGenerating markdown report...")

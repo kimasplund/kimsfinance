@@ -91,7 +91,9 @@ def calculate_tsi(
 
     # Apply second smoothing
     double_smoothed_pc_valid = calculate_ema(smoothed_pc_valid, period=short_period, engine=engine)
-    double_smoothed_abs_pc_valid = calculate_ema(smoothed_abs_pc_valid, period=short_period, engine=engine)
+    double_smoothed_abs_pc_valid = calculate_ema(
+        smoothed_abs_pc_valid, period=short_period, engine=engine
+    )
 
     # 6. CALCULATE TSI for valid portion
     tsi_valid = 100.0 * (double_smoothed_pc_valid / (double_smoothed_abs_pc_valid + 1e-10))
@@ -99,6 +101,6 @@ def calculate_tsi(
     # 7. RECONSTRUCT FULL TSI ARRAY
     # Prepend NaN for: first price (diff loses 1) + warmup period
     tsi = np.full(len(data_array), np.nan)
-    tsi[first_valid + 1:first_valid + 1 + len(tsi_valid)] = tsi_valid
+    tsi[first_valid + 1 : first_valid + 1 + len(tsi_valid)] = tsi_valid
 
     return tsi

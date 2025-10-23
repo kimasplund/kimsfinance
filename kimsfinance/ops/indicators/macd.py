@@ -92,7 +92,9 @@ def calculate_macd(
         signal_line = np.full_like(macd_line, np.nan)
     else:
         # Calculate signal on valid MACD values
-        signal_valid = valid_macd.ewm_mean(span=signal_period, adjust=False, min_samples=signal_period)
+        signal_valid = valid_macd.ewm_mean(
+            span=signal_period, adjust=False, min_samples=signal_period
+        )
 
         # Reconstruct full-length signal line with NaN prefix
         signal_line_values = [np.nan] * first_valid_idx + signal_valid.to_list()
@@ -101,7 +103,7 @@ def calculate_macd(
         if len(signal_line_values) < len(macd_line):
             signal_line_values.extend([np.nan] * (len(macd_line) - len(signal_line_values)))
         elif len(signal_line_values) > len(macd_line):
-            signal_line_values = signal_line_values[:len(macd_line)]
+            signal_line_values = signal_line_values[: len(macd_line)]
 
         signal_line = np.array(signal_line_values, dtype=np.float64)
 

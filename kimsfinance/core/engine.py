@@ -41,7 +41,10 @@ GPU_CROSSOVER_THRESHOLDS = load_tuned_thresholds()
 # Thresholds are now loaded from gpu_thresholds.py for consistency
 OPERATION_HEURISTICS = {
     "nan_ops": {"threshold": get_threshold("nan_ops"), "ops": ["nanmin", "nanmax", "isnan"]},
-    "linear_algebra": {"threshold": get_threshold("linear_algebra"), "ops": ["least_squares", "trend_line"]},
+    "linear_algebra": {
+        "threshold": get_threshold("linear_algebra"),
+        "ops": ["least_squares", "trend_line"],
+    },
     "indicators": {"threshold": get_threshold("aggregation"), "ops": ["atr", "rsi"]},
     "aggregations": {"threshold": get_threshold("aggregation"), "ops": ["volume_sum"]},
     "transformations": {"threshold": get_threshold("transformation"), "ops": ["pnf", "renko"]},
@@ -133,7 +136,9 @@ class EngineManager:
                     return "cpu"
 
                 if operation and data_size is not None:
-                    threshold = GPU_CROSSOVER_THRESHOLDS.get(operation, GPU_CROSSOVER_THRESHOLDS["default"])
+                    threshold = GPU_CROSSOVER_THRESHOLDS.get(
+                        operation, GPU_CROSSOVER_THRESHOLDS["default"]
+                    )
                     return "gpu" if data_size >= threshold else "cpu"
 
                 return "cpu"  # Conservative default for "auto"

@@ -107,8 +107,7 @@ class RenderConfig:
         # Width/height bounds
         if not (100 <= self.width <= 8192):
             raise ValueError(
-                f"width must be 100-8192, got {self.width}. "
-                f"Common values: 1920 (HD), 3840 (4K)"
+                f"width must be 100-8192, got {self.width}. " f"Common values: 1920 (HD), 3840 (4K)"
             )
 
         if not (100 <= self.height <= 8192):
@@ -121,15 +120,12 @@ class RenderConfig:
         valid_themes = ("classic", "modern", "light", "tradingview")
         if self.theme not in valid_themes:
             raise ValueError(
-                f"Invalid theme: '{self.theme}'. "
-                f"Valid themes: {', '.join(valid_themes)}"
+                f"Invalid theme: '{self.theme}'. " f"Valid themes: {', '.join(valid_themes)}"
             )
 
         # Line width validation
         if not (0.1 <= self.line_width <= 20.0):
-            raise ValueError(
-                f"line_width must be 0.1-20.0, got {self.line_width}"
-            )
+            raise ValueError(f"line_width must be 0.1-20.0, got {self.line_width}")
 
         # Antialiasing mode validation
         valid_aa_modes = ("fast", "best", "none")
@@ -151,8 +147,7 @@ class RenderConfig:
         """Validate hex color string."""
         if not color.startswith("#"):
             raise ValueError(
-                f"{name} must start with '#', got '{color}'. "
-                f"Example: '#FF0000' for red"
+                f"{name} must start with '#', got '{color}'. " f"Example: '#FF0000' for red"
             )
 
         # Remove '#' and check hex digits
@@ -169,8 +164,7 @@ class RenderConfig:
             int(hex_part, 16)
         except ValueError:
             raise ValueError(
-                f"{name} contains invalid hex digits: '{color}'. "
-                f"Use only 0-9, A-F characters"
+                f"{name} contains invalid hex digits: '{color}'. " f"Use only 0-9, A-F characters"
             )
 
     def to_dict(self) -> dict[str, Any]:

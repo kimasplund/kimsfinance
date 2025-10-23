@@ -18,10 +18,10 @@ from kimsfinance.utils.color_utils import _hex_to_rgba
 def sample_ohlc():
     """Generate sample OHLC data for testing."""
     return {
-        'open': np.array([100, 102, 101, 103, 105]),
-        'high': np.array([105, 106, 104, 107, 108]),
-        'low': np.array([99, 101, 100, 102, 104]),
-        'close': np.array([102, 101, 103, 105, 107]),
+        "open": np.array([100, 102, 101, 103, 105]),
+        "high": np.array([105, 106, 104, 107, 108]),
+        "low": np.array([99, 101, 100, 102, 104]),
+        "close": np.array([102, 101, 103, 105, 107]),
     }
 
 
@@ -40,11 +40,7 @@ class TestPathTraversalValidation:
         # This test verifies that attempts to write to a real system file fail
         with pytest.raises(ValueError, match="auto-detect format|system directory"):
             # Use /etc/passwd directly to ensure it's caught
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                savefig="/etc/passwd"
-            )
+            plot(sample_ohlc, volume=sample_volume, savefig="/etc/passwd")
 
     def test_system_directory_blocked(self, sample_ohlc, sample_volume):
         """Test that writing to system directories is blocked."""
@@ -147,11 +143,7 @@ class TestNumericValidation:
 
         for width, height in valid_dimensions:
             img = plot(
-                sample_ohlc,
-                volume=sample_volume,
-                width=width,
-                height=height,
-                returnfig=True
+                sample_ohlc, volume=sample_volume, width=width, height=height, returnfig=True
             )
             assert img is not None
             assert img.size == (width, height)
@@ -159,57 +151,27 @@ class TestNumericValidation:
     def test_line_width_too_small(self, sample_ohlc, sample_volume):
         """Test that line width below minimum is rejected."""
         with pytest.raises(ValueError, match="line_width must be between"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                type='line',
-                line_width=0.05,
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, type="line", line_width=0.05, returnfig=True)
 
     def test_line_width_too_large(self, sample_ohlc, sample_volume):
         """Test that line width above maximum is rejected."""
         with pytest.raises(ValueError, match="line_width must be between"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                type='line',
-                line_width=25,
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, type="line", line_width=25, returnfig=True)
 
     def test_box_size_negative(self, sample_ohlc, sample_volume):
         """Test that negative box size is rejected."""
         with pytest.raises(ValueError, match="box_size must be positive"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                type='renko',
-                box_size=-1,
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, type="renko", box_size=-1, returnfig=True)
 
     def test_reversal_boxes_too_small(self, sample_ohlc, sample_volume):
         """Test that reversal_boxes below minimum is rejected."""
         with pytest.raises(ValueError, match="reversal_boxes must be between"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                type='pnf',
-                reversal_boxes=0,
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, type="pnf", reversal_boxes=0, returnfig=True)
 
     def test_reversal_boxes_too_large(self, sample_ohlc, sample_volume):
         """Test that reversal_boxes above maximum is rejected."""
         with pytest.raises(ValueError, match="reversal_boxes must be between"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                type='pnf',
-                reversal_boxes=15,
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, type="pnf", reversal_boxes=15, returnfig=True)
 
 
 class TestColorValidation:
@@ -218,13 +180,13 @@ class TestColorValidation:
     def test_valid_hex_colors(self):
         """Test that valid hex colors are accepted."""
         valid_colors = [
-            '#FF0000',
-            '#00FF00',
-            '#0000FF',
-            'FF0000',  # Without #
-            '#AABBCC',
-            'aabbcc',  # Lowercase
-            '#FF0000FF',  # With alpha
+            "#FF0000",
+            "#00FF00",
+            "#0000FF",
+            "FF0000",  # Without #
+            "#AABBCC",
+            "aabbcc",  # Lowercase
+            "#FF0000FF",  # With alpha
         ]
 
         for color in valid_colors:
@@ -235,15 +197,15 @@ class TestColorValidation:
     def test_invalid_hex_format(self):
         """Test that invalid hex formats are rejected."""
         invalid_colors = [
-            'GGGGGG',  # Invalid hex characters
-            '#GG0000',
-            'FF00',  # Too short
-            '#FF',
-            'FF00000000',  # Too long
-            '#FFFFFFFFFF',
-            'not-a-color',
-            '',  # Empty
-            '#',
+            "GGGGGG",  # Invalid hex characters
+            "#GG0000",
+            "FF00",  # Too short
+            "#FF",
+            "FF00000000",  # Too long
+            "#FFFFFFFFFF",
+            "not-a-color",
+            "",  # Empty
+            "#",
         ]
 
         for color in invalid_colors:
@@ -253,22 +215,17 @@ class TestColorValidation:
     def test_plot_with_invalid_colors(self, sample_ohlc, sample_volume):
         """Test that plot rejects invalid color parameters."""
         with pytest.raises(ValueError, match="Invalid hex color format"):
-            plot(
-                sample_ohlc,
-                volume=sample_volume,
-                up_color='INVALID',
-                returnfig=True
-            )
+            plot(sample_ohlc, volume=sample_volume, up_color="INVALID", returnfig=True)
 
     def test_plot_with_valid_colors(self, sample_ohlc, sample_volume):
         """Test that plot accepts valid color parameters."""
         img = plot(
             sample_ohlc,
             volume=sample_volume,
-            bg_color='#000000',
-            up_color='#00FF00',
-            down_color='#FF0000',
-            returnfig=True
+            bg_color="#000000",
+            up_color="#00FF00",
+            down_color="#FF0000",
+            returnfig=True,
         )
         assert img is not None
 
@@ -288,9 +245,9 @@ class TestIntegration:
                 savefig=output_path,
                 width=1920,
                 height=1080,
-                bg_color='#1E1E1E',
-                up_color='#26A69A',
-                down_color='#EF5350',
+                bg_color="#1E1E1E",
+                up_color="#26A69A",
+                down_color="#EF5350",
             )
 
             # Verify file was created
@@ -305,7 +262,7 @@ class TestIntegration:
                 sample_ohlc,
                 volume=sample_volume,
                 savefig="/etc/test.webp",
-                up_color='INVALID_COLOR',  # Would fail if path check passed
+                up_color="INVALID_COLOR",  # Would fail if path check passed
             )
 
 

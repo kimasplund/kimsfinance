@@ -18,6 +18,7 @@ except ImportError:
 
         return decorator
 
+
 try:
     import svgwrite
 
@@ -68,7 +69,7 @@ def _ensure_c_contiguous(arr: np.ndarray) -> np.ndarray:
         - If not contiguous: Single copy, same as np.ascontiguousarray()
         - Reduces unnecessary copies by ~80% in typical use cases
     """
-    if arr.flags['C_CONTIGUOUS']:
+    if arr.flags["C_CONTIGUOUS"]:
         return arr
     return np.ascontiguousarray(arr)
 
@@ -105,7 +106,7 @@ def _validate_save_path(path: str) -> Path:
     except ValueError:
         # Path is outside cwd - allow only if user explicitly provides absolute path
         # but still validate it's not a system directory
-        system_dirs = ['/etc', '/sys', '/proc', '/dev', '/root', '/boot']
+        system_dirs = ["/etc", "/sys", "/proc", "/dev", "/root", "/boot"]
         if any(str(file_path).startswith(sd) for sd in system_dirs):
             raise ValueError(
                 f"Cannot write to system directory: {file_path}. "
@@ -135,25 +136,21 @@ def _validate_numeric_params(width: int, height: int, **kwargs) -> None:
         )
 
     # Line width validation
-    line_width = kwargs.get('line_width', 1.0)
+    line_width = kwargs.get("line_width", 1.0)
     if not (0.1 <= line_width <= 20.0):
-        raise ValueError(
-            f"line_width must be between 0.1 and 20.0, got {line_width}"
-        )
+        raise ValueError(f"line_width must be between 0.1 and 20.0, got {line_width}")
 
     # Box size for PnF charts
-    if 'box_size' in kwargs:
-        box_size = kwargs['box_size']
+    if "box_size" in kwargs:
+        box_size = kwargs["box_size"]
         if box_size is not None and box_size <= 0:
             raise ValueError(f"box_size must be positive, got {box_size}")
 
     # Reversal boxes for PnF charts
-    if 'reversal_boxes' in kwargs:
-        reversal_boxes = kwargs['reversal_boxes']
+    if "reversal_boxes" in kwargs:
+        reversal_boxes = kwargs["reversal_boxes"]
         if not (1 <= reversal_boxes <= 10):
-            raise ValueError(
-                f"reversal_boxes must be between 1 and 10, got {reversal_boxes}"
-            )
+            raise ValueError(f"reversal_boxes must be between 1 and 10, got {reversal_boxes}")
 
 
 def save_chart(
@@ -1257,7 +1254,9 @@ def render_hollow_candles(
     bar_width = candle_width - spacing
 
     # Calculate wick width: minimum 1px, maximum 10% of bar_width
-    wick_width = max(MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO)))
+    wick_width = max(
+        MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO))
+    )
 
     # Draw grid lines (background layer - before candles)
     if show_grid:
@@ -1397,7 +1396,9 @@ def render_hollow_candles(
         y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
             int, copy=False
         )
-        y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(int, copy=False)
+        y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
+            int, copy=False
+        )
         y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
             int, copy=False
         )
@@ -1484,7 +1485,9 @@ def _draw_grid(
     # Draw horizontal price level lines (10 divisions)
     # Vectorize coordinate calculations for better performance
     horizontal_indices = np.arange(1, HORIZONTAL_GRID_DIVISIONS)
-    y_coords = (horizontal_indices * chart_height // HORIZONTAL_GRID_DIVISIONS).astype(int, copy=False)
+    y_coords = (horizontal_indices * chart_height // HORIZONTAL_GRID_DIVISIONS).astype(
+        int, copy=False
+    )
 
     for y in y_coords:
         draw.line([(0, y), (width, y)], fill=color, width=int(GRID_LINE_WIDTH))
@@ -1881,7 +1884,9 @@ def render_ohlcv_chart(
     bar_width = candle_width - spacing
 
     # Calculate wick width: minimum 1px, maximum 10% of bar_width
-    wick_width = max(MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO)))
+    wick_width = max(
+        MIN_WICK_WIDTH, min(int(bar_width * wick_width_ratio), int(bar_width * WICK_WIDTH_RATIO))
+    )
 
     # Draw grid lines (background layer - before candles)
     if show_grid:
@@ -2019,7 +2024,9 @@ def render_ohlcv_chart(
         y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
             int, copy=False
         )
-        y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(int, copy=False)
+        y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
+            int, copy=False
+        )
         y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
             int, copy=False
         )

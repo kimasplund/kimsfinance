@@ -320,7 +320,9 @@ class TestRangeToOHLC:
         bar_ranges = highs - lows
 
         # Should be at least range_size
-        assert np.all(bar_ranges >= range_size * 0.95), "Bar ranges below threshold"  # Allow small tolerance
+        assert np.all(
+            bar_ranges >= range_size * 0.95
+        ), "Bar ranges below threshold"  # Allow small tolerance
 
     def test_volume_conservation(self, high_volatility_tick_data):
         """Test that total volume is conserved."""

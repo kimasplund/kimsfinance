@@ -153,9 +153,7 @@ class TestHMABasic:
             sqrt_period = int(np.round(np.sqrt(period)))
 
             assert half_period == expected_half, f"Period {period}: half should be {expected_half}"
-            assert (
-                sqrt_period == expected_sqrt
-            ), f"Period {period}: sqrt should be {expected_sqrt}"
+            assert sqrt_period == expected_sqrt, f"Period {period}: sqrt should be {expected_sqrt}"
 
     def test_hma_more_responsive_than_sma(self, sample_data):
         """Test that HMA is more responsive than SMA to recent changes."""

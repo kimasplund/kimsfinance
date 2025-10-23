@@ -385,7 +385,9 @@ def test_obv_uptrend_volume_confirmation():
 
     obv_weak = calculate_obv(closes_weak, volumes_weak, engine="cpu")
 
-    print(f"✓ Strong uptrend (increasing volume): OBV change = {obv_strong[-1] - obv_strong[0]:.0f}")
+    print(
+        f"✓ Strong uptrend (increasing volume): OBV change = {obv_strong[-1] - obv_strong[0]:.0f}"
+    )
     print(f"  Weak uptrend (decreasing volume): OBV change = {obv_weak[-1] - obv_weak[0]:.0f}")
 
     # Strong uptrend should have larger OBV increase
@@ -410,7 +412,9 @@ def test_obv_downtrend_volume_confirmation():
 
     obv_weak = calculate_obv(closes_weak, volumes_weak, engine="cpu")
 
-    print(f"✓ Strong downtrend (increasing volume): OBV change = {obv_strong[-1] - obv_strong[0]:.0f}")
+    print(
+        f"✓ Strong downtrend (increasing volume): OBV change = {obv_strong[-1] - obv_strong[0]:.0f}"
+    )
     print(f"  Weak downtrend (decreasing volume): OBV change = {obv_weak[-1] - obv_weak[0]:.0f}")
 
     # Strong downtrend should have larger OBV decrease
@@ -491,7 +495,9 @@ def test_obv_volume_surge():
 
     # Normal volume, then surge, then back to normal
     closes = np.array([100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0])
-    volumes = np.array([1_000_000.0, 1_000_000.0, 10_000_000.0, 1_000_000.0, 1_000_000.0, 1_000_000.0, 1_000_000.0])
+    volumes = np.array(
+        [1_000_000.0, 1_000_000.0, 10_000_000.0, 1_000_000.0, 1_000_000.0, 1_000_000.0, 1_000_000.0]
+    )
 
     obv = calculate_obv(closes, volumes, engine="cpu")
 

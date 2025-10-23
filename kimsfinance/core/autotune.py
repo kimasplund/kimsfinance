@@ -50,7 +50,10 @@ def _get_test_data(size: int) -> pl.DataFrame:
 
 
 def _benchmark_operation(
-    func: Callable[[pl.DataFrame, Engine], Any], data: pl.DataFrame, engine: Engine, number: int = 10
+    func: Callable[[pl.DataFrame, Engine], Any],
+    data: pl.DataFrame,
+    engine: Engine,
+    number: int = 10,
 ) -> float:
     """Benchmark a given function on a specific engine."""
     from .engine import EngineManager  # Local import to avoid circular dependency

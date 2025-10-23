@@ -27,13 +27,15 @@ for _ in range(num_candles):
     high_price = max(open_price, close_price) + abs(np.random.randn() * 2)
     low_price = min(open_price, close_price) - abs(np.random.randn() * 2)
 
-    prices.append({
-        'Open': open_price,
-        'High': high_price,
-        'Low': low_price,
-        'Close': close_price,
-        'Volume': np.random.randint(1000, 10000)
-    })
+    prices.append(
+        {
+            "Open": open_price,
+            "High": high_price,
+            "Low": low_price,
+            "Close": close_price,
+            "Volume": np.random.randint(1000, 10000),
+        }
+    )
 
     current_price = close_price
 
@@ -45,29 +47,59 @@ print("=" * 60)
 
 # Demo 1: Basic line chart
 print("\n1. Basic line chart (classic theme)")
-plot(df, type='line', style='classic', volume=True,
-     savefig='demo_line_basic.svg', width=1920, height=1080)
+plot(
+    df,
+    type="line",
+    style="classic",
+    volume=True,
+    savefig="demo_line_basic.svg",
+    width=1920,
+    height=1080,
+)
 print("   ✓ Saved to: demo_line_basic.svg")
 
 # Demo 2: Line chart with filled area
 print("\n2. Line chart with filled area (modern theme)")
-plot(df, type='line', style='modern', volume=True,
-     fill_area=True, line_width=3,
-     savefig='demo_line_filled.svg', width=1920, height=1080)
+plot(
+    df,
+    type="line",
+    style="modern",
+    volume=True,
+    fill_area=True,
+    line_width=3,
+    savefig="demo_line_filled.svg",
+    width=1920,
+    height=1080,
+)
 print("   ✓ Saved to: demo_line_filled.svg")
 
 # Demo 3: Custom colors
 print("\n3. Line chart with custom colors")
-plot(df, type='line', style='classic', volume=True,
-     bg_color='#0D1117', line_color='#58A6FF',
-     savefig='demo_line_custom.svg', width=1920, height=1080)
+plot(
+    df,
+    type="line",
+    style="classic",
+    volume=True,
+    bg_color="#0D1117",
+    line_color="#58A6FF",
+    savefig="demo_line_custom.svg",
+    width=1920,
+    height=1080,
+)
 print("   ✓ Saved to: demo_line_custom.svg")
 
 # Demo 4: No volume panel
 print("\n4. Line chart without volume (light theme)")
-df_no_vol = df.select(['Open', 'High', 'Low', 'Close'])
-plot(df_no_vol, type='line', style='light', volume=False,
-     savefig='demo_line_no_volume.svg', width=1600, height=900)
+df_no_vol = df.select(["Open", "High", "Low", "Close"])
+plot(
+    df_no_vol,
+    type="line",
+    style="light",
+    volume=False,
+    savefig="demo_line_no_volume.svg",
+    width=1600,
+    height=900,
+)
 print("   ✓ Saved to: demo_line_no_volume.svg")
 
 print("\n" + "=" * 60)

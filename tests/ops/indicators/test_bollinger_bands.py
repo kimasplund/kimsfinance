@@ -37,6 +37,7 @@ def gpu_available() -> bool:
     """Check if GPU is available."""
     try:
         import cupy
+
         cupy.cuda.runtime.getDeviceCount()
         return True
     except (ImportError, Exception):
@@ -140,11 +141,16 @@ class TestBollingerBandsBasicCalculation:
 
         # Manually calculate expected upper band
         import polars as pl
+
         df = pl.DataFrame({"price": simple_prices})
-        result = df.lazy().select(
-            middle=pl.col("price").rolling_mean(window_size=period),
-            std_dev=pl.col("price").rolling_std(window_size=period),
-        ).collect(engine="cpu")
+        result = (
+            df.lazy()
+            .select(
+                middle=pl.col("price").rolling_mean(window_size=period),
+                std_dev=pl.col("price").rolling_std(window_size=period),
+            )
+            .collect(engine="cpu")
+        )
 
         expected_upper = result["middle"].to_numpy() + (num_std * result["std_dev"].to_numpy())
 
@@ -161,11 +167,16 @@ class TestBollingerBandsBasicCalculation:
 
         # Manually calculate expected lower band
         import polars as pl
+
         df = pl.DataFrame({"price": simple_prices})
-        result = df.lazy().select(
-            middle=pl.col("price").rolling_mean(window_size=period),
-            std_dev=pl.col("price").rolling_std(window_size=period),
-        ).collect(engine="cpu")
+        result = (
+            df.lazy()
+            .select(
+                middle=pl.col("price").rolling_mean(window_size=period),
+                std_dev=pl.col("price").rolling_std(window_size=period),
+            )
+            .collect(engine="cpu")
+        )
 
         expected_lower = result["middle"].to_numpy() - (num_std * result["std_dev"].to_numpy())
 
@@ -204,7 +215,9 @@ class TestBollingerBandsBasicCalculation:
         band_width_1 = upper_1[valid_mask] - lower_1[valid_mask]
         band_width_2 = upper_2[valid_mask] - lower_2[valid_mask]
 
-        assert np.all(band_width_1 < band_width_2), "1-std bands should be narrower than 2-std bands"
+        assert np.all(
+            band_width_1 < band_width_2
+        ), "1-std bands should be narrower than 2-std bands"
 
     def test_custom_std_multiplier_3(self, sample_prices):
         """Test with custom std multiplier = 3.0."""
@@ -247,10 +260,15 @@ class TestBollingerBandsBasicCalculation:
 
         # Band width should equal 2 * num_std * std_dev
         import polars as pl
+
         df = pl.DataFrame({"price": sample_prices})
-        result = df.lazy().select(
-            std_dev=pl.col("price").rolling_std(window_size=period),
-        ).collect(engine="cpu")
+        result = (
+            df.lazy()
+            .select(
+                std_dev=pl.col("price").rolling_std(window_size=period),
+            )
+            .collect(engine="cpu")
+        )
 
         expected_width = 2 * num_std * result["std_dev"].to_numpy()
         np.testing.assert_allclose(band_width, expected_width, equal_nan=True)
@@ -341,7 +359,7 @@ class TestBollingerBandsBasicCalculation:
 
         # First (period-1) values should be NaN (Polars behavior)
         # Note: Polars rolling functions produce NaN for insufficient window
-        assert np.isnan(middle[0:period-1]).any()
+        assert np.isnan(middle[0 : period - 1]).any()
 
     def test_zero_std_produces_collapsed_bands(self):
         """Test that zero std deviation produces collapsed bands."""
@@ -354,12 +372,8 @@ class TestBollingerBandsBasicCalculation:
 
         # Where std_dev = 0, upper = middle = lower
         valid_mask = ~np.isnan(middle)
-        np.testing.assert_allclose(
-            upper[valid_mask], middle[valid_mask], rtol=1e-10
-        )
-        np.testing.assert_allclose(
-            lower[valid_mask], middle[valid_mask], rtol=1e-10
-        )
+        np.testing.assert_allclose(upper[valid_mask], middle[valid_mask], rtol=1e-10)
+        np.testing.assert_allclose(lower[valid_mask], middle[valid_mask], rtol=1e-10)
 
     def test_large_multiplier(self, sample_prices):
         """Test with very large std multiplier."""
@@ -461,7 +475,9 @@ class TestBollingerBandsVolatilitySignals:
 
         # Avoid division by zero
         nonzero_mask = band_width > 0
-        percent_b = (sample_prices[valid_mask][nonzero_mask] - lower[valid_mask][nonzero_mask]) / band_width[nonzero_mask]
+        percent_b = (
+            sample_prices[valid_mask][nonzero_mask] - lower[valid_mask][nonzero_mask]
+        ) / band_width[nonzero_mask]
 
         # %B should typically be between 0 and 1 (can exceed during breakouts)
         # Most values should be in reasonable range
@@ -720,9 +736,7 @@ class TestBollingerBandsEdgeCases:
         """Test with mixed positive and negative prices."""
         mixed = np.array([100.0, -50.0, 75.0, -25.0, 50.0, 0.0, 25.0, -10.0])
 
-        upper, middle, lower = calculate_bollinger_bands(
-            mixed, period=3, num_std=2.0, engine="cpu"
-        )
+        upper, middle, lower = calculate_bollinger_bands(mixed, period=3, num_std=2.0, engine="cpu")
 
         # Should handle mixed signs
         assert len(upper) == len(mixed)

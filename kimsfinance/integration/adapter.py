@@ -182,7 +182,9 @@ def activate(*, engine: str = "auto", strict: bool = False, verbose: bool = True
         try:
             import mplfinance
         except ImportError:
-            raise ImportError("mplfinance is not installed. " "Install with: pip install mplfinance")
+            raise ImportError(
+                "mplfinance is not installed. " "Install with: pip install mplfinance"
+            )
 
         # Apply patches
         from .hooks import patch_plotting_functions
@@ -295,7 +297,9 @@ def configure(**kwargs) -> None:
 
         for key, value in kwargs.items():
             if key not in valid_keys:
-                raise ValueError(f"Invalid configuration key: {key!r}. " f"Valid keys: {valid_keys}")
+                raise ValueError(
+                    f"Invalid configuration key: {key!r}. " f"Valid keys: {valid_keys}"
+                )
 
             # Type validation
             if key == "default_engine" and value not in ("auto", "cpu", "gpu"):

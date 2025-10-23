@@ -50,6 +50,7 @@ from kimsfinance.core.types import Engine
 # Check if GPU is available
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -441,7 +442,9 @@ class TestDEMATEMAComparison:
             sma_lag = np.mean(np.abs(prices_valid - sma_valid))
 
             # Verify order: TEMA < DEMA < EMA < SMA
-            assert tema_lag < dema_lag < ema_lag < sma_lag, "Responsiveness should be: TEMA > DEMA > EMA > SMA"
+            assert (
+                tema_lag < dema_lag < ema_lag < sma_lag
+            ), "Responsiveness should be: TEMA > DEMA > EMA > SMA"
 
     def test_crossover_timing_differences(self, oscillating_data):
         """Test that TEMA detects trend changes earlier than DEMA."""
@@ -461,7 +464,9 @@ class TestDEMATEMAComparison:
             tema_changes = np.sum(np.diff(np.sign(np.diff(tema_valid))) != 0)
 
             # TEMA should detect at least as many or more direction changes
-            assert tema_changes >= dema_changes * 0.8, "TEMA should be similarly responsive to direction changes"
+            assert (
+                tema_changes >= dema_changes * 0.8
+            ), "TEMA should be similarly responsive to direction changes"
 
     def test_same_period_different_values(self, sample_data):
         """Test that DEMA and TEMA produce different values for same period."""
@@ -545,8 +550,13 @@ class TestDEMATEMASignals:
             # Count crossovers
             crossovers = 0
             for i in range(1, len(dema_fast_valid)):
-                if (dema_fast_valid[i-1] < dema_slow_valid[i-1] and dema_fast_valid[i] > dema_slow_valid[i]) or \
-                   (dema_fast_valid[i-1] > dema_slow_valid[i-1] and dema_fast_valid[i] < dema_slow_valid[i]):
+                if (
+                    dema_fast_valid[i - 1] < dema_slow_valid[i - 1]
+                    and dema_fast_valid[i] > dema_slow_valid[i]
+                ) or (
+                    dema_fast_valid[i - 1] > dema_slow_valid[i - 1]
+                    and dema_fast_valid[i] < dema_slow_valid[i]
+                ):
                     crossovers += 1
 
             # Should have some crossovers in random walk data
@@ -601,12 +611,14 @@ class TestDEMATEMASignals:
     def test_dema_tema_divergence(self):
         """Test divergence between DEMA and TEMA."""
         # Create data where price makes higher highs but momentum weakens
-        prices = np.concatenate([
-            np.linspace(100, 120, 50),  # First peak
-            np.linspace(120, 110, 20),  # Pullback
-            np.linspace(110, 125, 50),  # Higher high
-            np.full(50, 125)            # Plateau
-        ])
+        prices = np.concatenate(
+            [
+                np.linspace(100, 120, 50),  # First peak
+                np.linspace(120, 110, 20),  # Pullback
+                np.linspace(110, 125, 50),  # Higher high
+                np.full(50, 125),  # Plateau
+            ]
+        )
 
         dema = calculate_dema(prices, period=10, engine="cpu")
         tema = calculate_tema(prices, period=10, engine="cpu")

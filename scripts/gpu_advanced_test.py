@@ -11,11 +11,18 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import numpy as np
 
+
 # Color codes
 class C:
-    H = '\033[95m'; B = '\033[94m'; C = '\033[96m'
-    G = '\033[92m'; Y = '\033[93m'; R = '\033[91m'
-    E = '\033[0m'; BOLD = '\033[1m'
+    H = "\033[95m"
+    B = "\033[94m"
+    C = "\033[96m"
+    G = "\033[92m"
+    Y = "\033[93m"
+    R = "\033[91m"
+    E = "\033[0m"
+    BOLD = "\033[1m"
+
 
 def header(t: str) -> None:
     w = 65
@@ -23,10 +30,12 @@ def header(t: str) -> None:
     print(f"{C.BOLD}│ {t:<{w-4}} │{C.E}")
     print(f"{C.BOLD}{'└' + '─' * (w-2) + '┘'}{C.E}\n")
 
+
 def status(label: str, value: str, s: str = "i") -> None:
     color = {"p": C.G, "f": C.R, "w": C.Y, "i": C.C}[s[0]]
     symbol = {"p": "✓", "f": "✗", "w": "⚠", "i": "•"}[s[0]]
     print(f"  {color}{symbol} {label}: {value}{C.E}")
+
 
 def run_cmd(cmd: List[str]) -> Tuple[str, int]:
     """Run command and return output, returncode"""
@@ -36,20 +45,23 @@ def run_cmd(cmd: List[str]) -> Tuple[str, int]:
     except Exception as e:
         return "", 1
 
+
 def get_gpu_stats() -> Dict[str, Any]:
     """Get comprehensive GPU stats"""
-    out, _ = run_cmd([
-        "nvidia-smi",
-        "--query-gpu=name,driver_version,memory.total,memory.used,memory.free,"
-        "utilization.gpu,utilization.memory,temperature.gpu,power.draw,clocks.sm,"
-        "clocks.mem,compute_cap",
-        "--format=csv,noheader,nounits"
-    ])
+    out, _ = run_cmd(
+        [
+            "nvidia-smi",
+            "--query-gpu=name,driver_version,memory.total,memory.used,memory.free,"
+            "utilization.gpu,utilization.memory,temperature.gpu,power.draw,clocks.sm,"
+            "clocks.mem,compute_cap",
+            "--format=csv,noheader,nounits",
+        ]
+    )
 
     if not out:
         return {}
 
-    parts = [p.strip() for p in out.split(',')]
+    parts = [p.strip() for p in out.split(",")]
     if len(parts) < 12:
         return {}
 
@@ -65,8 +77,9 @@ def get_gpu_stats() -> Dict[str, Any]:
         "power_w": float(parts[8]) if parts[8] != "[N/A]" else 0,
         "clock_sm_mhz": int(float(parts[9])),
         "clock_mem_mhz": int(float(parts[10])),
-        "compute_cap": parts[11]
+        "compute_cap": parts[11],
     }
+
 
 def test_pytorch_cuda() -> Dict[str, Any]:
     """Test PyTorch CUDA availability and performance"""
@@ -104,7 +117,7 @@ def test_pytorch_cuda() -> Dict[str, Any]:
 
             results[f"{size}x{size}"] = {
                 "time_ms": elapsed * 100,  # per iteration
-                "gflops": gflops
+                "gflops": gflops,
             }
 
             del a, b, c
@@ -115,13 +128,14 @@ def test_pytorch_cuda() -> Dict[str, Any]:
             "available": True,
             "cuda_version": torch.version.cuda,
             "device_name": torch.cuda.get_device_name(0),
-            "benchmarks": results
+            "benchmarks": results,
         }
 
     except ImportError:
         return {"available": False, "reason": "PyTorch not installed"}
     except Exception as e:
         return {"available": False, "reason": str(e)}
+
 
 def test_cupy() -> Dict[str, Any]:
     """Test CuPy availability and performance"""
@@ -143,13 +157,14 @@ def test_cupy() -> Dict[str, Any]:
             "available": True,
             "version": cp.__version__,
             "time_ms": elapsed * 1000,
-            "ops_per_sec": 100 / elapsed
+            "ops_per_sec": 100 / elapsed,
         }
 
     except ImportError:
         return {"available": False, "reason": "CuPy not installed"}
     except Exception as e:
         return {"available": False, "reason": str(e)}
+
 
 def test_pynvml() -> Dict[str, Any]:
     """Test pynvml for detailed GPU monitoring"""
@@ -189,13 +204,14 @@ def test_pynvml() -> Dict[str, Any]:
             "mem_util": util.memory,
             "temp_c": temp,
             "power_w": power,
-            "power_limit_w": power_limit
+            "power_limit_w": power_limit,
         }
 
     except ImportError:
         return {"available": False, "reason": "pynvml not installed"}
     except Exception as e:
         return {"available": False, "reason": str(e)}
+
 
 def benchmark_numpy_vs_torch() -> Dict[str, Any]:
     """Benchmark NumPy CPU vs PyTorch GPU"""
@@ -212,6 +228,7 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
     # Try PyTorch GPU
     try:
         import torch
+
         if torch.cuda.is_available():
             device = torch.device("cuda:0")
             data_torch = torch.from_numpy(data_np).float().to(device)
@@ -230,7 +247,7 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
                 "numpy_cpu_ms": numpy_time * 1000,
                 "torch_gpu_ms": torch_time * 1000,
                 "speedup": speedup,
-                "winner": "GPU" if speedup > 1 else "CPU"
+                "winner": "GPU" if speedup > 1 else "CPU",
             }
     except Exception:
         pass
@@ -239,8 +256,9 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
         "numpy_cpu_ms": numpy_time * 1000,
         "torch_gpu_ms": None,
         "speedup": None,
-        "winner": "CPU (no GPU comparison)"
+        "winner": "CPU (no GPU comparison)",
     }
+
 
 def test_financial_indicators() -> Dict[str, Any]:
     """Test financial indicator calculations on GPU"""
@@ -270,14 +288,10 @@ def test_financial_indicators() -> Dict[str, Any]:
             # Simple moving average
             window = 14
             avg_gains = torch.nn.functional.avg_pool1d(
-                gains.unsqueeze(0).unsqueeze(0),
-                kernel_size=window,
-                stride=1
+                gains.unsqueeze(0).unsqueeze(0), kernel_size=window, stride=1
             )
             avg_losses = torch.nn.functional.avg_pool1d(
-                losses.unsqueeze(0).unsqueeze(0),
-                kernel_size=window,
-                stride=1
+                losses.unsqueeze(0).unsqueeze(0), kernel_size=window, stride=1
             )
 
         torch.cuda.synchronize()
@@ -289,9 +303,7 @@ def test_financial_indicators() -> Dict[str, Any]:
         start = time.time()
         for _ in range(100):
             ma = torch.nn.functional.avg_pool1d(
-                close.unsqueeze(0).unsqueeze(0),
-                kernel_size=20,
-                stride=1
+                close.unsqueeze(0).unsqueeze(0), kernel_size=20, stride=1
             )
         torch.cuda.synchronize()
         elapsed = time.time() - start
@@ -302,9 +314,7 @@ def test_financial_indicators() -> Dict[str, Any]:
         start = time.time()
         for _ in range(50):
             ma = torch.nn.functional.avg_pool1d(
-                close.unsqueeze(0).unsqueeze(0),
-                kernel_size=20,
-                stride=1
+                close.unsqueeze(0).unsqueeze(0), kernel_size=20, stride=1
             ).squeeze()
 
             # Standard deviation (simplified)
@@ -317,14 +327,11 @@ def test_financial_indicators() -> Dict[str, Any]:
 
         results["bb_ms"] = elapsed * 20  # per iteration
 
-        return {
-            "available": True,
-            "n_bars": n_bars,
-            "indicators": results
-        }
+        return {"available": True, "n_bars": n_bars, "indicators": results}
 
     except Exception:
         return {"available": False}
+
 
 def main() -> None:
     """Run advanced GPU tests"""
@@ -362,7 +369,9 @@ def main() -> None:
 
         print(f"\n  {C.BOLD}Matrix Multiplication Benchmarks:{C.E}")
         for size, bench in pt["benchmarks"].items():
-            status(f"  {size}", f"{bench['time_ms']:.2f} ms/iter, {bench['gflops']:.1f} GFLOPS", "i")
+            status(
+                f"  {size}", f"{bench['time_ms']:.2f} ms/iter, {bench['gflops']:.1f} GFLOPS", "i"
+            )
     else:
         status("PyTorch CUDA", f"Not available: {pt.get('reason')}", "w")
 
@@ -459,6 +468,7 @@ def main() -> None:
 
     print(f"{C.C}Test suite completed{C.E}\n")
 
+
 if __name__ == "__main__":
     try:
         main()
@@ -468,5 +478,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n{C.R}Error: {e}{C.E}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

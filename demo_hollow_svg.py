@@ -26,13 +26,15 @@ def main():
     low_prices = np.minimum(open_prices, close_prices) - np.abs(np.random.randn(n_candles)) * 2
     volume_data = np.abs(np.random.randn(n_candles)) * 1000 + 5000
 
-    df = pl.DataFrame({
-        'Open': open_prices,
-        'High': high_prices,
-        'Low': low_prices,
-        'Close': close_prices,
-        'Volume': volume_data
-    })
+    df = pl.DataFrame(
+        {
+            "Open": open_prices,
+            "High": high_prices,
+            "Low": low_prices,
+            "Close": close_prices,
+            "Volume": volume_data,
+        }
+    )
 
     print("Generating hollow candles SVG charts...")
 
@@ -40,62 +42,62 @@ def main():
     print("  1. Classic theme (50 candles with volume)...")
     plot(
         df,
-        type='hollow_and_filled',
+        type="hollow_and_filled",
         volume=True,
-        theme='classic',
-        savefig='demo_output/hollow_candles_classic.svg',
+        theme="classic",
+        savefig="demo_output/hollow_candles_classic.svg",
         width=1920,
-        height=1080
+        height=1080,
     )
 
     # 2. TradingView theme
     print("  2. TradingView theme...")
     plot(
         df,
-        type='hollow',
+        type="hollow",
         volume=True,
-        theme='tradingview',
-        savefig='demo_output/hollow_candles_tradingview.svg',
+        theme="tradingview",
+        savefig="demo_output/hollow_candles_tradingview.svg",
         width=1920,
-        height=1080
+        height=1080,
     )
 
     # 3. Light theme
     print("  3. Light theme...")
     plot(
         df,
-        type='hollow_and_filled',
+        type="hollow_and_filled",
         volume=True,
-        theme='light',
-        savefig='demo_output/hollow_candles_light.svg',
+        theme="light",
+        savefig="demo_output/hollow_candles_light.svg",
         width=1920,
-        height=1080
+        height=1080,
     )
 
     # 4. Custom colors
     print("  4. Custom colors...")
     plot(
         df,
-        type='hollow',
+        type="hollow",
         volume=True,
-        bg_color='#1a1a2e',
-        up_color='#00ff88',
-        down_color='#ff0066',
-        savefig='demo_output/hollow_candles_custom.svg',
+        bg_color="#1a1a2e",
+        up_color="#00ff88",
+        down_color="#ff0066",
+        savefig="demo_output/hollow_candles_custom.svg",
         width=1920,
-        height=1080
+        height=1080,
     )
 
     # 5. Small subset (10 candles) for detail inspection
     print("  5. Small chart (10 candles) for detail...")
     plot(
         df[:10],
-        type='hollow_and_filled',
+        type="hollow_and_filled",
         volume=True,
-        theme='modern',
-        savefig='demo_output/hollow_candles_small.svg',
+        theme="modern",
+        savefig="demo_output/hollow_candles_small.svg",
         width=800,
-        height=600
+        height=600,
     )
 
     print("\nDone! Generated 5 SVG charts in demo_output/")
@@ -106,7 +108,8 @@ def main():
     print("  - Embedded in web pages or documents")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import os
-    os.makedirs('demo_output', exist_ok=True)
+
+    os.makedirs("demo_output", exist_ok=True)
     main()

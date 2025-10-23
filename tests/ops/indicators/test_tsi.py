@@ -34,6 +34,7 @@ from kimsfinance.core.exceptions import ConfigurationError
 # Check if GPU is available
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -209,7 +210,9 @@ class TestTSIBasicCalculation:
         assert len(valid_tsi) > 0, "TSI should have valid values"
 
         # TSI should be in valid range
-        assert np.all(valid_tsi >= -100) and np.all(valid_tsi <= 100), "TSI should be in [-100, 100]"
+        assert np.all(valid_tsi >= -100) and np.all(
+            valid_tsi <= 100
+        ), "TSI should be in [-100, 100]"
 
         # For alternating up/down pattern, TSI behavior should be reasonable
         # The actual values will vary based on the pattern
@@ -342,7 +345,7 @@ class TestTSISignals:
 
         # Calculate signal line on valid portion only
         # Extract valid TSI values
-        tsi_valid = tsi[first_valid_tsi[0]:]
+        tsi_valid = tsi[first_valid_tsi[0] :]
         signal_line = calculate_ema(tsi_valid, period=7, engine="cpu")
 
         # Signal line should exist and have some valid values
@@ -364,7 +367,7 @@ class TestTSISignals:
             pytest.skip("No valid TSI values")
 
         # Calculate signal on valid portion
-        tsi_valid = tsi[first_valid[0]:]
+        tsi_valid = tsi[first_valid[0] :]
         signal = calculate_ema(tsi_valid, period=7, engine="cpu")
 
         # Both should have valid values
@@ -385,7 +388,7 @@ class TestTSISignals:
             pytest.skip("No valid TSI values")
 
         # Calculate signal on valid portion
-        tsi_valid = tsi[first_valid[0]:]
+        tsi_valid = tsi[first_valid[0] :]
         signal = calculate_ema(tsi_valid, period=7, engine="cpu")
 
         # Both should have valid values
@@ -517,7 +520,9 @@ class TestTSIEdgeCases:
         np.random.seed(42)
         prices = 100 + np.cumsum(np.random.randn(n) * 0.5)
 
-        tsi = calculate_tsi(prices, long_period=long_period, short_period=short_period, engine="cpu")
+        tsi = calculate_tsi(
+            prices, long_period=long_period, short_period=short_period, engine="cpu"
+        )
 
         # Should complete without error
         assert len(tsi) == n
@@ -870,7 +875,9 @@ class TestTSIPerformance:
 
         # GPU should be faster or at least competitive
         # Due to double smoothing, speedup may be modest
-        assert elapsed_gpu < elapsed_cpu * 2, f"GPU ({elapsed_gpu:.3f}s) should be reasonably fast vs CPU ({elapsed_cpu:.3f}s)"
+        assert (
+            elapsed_gpu < elapsed_cpu * 2
+        ), f"GPU ({elapsed_gpu:.3f}s) should be reasonably fast vs CPU ({elapsed_cpu:.3f}s)"
 
         # Results should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)

@@ -25,43 +25,33 @@ GPU_THRESHOLDS: dict[str, int] = {
     # Simple vectorizable operations (1-2 passes)
     # High parallelization potential, minimal memory overhead
     "vectorizable_simple": 50_000,  # RSI, ROC, Bollinger Bands
-
     # Complex vectorizable operations (multiple passes)
     # Moderate parallelization, multiple intermediate arrays
     "vectorizable_complex": 100_000,  # MACD, Stochastic
-
     # Iterative/state-dependent operations
     # Limited parallelization, sequential state updates
     "iterative": 500_000,  # Parabolic SAR, Aroon
-
     # Histogram/binning operations
     # GPU-optimized histogram kernels provide significant benefit
     "histogram": 100_000,  # Volume Profile
-
     # Rolling window operations
     # GPU-accelerated rolling operations (min/max/mean/std)
     "rolling": 50_000,  # Rolling min/max/mean/std
-
     # Aggregation operations (simple reductions)
     # GPU benefit only for large datasets
     "aggregation": 5_000,  # volume_sum, cumulative_sum, volume_weighted_price
-
     # Batch indicator operations
     # Lower threshold due to batch processing overhead
     "batch_indicators": 15_000,  # Batch processing of multiple indicators
-
     # NaN operations
     # GPU benefit for large datasets with many NaN checks
     "nan_ops": 10_000,  # nanmin, nanmax, isnan
-
     # Linear algebra operations
     # GPU efficient for matrix operations
     "linear_algebra": 1_000,  # least_squares, trend_line
-
     # Transformation operations
     # GPU benefit for large datasets with complex transforms
     "transformation": 10_000,  # pnf, renko
-
     # Default fallback for unspecified operations
     "default": 100_000,
 }

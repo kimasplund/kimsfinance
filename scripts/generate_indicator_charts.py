@@ -14,8 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import kimsfinance as kf
 
 
-def load_data(csv_path: str, n_candles: int = 100, warmup_candles: int = 50,
-              start_row: int = 600) -> pl.DataFrame:
+def load_data(
+    csv_path: str, n_candles: int = 100, warmup_candles: int = 50, start_row: int = 600
+) -> pl.DataFrame:
     """Load and prepare OHLCV data with warmup period for indicators
 
     Args:
@@ -36,20 +37,23 @@ def load_data(csv_path: str, n_candles: int = 100, warmup_candles: int = 50,
     df = df.slice(slice_start, slice_end - slice_start)
 
     # Rename columns to match kimsfinance expectations
-    df = df.rename({
-        "timestamp": "date",
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume"
-    })
+    df = df.rename(
+        {
+            "timestamp": "date",
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }
+    )
 
     return df
 
 
-def generate_chart(df: pl.DataFrame, style_config: dict, output_path: Path,
-                   display_candles: int = 100) -> None:
+def generate_chart(
+    df: pl.DataFrame, style_config: dict, output_path: Path, display_candles: int = 100
+) -> None:
     """Generate a single chart with given style"""
     try:
         import pandas as pd
@@ -58,8 +62,8 @@ def generate_chart(df: pl.DataFrame, style_config: dict, output_path: Path,
         df_pandas = df.to_pandas()
 
         # Parse date and set as index
-        df_pandas['date'] = pd.to_datetime(df_pandas['date'])
-        df_pandas.set_index('date', inplace=True)
+        df_pandas["date"] = pd.to_datetime(df_pandas["date"])
+        df_pandas.set_index("date", inplace=True)
 
         # Use last N candles for display
         df_display = df_pandas.tail(display_candles)
@@ -68,11 +72,7 @@ def generate_chart(df: pl.DataFrame, style_config: dict, output_path: Path,
         plot_config = {k: v for k, v in style_config.items() if v is not None}
 
         # Save the chart
-        kf.plot(
-            df_display,
-            **plot_config,
-            savefig=str(output_path)
-        )
+        kf.plot(df_display, **plot_config, savefig=str(output_path))
 
         # Check file size
         size_kb = output_path.stat().st_size / 1024
@@ -145,7 +145,12 @@ def create_indicator_configs():
             {**base_config, "type": "candle", "title": "Candlestick Chart", "mav": (20, 50)},
             {**base_config, "type": "ohlc", "title": "OHLC Bars", "mav": (20, 50)},
             {**base_config, "type": "line", "title": "Line Chart", "mav": (20, 50)},
-            {**base_config, "type": "hollow_and_filled", "title": "Hollow Candles", "mav": (20, 50)},
+            {
+                **base_config,
+                "type": "hollow_and_filled",
+                "title": "Hollow Candles",
+                "mav": (20, 50),
+            },
             {**base_config, "type": "renko", "title": "Renko Chart"},
         ],
         "trading_strategies": [
@@ -266,5 +271,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

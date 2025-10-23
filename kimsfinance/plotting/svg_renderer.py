@@ -70,7 +70,7 @@ def _validate_save_path(path: str) -> Path:
     except ValueError:
         # Path is outside cwd - allow only if user explicitly provides absolute path
         # but still validate it's not a system directory
-        system_dirs = ['/etc', '/sys', '/proc', '/dev', '/root', '/boot']
+        system_dirs = ["/etc", "/sys", "/proc", "/dev", "/root", "/boot"]
         if any(str(file_path).startswith(sd) for sd in system_dirs):
             raise ValueError(
                 f"Cannot write to system directory: {file_path}. "
@@ -216,7 +216,9 @@ def render_candlestick_svg(
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
         for i in range(1, HORIZONTAL_GRID_DIVISIONS):
             y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
@@ -278,11 +280,11 @@ def render_candlestick_svg(
         )
 
         # Draw body (uses pre-computed coordinates)
-        candles_group.add(dwg.rect(
-            insert=(x_coords[i], body_tops[i]),
-            size=(bar_width, body_heights[i]),
-            fill=color
-        ))
+        candles_group.add(
+            dwg.rect(
+                insert=(x_coords[i], body_tops[i]), size=(bar_width, body_heights[i]), fill=color
+            )
+        )
 
         # Draw volume bar if volume data provided
         if has_volume:
@@ -291,7 +293,7 @@ def render_candlestick_svg(
                     insert=(x_coords[i], vol_ys[i]),
                     size=(bar_width, vol_heights[i]),
                     fill=color,
-                    opacity=VOLUME_ALPHA
+                    opacity=VOLUME_ALPHA,
                 )
             )
 
@@ -407,7 +409,9 @@ def render_ohlc_bars_svg(
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
         for i in range(1, HORIZONTAL_GRID_DIVISIONS):
             y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
@@ -592,7 +596,9 @@ def render_line_chart_svg(
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
         for i in range(1, HORIZONTAL_GRID_DIVISIONS):
             y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
@@ -809,7 +815,9 @@ def render_renko_chart_svg(
     # Draw grid lines (background layer)
     if show_grid:
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
 
         # Horizontal price grid lines (10 divisions)
@@ -1002,7 +1010,9 @@ def render_pnf_chart_svg(
     # Draw grid lines (background layer)
     if show_grid:
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
 
         # Horizontal price lines (10 divisions)
@@ -1172,7 +1182,9 @@ def render_hollow_candles_svg(
     if show_grid:
         # Horizontal price grid lines (10 divisions)
         grid_group = dwg.add(
-            dwg.g(id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA)
+            dwg.g(
+                id="grid", stroke=grid_color_final, stroke_width=GRID_LINE_WIDTH, opacity=GRID_ALPHA
+            )
         )
         for i in range(1, HORIZONTAL_GRID_DIVISIONS):
             y = int(i * chart_height / HORIZONTAL_GRID_DIVISIONS)
@@ -1251,7 +1263,7 @@ def render_hollow_candles_svg(
                 dwg.rect(
                     insert=(x_coords[i], body_tops[i]),
                     size=(bar_width, body_heights[i]),
-                    fill=color
+                    fill=color,
                 )
             )
 
@@ -1262,7 +1274,7 @@ def render_hollow_candles_svg(
                     insert=(x_coords[i], vol_ys[i]),
                     size=(bar_width, vol_heights[i]),
                     fill=color,
-                    opacity=VOLUME_ALPHA
+                    opacity=VOLUME_ALPHA,
                 )
             )
 

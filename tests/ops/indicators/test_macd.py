@@ -168,7 +168,9 @@ class TestMACDAlgorithm:
     def test_known_values_simple_case(self):
         """Test against manually calculated values."""
         # Simple uptrend data
-        prices = np.array([100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0, 114.0, 116.0, 118.0] + [120.0] * 50)
+        prices = np.array(
+            [100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0, 114.0, 116.0, 118.0] + [120.0] * 50
+        )
 
         macd_line, signal_line, histogram = calculate_macd(
             prices, fast_period=5, slow_period=8, signal_period=3, engine="cpu"
@@ -377,7 +379,9 @@ class TestMACDEdgeCases:
         short_data = np.random.randn(10) + 100
 
         with pytest.raises(ValueError, match="Insufficient data"):
-            calculate_macd(short_data, fast_period=12, slow_period=26, signal_period=9, engine="cpu")
+            calculate_macd(
+                short_data, fast_period=12, slow_period=26, signal_period=9, engine="cpu"
+            )
 
     def test_minimal_data_size(self):
         """Test with minimal valid data size."""
@@ -448,7 +452,9 @@ class TestMACDEdgeCases:
         short_data = np.random.randn(20) + 100
 
         with pytest.raises(ValueError):
-            calculate_macd(short_data, fast_period=12, slow_period=50, signal_period=9, engine="cpu")
+            calculate_macd(
+                short_data, fast_period=12, slow_period=50, signal_period=9, engine="cpu"
+            )
 
     def test_negative_prices(self):
         """Test handling of negative prices."""
@@ -692,7 +698,9 @@ class TestMACDPerformance:
         # Allow for some variance due to overhead
         # GPU might not always be faster for MACD due to multiple EMA calculations
         # but should complete successfully
-        assert elapsed_gpu < elapsed_cpu * 2, f"GPU ({elapsed_gpu:.3f}s) should be reasonably fast vs CPU ({elapsed_cpu:.3f}s)"
+        assert (
+            elapsed_gpu < elapsed_cpu * 2
+        ), f"GPU ({elapsed_gpu:.3f}s) should be reasonably fast vs CPU ({elapsed_cpu:.3f}s)"
 
 
 # ============================================================================
