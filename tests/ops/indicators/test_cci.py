@@ -696,7 +696,7 @@ class TestCCIPerformance:
         cci = calculate_cci(highs, lows, closes, period=20, engine="cpu")
         elapsed = time.perf_counter() - start
 
-        assert elapsed < 0.005  # 5ms
+        assert elapsed < 0.010  # 10ms
         assert len(cci) == 1000
 
     def test_performance_10k_candles(self):

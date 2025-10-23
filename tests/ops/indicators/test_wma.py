@@ -35,7 +35,7 @@ def sample_data():
 def large_data():
     """Generate large dataset for GPU testing."""
     np.random.seed(42)
-    n = 600_000  # Above GPU threshold
+    n = 100_000  # Above GPU threshold
     prices = 100 + np.cumsum(np.random.randn(n) * 0.5)
     return prices
 

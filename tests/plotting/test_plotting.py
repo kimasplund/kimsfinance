@@ -2035,6 +2035,7 @@ def test_render_and_save_vs_separate_calls():
 # Tests for Parallel Rendering (Task 6)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_basic():
     """
     Test basic parallel rendering with multiple datasets.
@@ -2065,6 +2066,7 @@ def test_render_charts_parallel_basic():
             assert img.format == "WEBP"
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_in_memory():
     """
     Test parallel rendering to in-memory PNG bytes.
@@ -2087,6 +2089,7 @@ def test_render_charts_parallel_in_memory():
         assert result.startswith(b"\x89PNG")
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_order_preserved():
     """
     Test that parallel rendering preserves input order.
@@ -2125,6 +2128,7 @@ def test_render_charts_parallel_order_preserved():
         assert results == output_paths
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_num_workers():
     """
     Test parallel rendering with different worker counts.
@@ -2142,6 +2146,7 @@ def test_render_charts_parallel_num_workers():
             assert os.path.exists(path)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_auto_workers():
     """
     Test parallel rendering with automatic worker detection.
@@ -2160,6 +2165,7 @@ def test_render_charts_parallel_auto_workers():
         assert len(results) == 2
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_speed_modes():
     """
     Test parallel rendering with different speed modes.
@@ -2180,6 +2186,7 @@ def test_render_charts_parallel_speed_modes():
                 assert os.path.exists(path)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_common_kwargs():
     """
     Test parallel rendering with common rendering kwargs.
@@ -2211,6 +2218,7 @@ def test_render_charts_parallel_common_kwargs():
             assert img.size == (800, 600)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_large_batch():
     """
     Test parallel rendering with many charts (10 charts).
@@ -2228,6 +2236,7 @@ def test_render_charts_parallel_large_batch():
             assert os.path.getsize(path) > 0
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_single_chart():
     """
     Test parallel rendering with single chart.
@@ -2245,6 +2254,7 @@ def test_render_charts_parallel_single_chart():
         assert os.path.exists(output_paths[0])
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_empty_list():
     """
     Test parallel rendering with empty list.
@@ -2257,6 +2267,7 @@ def test_render_charts_parallel_empty_list():
         assert results == []
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_mixed_formats():
     """
     Test parallel rendering with different output formats.
@@ -2289,6 +2300,7 @@ def test_render_charts_parallel_mixed_formats():
         assert img2.format == "JPEG"
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_length_mismatch_error():
     """
     Test that length mismatch raises ValueError.
@@ -2306,6 +2318,7 @@ def test_render_charts_parallel_length_mismatch_error():
             render_charts_parallel(datasets, output_paths)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_all_themes():
     """
     Test parallel rendering with all available themes.
@@ -2326,6 +2339,7 @@ def test_render_charts_parallel_all_themes():
                 assert os.path.exists(path)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_custom_colors():
     """
     Test parallel rendering with custom color overrides.
@@ -2350,6 +2364,7 @@ def test_render_charts_parallel_custom_colors():
         assert len(results) == 2
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_batch_drawing():
     """
     Test parallel rendering with batch drawing enabled.
@@ -2367,6 +2382,7 @@ def test_render_charts_parallel_batch_drawing():
         assert len(results) == 2
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_import_from_package():
     """
     Test that render_charts_parallel is properly exported from package.
@@ -2384,6 +2400,7 @@ def test_render_charts_parallel_import_from_package():
     assert isinstance(results[0], bytes)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_in_memory_load_images():
     """
     Test that in-memory PNG bytes can be loaded as images.
@@ -2408,6 +2425,7 @@ def test_render_charts_parallel_in_memory_load_images():
         assert img.size == (1920, 1080)
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_wick_width():
     """
     Test parallel rendering with custom wick width ratio.
@@ -2425,6 +2443,7 @@ def test_render_charts_parallel_wick_width():
         assert len(results) == 2
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_rgba_mode():
     """
     Test parallel rendering in RGBA mode.
@@ -2448,6 +2467,7 @@ def test_render_charts_parallel_rgba_mode():
             assert img.mode in ("RGBA", "RGB")
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_rgb_mode():
     """
     Test parallel rendering in RGB mode.
@@ -2465,6 +2485,7 @@ def test_render_charts_parallel_rgb_mode():
         assert len(results) == 2
 
 
+@pytest.mark.filterwarnings("ignore:This process is multi-threaded, use of fork()")
 def test_render_charts_parallel_all_features():
     """
     Test parallel rendering with all features enabled.
