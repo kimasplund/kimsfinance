@@ -41,6 +41,13 @@ def _validate_save_path(path: str) -> Path:
     if not path:
         raise ValueError("savefig path cannot be empty")
 
+    # Detect directory traversal attempts BEFORE resolving
+    if ".." in Path(path).parts:
+        raise ValueError(
+            f"Directory traversal detected in path: {path}. "
+            f"Use absolute paths or paths within current directory."
+        )
+
     # Convert to Path object and resolve to absolute path
     try:
         file_path = Path(path).resolve()

@@ -9,6 +9,13 @@ from ...core import (
 from .moving_averages import calculate_ema
 
 
+def _to_numpy(arr):
+    """Convert array to NumPy, handling CuPy arrays."""
+    if hasattr(arr, "get"):  # CuPy array
+        return arr.get()
+    return np.asarray(arr)
+
+
 def calculate_elder_ray(
     highs: ArrayLike,
     lows: ArrayLike,
@@ -37,7 +44,7 @@ def calculate_elder_ray(
                 API consistency and is passed to the underlying EMA function.
 
     Returns:
-        Tuple of (bull_power, bear_power)
+        Tuple of (bull_power, bear_power) as NumPy arrays
     """
     if period < 1:
         raise ValueError(f"period must be >= 1, got {period}")
@@ -57,5 +64,9 @@ def calculate_elder_ray(
 
     # Calculate Bear Power = Low - EMA
     bear_power = lows_arr - ema
+
+    # Convert back to NumPy if GPU was used
+    bull_power = _to_numpy(bull_power)
+    bear_power = _to_numpy(bear_power)
 
     return (bull_power, bear_power)
