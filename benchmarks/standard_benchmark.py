@@ -199,12 +199,13 @@ def get_hardware_info() -> HardwareInfo:
 # Data Download and Preparation
 # ==============================================================================
 
-def download_binance_data(date_str: str) -> Path:
+def download_binance_data(date_str: str, is_monthly: bool = False) -> Path:
     """
     Download Binance trade data for a specific date.
 
     Args:
-        date_str: Date in YYYY-MM-DD format
+        date_str: Date in YYYY-MM-DD format (daily) or YYYY-MM format (monthly)
+        is_monthly: If True, download monthly data instead of daily
 
     Returns:
         Path to extracted CSV file
@@ -225,12 +226,18 @@ def download_binance_data(date_str: str) -> Path:
 
     print(f"Downloading {filename}...")
 
+    # Build URL based on mode (daily vs monthly)
+    if is_monthly:
+        base_url = "https://data.binance.vision/data/futures/cm/monthly/trades/BTCUSD_PERP"
+    else:
+        base_url = BINANCE_BASE_URL
+
     # Download ZIP
-    zip_url = f"{BINANCE_BASE_URL}/{filename}"
+    zip_url = f"{base_url}/{filename}"
     urllib.request.urlretrieve(zip_url, zip_path)
 
     # Download checksum
-    checksum_url = f"{BINANCE_BASE_URL}/{checksum_filename}"
+    checksum_url = f"{base_url}/{checksum_filename}"
     urllib.request.urlretrieve(checksum_url, checksum_path)
 
     # Verify checksum
@@ -1565,11 +1572,16 @@ def main():
     parser = argparse.ArgumentParser(description="Run kimsfinance standard benchmark")
     parser.add_argument("--quick", action="store_true", help="Quick mode (1 day)")
     parser.add_argument("--full", action="store_true", help="Full mode (30 days)")
+    parser.add_argument("--monthly", action="store_true", help="Use monthly data (~43K candles for GPU)")
+    parser.add_argument("--skip-charts", action="store_true", help="Skip chart rendering (focus on calculations)")
     parser.add_argument("--timeframe", default="1m", help="Candle timeframe (default: 1m)")
     args = parser.parse_args()
 
     # Determine number of days
-    if args.quick:
+    if args.monthly:
+        num_days = 1
+        mode = "monthly"
+    elif args.quick:
         num_days = QUICK_MODE_DAYS
         mode = "quick"
     elif args.full:
@@ -1580,7 +1592,12 @@ def main():
         mode = "standard"
 
     print("=" * 80)
-    print(f"kimsfinance Standard Benchmark ({mode} mode: {num_days} days)")
+    if args.monthly:
+        print(f"kimsfinance Standard Benchmark ({mode} mode: 1 month)")
+    else:
+        print(f"kimsfinance Standard Benchmark ({mode} mode: {num_days} days)")
+    if args.skip_charts:
+        print("⚡ Chart rendering SKIPPED (calculations only)")
     print("=" * 80)
 
     # Detect hardware
@@ -1591,19 +1608,29 @@ def main():
     print(f"  RAM: {hardware.ram_gb:.1f} GB")
 
     # Download data
-    print(f"\n📥 Downloading Binance data ({num_days} days)...")
-    start_date = datetime(2025, 1, 1)
     csv_paths = []
-
-    for i in range(num_days):
-        date = start_date + timedelta(days=i)
-        date_str = date.strftime("%Y-%m-%d")
+    if args.monthly:
+        print(f"\n📥 Downloading Binance monthly data...")
+        start_date = datetime(2025, 1, 1)
+        date_str = start_date.strftime("%Y-%m")
         try:
-            csv_path = download_binance_data(date_str)
+            csv_path = download_binance_data(date_str, is_monthly=True)
             csv_paths.append(csv_path)
         except Exception as e:
             print(f"⚠️  Failed to download {date_str}: {e}")
-            continue
+    else:
+        print(f"\n📥 Downloading Binance data ({num_days} days)...")
+        start_date = datetime(2025, 1, 1)
+
+        for i in range(num_days):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime("%Y-%m-%d")
+            try:
+                csv_path = download_binance_data(date_str, is_monthly=False)
+                csv_paths.append(csv_path)
+            except Exception as e:
+                print(f"⚠️  Failed to download {date_str}: {e}")
+                continue
 
     if not csv_paths:
         print("❌ No data downloaded. Exiting.")
@@ -1625,7 +1652,12 @@ def main():
     print("\n🚀 Running benchmarks...")
     indicator_results = benchmark_indicators(ohlcv)
     batch_mpl, batch_cpu, batch_gpu = benchmark_batch_indicators(ohlcv)
-    chart_results = benchmark_charts(ohlcv)
+
+    if args.skip_charts:
+        print("\n⏩ Skipping chart rendering benchmarks")
+        chart_results = []
+    else:
+        chart_results = benchmark_charts(ohlcv)
 
     # Calculate speedups
     total_mpl_ms = sum(r.time_ms for r in indicator_results if r.library == "mplfinance" and r.time_ms)

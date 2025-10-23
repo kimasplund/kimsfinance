@@ -141,6 +141,10 @@ research/
 # Benchmark outputs (keep source, ignore results)
 benchmarks/*.log
 benchmarks/benchmark_output.log
+benchmarks/results/
+
+# Benchmark data (downloaded from Binance)
+benchmarks/data/
 
 # Test output files
 test_svg_*.svg
