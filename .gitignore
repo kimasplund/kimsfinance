@@ -157,3 +157,4 @@ test_*.png
 # Claude Code workspace
 .claude/
 integrated-reasoning/
+CLAUDE.md
