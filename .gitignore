@@ -126,8 +126,9 @@ Thumbs.db
 # Project-Specific
 # ==============================================================================
 
-# Archives (from cleanup)
+# Archives and dev artifacts (from cleanup)
 archive/
+research/
 
 # Temporary files
 *.backup
@@ -140,6 +141,11 @@ archive/
 # Benchmark outputs (keep source, ignore results)
 benchmarks/*.log
 benchmarks/benchmark_output.log
+
+# Test output files
+test_svg_*.svg
+test_*.webp
+test_*.png
 
 # GPU profiling data
 # (already covered above: *.nsys-rep, *.sqlite, *.qdrep)
