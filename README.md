@@ -721,7 +721,7 @@ print(f"Speedup: {results['speedup']:.1f}x")
 
 ### Benchmark Results
 
-Tested on: AMD Ryzen 9 7950X (32 cores), RTX 3500 Ada (12GB VRAM)
+Tested on: Intel i9-13980HX (24 cores), RTX 3500 Ada (12GB VRAM)
 
 ```
 === 50 candles, 100 iterations ===
