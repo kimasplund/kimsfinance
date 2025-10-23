@@ -451,30 +451,26 @@ def render_ohlc_bars(
 
     # Vectorized coordinate calculation for performance
     indices = np.arange(num_bars)
-    x_centers = ((indices + CENTER_OFFSET) * bar_width).astype(np.int32, copy=False)
-    x_lefts = (x_centers - tick_length).astype(np.int32, copy=False)
-    x_rights = (x_centers + tick_length).astype(np.int32, copy=False)
+    x_centers = ((indices + CENTER_OFFSET) * bar_width).astype(np.int32)
+    x_lefts = (x_centers - tick_length).astype(np.int32)
+    x_rights = (x_centers + tick_length).astype(np.int32)
 
     # Vectorized price scaling
     y_highs = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_lows = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_opens = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_closes = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
 
     # Vectorized volume scaling
-    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32, copy=False)
+    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
 
     # Pre-compute volume bar X coordinates (optimization for 5-10% speedup)
-    vol_start_x = ((indices + QUARTER_OFFSET) * bar_width).astype(np.int32, copy=False)
-    vol_end_x = ((indices + THREE_QUARTER_OFFSET) * bar_width).astype(np.int32, copy=False)
+    vol_start_x = ((indices + QUARTER_OFFSET) * bar_width).astype(np.int32)
+    vol_end_x = ((indices + THREE_QUARTER_OFFSET) * bar_width).astype(np.int32)
 
     # Determine bullish/bearish for each bar
     is_bullish = close_prices >= open_prices
@@ -1097,12 +1093,11 @@ def render_line_chart(
 
     # Vectorize all coordinate calculations
     indices = np.arange(num_points)
-    x_coords = ((indices + CENTER_OFFSET) * point_spacing).astype(np.int32, copy=False)
+    x_coords = ((indices + CENTER_OFFSET) * point_spacing).astype(np.int32)
 
     # Vectorized price scaling
     y_coords = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
 
     # Create point list for PIL's line drawing
     points = list(zip(x_coords.tolist(), y_coords.tolist()))
@@ -1142,11 +1137,11 @@ def render_line_chart(
     bar_width_val = point_spacing - bar_spacing
 
     # Vectorized volume bar coordinate calculation
-    x_start_vol = (indices * point_spacing + bar_spacing / 2).astype(np.int32, copy=False)
-    x_end_vol = (x_start_vol + bar_width_val).astype(np.int32, copy=False)
+    x_start_vol = (indices * point_spacing + bar_spacing / 2).astype(np.int32)
+    x_end_vol = (x_start_vol + bar_width_val).astype(np.int32)
 
     # Vectorized volume height calculation
-    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32, copy=False)
+    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
 
     # Draw volume bars (using same color as line)
     for i in range(num_points):
@@ -1401,25 +1396,21 @@ def render_hollow_candles(
 
         # Vectorized price scaling
         y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
 
         # Vectorized volume scaling
-        vol_heights = ((volume_data / volume_range) * volume_height).astype(int, copy=False)
+        vol_heights = ((volume_data / volume_range) * volume_height).astype(int)
 
         # Vectorized X coordinate calculation
-        x_start = (indices * candle_width + spacing / 2).astype(int, copy=False)
-        x_end = (x_start + bar_width).astype(int, copy=False)
-        x_center = (x_start + bar_width / 2).astype(int, copy=False)
+        x_start = (indices * candle_width + spacing / 2).astype(int)
+        x_end = (x_start + bar_width).astype(int)
+        x_center = (x_start + bar_width / 2).astype(int)
 
         # Vectorized body top/bottom calculation
         body_top = np.minimum(y_open, y_close)
@@ -1493,8 +1484,7 @@ def _draw_grid(
     # Vectorize coordinate calculations for better performance
     horizontal_indices = np.arange(1, HORIZONTAL_GRID_DIVISIONS)
     y_coords = (horizontal_indices * chart_height // HORIZONTAL_GRID_DIVISIONS).astype(
-        int, copy=False
-    )
+        int)
 
     for y in y_coords:
         draw.line([(0, y), (width, y)], fill=color, width=int(GRID_LINE_WIDTH))
@@ -1503,7 +1493,7 @@ def _draw_grid(
     # Space them out to max 20 lines for readability
     step = max(1, num_candles // MAX_VERTICAL_GRID_LINES)
     vertical_indices = np.arange(0, num_candles, step)
-    x_coords = (vertical_indices * candle_width).astype(int, copy=False)
+    x_coords = (vertical_indices * candle_width).astype(int)
 
     for x in x_coords:
         # Draw from top to bottom of chart area only
@@ -1576,26 +1566,22 @@ def _calculate_coordinates_jit(
     """
     # Vectorized X coordinate calculation
     indices = np.arange(num_candles)
-    x_start = (indices * candle_width + spacing / 2).astype(np.int32, copy=False)
-    x_end = (x_start + bar_width).astype(np.int32, copy=False)
-    x_center = (x_start + bar_width / 2).astype(np.int32, copy=False)
+    x_start = (indices * candle_width + spacing / 2).astype(np.int32)
+    x_end = (x_start + bar_width).astype(np.int32)
+    x_center = (x_start + bar_width / 2).astype(np.int32)
 
     # Vectorized price scaling
     y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
 
     # Vectorized volume scaling
-    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32, copy=False)
+    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
 
     # Vectorized body top/bottom calculation
     body_top = np.minimum(y_open, y_close)
@@ -1670,26 +1656,22 @@ def _calculate_coordinates_numpy(
     """
     # Vectorized X coordinate calculation
     indices = np.arange(num_candles)
-    x_start = (indices * candle_width + spacing / 2).astype(np.int32, copy=False)
-    x_end = (x_start + bar_width).astype(np.int32, copy=False)
-    x_center = (x_start + bar_width / 2).astype(np.int32, copy=False)
+    x_start = (indices * candle_width + spacing / 2).astype(np.int32)
+    x_end = (x_start + bar_width).astype(np.int32)
+    x_center = (x_start + bar_width / 2).astype(np.int32)
 
     # Vectorized price scaling
     y_high = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_low = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_open = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
     y_close = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32, copy=False
-    )
+        np.int32)
 
     # Vectorized volume scaling
-    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32, copy=False)
+    vol_heights = ((volume_data / volume_range) * volume_height).astype(np.int32)
 
     # Vectorized body top/bottom calculation
     body_top = np.minimum(y_open, y_close)
@@ -2029,25 +2011,21 @@ def render_ohlcv_chart(
 
         # Vectorized price scaling (eliminates per-candle scale_price() calls)
         y_high = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_low = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_open = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
         y_close = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
-            int, copy=False
-        )
+            int)
 
         # Vectorized volume scaling
-        vol_heights = ((volume_data / volume_range) * volume_height).astype(int, copy=False)
+        vol_heights = ((volume_data / volume_range) * volume_height).astype(int)
 
         # Vectorized X coordinate calculation
-        x_start = (indices * candle_width + spacing / 2).astype(int, copy=False)
-        x_end = (x_start + bar_width).astype(int, copy=False)
-        x_center = (x_start + bar_width / 2).astype(int, copy=False)
+        x_start = (indices * candle_width + spacing / 2).astype(int)
+        x_end = (x_start + bar_width).astype(int)
+        x_center = (x_start + bar_width / 2).astype(int)
 
         # Vectorized body top/bottom calculation
         body_top = np.minimum(y_open, y_close)

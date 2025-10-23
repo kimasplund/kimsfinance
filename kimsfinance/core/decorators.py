@@ -57,7 +57,7 @@ def _to_numpy_array(data: ArrayLike) -> NDArray[np.float64]:
     Handles: np.ndarray, pd.Series, pd.DataFrame columns, pl.Series, lists.
     """
     if isinstance(data, np.ndarray):
-        return data.astype(np.float64, copy=False)
+        return data.astype(np.float64)
     elif hasattr(data, "to_numpy"):  # pandas, polars
         arr = data.to_numpy()
         return np.asarray(arr, dtype=np.float64)
