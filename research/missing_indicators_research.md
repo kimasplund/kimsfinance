@@ -1,7 +1,25 @@
 # Research Report: Missing Technical Indicators for kimsfinance
 
-**Research Date**: 2025-10-20
+**Research Date**: 2025-10-20 (ARCHIVED - See update below)
 **Scope**: Identify most popular and requested technical indicators missing from kimsfinance
+
+---
+
+## ⚠️ ARCHIVE NOTICE (2025-10-23)
+
+**This research is now archived and outdated.**
+
+**UPDATE**: All indicators listed in this research (ADX, Ichimoku, SuperTrend, MFI) **have been implemented** in kimsfinance v0.1.0 Beta. See:
+- `/kimsfinance/ops/adx.py` - ADX implementation
+- `/kimsfinance/ops/ichimoku.py` - Ichimoku Cloud implementation
+- `/kimsfinance/ops/supertrend.py` - SuperTrend implementation
+- `/kimsfinance/ops/mfi.py` - MFI implementation
+
+For the current roadmap of future indicators, see `ROADMAP.md`.
+
+---
+
+## Original Research (Archived)
 
 ---
 

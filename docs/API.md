@@ -529,16 +529,16 @@ kf.plot(df, enable_antialiasing=False, savefig='fast.webp')
 
 ## Technical Indicators
 
-kimsfinance provides **29 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection.
+kimsfinance provides **32 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection.
 
 ### Indicator Categories
 
-1. **Moving Averages** (4 indicators)
-2. **Momentum Oscillators** (7 indicators)
+1. **Moving Averages** (7 indicators)
+2. **Momentum Oscillators** (8 indicators)
 3. **Volatility** (4 indicators)
-4. **Volume** (4 indicators)
+4. **Volume** (5 indicators)
 5. **Trend** (5 indicators)
-6. **Support/Resistance** (5 indicators)
+6. **Support/Resistance** (3 indicators)
 
 ---
 
@@ -2005,7 +2005,7 @@ print(f"Throughput: {1/elapsed:.0f} img/sec")
 - **v0.1.0** (2025-10-22) - Initial release
   - Native PIL rendering (28.8x average speedup, up to 70.1x)
   - 6 chart types
-  - 29 technical indicators
+  - 32 technical indicators
   - GPU acceleration (optional)
   - WebP fast mode (61x faster encoding)
   - Parallel batch rendering

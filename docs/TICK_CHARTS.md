@@ -15,7 +15,7 @@ Traditional financial charts use time-based aggregation (1-minute bars, 5-minute
 4. **Kagi Charts** - Reversal-based trend lines
 5. **Three-Line Break** - Breakout confirmation charts
 
-All five work seamlessly with kimsfinance's **native PIL renderers**, maintaining the **178x speedup** over mplfinance!
+All five work seamlessly with kimsfinance's **native PIL renderers**, maintaining **significant speedup** over mplfinance (28.8x average, up to 70.1x peak)!
 
 ---
 
@@ -104,7 +104,7 @@ ohlc_swing = tick_to_ohlc(ticks, tick_size=500)
 ### Performance
 
 - **Processing speed**: 100K+ ticks/sec with Polars
-- **Chart rendering**: Same 178x speedup as time-based charts
+- **Chart rendering**: Same speedup as time-based charts (28.8x average vs mplfinance)
 - **Memory efficient**: O(n) complexity
 
 ---
@@ -319,7 +319,7 @@ Tested on: 100,000 ticks, ThinkPad P16 Gen2, Python 3.13
 
 **All aggregations < 300ms for 100K ticks!** 🚀
 
-Chart rendering maintains **178x speedup** regardless of aggregation method.
+Chart rendering maintains **high speedup** (28.8x average vs mplfinance) regardless of aggregation method.
 
 ---
 
@@ -639,9 +639,9 @@ ohlc = tick_to_ohlc(ticks, tick_size=100,
 
 Try all three and see which provides clearest signals for your strategy!
 
-### Q: Is the 178x speedup maintained?
+### Q: Is the high speedup maintained?
 
-**A:** Yes! The aggregation step is very fast (<300ms for 100K ticks), and chart rendering maintains the full 178x speedup vs mplfinance.
+**A:** Yes! The aggregation step is very fast (<300ms for 100K ticks), and chart rendering maintains the high speedup vs mplfinance (28.8x average, up to 70.1x peak).
 
 ### Q: Can I backtest with these charts?
 

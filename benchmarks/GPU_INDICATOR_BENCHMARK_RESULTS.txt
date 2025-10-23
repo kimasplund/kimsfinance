@@ -1,0 +1,292 @@
+
+[1m██████████████████████████████████████████████████████████████████████[0m
+[1mGPU Indicator Performance Benchmark[0m
+[1m██████████████████████████████████████████████████████████████████████[0m
+
+
+[1m======================================================================[0m
+[1mATR[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.15 ms (6,615,397 candles/sec)
+  [91mGPU:[0m 0.65 ms (1,544,833 candles/sec)
+  [91mSpeedup: 0.23x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.36 ms (28,148,596 candles/sec)
+  [91mGPU:[0m 0.53 ms (18,958,568 candles/sec)
+  [91mSpeedup: 0.67x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 0.76 ms (65,807,137 candles/sec)
+  [91mGPU:[0m 0.95 ms (52,646,458 candles/sec)
+  [91mSpeedup: 0.80x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 1.11 ms (90,399,196 candles/sec)
+  [91mGPU:[0m 1.30 ms (76,774,487 candles/sec)
+  [91mSpeedup: 0.85x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 5.82 ms (85,879,068 candles/sec)
+  [91mGPU:[0m 7.66 ms (65,239,028 candles/sec)
+  [91mSpeedup: 0.76x[0m
+
+[1m======================================================================[0m
+[1mRSI[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.19 ms (5,203,522 candles/sec)
+  [91mGPU:[0m 0.38 ms (2,632,947 candles/sec)
+  [91mSpeedup: 0.51x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.59 ms (16,869,438 candles/sec)
+  [91mGPU:[0m 0.72 ms (13,894,283 candles/sec)
+  [91mSpeedup: 0.82x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 0.88 ms (56,822,701 candles/sec)
+  [91mGPU:[0m 1.04 ms (47,919,709 candles/sec)
+  [91mSpeedup: 0.84x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 1.61 ms (62,116,758 candles/sec)
+  [91mGPU:[0m 1.83 ms (54,777,023 candles/sec)
+  [91mSpeedup: 0.88x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 14.47 ms (34,562,473 candles/sec)
+  [91mGPU:[0m 14.59 ms (34,268,336 candles/sec)
+  [91mSpeedup: 0.99x[0m
+
+[1m======================================================================[0m
+[1mStochastic[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.27 ms (3,745,781 candles/sec)
+  [91mGPU:[0m 0.35 ms (2,825,038 candles/sec)
+  [91mSpeedup: 0.75x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.72 ms (13,892,410 candles/sec)
+  [93mGPU:[0m 0.67 ms (14,988,932 candles/sec)
+  [93mSpeedup: 1.08x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 2.81 ms (17,807,723 candles/sec)
+  [91mGPU:[0m 2.95 ms (16,939,216 candles/sec)
+  [91mSpeedup: 0.95x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 5.21 ms (19,198,794 candles/sec)
+  [91mGPU:[0m 5.43 ms (18,408,341 candles/sec)
+  [91mSpeedup: 0.96x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 25.11 ms (19,911,199 candles/sec)
+  [91mGPU:[0m 25.99 ms (19,236,354 candles/sec)
+  [91mSpeedup: 0.97x[0m
+
+[1m======================================================================[0m
+[1mCCI[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.24 ms (4,128,947 candles/sec)
+  [91mGPU:[0m 0.40 ms (2,526,860 candles/sec)
+  [91mSpeedup: 0.61x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.46 ms (21,617,345 candles/sec)
+  [91mGPU:[0m 0.65 ms (15,399,102 candles/sec)
+  [91mSpeedup: 0.71x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 1.48 ms (33,740,810 candles/sec)
+  [91mGPU:[0m 1.81 ms (27,614,370 candles/sec)
+  [91mSpeedup: 0.82x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 2.98 ms (33,542,387 candles/sec)
+  [91mGPU:[0m 3.82 ms (26,194,444 candles/sec)
+  [91mSpeedup: 0.78x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 15.07 ms (33,170,651 candles/sec)
+  [91mGPU:[0m 15.29 ms (32,696,576 candles/sec)
+  [91mSpeedup: 0.99x[0m
+
+[1m======================================================================[0m
+[1mTSI[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.14 ms (7,193,392 candles/sec)
+  [93mGPU:[0m 0.13 ms (7,547,910 candles/sec)
+  [93mSpeedup: 1.05x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.43 ms (23,041,049 candles/sec)
+  [93mGPU:[0m 0.39 ms (25,494,824 candles/sec)
+  [93mSpeedup: 1.11x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 1.99 ms (25,094,701 candles/sec)
+  [91mGPU:[0m 2.27 ms (21,986,377 candles/sec)
+  [91mSpeedup: 0.88x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 3.94 ms (25,370,067 candles/sec)
+  [93mGPU:[0m 3.90 ms (25,633,362 candles/sec)
+  [93mSpeedup: 1.01x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 33.82 ms (14,784,564 candles/sec)
+  [93mGPU:[0m 33.57 ms (14,892,131 candles/sec)
+  [93mSpeedup: 1.01x[0m
+
+[1m======================================================================[0m
+[1mROC[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.01 ms (140,577,774 candles/sec)
+  [91mGPU:[0m 0.34 ms (2,945,946 candles/sec)
+  [91mSpeedup: 0.02x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.02 ms (454,648,450 candles/sec)
+  [91mGPU:[0m 0.32 ms (31,674,489 candles/sec)
+  [91mSpeedup: 0.07x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 0.09 ms (565,617,353 candles/sec)
+  [91mGPU:[0m 0.41 ms (121,938,433 candles/sec)
+  [91mSpeedup: 0.22x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 0.19 ms (524,898,550 candles/sec)
+  [91mGPU:[0m 0.60 ms (167,113,977 candles/sec)
+  [91mSpeedup: 0.32x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 1.87 ms (266,895,336 candles/sec)
+  [91mGPU:[0m 2.18 ms (229,783,108 candles/sec)
+  [91mSpeedup: 0.86x[0m
+
+[1m======================================================================[0m
+[1mAroon[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.14 ms (7,328,694 candles/sec)
+  [91mGPU:[0m 384.83 ms (2,599 candles/sec)
+  [91mSpeedup: 0.00x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 1.20 ms (8,303,234 candles/sec)
+  [91mGPU:[0m 4017.41 ms (2,489 candles/sec)
+  [91mSpeedup: 0.00x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 6.32 ms (7,906,505 candles/sec)
+  [91mGPU:[0m 21814.49 ms (2,292 candles/sec)
+  [91mSpeedup: 0.00x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 16.86 ms (5,929,525 candles/sec)
+  [91mGPU:[0m 43056.10 ms (2,323 candles/sec)
+  [91mSpeedup: 0.00x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 78.88 ms (6,338,356 candles/sec)
+  [91mGPU:[0m 218598.77 ms (2,287 candles/sec)
+  [91mSpeedup: 0.00x[0m
+
+[1m======================================================================[0m
+[1mElder Ray[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 0.04 ms (25,368,150 candles/sec)
+  [93mGPU:[0m 0.04 ms (26,500,611 candles/sec)
+  [93mSpeedup: 1.04x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 0.13 ms (76,284,640 candles/sec)
+  [91mGPU:[0m 0.13 ms (76,240,140 candles/sec)
+  [91mSpeedup: 1.00x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 0.56 ms (89,269,376 candles/sec)
+  [91mGPU:[0m 0.56 ms (88,572,860 candles/sec)
+  [91mSpeedup: 0.99x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 1.13 ms (88,473,808 candles/sec)
+  [93mGPU:[0m 1.10 ms (90,704,345 candles/sec)
+  [93mSpeedup: 1.03x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 5.73 ms (87,269,196 candles/sec)
+  [93mGPU:[0m 5.56 ms (89,996,858 candles/sec)
+  [93mSpeedup: 1.03x[0m
+
+[1m======================================================================[0m
+[1mHMA[0m
+[1m======================================================================[0m
+
+[96mDataset: 1,000 candles[0m
+  [92mCPU:[0m 16.34 ms (61,193 candles/sec)
+  [91mGPU:[0m 16.52 ms (60,526 candles/sec)
+  [91mSpeedup: 0.99x[0m
+
+[96mDataset: 10,000 candles[0m
+  [92mCPU:[0m 162.19 ms (61,657 candles/sec)
+  [93mGPU:[0m 161.87 ms (61,779 candles/sec)
+  [93mSpeedup: 1.00x[0m
+
+[96mDataset: 50,000 candles[0m
+  [92mCPU:[0m 803.70 ms (62,212 candles/sec)
+  [91mGPU:[0m 803.80 ms (62,205 candles/sec)
+  [91mSpeedup: 1.00x[0m
+
+[96mDataset: 100,000 candles[0m
+  [92mCPU:[0m 1607.68 ms (62,202 candles/sec)
+  [91mGPU:[0m 1611.13 ms (62,068 candles/sec)
+  [91mSpeedup: 1.00x[0m
+
+[96mDataset: 500,000 candles[0m
+  [92mCPU:[0m 8114.75 ms (61,616 candles/sec)
+  [93mGPU:[0m 8090.21 ms (61,803 candles/sec)
+  [93mSpeedup: 1.00x[0m
+
+
+[1m======================================================================[0m
+[1mSUMMARY[0m
+[1m======================================================================[0m
+
+[91mATR                  | Avg: 0.66x | Peak: 0.85x[0m
+[91mRSI                  | Avg: 0.81x | Peak: 0.99x[0m
+[91mStochastic           | Avg: 0.94x | Peak: 1.08x[0m
+[91mCCI                  | Avg: 0.78x | Peak: 0.99x[0m
+[93mTSI                  | Avg: 1.01x | Peak: 1.11x[0m
+[91mROC                  | Avg: 0.30x | Peak: 0.86x[0m
+[91mAroon                | Avg: 0.00x | Peak: 0.00x[0m
+[93mElder Ray            | Avg: 1.02x | Peak: 1.04x[0m
+[91mHMA                  | Avg: 1.00x | Peak: 1.00x[0m
+
+[1mRecommendations:[0m
+  • GPU is beneficial for datasets >100K candles
+  • Use engine='auto' for automatic CPU/GPU selection
+  • Best GPU speedups: RSI, Stochastic, ROC
+  • Moderate GPU speedups: ATR, CCI, TSI
+
+[1m======================================================================[0m
+[92mBenchmark complete![0m
+[1m======================================================================[0m
+

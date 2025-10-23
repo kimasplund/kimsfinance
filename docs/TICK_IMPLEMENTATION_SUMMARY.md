@@ -14,7 +14,7 @@ Successfully implemented **3 new aggregation methods** for kimsfinance, enabling
 2. **Volume Charts** - Fixed cumulative volume per bar
 3. **Range Charts** - Fixed price range per bar
 
-All three methods work seamlessly with kimsfinance's **6 native chart types**, maintaining the **178x speedup** over mplfinance.
+All three methods work seamlessly with kimsfinance's **6 native chart types**, maintaining **significant speedup** over mplfinance (28.8x average, up to 70.1x peak).
 
 ---
 
@@ -224,12 +224,12 @@ Tested on: ThinkPad P16 Gen2 (i9-13980HX, RTX 3500 Ada), Python 3.13
 
 | Chart Type | Speed | Speedup vs mplfinance |
 |-----------|-------|----------------------|
-| Candlestick | 6,249 charts/sec | 178x |
-| OHLC | 1,337 charts/sec | 150-200x |
-| Line | 2,100 charts/sec | 200-300x |
-| Hollow | 5,728 charts/sec | 150-200x |
-| Renko | 3,800 charts/sec | 100-150x |
-| PNF | 357 charts/sec | 100-150x |
+| Candlestick | 6,249 charts/sec | Baseline (high speedup) |
+| OHLC | 1,337 charts/sec | High speedup |
+| Line | 2,100 charts/sec | High speedup |
+| Hollow | 5,728 charts/sec | High speedup |
+| Renko | 3,800 charts/sec | High speedup |
+| PNF | 357 charts/sec | High speedup |
 
 **All aggregation methods work with all 6 chart types!**
 
@@ -445,7 +445,7 @@ When tick_size doesn't divide evenly, the last bar may be partial.
 | **Sample Charts** | 26 charts (7 test + 19 demo) |
 | **Documentation** | 550+ lines (user guide + API ref) |
 | **Performance** | 400K - 2M ticks/sec |
-| **Chart Speedup** | 178x maintained |
+| **Chart Speedup** | High speedup maintained (28.8x average) |
 | **Implementation Time** | ~2 hours |
 
 ---
@@ -456,7 +456,7 @@ Successfully implemented comprehensive tick-based aggregation support for kimsfi
 
 ✅ **3 new aggregation methods** (tick, volume, range)
 ✅ **Works with all 6 chart types** (candle, ohlc, line, hollow, renko, pnf)
-✅ **Maintains 178x speedup** (native PIL rendering)
+✅ **Maintains high speedup** (28.8x average native PIL rendering)
 ✅ **Comprehensive testing** (27 tests, all passing)
 ✅ **Full documentation** (user guide, API ref, examples)
 ✅ **Sample charts** (26 generated)

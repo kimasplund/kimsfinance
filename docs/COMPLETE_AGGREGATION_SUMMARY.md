@@ -19,7 +19,7 @@ Successfully implemented **5 advanced aggregation methods** for kimsfinance, exp
 4. **Kagi Charts** (`kagi_to_ohlc()`) - Reversal-based trend lines
 5. **Three-Line Break** (`three_line_break_to_ohlc()`) - Breakout confirmation
 
-All methods work seamlessly with kimsfinance's **6 native chart types**, maintaining the **178x speedup** over mplfinance.
+All methods work seamlessly with kimsfinance's **6 native chart types**, maintaining **28.8x average speedup** over mplfinance (validated range: 7.3x - 70.1x).
 
 ---
 
@@ -33,7 +33,7 @@ All methods work seamlessly with kimsfinance's **6 native chart types**, maintai
 | **Sample Charts** | 47 charts (45 base + 2 new) |
 | **Lines of Code** | ~700 lines (aggregations + tests) |
 | **Performance** | 400K - 2M ticks/sec |
-| **Chart Speedup** | 178x maintained |
+| **Chart Speedup** | 28.8x average (7.3x - 70.1x range) |
 
 ---
 
@@ -271,7 +271,7 @@ plot(ohlc, type='line', savefig='kagi_chart.webp')
 ohlc = three_line_break_to_ohlc(ticks, num_lines=3)
 plot(ohlc, type='candle', savefig='three_line_break.webp')
 
-# All maintain 178x speedup!
+# All maintain high speedup (28.8x average vs mplfinance)!
 ```
 
 ### Comparison Across Methods
@@ -305,7 +305,7 @@ Tested on: ThinkPad P16 Gen2 (i9-13980HX), Python 3.13, 100K ticks
 | **kagi_to_ohlc()** | 200ms | 500K ticks/sec | Stateful (Python loop) |
 | **three_line_break_to_ohlc()** | 150ms | 600K ticks/sec | Stateful (Python loop) |
 
-**Chart Rendering**: All methods maintain **178x speedup** vs mplfinance
+**Chart Rendering**: All methods maintain **28.8x average speedup** vs mplfinance (validated range: 7.3x - 70.1x, benchmarked 2025-10-22)
 
 ---
 
@@ -445,7 +445,7 @@ plot(ohlc, type='candle')
 - ✅ 41 comprehensive tests (100% passing)
 - ✅ Sample charts generated
 - ✅ Performance: 400K - 2M ticks/sec
-- ✅ 178x speedup maintained
+- ✅ High speedup maintained (28.8x average, up to 70.1x peak)
 - ✅ Volume conservation verified
 - ✅ Edge cases handled
 - ✅ Documentation complete
@@ -464,7 +464,7 @@ Successfully transformed kimsfinance from having **3 aggregation methods** to a 
 - **47 sample charts**
 - **~700 lines of code**
 - **400K - 2M ticks/sec performance**
-- **178x speedup maintained**
+- **28.8x average speedup maintained** (range: 7.3x - 70.1x)
 
 **Status**: ✅ **PRODUCTION READY**
 
