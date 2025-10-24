@@ -235,8 +235,8 @@ def from_pandas_series(series: object, window: int, ma_type: str = "sma") -> Mov
         Numpy array with moving average values
 
     Example:
-        >>> import pandas as pd
-        >>> prices = pd.Series([100, 102, 101, 105, 103])
+        >>> import polars as pl
+        >>> prices = pl.Series([100, 102, 101, 105, 103])
         >>> sma = from_pandas_series(prices, window=3)
     """
     # Convert to Polars DataFrame

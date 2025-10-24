@@ -757,25 +757,25 @@ Speedup: 143x faster than mplfinance
 Generate millions of charts for ML training:
 
 ```python
-import pandas as pd
+import polars as pl
 from kimsfinance.plotting import render_and_save
 
-# Process entire dataset
-df = pd.read_csv('ohlcv_data.csv')
+# Process entire dataset (8x faster with Polars)
+df = pl.read_csv('ohlcv_data.csv')
 
 for i in range(len(df) - 50):
-    window = df.iloc[i:i+50]
+    window = df.slice(i, 50)
 
     ohlc = {
-        'open': window['open'].values,
-        'high': window['high'].values,
-        'low': window['low'].values,
-        'close': window['close'].values,
+        'open': window['open'].to_numpy(),
+        'high': window['high'].to_numpy(),
+        'low': window['low'].to_numpy(),
+        'close': window['close'].to_numpy(),
     }
 
     render_and_save(
         ohlc=ohlc,
-        volume=window['volume'].values,
+        volume=window['volume'].to_numpy(),
         output_path=f'charts/chart_{i}.webp',
         speed='fast',  # 61x faster encoding
         width=300,
