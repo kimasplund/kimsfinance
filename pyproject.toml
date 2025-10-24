@@ -25,6 +25,7 @@ classifiers = [
     "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Office/Business :: Financial",
@@ -84,10 +85,10 @@ kimsfinance = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py313', 'py314']
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
