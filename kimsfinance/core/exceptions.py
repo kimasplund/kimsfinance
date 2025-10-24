@@ -7,6 +7,16 @@ Custom exceptions for error handling and debugging.
 
 from __future__ import annotations
 
+import sys
+
+# Python 3.12+ supports typing.override
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    # Fallback for older Python versions (no-op decorator)
+    def override(func):  # type: ignore
+        return func
+
 
 class KimsFinanceError(Exception):
     """Base exception for all kimsfinance errors."""
@@ -26,6 +36,7 @@ class GPUNotAvailableError(KimsFinanceError):
 
     __slots__ = ()
 
+    @override
     def __init__(self, message: str | None = None):
         if message is None:
             message = (

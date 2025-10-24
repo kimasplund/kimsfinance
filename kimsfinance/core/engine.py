@@ -104,6 +104,40 @@ class EngineManager:
             cls._gpu_available = None
 
     @classmethod
+    def supports_free_threading(cls) -> bool:
+        """
+        Check if Python 3.14+ free-threading (no-GIL) is enabled.
+
+        Free-threading allows true parallel execution in threads without
+        the Global Interpreter Lock (GIL) limitation.
+
+        Returns:
+            bool: True if free-threading is available and enabled
+
+        Examples:
+            >>> if EngineManager.supports_free_threading():
+            ...     # Use ThreadPoolExecutor for parallel rendering
+            ...     print("Free-threading enabled - use threads!")
+            ... else:
+            ...     # Fall back to ProcessPoolExecutor
+            ...     print("Free-threading disabled - use processes")
+
+        Notes:
+            - Requires Python 3.14+ built with `--disable-gil`
+            - Check sys._is_gil_enabled() for runtime GIL status
+            - Only available in `python3.14t` builds (t = threads)
+        """
+        import sys
+
+        # Python 3.14+ required
+        if sys.version_info < (3, 14):
+            return False
+
+        # Check if _is_gil_enabled attribute exists and GIL is disabled
+        # _is_gil_enabled() returns True if GIL is enabled, False if disabled
+        return hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled()
+
+    @classmethod
     def select_engine(
         cls, engine: Engine, operation: str | None = None, data_size: int | None = None
     ) -> Literal["cpu", "gpu"]:
@@ -177,13 +211,15 @@ class EngineManager:
         Get information about engine availability and configuration.
 
         Returns:
-            Dict with engine information
+            Dict with engine information including free-threading status
         """
         gpu_available = cls.check_gpu_available()
+        free_threading = cls.supports_free_threading()
 
         info: dict[str, str | bool] = {
             "cpu_available": True,
             "gpu_available": gpu_available,
+            "free_threading_available": free_threading,
             "default_engine": "auto",
         }
 
