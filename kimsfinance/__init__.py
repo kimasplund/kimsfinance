@@ -410,12 +410,7 @@ if not _deps["polars"]:
 if not _deps["numpy"]:
     raise ImportError("NumPy is required but not installed. " "Install with: pip install numpy")
 
-# Optional GPU dependencies
-if not (_deps["cupy"] and _deps["cudf"]):
-    import warnings
-
-    warnings.warn(
-        "GPU acceleration not available. Install RAPIDS for GPU support:\n"
-        "  pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x",
-        UserWarning,
-    )
+# Optional dependencies (no warnings - they're truly optional)
+# - pandas: Only needed for mplfinance compatibility (install with: pip install kimsfinance[pandas])
+# - GPU: Only needed for GPU acceleration (install with: pip install kimsfinance[gpu])
+# - JIT: Only needed for JIT compilation (install with: pip install kimsfinance[jit])

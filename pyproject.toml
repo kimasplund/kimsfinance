@@ -40,12 +40,14 @@ classifiers = [
 dependencies = [
     "polars>=1.0",
     "numpy>=2.0",
-    "pandas>=2.0",
     "Pillow>=12.0",
     "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
+pandas = [
+    "pandas>=2.0",  # Only needed for mplfinance compatibility
+]
 gpu = [
     "cudf-cu12>=24.12",
     "cupy-cuda12x>=13.0",
@@ -60,7 +62,7 @@ dev = [
     "mypy>=1.0",
 ]
 test = [
-    "kimsfinance[dev]",
+    "kimsfinance[dev,pandas]",
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "mplfinance>=0.12.10b0",
