@@ -6,9 +6,10 @@
 //! within a given period, expressed as a percentage (0-100).
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for Aroon indicator
 const AROON_KERNEL: &str = r#"
@@ -78,6 +79,7 @@ extern "C" __global__ void aroon_kernel(
 /// * `high` - High prices
 /// * `low` - Low prices
 /// * `period` - Lookback period (typically 14 or 25)
+/// * `stream` - Optional CUDA stream for concurrent execution (uses device default if None)
 ///
 /// # Returns
 ///
@@ -98,13 +100,14 @@ extern "C" __global__ void aroon_kernel(
 /// use kimsfinance_core::gpu::{GpuDevice, aroon_gpu};
 ///
 /// let device = GpuDevice::new()?;
-/// let (aroon_up, aroon_down) = aroon_gpu(&device, &high, &low, 14)?;
+/// let (aroon_up, aroon_down) = aroon_gpu(&device, &high, &low, 14, None)?;
 /// ```
 pub fn aroon_gpu(
     device: &GpuDevice,
     high: &Array1<f64>,
     low: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<(Array1<f64>, Array1<f64>), GpuError> {
     let n = high.len();
 
@@ -143,19 +146,48 @@ pub fn aroon_gpu(
         GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
     })?;
 
-    // Copy data to GPU
-    let d_high = device.copy_to_device(high.as_slice().unwrap())?;
-    let d_low = device.copy_to_device(low.as_slice().unwrap())?;
+    // Select stream: use provided stream or device default
+    let exec_stream = stream.unwrap_or(&device.stream);
 
-    // Allocate output buffers
-    let mut d_aroon_up = device.alloc_buffer(n)?;
-    let mut d_aroon_down = device.alloc_buffer(n)?;
+    // Copy data to GPU using selected stream
+    let d_high = {
+        let mut buffer = exec_stream.alloc_zeros::<f64>(n).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate high buffer: {:?}", e))
+        })?;
+        exec_stream
+            .memcpy_htod(high.as_slice().unwrap(), &mut buffer)
+            .map_err(|e| {
+                GpuError::MemoryCopyError(format!("Failed to copy high to device: {:?}", e))
+            })?;
+        buffer
+    };
 
-    // Launch kernel using builder pattern
+    let d_low = {
+        let mut buffer = exec_stream.alloc_zeros::<f64>(n).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate low buffer: {:?}", e))
+        })?;
+        exec_stream
+            .memcpy_htod(low.as_slice().unwrap(), &mut buffer)
+            .map_err(|e| {
+                GpuError::MemoryCopyError(format!("Failed to copy low to device: {:?}", e))
+            })?;
+        buffer
+    };
+
+    // Allocate output buffers on selected stream
+    let mut d_aroon_up = exec_stream.alloc_zeros::<f64>(n).map_err(|e| {
+        GpuError::AllocationError(format!("Failed to allocate aroon_up buffer: {:?}", e))
+    })?;
+
+    let mut d_aroon_down = exec_stream.alloc_zeros::<f64>(n).map_err(|e| {
+        GpuError::AllocationError(format!("Failed to allocate aroon_down buffer: {:?}", e))
+    })?;
+
+    // Launch kernel on selected stream
     let n_i32 = n as i32;
     let period_i32 = period as i32;
 
-    let mut builder = device.stream.launch_builder(&kernel);
+    let mut builder = exec_stream.launch_builder(&kernel);
     builder.arg(&d_high);
     builder.arg(&d_low);
     builder.arg(&mut d_aroon_up);
@@ -170,11 +202,18 @@ pub fn aroon_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("Kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize selected stream and copy results back
+    exec_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+    })?;
 
-    let aroon_up_vec = device.copy_to_host(&d_aroon_up)?;
-    let aroon_down_vec = device.copy_to_host(&d_aroon_down)?;
+    let aroon_up_vec = exec_stream.memcpy_dtov(&d_aroon_up).map_err(|e| {
+        GpuError::MemoryCopyError(format!("Failed to copy aroon_up to host: {:?}", e))
+    })?;
+
+    let aroon_down_vec = exec_stream.memcpy_dtov(&d_aroon_down).map_err(|e| {
+        GpuError::MemoryCopyError(format!("Failed to copy aroon_down to host: {:?}", e))
+    })?;
 
     Ok((
         Array1::from_vec(aroon_up_vec),
@@ -203,7 +242,7 @@ mod tests {
         ]);
 
         let (aroon_up, aroon_down) =
-            aroon_gpu(&device, &high, &low, 14).expect("Aroon GPU calculation failed");
+            aroon_gpu(&device, &high, &low, 14, None).expect("Aroon GPU calculation failed");
 
         // Verify output length
         assert_eq!(aroon_up.len(), 15);
@@ -241,7 +280,7 @@ mod tests {
         ]);
 
         let (aroon_up, aroon_down) =
-            aroon_gpu(&device, &high, &low, 14).expect("Aroon GPU calculation failed");
+            aroon_gpu(&device, &high, &low, 14, None).expect("Aroon GPU calculation failed");
 
         // In downtrend, Aroon Down should be higher than Aroon Up
         assert!(aroon_down[14] > aroon_up[14]);
@@ -263,7 +302,7 @@ mod tests {
         let low_arr = Array1::from_vec(low);
 
         let (aroon_up, aroon_down) =
-            aroon_gpu(&device, &high_arr, &low_arr, 14).expect("Aroon GPU calculation failed");
+            aroon_gpu(&device, &high_arr, &low_arr, 14, None).expect("Aroon GPU calculation failed");
 
         // Aroon Up should be 100 (highest high at position 0 periods ago)
         assert!((aroon_up[19] - 100.0).abs() < 0.001);
@@ -283,7 +322,7 @@ mod tests {
 
         let start = std::time::Instant::now();
         let (aroon_up, aroon_down) =
-            aroon_gpu(&device, &high, &low, 14).expect("Aroon GPU calculation failed");
+            aroon_gpu(&device, &high, &low, 14, None).expect("Aroon GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!(
@@ -308,18 +347,18 @@ mod tests {
         let low = arr1(&[95.0, 97.0]);
 
         // Mismatched lengths
-        let result = aroon_gpu(&device, &high, &low, 14);
+        let result = aroon_gpu(&device, &high, &low, 14, None);
         assert!(result.is_err());
 
         let high = arr1(&[100.0, 102.0, 105.0]);
         let low = arr1(&[95.0, 97.0, 100.0]);
 
         // Period too large
-        let result = aroon_gpu(&device, &high, &low, 14);
+        let result = aroon_gpu(&device, &high, &low, 14, None);
         assert!(result.is_err());
 
         // Period zero
-        let result = aroon_gpu(&device, &high, &low, 0);
+        let result = aroon_gpu(&device, &high, &low, 0, None);
         assert!(result.is_err());
     }
 }

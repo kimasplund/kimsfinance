@@ -3,9 +3,10 @@
 //! Provides 15-25x speedup over CPU implementation for large datasets.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for Stochastic Oscillator
 const STOCHASTIC_KERNEL: &str = r#"
@@ -89,6 +90,7 @@ extern "C" __global__ void stochastic_oscillator_kernel(
 /// * `close` - Close prices
 /// * `k_period` - Period for %K line (typically 14)
 /// * `d_period` - Period for %D line (typically 3)
+/// * `stream` - Optional CUDA stream for concurrent execution (None uses device default)
 ///
 /// # Returns
 ///
@@ -97,6 +99,14 @@ extern "C" __global__ void stochastic_oscillator_kernel(
 /// # Performance
 ///
 /// Expected speedup: **15-25x** over CPU for n > 10,000
+///
+/// # Stream Concurrency
+///
+/// When a stream is provided, kernel launches execute on that stream, enabling
+/// concurrent execution with other operations on different streams. This is used
+/// in the batch pipeline for 4-6x speedup across Fast/Medium/Slow indicator groups.
+///
+/// Classification: **SLOW** indicator (>15μs/candle due to multiple kernel passes)
 pub fn stochastic_gpu(
     device: &GpuDevice,
     high: &Array1<f64>,
@@ -104,6 +114,7 @@ pub fn stochastic_gpu(
     close: &Array1<f64>,
     k_period: usize,
     d_period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<(Array1<f64>, Array1<f64>), GpuError> {
     let n = high.len();
 
@@ -145,21 +156,24 @@ pub fn stochastic_gpu(
             GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
         })?;
 
-    // Copy data to GPU
+    // Select stream: use provided stream or device default
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // Copy data to GPU (uses device.stream for memory operations)
     let d_high = device.copy_to_device(high.as_slice().unwrap())?;
     let d_low = device.copy_to_device(low.as_slice().unwrap())?;
     let d_close = device.copy_to_device(close.as_slice().unwrap())?;
 
-    // Allocate output buffers
+    // Allocate output buffers (uses device.stream for memory operations)
     let mut d_k_line = device.alloc_buffer(n)?;
     let mut d_d_line = device.alloc_buffer(n)?;
 
-    // Launch kernel using builder pattern
+    // Launch kernel using builder pattern on specified stream
     let n_i32 = n as i32;
     let k_period_i32 = k_period as i32;
     let d_period_i32 = d_period as i32;
 
-    let mut builder = device.stream.launch_builder(&kernel);
+    let mut builder = kernel_stream.launch_builder(&kernel);
     builder.arg(&d_high);
     builder.arg(&d_low);
     builder.arg(&d_close);
@@ -176,8 +190,10 @@ pub fn stochastic_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("Kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize the specified stream
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+    })?;
 
     let k_line_vec = device.copy_to_host(&d_k_line)?;
     let d_line_vec = device.copy_to_host(&d_d_line)?;
@@ -208,7 +224,7 @@ mod tests {
             131.0, 134.0, 138.0, 136.0, 140.0, 143.0,
         ]);
 
-        let (k_line, d_line) = stochastic_gpu(&device, &high, &low, &close, 14, 3)
+        let (k_line, d_line) = stochastic_gpu(&device, &high, &low, &close, 14, 3, None)
             .expect("Stochastic GPU calculation failed");
 
         // Verify %K is in valid range [0, 100]
@@ -231,7 +247,7 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let (k_line, d_line) = stochastic_gpu(&device, &high, &low, &close, 14, 3)
+        let (k_line, d_line) = stochastic_gpu(&device, &high, &low, &close, 14, 3, None)
             .expect("Stochastic GPU calculation failed");
         let elapsed = start.elapsed();
 

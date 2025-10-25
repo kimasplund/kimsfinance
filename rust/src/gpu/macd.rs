@@ -20,9 +20,10 @@
 //! - **GPU Threshold**: Recommended for datasets > 50K rows
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for MACD calculation
 const MACD_KERNEL: &str = r#"
@@ -173,6 +174,7 @@ extern "C" __global__ void macd_combined_kernel(
 /// * `fast_period` - Fast EMA period (typically 12)
 /// * `slow_period` - Slow EMA period (typically 26)
 /// * `signal_period` - Signal line EMA period (typically 9)
+/// * `stream` - Optional CUDA stream for concurrent execution
 ///
 /// # Returns
 ///
@@ -185,6 +187,14 @@ extern "C" __global__ void macd_combined_kernel(
 /// Due to sequential EMA dependencies, speedup is modest compared to
 /// fully parallel indicators. Best used for very large datasets.
 ///
+/// # Stream Concurrency
+///
+/// When a stream is provided, kernel launches execute on that stream, enabling
+/// concurrent execution with other operations on different streams. This is used
+/// in the batch pipeline for 4-6x speedup across Fast/Medium/Slow indicator groups.
+///
+/// Classification: **SLOW** indicator (>15μs/candle due to three sequential EMAs)
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -194,7 +204,7 @@ extern "C" __global__ void macd_combined_kernel(
 /// let device = GpuDevice::new()?;
 /// let close = Array1::from_vec(vec![100.0, 101.0, 102.0, /* ... */]);
 ///
-/// let (macd, signal, histogram) = macd_gpu(&device, &close, 12, 26, 9)?;
+/// let (macd, signal, histogram) = macd_gpu(&device, &close, 12, 26, 9, None)?;
 /// ```
 pub fn macd_gpu(
     device: &GpuDevice,
@@ -202,6 +212,7 @@ pub fn macd_gpu(
     fast_period: usize,
     slow_period: usize,
     signal_period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>), GpuError> {
     let n = close.len();
 
@@ -241,23 +252,26 @@ pub fn macd_gpu(
         GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
     })?;
 
-    // Copy close prices to GPU
+    // Select stream: use provided stream or device default
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // Copy close prices to GPU (uses device.stream for memory operations)
     let d_close = device.copy_to_device(close.as_slice().unwrap())?;
 
-    // Allocate output buffers on GPU
+    // Allocate output buffers on GPU (uses device.stream for memory operations)
     let mut d_fast_ema = device.alloc_buffer(n)?;
     let mut d_slow_ema = device.alloc_buffer(n)?;
     let mut d_macd_line = device.alloc_buffer(n)?;
     let mut d_signal_line = device.alloc_buffer(n)?;
     let mut d_histogram = device.alloc_buffer(n)?;
 
-    // Launch kernel with builder pattern
+    // Launch kernel with builder pattern on specified stream
     let n_i32 = n as i32;
     let fast_period_i32 = fast_period as i32;
     let slow_period_i32 = slow_period as i32;
     let signal_period_i32 = signal_period as i32;
 
-    let mut builder = device.stream.launch_builder(&kernel);
+    let mut builder = kernel_stream.launch_builder(&kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_fast_ema);
     builder.arg(&mut d_slow_ema);
@@ -283,9 +297,12 @@ pub fn macd_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("Kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize the specified stream
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+    })?;
 
+    // Copy results back to host
     let macd_vec = device.copy_to_host(&d_macd_line)?;
     let signal_vec = device.copy_to_host(&d_signal_line)?;
     let histogram_vec = device.copy_to_host(&d_histogram)?;
@@ -315,7 +332,7 @@ mod tests {
         ]);
 
         let (macd, signal, histogram) =
-            macd_gpu(&device, &close, 12, 26, 9).expect("MACD GPU calculation failed");
+            macd_gpu(&device, &close, 12, 26, 9, None).expect("MACD GPU calculation failed");
 
         // Verify lengths
         assert_eq!(macd.len(), close.len());
@@ -369,7 +386,7 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64) * 0.5).collect());
 
         let (macd, signal, histogram) =
-            macd_gpu(&device, &close, 12, 26, 9).expect("MACD GPU calculation failed");
+            macd_gpu(&device, &close, 12, 26, 9, None).expect("MACD GPU calculation failed");
 
         // Check that MACD captures uptrend
         // In an uptrend, MACD should be positive (fast > slow)
@@ -401,7 +418,7 @@ mod tests {
 
         let start = std::time::Instant::now();
         let (macd, signal, histogram) =
-            macd_gpu(&device, &close, 12, 26, 9).expect("MACD GPU calculation failed");
+            macd_gpu(&device, &close, 12, 26, 9, None).expect("MACD GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!(
@@ -430,19 +447,19 @@ mod tests {
         let close = arr1(&[10.0, 20.0, 30.0]);
 
         // Invalid: fast >= slow
-        let result = macd_gpu(&device, &close, 26, 12, 9);
+        let result = macd_gpu(&device, &close, 26, 12, 9, None);
         assert!(
             result.is_err(),
             "Should fail when fast_period >= slow_period"
         );
 
         // Invalid: not enough data
-        let result = macd_gpu(&device, &close, 12, 26, 9);
+        let result = macd_gpu(&device, &close, 12, 26, 9, None);
         assert!(result.is_err(), "Should fail with insufficient data");
 
         // Invalid: zero period
         let close_long = Array1::from_vec((0..50).map(|i| i as f64).collect());
-        let result = macd_gpu(&device, &close_long, 0, 26, 9);
+        let result = macd_gpu(&device, &close_long, 0, 26, 9, None);
         assert!(result.is_err(), "Should fail with zero period");
     }
 
@@ -455,7 +472,7 @@ mod tests {
         let close = Array1::from_vec((0..50).map(|i| 100.0 + (i as f64) * 0.2).collect());
 
         let (macd, signal, histogram) =
-            macd_gpu(&device, &close, 5, 13, 3).expect("MACD GPU calculation failed");
+            macd_gpu(&device, &close, 5, 13, 3, None).expect("MACD GPU calculation failed");
 
         // Verify MACD starts at slow_period - 1 = 12
         assert!(!macd[12].is_nan(), "MACD should start at slow_period - 1");

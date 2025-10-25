@@ -4,9 +4,10 @@
 //! RSI measures momentum by comparing average gains to average losses.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for RSI calculation
 const RSI_KERNEL: &str = r#"
@@ -106,6 +107,7 @@ extern "C" __global__ void calculate_rsi_kernel(
 /// * `device` - GPU device handle
 /// * `close` - Closing prices
 /// * `period` - RSI period (typically 14)
+/// * `stream` - Optional CUDA stream for concurrent execution (None uses device default)
 ///
 /// # Returns
 ///
@@ -114,6 +116,14 @@ extern "C" __global__ void calculate_rsi_kernel(
 /// # Performance
 ///
 /// Expected speedup: **10-20x** over CPU for n > 10,000
+///
+/// # Stream Concurrency
+///
+/// When a stream is provided, kernel launches execute on that stream, enabling
+/// concurrent execution with other operations on different streams. This is used
+/// in the batch pipeline for 4-6x speedup across Fast/Medium/Slow indicator groups.
+///
+/// Classification: **MEDIUM** indicator (three-kernel approach with sequential smoothing)
 ///
 /// # Algorithm
 ///
@@ -125,6 +135,7 @@ pub fn rsi_gpu(
     device: &GpuDevice,
     close: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = close.len();
 
@@ -171,7 +182,10 @@ pub fn rsi_gpu(
         .load_function("calculate_rsi_kernel")
         .map_err(|e| GpuError::ExecutionError(format!("Failed to load RSI kernel: {:?}", e)))?;
 
-    // Copy close prices to GPU
+    // Select stream: use provided stream or device default
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // Copy close prices to GPU (uses device.stream for memory operations)
     let d_close = device.copy_to_device(close.as_slice().unwrap())?;
 
     // Allocate GPU buffers
@@ -184,9 +198,9 @@ pub fn rsi_gpu(
     let n_i32 = n as i32;
     let period_i32 = period as i32;
 
-    // Launch Kernel 1: Calculate gains and losses
+    // Launch Kernel 1: Calculate gains and losses (parallel)
     {
-        let mut builder = device.stream.launch_builder(&gains_losses_kernel);
+        let mut builder = kernel_stream.launch_builder(&gains_losses_kernel);
         builder.arg(&d_close);
         builder.arg(&mut d_gains);
         builder.arg(&mut d_losses);
@@ -201,12 +215,14 @@ pub fn rsi_gpu(
         }
     }
 
-    // Synchronize before next kernel
-    device.synchronize()?;
+    // Synchronize stream before next kernel
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed after kernel 1: {:?}", e))
+    })?;
 
     // Launch Kernel 2a: Apply Wilder's smoothing to gains (sequential - single thread)
     {
-        let mut builder = device.stream.launch_builder(&smoothing_kernel);
+        let mut builder = kernel_stream.launch_builder(&smoothing_kernel);
         builder.arg(&d_gains);
         builder.arg(&mut d_avg_gain);
         builder.arg(&n_i32);
@@ -227,7 +243,7 @@ pub fn rsi_gpu(
 
     // Launch Kernel 2b: Apply Wilder's smoothing to losses (sequential - single thread)
     {
-        let mut builder = device.stream.launch_builder(&smoothing_kernel);
+        let mut builder = kernel_stream.launch_builder(&smoothing_kernel);
         builder.arg(&d_losses);
         builder.arg(&mut d_avg_loss);
         builder.arg(&n_i32);
@@ -249,12 +265,14 @@ pub fn rsi_gpu(
         }
     }
 
-    // Synchronize before final kernel
-    device.synchronize()?;
+    // Synchronize stream before final kernel
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed after kernel 2: {:?}", e))
+    })?;
 
-    // Launch Kernel 3: Calculate RSI
+    // Launch Kernel 3: Calculate RSI (parallel)
     {
-        let mut builder = device.stream.launch_builder(&rsi_kernel);
+        let mut builder = kernel_stream.launch_builder(&rsi_kernel);
         builder.arg(&d_avg_gain);
         builder.arg(&d_avg_loss);
         builder.arg(&mut d_rsi);
@@ -269,8 +287,10 @@ pub fn rsi_gpu(
         }
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize stream and copy results back
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed after kernel 3: {:?}", e))
+    })?;
 
     let rsi_vec = device.copy_to_host(&d_rsi)?;
 
@@ -293,7 +313,7 @@ mod tests {
             49.0, 49.5, 50.0,
         ]);
 
-        let result = rsi_gpu(&device, &close, 14).expect("RSI GPU calculation failed");
+        let result = rsi_gpu(&device, &close, 14, None).expect("RSI GPU calculation failed");
 
         // Verify RSI is in valid range [0, 100]
         for i in 14..result.len() {
@@ -325,7 +345,7 @@ mod tests {
             112.0, 113.0, 114.0, 115.0,
         ]);
 
-        let result = rsi_gpu(&device, &close, 14).expect("RSI GPU calculation failed");
+        let result = rsi_gpu(&device, &close, 14, None).expect("RSI GPU calculation failed");
 
         // RSI should approach 100 when only gains
         assert!(
@@ -351,7 +371,7 @@ mod tests {
         let close = Array1::from_vec(close);
 
         let start = std::time::Instant::now();
-        let result = rsi_gpu(&device, &close, 14).expect("RSI GPU calculation failed");
+        let result = rsi_gpu(&device, &close, 14, None).expect("RSI GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!("GPU RSI (n={}): {:.2}ms", n, elapsed.as_secs_f64() * 1000.0);
@@ -385,12 +405,12 @@ mod tests {
 
         // Too short dataset
         let close = arr1(&[100.0, 101.0, 102.0]);
-        let result = rsi_gpu(&device, &close, 14);
+        let result = rsi_gpu(&device, &close, 14, None);
         assert!(result.is_err(), "Should fail with insufficient data");
 
         // Invalid period
         let close = arr1(&[100.0; 20]);
-        let result = rsi_gpu(&device, &close, 0);
+        let result = rsi_gpu(&device, &close, 0, None);
         assert!(result.is_err(), "Should fail with period = 0");
     }
 
@@ -402,7 +422,7 @@ mod tests {
         // Constant prices - no gains or losses
         let close = arr1(&[100.0; 30]);
 
-        let result = rsi_gpu(&device, &close, 14).expect("RSI GPU calculation failed");
+        let result = rsi_gpu(&device, &close, 14, None).expect("RSI GPU calculation failed");
 
         // With no change, RSI is undefined but we handle it as 100 (no losses)
         // Actually, with no gains and no losses, we get 0/0 which should be handled

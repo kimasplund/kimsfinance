@@ -4,9 +4,10 @@
 //! Williams %R is nearly identical to Stochastic %K but inverted to range [-100, 0].
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for Williams %R
 const WILLIAMS_R_KERNEL: &str = r#"
@@ -54,7 +55,7 @@ extern "C" __global__ void williams_r_kernel(
 }
 "#;
 
-/// GPU-accelerated Williams %R indicator
+/// GPU-accelerated Williams %R indicator with optional CUDA stream support
 ///
 /// Williams %R measures overbought/oversold levels, ranging from -100 (oversold) to 0 (overbought).
 /// It is inversely related to the Stochastic %K: Williams %R = Stochastic %K - 100.
@@ -66,6 +67,7 @@ extern "C" __global__ void williams_r_kernel(
 /// * `low` - Low prices
 /// * `close` - Close prices
 /// * `period` - Lookback period (typically 14)
+/// * `stream` - Optional CUDA stream for concurrent execution (uses device.stream if None)
 ///
 /// # Returns
 ///
@@ -74,6 +76,10 @@ extern "C" __global__ void williams_r_kernel(
 /// # Performance
 ///
 /// Expected speedup: **15-25x** over CPU for n > 10,000
+///
+/// # Classification
+///
+/// **FAST** indicator (<5μs/candle) - Single kernel execution
 ///
 /// # Formula
 ///
@@ -86,12 +92,25 @@ extern "C" __global__ void williams_r_kernel(
 /// - **-80 to -100**: Oversold (potential buy signal)
 /// - **-20 to 0**: Overbought (potential sell signal)
 /// - **-50**: Neutral
+///
+/// # Stream Concurrency
+///
+/// Supports concurrent execution via CUDA streams:
+/// ```rust,ignore
+/// let stream1 = device.create_stream()?;
+/// let stream2 = device.create_stream()?;
+///
+/// // Execute concurrently on different streams
+/// let result1 = williams_r_gpu(device, &high1, &low1, &close1, 14, Some(&stream1))?;
+/// let result2 = williams_r_gpu(device, &high2, &low2, &close2, 14, Some(&stream2))?;
+/// ```
 pub fn williams_r_gpu(
     device: &GpuDevice,
     high: &Array1<f64>,
     low: &Array1<f64>,
     close: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = high.len();
 
@@ -138,11 +157,14 @@ pub fn williams_r_gpu(
     // Allocate output buffer
     let mut d_williams_r = device.alloc_buffer(n)?;
 
-    // Launch kernel using builder pattern
+    // Select stream: use provided stream or default to device.stream
+    let exec_stream = stream.unwrap_or(&device.stream);
+
+    // Launch kernel using builder pattern with selected stream
     let n_i32 = n as i32;
     let period_i32 = period as i32;
 
-    let mut builder = device.stream.launch_builder(&kernel);
+    let mut builder = exec_stream.launch_builder(&kernel);
     builder.arg(&d_high);
     builder.arg(&d_low);
     builder.arg(&d_close);
@@ -157,8 +179,10 @@ pub fn williams_r_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("Kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize on the stream used for execution
+    exec_stream
+        .synchronize()
+        .map_err(|e| GpuError::ExecutionError(format!("Stream synchronization failed: {:?}", e)))?;
 
     let williams_r_vec = device.copy_to_host(&d_williams_r)?;
 
@@ -188,7 +212,7 @@ mod tests {
             131.0, 134.0, 138.0, 136.0, 140.0, 143.0,
         ]);
 
-        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14)
+        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14, None)
             .expect("Williams %R GPU calculation failed");
 
         // Verify %R is in valid range [-100, 0]
@@ -218,7 +242,7 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14)
+        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14, None)
             .expect("Williams %R GPU calculation failed");
         let elapsed = start.elapsed();
 
@@ -262,12 +286,12 @@ mod tests {
             131.0, 134.0, 138.0, 136.0, 140.0, 143.0,
         ]);
 
-        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14)
+        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14, None)
             .expect("Williams %R GPU calculation failed");
 
         // Use stochastic from the existing implementation
         use super::super::stochastic::stochastic_gpu;
-        let (stochastic_k, _) = stochastic_gpu(&device, &high, &low, &close, 14, 3)
+        let (stochastic_k, _) = stochastic_gpu(&device, &high, &low, &close, 14, 3, None)
             .expect("Stochastic GPU calculation failed");
 
         // Verify: Williams %R ≈ Stochastic %K - 100
@@ -295,7 +319,7 @@ mod tests {
         let low = arr1(&[100.0; 20]);
         let close = arr1(&[100.0; 20]);
 
-        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14)
+        let williams_r = williams_r_gpu(&device, &high, &low, &close, 14, None)
             .expect("Williams %R GPU calculation failed");
 
         // When range is zero, should return -50 (neutral)

@@ -13,6 +13,7 @@ use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for CCI indicator
 ///
@@ -114,6 +115,7 @@ extern "C" __global__ void cci_pass2_kernel(
 /// * `low` - Low prices
 /// * `close` - Close prices
 /// * `period` - CCI period (typically 20)
+/// * `stream` - Optional CUDA stream for concurrent execution (defaults to device stream)
 ///
 /// # Returns
 ///
@@ -122,6 +124,10 @@ extern "C" __global__ void cci_pass2_kernel(
 /// # Performance
 ///
 /// Expected speedup: **15-30x** over CPU for n > 10,000
+///
+/// **Classification**: FAST indicator (< 5μs/candle)
+/// - Ideal for Stream 0 (fast stream) in concurrent execution
+/// - Two-pass algorithm with embarrassingly parallel operations
 ///
 /// # Example
 ///
@@ -134,7 +140,12 @@ extern "C" __global__ void cci_pass2_kernel(
 /// let low = Array1::from_vec(vec![105.0, 110.0, 115.0, /* ... */]);
 /// let close = Array1::from_vec(vec![108.0, 112.0, 118.0, /* ... */]);
 ///
-/// let cci = cci_gpu(&device, &high, &low, &close, 20)?;
+/// // Default stream
+/// let cci = cci_gpu(&device, &high, &low, &close, 20, None)?;
+///
+/// // Or use custom stream for concurrency
+/// let stream = stream_mgr.get_stream(IndicatorSpeed::Fast);
+/// let cci = cci_gpu(&device, &high, &low, &close, 20, Some(stream))?;
 /// ```
 pub fn cci_gpu(
     device: &GpuDevice,
@@ -142,6 +153,7 @@ pub fn cci_gpu(
     low: &Array1<f64>,
     close: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<cudarc::driver::CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = high.len();
 
@@ -198,8 +210,11 @@ pub fn cci_gpu(
     let period_i32 = period as i32;
     let config = LaunchConfig::for_num_elems(n as u32);
 
+    // Use provided stream or fall back to device default stream
+    let exec_stream = stream.unwrap_or(&device.stream);
+
     // Pass 1: Calculate typical price and SMA
-    let mut builder = device.stream.launch_builder(&kernel_pass1);
+    let mut builder = exec_stream.launch_builder(&kernel_pass1);
     builder.arg(&d_high);
     builder.arg(&d_low);
     builder.arg(&d_close);
@@ -214,11 +229,13 @@ pub fn cci_gpu(
         })?;
     }
 
-    // Synchronize before pass 2
-    device.synchronize()?;
+    // Synchronize stream before pass 2 (ensure pass 1 completes)
+    exec_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Failed to sync after pass1: {:?}", e))
+    })?;
 
     // Pass 2: Calculate MAD and CCI
-    let mut builder = device.stream.launch_builder(&kernel_pass2);
+    let mut builder = exec_stream.launch_builder(&kernel_pass2);
     builder.arg(&d_typical_price);
     builder.arg(&d_sma);
     builder.arg(&mut d_cci);
@@ -231,8 +248,10 @@ pub fn cci_gpu(
         })?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize stream and copy results back
+    exec_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Failed to sync after pass2: {:?}", e))
+    })?;
 
     let cci_vec = device.copy_to_host(&d_cci)?;
 
@@ -263,7 +282,7 @@ mod tests {
             131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0, 148.0,
         ]);
 
-        let cci = cci_gpu(&device, &high, &low, &close, 14).expect("CCI GPU calculation failed");
+        let cci = cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
 
         // Verify first period-1 elements are NaN
         for i in 0..13 {
@@ -303,7 +322,7 @@ mod tests {
         let low = arr1(&[100.0; 20]);
         let close = arr1(&[100.0; 20]);
 
-        let cci = cci_gpu(&device, &high, &low, &close, 14).expect("CCI GPU calculation failed");
+        let cci = cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
 
         // All values should be NaN (including period onwards due to MAD == 0)
         for i in 0..cci.len() {
@@ -326,7 +345,7 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let cci = cci_gpu(&device, &high, &low, &close, 20).expect("CCI GPU calculation failed");
+        let cci = cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!(
@@ -362,15 +381,15 @@ mod tests {
 
         // Test mismatched array lengths
         let close_short = arr1(&[108.0, 112.0]);
-        let result = cci_gpu(&device, &high, &low, &close_short, 2);
+        let result = cci_gpu(&device, &high, &low, &close_short, 2, None);
         assert!(result.is_err(), "Should error on mismatched array lengths");
 
         // Test period too large
-        let result = cci_gpu(&device, &high, &low, &close, 10);
+        let result = cci_gpu(&device, &high, &low, &close, 10, None);
         assert!(result.is_err(), "Should error when period > data length");
 
         // Test invalid period
-        let result = cci_gpu(&device, &high, &low, &close, 0);
+        let result = cci_gpu(&device, &high, &low, &close, 0, None);
         assert!(result.is_err(), "Should error on zero period");
     }
 
@@ -385,7 +404,7 @@ mod tests {
         let low = Array1::from_vec((0..n).map(|i| 95.0 + (i as f64) * 2.0).collect());
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 2.0).collect());
 
-        let cci = cci_gpu(&device, &high, &low, &close, 20).expect("CCI GPU calculation failed");
+        let cci = cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
 
         // Check trend: most CCI values should be positive in uptrend
         let valid_cci: Vec<f64> = cci

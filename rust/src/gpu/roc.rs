@@ -4,9 +4,10 @@
 //! ROC is perfectly parallelizable - each thread calculates one value independently.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for Rate of Change
 ///
@@ -51,6 +52,7 @@ extern "C" __global__ void roc_kernel(
 /// * `device` - GPU device handle
 /// * `close` - Close prices
 /// * `period` - Lookback period (e.g., 12)
+/// * `stream` - Optional CUDA stream for concurrent execution (None uses device default)
 ///
 /// # Returns
 ///
@@ -72,6 +74,14 @@ extern "C" __global__ void roc_kernel(
 /// - No thread synchronization
 /// - Each thread is completely independent
 ///
+/// # Stream Concurrency
+///
+/// When a stream is provided, kernel launches execute on that stream, enabling
+/// concurrent execution with other operations on different streams. This is used
+/// in the batch pipeline for 4-6x speedup across Fast/Medium/Slow indicator groups.
+///
+/// Classification: **FAST** indicator (<5μs/candle, perfectly parallel, single kernel)
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -80,7 +90,7 @@ extern "C" __global__ void roc_kernel(
 ///
 /// let device = GpuDevice::new()?;
 /// let close = arr1(&[100.0, 105.0, 103.0, 108.0, 112.0, 110.0, 115.0]);
-/// let roc = roc_gpu(&device, &close, 3)?;
+/// let roc = roc_gpu(&device, &close, 3, None)?;
 ///
 /// // roc[3] = ((108 - 100) / 100) * 100 = 8.0%
 /// assert!((roc[3] - 8.0).abs() < 0.01);
@@ -89,6 +99,7 @@ pub fn roc_gpu(
     device: &GpuDevice,
     close: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = close.len();
 
@@ -125,14 +136,17 @@ pub fn roc_gpu(
     // Copy data to GPU
     let d_close = device.copy_to_device(close.as_slice().unwrap())?;
 
-    // Allocate output buffer
+    // Allocate output buffer (uses device.stream for memory operations)
     let mut d_roc = device.alloc_buffer(n)?;
 
-    // Launch kernel using builder pattern
+    // Use provided stream or default to device stream
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // Launch kernel using builder pattern on specified stream
     let n_i32 = n as i32;
     let period_i32 = period as i32;
 
-    let mut builder = device.stream.launch_builder(&kernel);
+    let mut builder = kernel_stream.launch_builder(&kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_roc);
     builder.arg(&n_i32);
@@ -145,8 +159,10 @@ pub fn roc_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("ROC kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize the specified stream
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+    })?;
 
     let roc_vec = device.copy_to_host(&d_roc)?;
 
@@ -167,7 +183,7 @@ mod tests {
         let close = arr1(&[
             100.0, 105.0, 103.0, 108.0, 112.0, 110.0, 115.0, 118.0, 120.0,
         ]);
-        let roc = roc_gpu(&device, &close, 3).expect("ROC GPU calculation failed");
+        let roc = roc_gpu(&device, &close, 3, None).expect("ROC GPU calculation failed");
 
         // Verify first `period` values are NaN
         for i in 0..3 {
@@ -204,7 +220,7 @@ mod tests {
 
         // Test case with zero value (should produce NaN)
         let close = arr1(&[0.0, 100.0, 105.0, 110.0, 115.0]);
-        let roc = roc_gpu(&device, &close, 2).expect("ROC GPU calculation failed");
+        let roc = roc_gpu(&device, &close, 2, None).expect("ROC GPU calculation failed");
 
         // roc[2] should be NaN because close[0] = 0
         assert!(roc[2].is_nan(), "roc[2] should be NaN (division by zero)");
@@ -224,7 +240,7 @@ mod tests {
 
         // Test with price decline
         let close = arr1(&[120.0, 115.0, 110.0, 105.0, 100.0]);
-        let roc = roc_gpu(&device, &close, 2).expect("ROC GPU calculation failed");
+        let roc = roc_gpu(&device, &close, 2, None).expect("ROC GPU calculation failed");
 
         // roc[2] = ((110 - 120) / 120) * 100 = -8.333...
         assert!(
@@ -250,7 +266,7 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let roc = roc_gpu(&device, &close, 12).expect("ROC GPU calculation failed");
+        let roc = roc_gpu(&device, &close, 12, None).expect("ROC GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!(
@@ -283,17 +299,17 @@ mod tests {
         ]);
 
         // Test period=1 (daily change)
-        let roc1 = roc_gpu(&device, &close, 1).expect("ROC GPU failed");
+        let roc1 = roc_gpu(&device, &close, 1, None).expect("ROC GPU failed");
         // roc1[1] = ((102 - 100) / 100) * 100 = 2.0
         assert!((roc1[1] - 2.0).abs() < 0.01);
 
         // Test period=5
-        let roc5 = roc_gpu(&device, &close, 5).expect("ROC GPU failed");
+        let roc5 = roc_gpu(&device, &close, 5, None).expect("ROC GPU failed");
         // roc5[5] = ((110 - 100) / 100) * 100 = 10.0
         assert!((roc5[5] - 10.0).abs() < 0.01);
 
         // Test period=10
-        let roc10 = roc_gpu(&device, &close, 10).expect("ROC GPU failed");
+        let roc10 = roc_gpu(&device, &close, 10, None).expect("ROC GPU failed");
         // roc10[10] = ((120 - 100) / 100) * 100 = 20.0
         assert!((roc10[10] - 20.0).abs() < 0.01);
     }
@@ -309,7 +325,7 @@ mod tests {
             let close = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64) * 0.001).collect());
 
             let start = std::time::Instant::now();
-            let _roc = roc_gpu(&device, &close, 12).expect("ROC GPU calculation failed");
+            let _roc = roc_gpu(&device, &close, 12, None).expect("ROC GPU calculation failed");
             let elapsed = start.elapsed();
 
             let throughput = n as f64 / elapsed.as_secs_f64();
@@ -327,7 +343,7 @@ mod tests {
     fn test_roc_gpu_invalid_period() {
         let device = GpuDevice::new().expect("Failed to initialize GPU");
         let close = arr1(&[100.0, 105.0, 110.0]);
-        let _roc = roc_gpu(&device, &close, 0).unwrap();
+        let _roc = roc_gpu(&device, &close, 0, None).unwrap();
     }
 
     #[test]
@@ -335,6 +351,6 @@ mod tests {
     fn test_roc_gpu_insufficient_data() {
         let device = GpuDevice::new().expect("Failed to initialize GPU");
         let close = arr1(&[100.0, 105.0]);
-        let _roc = roc_gpu(&device, &close, 5).unwrap();
+        let _roc = roc_gpu(&device, &close, 5, None).unwrap();
     }
 }

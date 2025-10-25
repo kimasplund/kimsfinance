@@ -609,6 +609,7 @@ fn calculate_stochastic_gpu<'py>(
         &close_array,
         k_period,
         d_period,
+        None, // Use device default stream
     )
     .map_err(|e| {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("GPU computation failed: {}", e))

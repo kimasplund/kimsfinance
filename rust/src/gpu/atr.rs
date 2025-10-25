@@ -8,9 +8,10 @@
 //! - First ATR value is SMA of first `period` TR values
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::compile_ptx;
 use ndarray::Array1;
+use std::sync::Arc;
 
 /// CUDA kernel source code for ATR calculation
 ///
@@ -90,6 +91,7 @@ extern "C" __global__ void calculate_atr_kernel(
 /// * `low` - Low prices
 /// * `close` - Close prices
 /// * `period` - ATR period (typically 14)
+/// * `stream` - Optional CUDA stream for concurrent execution (Week 2 optimization)
 ///
 /// # Returns
 ///
@@ -104,6 +106,7 @@ extern "C" __global__ void calculate_atr_kernel(
 /// # Performance
 ///
 /// Expected speedup: **10-20x** over CPU for n > 10,000
+/// Stream concurrency: Enables parallel execution with other indicators
 ///
 /// # Errors
 ///
@@ -118,6 +121,7 @@ pub fn atr_gpu(
     low: &Array1<f64>,
     close: &Array1<f64>,
     period: usize,
+    stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = high.len();
 
@@ -162,6 +166,9 @@ pub fn atr_gpu(
         GpuError::ExecutionError(format!("Failed to load ATR kernel function: {:?}", e))
     })?;
 
+    // Select stream: use provided stream or fallback to device.stream
+    let exec_stream = stream.unwrap_or(&device.stream);
+
     // Copy data to GPU
     let d_high = device.copy_to_device(high.as_slice().unwrap())?;
     let d_low = device.copy_to_device(low.as_slice().unwrap())?;
@@ -171,11 +178,11 @@ pub fn atr_gpu(
     let mut d_true_range = device.alloc_buffer(n)?;
     let mut d_atr = device.alloc_buffer(n)?;
 
-    // Launch TR kernel (parallel across all candles)
+    // Launch TR kernel (parallel across all candles) on selected stream
     let n_i32 = n as i32;
     let period_i32 = period as i32;
 
-    let mut tr_builder = device.stream.launch_builder(&tr_kernel);
+    let mut tr_builder = exec_stream.launch_builder(&tr_kernel);
     tr_builder.arg(&d_high);
     tr_builder.arg(&d_low);
     tr_builder.arg(&d_close);
@@ -189,11 +196,13 @@ pub fn atr_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("TR kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize before launching ATR kernel
-    device.synchronize()?;
+    // Synchronize on selected stream before launching ATR kernel
+    exec_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("TR kernel synchronization failed: {:?}", e))
+    })?;
 
-    // Launch ATR kernel (single thread for sequential smoothing)
-    let mut atr_builder = device.stream.launch_builder(&atr_kernel);
+    // Launch ATR kernel (single thread for sequential smoothing) on selected stream
+    let mut atr_builder = exec_stream.launch_builder(&atr_kernel);
     atr_builder.arg(&d_true_range);
     atr_builder.arg(&mut d_atr);
     atr_builder.arg(&n_i32);
@@ -212,8 +221,10 @@ pub fn atr_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("ATR kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize and copy results back
-    device.synchronize()?;
+    // Synchronize on selected stream and copy results back
+    exec_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("ATR kernel synchronization failed: {:?}", e))
+    })?;
 
     let atr_vec = device.copy_to_host(&d_atr)?;
 
@@ -245,8 +256,8 @@ mod tests {
         ]);
 
         let period = 14;
-        let atr =
-            atr_gpu(&device, &high, &low, &close, period).expect("ATR GPU calculation failed");
+        let atr = atr_gpu(&device, &high, &low, &close, period, None)
+            .expect("ATR GPU calculation failed");
 
         // First period-1 values should be NaN
         for i in 0..period - 1 {
@@ -284,7 +295,8 @@ mod tests {
         let low = arr1(&[98.0, 100.5, 99.0]);
         let close = arr1(&[99.0, 101.0, 100.0]);
 
-        let atr = atr_gpu(&device, &high, &low, &close, 2).expect("ATR GPU calculation failed");
+        let atr = atr_gpu(&device, &high, &low, &close, 2, None)
+            .expect("ATR GPU calculation failed");
 
         // First value is NaN (period-1)
         assert!(atr[0].is_nan());
@@ -310,17 +322,17 @@ mod tests {
         let close = arr1(&[9.0, 10.0]);
 
         // Mismatched lengths
-        let result = atr_gpu(&device, &high, &low, &close, 2);
+        let result = atr_gpu(&device, &high, &low, &close, 2, None);
         assert!(result.is_err());
 
         let close = arr1(&[9.0, 10.0, 11.0]);
 
         // Period = 0
-        let result = atr_gpu(&device, &high, &low, &close, 0);
+        let result = atr_gpu(&device, &high, &low, &close, 0, None);
         assert!(result.is_err());
 
         // Not enough data
-        let result = atr_gpu(&device, &high, &low, &close, 5);
+        let result = atr_gpu(&device, &high, &low, &close, 5, None);
         assert!(result.is_err());
     }
 
@@ -335,7 +347,8 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 99.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let atr = atr_gpu(&device, &high, &low, &close, 14).expect("ATR GPU calculation failed");
+        let atr = atr_gpu(&device, &high, &low, &close, 14, None)
+            .expect("ATR GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!("GPU ATR (n={}): {:.2}ms", n, elapsed.as_secs_f64() * 1000.0);
@@ -364,8 +377,8 @@ mod tests {
         let close = arr1(&[9.0; 20]);
 
         let period = 5;
-        let atr =
-            atr_gpu(&device, &high, &low, &close, period).expect("ATR GPU calculation failed");
+        let atr = atr_gpu(&device, &high, &low, &close, period, None)
+            .expect("ATR GPU calculation failed");
 
         // TR is constant = 2.0 for all candles
         // ATR[4] (first ATR) = SMA of 5 TRs = 2.0
