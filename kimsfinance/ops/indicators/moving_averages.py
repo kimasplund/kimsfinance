@@ -31,6 +31,11 @@ from typing import Literal
 import polars as pl
 import numpy as np
 
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
 from kimsfinance.core.engine import EngineManager
 from kimsfinance.core.exceptions import DataValidationError
 from kimsfinance.core.types import ArrayLike, ArrayResult, Engine, MovingAverageResult, ShiftPeriods
@@ -239,6 +244,10 @@ def from_pandas_series(series: object, window: int, ma_type: str = "sma") -> Mov
         >>> prices = pd.Series([100, 102, 101, 105, 103])
         >>> sma = from_pandas_series(prices, window=3)
     """
+    if pd is None:
+        raise ImportError(
+            "pandas is not installed. Please install it with `pip install kimsfinance[pandas]`"
+        )
     # Convert to Polars DataFrame
     df = pl.DataFrame({"_data": series})
 

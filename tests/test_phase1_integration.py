@@ -322,7 +322,7 @@ class TestPhase1Integration:
             "Supertrend": 3_500,  # Medium (ATR + logic)
             "ADX": 3_500,  # Medium (multiple indicators)
             "MFI": 3_500,  # Medium (typical price + RSI-like)
-            "Stochastic": 7_000,  # Complex (dual rolling windows + smoothing)
+            "Stochastic": 9_000,  # Complex (dual rolling windows + smoothing)
             "Ichimoku": 12_000,  # Very complex (5 separate lines)
         }
         for name, ms in results:

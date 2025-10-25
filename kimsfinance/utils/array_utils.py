@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
-import pandas as pd
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 from ..core.types import ArrayLike
 
@@ -21,7 +25,7 @@ def to_numpy_array(data: ArrayLike) -> np.ndarray:
         return data
     elif isinstance(data, pl.Series):
         return data.to_numpy()
-    elif isinstance(data, pd.Series):
+    elif pd and isinstance(data, pd.Series):
         return data.to_numpy()
     else:
         return np.asarray(data)
