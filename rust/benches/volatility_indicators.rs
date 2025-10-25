@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::indicators::*;
 use ndarray::Array1;
 
@@ -60,9 +60,7 @@ fn bench_bollinger_bands(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &_size| {
             let bb = BollingerBands::new(20, 2.0).unwrap();
-            b.iter(|| {
-                bb.calculate_multi(black_box(prices.view()))
-            });
+            b.iter(|| bb.calculate_multi(black_box(prices.view())));
         });
     }
 
@@ -98,12 +96,7 @@ fn bench_donchian_channels(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &_size| {
             let dc = DonchianChannels::new(20).unwrap();
-            b.iter(|| {
-                dc.calculate_hl(
-                    black_box(high.view()),
-                    black_box(low.view()),
-                )
-            });
+            b.iter(|| dc.calculate_hl(black_box(high.view()), black_box(low.view())));
         });
     }
 

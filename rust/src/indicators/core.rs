@@ -3,7 +3,7 @@
 //! This module provides the foundational trait system for all technical indicators,
 //! enabling code reuse and consistent behavior across different indicator types.
 
-use ndarray::{ArrayView1, Array1};
+use ndarray::{Array1, ArrayView1};
 
 /// Result type for indicator calculations
 pub type IndicatorResult = Result<Array1<f64>, IndicatorError>;

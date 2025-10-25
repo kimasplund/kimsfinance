@@ -250,6 +250,7 @@ dependencies = [
  "packed_simd_2",
  "pyo3",
  "rayon",
+ "serde_json",
 ]
 
 [[package]]

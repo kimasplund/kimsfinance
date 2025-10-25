@@ -9,11 +9,11 @@
 //!
 //! Cache-optimized implementations with parallel processing where beneficial.
 
+use super::core::{
+    Indicator, IndicatorError, IndicatorResult, validate_lengths, validate_min_periods,
+};
 use ndarray::{Array1, ArrayView1};
 use rayon::prelude::*;
-use super::core::{
-    Indicator, IndicatorError, IndicatorResult, validate_min_periods, validate_lengths,
-};
 
 /// On-Balance Volume (OBV)
 ///
@@ -304,13 +304,17 @@ impl VolumeProfile {
 
         // Find price range in parallel for large datasets
         let (min_price, max_price) = if n > 1000 {
-            let min_low = low.iter().copied()
+            let min_low = low
+                .iter()
+                .copied()
                 .collect::<Vec<_>>()
                 .par_iter()
                 .copied()
                 .reduce(|| f64::INFINITY, f64::min);
 
-            let max_high = high.iter().copied()
+            let max_high = high
+                .iter()
+                .copied()
                 .collect::<Vec<_>>()
                 .par_iter()
                 .copied()
@@ -394,9 +398,7 @@ impl VolumeProfile {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .ok_or_else(|| {
-                IndicatorError::ComputationError("Empty volume profile".to_string())
-            })?;
+            .ok_or_else(|| IndicatorError::ComputationError("Empty volume profile".to_string()))?;
 
         // Calculate price at center of max bin
         let min_price = low.iter().copied().fold(f64::INFINITY, f64::min);
@@ -435,7 +437,9 @@ mod tests {
         let volume = arr1(&[1000.0, 1500.0, 1200.0, 1800.0, 1300.0]);
 
         let obv = OBV::new();
-        let result = obv.calculate_with_volume(close.view(), volume.view()).unwrap();
+        let result = obv
+            .calculate_with_volume(close.view(), volume.view())
+            .unwrap();
 
         // OBV[0] = volume[0] = 1000
         assert!((result[0] - 1000.0).abs() < 1e-10);
@@ -455,7 +459,9 @@ mod tests {
         let volume = arr1(&[100.0, 200.0, 150.0]);
 
         let vwap = VWAP::new();
-        let result = vwap.calculate_hlcv(high.view(), low.view(), close.view(), volume.view()).unwrap();
+        let result = vwap
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
 
         // VWAP should be cumulative volume-weighted average
         assert!(result[0] > 0.0);
@@ -472,13 +478,15 @@ mod tests {
         let anchors = arr1(&[true, false, false, true, false]); // Reset at index 0 and 3
 
         let vwap = VWAP::new();
-        let result = vwap.calculate_anchored(
-            high.view(),
-            low.view(),
-            close.view(),
-            volume.view(),
-            anchors.view(),
-        ).unwrap();
+        let result = vwap
+            .calculate_anchored(
+                high.view(),
+                low.view(),
+                close.view(),
+                volume.view(),
+                anchors.view(),
+            )
+            .unwrap();
 
         // VWAP should reset at anchor points
         assert!(result[0] > 0.0);
@@ -488,17 +496,27 @@ mod tests {
 
     #[test]
     fn test_cmf() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0]);
-        let volume = arr1(&[100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0,
-                            200.0, 260.0, 150.0, 210.0, 270.0, 160.0, 220.0, 280.0, 170.0, 230.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
+        ]);
+        let volume = arr1(&[
+            100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0, 200.0, 260.0,
+            150.0, 210.0, 270.0, 160.0, 220.0, 280.0, 170.0, 230.0,
+        ]);
 
         let cmf = CMF::new(20).unwrap();
-        let result = cmf.calculate_hlcv(high.view(), low.view(), close.view(), volume.view()).unwrap();
+        let result = cmf
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
 
         // CMF should be in range [-1, 1]
         for i in 19..result.len() {
@@ -516,7 +534,9 @@ mod tests {
         let volume = arr1(&[100.0, 150.0, 200.0, 120.0, 180.0]);
 
         let vp = VolumeProfile::new(10).unwrap();
-        let result = vp.calculate_hlcv(high.view(), low.view(), close.view(), volume.view()).unwrap();
+        let result = vp
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
 
         // Should have 10 bins
         assert_eq!(result.len(), 10);
@@ -535,12 +555,9 @@ mod tests {
         let volume = arr1(&[100.0, 150.0, 200.0, 120.0, 180.0]);
 
         let vp = VolumeProfile::new(10).unwrap();
-        let (poc_price, poc_volume) = vp.point_of_control(
-            high.view(),
-            low.view(),
-            close.view(),
-            volume.view(),
-        ).unwrap();
+        let (poc_price, poc_volume) = vp
+            .point_of_control(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
 
         // POC price should be within the overall price range
         assert!(poc_price >= 105.0 && poc_price <= 122.0);
@@ -563,12 +580,14 @@ mod tests {
         let volume_arr = Array1::from(volume);
 
         let vp = VolumeProfile::new(50).unwrap();
-        let result = vp.calculate_hlcv(
-            high_arr.view(),
-            low_arr.view(),
-            close_arr.view(),
-            volume_arr.view(),
-        ).unwrap();
+        let result = vp
+            .calculate_hlcv(
+                high_arr.view(),
+                low_arr.view(),
+                close_arr.view(),
+                volume_arr.view(),
+            )
+            .unwrap();
 
         // Should have 50 bins
         assert_eq!(result.len(), 50);

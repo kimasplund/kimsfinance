@@ -12,13 +12,13 @@
 //!
 //! Performance targets: 3-5x faster than NumPy for <1,000 rows
 
+use super::core::{
+    Indicator, IndicatorError, IndicatorOutput, IndicatorResult, MultiOutputIndicator, MultiResult,
+    validate_lengths, validate_min_periods,
+};
+use super::utils::{diff, ema, rolling_max, rolling_min, sma, wilders_smoothing};
 use ndarray::{Array1, ArrayView1, Zip, s};
 use rayon::prelude::*;
-use super::core::{
-    Indicator, IndicatorError, IndicatorResult, MultiOutputIndicator, MultiResult,
-    IndicatorOutput, validate_min_periods, validate_lengths,
-};
-use super::utils::{ema, wilders_smoothing, diff, rolling_max, rolling_min, sma};
 
 // Threshold for parallel processing (tune based on benchmarks)
 const PARALLEL_THRESHOLD: usize = 500;
@@ -85,7 +85,9 @@ impl Indicator for RSI {
                     }
                 })
                 .collect();
-            result.slice_mut(s![self.period..]).assign(&Array1::from(rsi_slice));
+            result
+                .slice_mut(s![self.period..])
+                .assign(&Array1::from(rsi_slice));
         } else {
             // Sequential with potential auto-vectorization
             Zip::from(&mut result.slice_mut(s![self.period..]))
@@ -153,7 +155,9 @@ impl Indicator for ROC {
                     }
                 })
                 .collect();
-            result.slice_mut(s![self.period..]).assign(&Array1::from(roc_values));
+            result
+                .slice_mut(s![self.period..])
+                .assign(&Array1::from(roc_values));
         } else {
             // SIMD-friendly sequential computation using raw slices
             let prices_slice = prices.as_slice().unwrap();
@@ -233,7 +237,9 @@ impl WilliamsR {
                     }
                 })
                 .collect();
-            result.slice_mut(s![(self.period - 1)..]).assign(&Array1::from(williams_values));
+            result
+                .slice_mut(s![(self.period - 1)..])
+                .assign(&Array1::from(williams_values));
         } else {
             // Vectorized sequential computation using Zip
             Zip::from(&mut result.slice_mut(s![(self.period - 1)..]))
@@ -329,7 +335,8 @@ impl Stochastic {
                     }
                 })
                 .collect();
-            k.slice_mut(s![(self.k_period - 1)..]).assign(&Array1::from(k_values));
+            k.slice_mut(s![(self.k_period - 1)..])
+                .assign(&Array1::from(k_values));
         } else {
             // Vectorized sequential computation
             Zip::from(&mut k.slice_mut(s![(self.k_period - 1)..]))
@@ -574,7 +581,9 @@ impl CCI {
                     }
                 })
                 .collect();
-            result.slice_mut(s![(self.period - 1)..]).assign(&Array1::from(cci_values));
+            result
+                .slice_mut(s![(self.period - 1)..])
+                .assign(&Array1::from(cci_values));
         } else {
             // Sequential optimized computation
             let period_f = self.period as f64;
@@ -628,7 +637,11 @@ pub struct MACD {
 }
 
 impl MACD {
-    pub fn new(fast_period: usize, slow_period: usize, signal_period: usize) -> Result<Self, IndicatorError> {
+    pub fn new(
+        fast_period: usize,
+        slow_period: usize,
+        signal_period: usize,
+    ) -> Result<Self, IndicatorError> {
         if fast_period == 0 || slow_period == 0 || signal_period == 0 {
             return Err(IndicatorError::InvalidParameter {
                 name: "periods",
@@ -732,7 +745,11 @@ pub struct TSI {
 }
 
 impl TSI {
-    pub fn new(long_period: usize, short_period: usize, signal_period: usize) -> Result<Self, IndicatorError> {
+    pub fn new(
+        long_period: usize,
+        short_period: usize,
+        signal_period: usize,
+    ) -> Result<Self, IndicatorError> {
         if long_period == 0 || short_period == 0 || signal_period == 0 {
             return Err(IndicatorError::InvalidParameter {
                 name: "periods",
@@ -831,7 +848,10 @@ mod tests {
 
     #[test]
     fn test_rsi() {
-        let prices = arr1(&[44.0, 44.5, 45.0, 44.8, 45.5, 46.0, 45.8, 46.5, 47.0, 46.8, 47.5, 48.0, 47.8, 48.5, 49.0]);
+        let prices = arr1(&[
+            44.0, 44.5, 45.0, 44.8, 45.5, 46.0, 45.8, 46.5, 47.0, 46.8, 47.5, 48.0, 47.8, 48.5,
+            49.0,
+        ]);
         let rsi = RSI::new(14).unwrap();
         let result = rsi.calculate(prices.view()).unwrap();
 
@@ -856,7 +876,9 @@ mod tests {
         let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0]);
 
         let williams = WilliamsR::new(3).unwrap();
-        let result = williams.calculate_hlc(high.view(), low.view(), close.view()).unwrap();
+        let result = williams
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap();
 
         // Williams %R should be between -100 and 0
         for i in 2..result.len() {
@@ -869,10 +891,10 @@ mod tests {
     #[test]
     fn test_macd() {
         let prices = arr1(&[
-            100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 109.0, 112.0,
-            111.0, 115.0, 114.0, 118.0, 117.0, 120.0, 119.0, 122.0, 121.0, 125.0,
-            124.0, 128.0, 127.0, 130.0, 129.0, 132.0, 131.0, 135.0, 134.0, 138.0,
-            137.0, 140.0, 139.0, 142.0, 141.0, 145.0,  // Added 6 more points (total 36)
+            100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 109.0, 112.0, 111.0, 115.0,
+            114.0, 118.0, 117.0, 120.0, 119.0, 122.0, 121.0, 125.0, 124.0, 128.0, 127.0, 130.0,
+            129.0, 132.0, 131.0, 135.0, 134.0, 138.0, 137.0, 140.0, 139.0, 142.0, 141.0,
+            145.0, // Added 6 more points (total 36)
         ]);
 
         let macd = MACD::new(12, 26, 9).unwrap();

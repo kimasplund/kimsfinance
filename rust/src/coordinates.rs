@@ -33,10 +33,7 @@ use crate::types::{CandlestickCoordinates, ChartParams, OHLCVData};
 /// # Performance
 /// - Sequential for <5,000 candles (lower overhead)
 /// - Parallel (Rayon) for ≥5,000 candles (multi-core scaling)
-pub fn calculate_coordinates(
-    ohlcv: &OHLCVData,
-    params: &ChartParams,
-) -> CandlestickCoordinates {
+pub fn calculate_coordinates(ohlcv: &OHLCVData, params: &ChartParams) -> CandlestickCoordinates {
     const PARALLEL_THRESHOLD: usize = 5000;
 
     if params.num_candles >= PARALLEL_THRESHOLD {
@@ -87,29 +84,25 @@ pub fn calculate_coordinates_sequential(
     Zip::from(&mut y_high)
         .and(&ohlcv.high_prices)
         .for_each(|y, &price| {
-            *y = (params.chart_height as f64
-                - ((price - params.price_min) * price_scale)) as i32;
+            *y = (params.chart_height as f64 - ((price - params.price_min) * price_scale)) as i32;
         });
 
     Zip::from(&mut y_low)
         .and(&ohlcv.low_prices)
         .for_each(|y, &price| {
-            *y = (params.chart_height as f64
-                - ((price - params.price_min) * price_scale)) as i32;
+            *y = (params.chart_height as f64 - ((price - params.price_min) * price_scale)) as i32;
         });
 
     Zip::from(&mut y_open)
         .and(&ohlcv.open_prices)
         .for_each(|y, &price| {
-            *y = (params.chart_height as f64
-                - ((price - params.price_min) * price_scale)) as i32;
+            *y = (params.chart_height as f64 - ((price - params.price_min) * price_scale)) as i32;
         });
 
     Zip::from(&mut y_close)
         .and(&ohlcv.close_prices)
         .for_each(|y, &price| {
-            *y = (params.chart_height as f64
-                - ((price - params.price_min) * price_scale)) as i32;
+            *y = (params.chart_height as f64 - ((price - params.price_min) * price_scale)) as i32;
         });
 
     // Vectorized volume scaling
@@ -204,14 +197,14 @@ pub fn calculate_coordinates_parallel(
             let open = open_slice[i];
             let close = close_slice[i];
 
-            let y_h = (params.chart_height as f64
-                - ((high - params.price_min) * price_scale)) as i32;
-            let y_l = (params.chart_height as f64
-                - ((low - params.price_min) * price_scale)) as i32;
-            let y_o = (params.chart_height as f64
-                - ((open - params.price_min) * price_scale)) as i32;
-            let y_c = (params.chart_height as f64
-                - ((close - params.price_min) * price_scale)) as i32;
+            let y_h =
+                (params.chart_height as f64 - ((high - params.price_min) * price_scale)) as i32;
+            let y_l =
+                (params.chart_height as f64 - ((low - params.price_min) * price_scale)) as i32;
+            let y_o =
+                (params.chart_height as f64 - ((open - params.price_min) * price_scale)) as i32;
+            let y_c =
+                (params.chart_height as f64 - ((close - params.price_min) * price_scale)) as i32;
 
             // Volume scaling
             let v_h = (volume_slice[i] * volume_scale) as i32;
@@ -221,7 +214,9 @@ pub fn calculate_coordinates_parallel(
             let b_bottom = y_o.max(y_c);
             let bullish = close >= open;
 
-            (x_s, x_e, x_c, y_h, y_l, y_o, y_c, v_h, b_top, b_bottom, bullish)
+            (
+                x_s, x_e, x_c, y_h, y_l, y_o, y_c, v_h, b_top, b_bottom, bullish,
+            )
         })
         .collect();
 
@@ -263,7 +258,15 @@ mod tests {
     use super::*;
     use ndarray::Array1;
 
-    fn create_test_data(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+    fn create_test_data(
+        n: usize,
+    ) -> (
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+    ) {
         let high = Array1::linspace(100.0, 150.0, n);
         let low = Array1::linspace(90.0, 140.0, n);
         let open = Array1::linspace(95.0, 145.0, n);
@@ -284,18 +287,7 @@ mod tests {
             volume.view(),
         );
 
-        let params = ChartParams::new(
-            100,
-            10.0,
-            1.0,
-            9.0,
-            90.0,
-            60.0,
-            4000.0,
-            1080,
-            300,
-            1080,
-        );
+        let params = ChartParams::new(100, 10.0, 1.0, 9.0, 90.0, 60.0, 4000.0, 1080, 300, 1080);
 
         let coords = calculate_coordinates(&ohlcv, &params);
 
@@ -316,18 +308,7 @@ mod tests {
             volume.view(),
         );
 
-        let params = ChartParams::new(
-            1000,
-            10.0,
-            1.0,
-            9.0,
-            90.0,
-            60.0,
-            4000.0,
-            1080,
-            300,
-            1080,
-        );
+        let params = ChartParams::new(1000, 10.0, 1.0, 9.0, 90.0, 60.0, 4000.0, 1080, 300, 1080);
 
         let seq = calculate_coordinates_sequential(&ohlcv, &params);
         let par = calculate_coordinates_parallel(&ohlcv, &params);

@@ -13,12 +13,12 @@
 //! - Zero-allocation true range computation
 //! - O(n) rolling min/max with deque algorithm
 
-use ndarray::{Array1, ArrayView1, Zip};
 use super::core::{
-    Indicator, IndicatorError, IndicatorResult, MultiOutputIndicator, MultiResult,
-    IndicatorOutput, validate_min_periods, validate_lengths,
+    Indicator, IndicatorError, IndicatorOutput, IndicatorResult, MultiOutputIndicator, MultiResult,
+    validate_lengths, validate_min_periods,
 };
-use super::utils::{sma, ema, wilders_smoothing};
+use super::utils::{ema, rolling_max, rolling_min, sma, wilders_smoothing};
+use ndarray::{Array1, ArrayView1, Zip};
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
@@ -206,80 +206,6 @@ unsafe fn variance_avx2(data: ArrayView1<f64>, mean: f64) -> f64 {
     }
 }
 
-/// O(n) rolling maximum using monotonic deque
-///
-/// Faster than naive O(n*period) approach.
-#[inline]
-fn rolling_max_deque(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
-    let n = data.len();
-    let mut result = Array1::from_elem(n, f64::NAN);
-
-    if n < period {
-        return result;
-    }
-
-    // Monotonic decreasing deque storing indices
-    let mut deque: Vec<usize> = Vec::with_capacity(period);
-
-    for i in 0..n {
-        // Remove elements outside window
-        while !deque.is_empty() && deque[0] <= i.saturating_sub(period) {
-            deque.remove(0);
-        }
-
-        // Remove elements smaller than current (maintain decreasing order)
-        while !deque.is_empty() && data[*deque.last().unwrap()] <= data[i] {
-            deque.pop();
-        }
-
-        deque.push(i);
-
-        // Record maximum (front of deque)
-        if i >= period - 1 {
-            result[i] = data[deque[0]];
-        }
-    }
-
-    result
-}
-
-/// O(n) rolling minimum using monotonic deque
-///
-/// Faster than naive O(n*period) approach.
-#[inline]
-fn rolling_min_deque(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
-    let n = data.len();
-    let mut result = Array1::from_elem(n, f64::NAN);
-
-    if n < period {
-        return result;
-    }
-
-    // Monotonic increasing deque storing indices
-    let mut deque: Vec<usize> = Vec::with_capacity(period);
-
-    for i in 0..n {
-        // Remove elements outside window
-        while !deque.is_empty() && deque[0] <= i.saturating_sub(period) {
-            deque.remove(0);
-        }
-
-        // Remove elements larger than current (maintain increasing order)
-        while !deque.is_empty() && data[*deque.last().unwrap()] >= data[i] {
-            deque.pop();
-        }
-
-        deque.push(i);
-
-        // Record minimum (front of deque)
-        if i >= period - 1 {
-            result[i] = data[deque[0]];
-        }
-    }
-
-    result
-}
-
 /// Average True Range (ATR)
 ///
 /// Measures market volatility using the true range.
@@ -409,7 +335,9 @@ impl MultiOutputIndicator for BollingerBands {
 
         Ok(IndicatorOutput {
             primary: middle,
-            secondary: vec![unsafe { upper.assume_init() }, unsafe { lower.assume_init() }],
+            secondary: vec![unsafe { upper.assume_init() }, unsafe {
+                lower.assume_init()
+            }],
             metadata: None,
         })
     }
@@ -434,7 +362,11 @@ pub struct KeltnerChannels {
 }
 
 impl KeltnerChannels {
-    pub fn new(ema_period: usize, atr_period: usize, atr_multiplier: f64) -> Result<Self, IndicatorError> {
+    pub fn new(
+        ema_period: usize,
+        atr_period: usize,
+        atr_multiplier: f64,
+    ) -> Result<Self, IndicatorError> {
         if ema_period == 0 {
             return Err(IndicatorError::InvalidParameter {
                 name: "ema_period",
@@ -487,26 +419,26 @@ impl KeltnerChannels {
         let mut lower = Array1::uninit(n);
 
         // Vectorized band calculation using Zip
-        Zip::indexed(&middle)
-            .and(&atr)
-            .for_each(|i, &m, &a| {
-                if !m.is_nan() && !a.is_nan() {
-                    let delta = self.atr_multiplier * a;
-                    unsafe {
-                        upper.uget_mut(i).write(m + delta);
-                        lower.uget_mut(i).write(m - delta);
-                    }
-                } else {
-                    unsafe {
-                        upper.uget_mut(i).write(f64::NAN);
-                        lower.uget_mut(i).write(f64::NAN);
-                    }
+        Zip::indexed(&middle).and(&atr).for_each(|i, &m, &a| {
+            if !m.is_nan() && !a.is_nan() {
+                let delta = self.atr_multiplier * a;
+                unsafe {
+                    upper.uget_mut(i).write(m + delta);
+                    lower.uget_mut(i).write(m - delta);
                 }
-            });
+            } else {
+                unsafe {
+                    upper.uget_mut(i).write(f64::NAN);
+                    lower.uget_mut(i).write(f64::NAN);
+                }
+            }
+        });
 
         Ok(IndicatorOutput {
             primary: middle,
-            secondary: vec![unsafe { upper.assume_init() }, unsafe { lower.assume_init() }],
+            secondary: vec![unsafe { upper.assume_init() }, unsafe {
+                lower.assume_init()
+            }],
             metadata: None,
         })
     }
@@ -549,7 +481,7 @@ impl DonchianChannels {
 
     /// Calculate Donchian Channels with high and low
     ///
-    /// Optimized with O(n) deque-based rolling min/max.
+    /// Optimized with O(n) deque-based rolling min/max from utils.
     pub fn calculate_hl<'a>(
         &self,
         high: ArrayView1<'a, f64>,
@@ -560,26 +492,24 @@ impl DonchianChannels {
 
         // Parallel computation of upper and lower channels with O(n) algorithm
         let (upper, lower) = rayon::join(
-            || rolling_max_deque(high, self.period),
-            || rolling_min_deque(low, self.period),
+            || rolling_max(high, self.period),
+            || rolling_min(low, self.period),
         );
 
         // Vectorized middle line calculation
         let mut middle = Array1::uninit(n);
 
-        Zip::indexed(&upper)
-            .and(&lower)
-            .for_each(|i, &u, &l| {
-                if !u.is_nan() && !l.is_nan() {
-                    unsafe {
-                        middle.uget_mut(i).write((u + l) * 0.5);
-                    }
-                } else {
-                    unsafe {
-                        middle.uget_mut(i).write(f64::NAN);
-                    }
+        Zip::indexed(&upper).and(&lower).for_each(|i, &u, &l| {
+            if !u.is_nan() && !l.is_nan() {
+                unsafe {
+                    middle.uget_mut(i).write((u + l) * 0.5);
                 }
-            });
+            } else {
+                unsafe {
+                    middle.uget_mut(i).write(f64::NAN);
+                }
+            }
+        });
 
         Ok(IndicatorOutput {
             primary: unsafe { middle.assume_init() },
@@ -692,15 +622,23 @@ mod tests {
 
     #[test]
     fn test_atr() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0, 136.0, 140.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0, 131.0, 135.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0, 134.0, 138.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0,
+        ]);
 
         let atr = ATR::new(14).unwrap();
-        let result = atr.calculate_hlc(high.view(), low.view(), close.view()).unwrap();
+        let result = atr
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap();
 
         // ATR should be positive after warmup
         assert!(result[14] > 0.0);
@@ -708,8 +646,10 @@ mod tests {
 
     #[test]
     fn test_bollinger_bands() {
-        let prices = arr1(&[100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 109.0, 112.0,
-                            111.0, 115.0, 114.0, 118.0, 117.0, 120.0, 119.0, 122.0, 121.0, 125.0]);
+        let prices = arr1(&[
+            100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 109.0, 112.0, 111.0, 115.0,
+            114.0, 118.0, 117.0, 120.0, 119.0, 122.0, 121.0, 125.0,
+        ]);
 
         let bb = BollingerBands::new(20, 2.0).unwrap();
         let result = bb.calculate_multi(prices.view()).unwrap();
@@ -731,15 +671,23 @@ mod tests {
 
     #[test]
     fn test_keltner_channels() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
+        ]);
 
         let kc = KeltnerChannels::new(20, 10, 2.0).unwrap();
-        let result = kc.calculate_hlc(high.view(), low.view(), close.view()).unwrap();
+        let result = kc
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap();
 
         // Should have upper and lower channels
         assert_eq!(result.secondary.len(), 2);
@@ -747,8 +695,12 @@ mod tests {
 
     #[test]
     fn test_donchian_channels() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
+        ]);
 
         let dc = DonchianChannels::new(5).unwrap();
         let result = dc.calculate_hl(high.view(), low.view()).unwrap();
@@ -770,15 +722,23 @@ mod tests {
 
     #[test]
     fn test_elder_ray() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0,
+        ]);
 
         let er = ElderRay::new(13).unwrap();
-        let result = er.calculate_hlc(high.view(), low.view(), close.view()).unwrap();
+        let result = er
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap();
 
         // Should have bull power (primary) and bear power (secondary)
         assert_eq!(result.secondary.len(), 1);

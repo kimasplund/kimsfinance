@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
-use ndarray::{Array1, arr1};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::indicators::*;
+use ndarray::{Array1, arr1};
 
 fn generate_ohlcv(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
     let high: Array1<f64> = (0..n).map(|i| 100.0 + (i as f64) * 0.1).collect();
@@ -19,10 +19,10 @@ fn bench_obv(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             let obv = OBV::new();
             b.iter(|| {
-                black_box(obv.calculate_with_volume(
-                    black_box(close.view()),
-                    black_box(volume.view()),
-                ).unwrap())
+                black_box(
+                    obv.calculate_with_volume(black_box(close.view()), black_box(volume.view()))
+                        .unwrap(),
+                )
             });
         });
     }
@@ -39,12 +39,15 @@ fn bench_vwap(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             let vwap = VWAP::new();
             b.iter(|| {
-                black_box(vwap.calculate_hlcv(
-                    black_box(high.view()),
-                    black_box(low.view()),
-                    black_box(close.view()),
-                    black_box(volume.view()),
-                ).unwrap())
+                black_box(
+                    vwap.calculate_hlcv(
+                        black_box(high.view()),
+                        black_box(low.view()),
+                        black_box(close.view()),
+                        black_box(volume.view()),
+                    )
+                    .unwrap(),
+                )
             });
         });
     }
@@ -61,12 +64,15 @@ fn bench_cmf(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             let cmf = CMF::new(20).unwrap();
             b.iter(|| {
-                black_box(cmf.calculate_hlcv(
-                    black_box(high.view()),
-                    black_box(low.view()),
-                    black_box(close.view()),
-                    black_box(volume.view()),
-                ).unwrap())
+                black_box(
+                    cmf.calculate_hlcv(
+                        black_box(high.view()),
+                        black_box(low.view()),
+                        black_box(close.view()),
+                        black_box(volume.view()),
+                    )
+                    .unwrap(),
+                )
             });
         });
     }
@@ -84,12 +90,15 @@ fn bench_volume_profile(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             let vp = VolumeProfile::new(50).unwrap();
             b.iter(|| {
-                black_box(vp.calculate_hlcv(
-                    black_box(high.view()),
-                    black_box(low.view()),
-                    black_box(close.view()),
-                    black_box(volume.view()),
-                ).unwrap())
+                black_box(
+                    vp.calculate_hlcv(
+                        black_box(high.view()),
+                        black_box(low.view()),
+                        black_box(close.view()),
+                        black_box(volume.view()),
+                    )
+                    .unwrap(),
+                )
             });
         });
     }
@@ -106,12 +115,15 @@ fn bench_volume_profile_poc(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             let vp = VolumeProfile::new(50).unwrap();
             b.iter(|| {
-                black_box(vp.point_of_control(
-                    black_box(high.view()),
-                    black_box(low.view()),
-                    black_box(close.view()),
-                    black_box(volume.view()),
-                ).unwrap())
+                black_box(
+                    vp.point_of_control(
+                        black_box(high.view()),
+                        black_box(low.view()),
+                        black_box(close.view()),
+                        black_box(volume.view()),
+                    )
+                    .unwrap(),
+                )
             });
         });
     }

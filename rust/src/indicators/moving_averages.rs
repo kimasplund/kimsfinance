@@ -15,10 +15,10 @@
 //! - Rayon parallelization for datasets >5,000 rows
 //! - Cache-friendly memory access patterns
 
+use super::core::{Indicator, IndicatorError, IndicatorResult, validate_min_periods};
+use super::utils::{ema, sma};
 use ndarray::{Array1, ArrayView1, Zip, s};
 use rayon::prelude::*;
-use super::core::{Indicator, IndicatorError, IndicatorResult, validate_min_periods};
-use super::utils::{sma, ema};
 
 /// Threshold for parallel computation (tuned for typical L3 cache)
 const PARALLEL_THRESHOLD: usize = 5000;
@@ -543,7 +543,9 @@ mod tests {
         let prices = arr1(&[10.0, 20.0, 30.0]);
         let volumes = arr1(&[100.0, 200.0, 300.0]);
         let vwma = VWMA::new(2).unwrap();
-        let result = vwma.calculate_with_volume(prices.view(), volumes.view()).unwrap();
+        let result = vwma
+            .calculate_with_volume(prices.view(), volumes.view())
+            .unwrap();
 
         assert!(result[0].is_nan());
         // (10*100 + 20*200) / (100+200) = 5000/300 = 16.666...
@@ -565,7 +567,9 @@ mod tests {
     #[test]
     fn test_tema() {
         // TEMA with sufficient data
-        let prices = arr1(&[100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 108.0, 112.0]);
+        let prices = arr1(&[
+            100.0, 102.0, 101.0, 105.0, 103.0, 107.0, 106.0, 110.0, 108.0, 112.0,
+        ]);
         let tema = TEMA::new(3).unwrap();
         let result = tema.calculate(prices.view()).unwrap();
 

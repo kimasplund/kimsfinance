@@ -31,21 +31,19 @@
 //! ```
 
 pub mod core;
-pub mod utils;
-pub mod moving_averages;
 pub mod momentum;
+pub mod moving_averages;
+pub mod trend;
+pub mod utils;
 pub mod volatility;
 pub mod volume;
-pub mod trend;
 
 // Re-export commonly used types
-pub use core::{
-    Indicator, IndicatorError, MultiOutputIndicator,
-};
+pub use core::{Indicator, IndicatorError, MultiOutputIndicator};
 
 // Re-export all indicators
-pub use moving_averages::{SMA, EMA, WMA, VWMA, DEMA, TEMA, HMA};
-pub use momentum::{RSI, ROC, WilliamsR, Stochastic, Aroon, CCI, MACD, TSI};
-pub use volatility::{ATR, BollingerBands, KeltnerChannels, DonchianChannels, ElderRay};
-pub use volume::{OBV, VWAP, CMF, VolumeProfile};
+pub use momentum::{Aroon, CCI, MACD, ROC, RSI, Stochastic, TSI, WilliamsR};
+pub use moving_averages::{DEMA, EMA, HMA, SMA, TEMA, VWMA, WMA};
 pub use trend::{ParabolicSAR, PivotPoints};
+pub use volatility::{ATR, BollingerBands, DonchianChannels, ElderRay, KeltnerChannels};
+pub use volume::{CMF, OBV, VWAP, VolumeProfile};

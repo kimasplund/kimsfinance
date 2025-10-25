@@ -4,11 +4,11 @@
 //! - Parabolic SAR (Stop and Reverse)
 //! - Pivot Points (support/resistance levels)
 
-use ndarray::{Array1, ArrayView1};
 use super::core::{
-    Indicator, IndicatorError, IndicatorResult,
-    IndicatorOutput, validate_min_periods, validate_lengths,
+    Indicator, IndicatorError, IndicatorOutput, IndicatorResult, validate_lengths,
+    validate_min_periods,
 };
+use ndarray::{Array1, ArrayView1};
 
 /// Parabolic SAR (Stop and Reverse)
 ///
@@ -151,12 +151,7 @@ impl PivotPoints {
     /// Calculate pivot points from a single period's OHLC
     ///
     /// Returns [PP, R1, R2, R3, S1, S2, S3]
-    pub fn calculate_single(
-        &self,
-        high: f64,
-        low: f64,
-        close: f64,
-    ) -> [f64; 7] {
+    pub fn calculate_single(&self, high: f64, low: f64, close: f64) -> [f64; 7] {
         // Pivot Point = (H + L + C) / 3
         let pp = (high + low + close) / 3.0;
 
@@ -244,13 +239,13 @@ impl FibonacciRetracement {
         let diff = high - low;
 
         [
-            high,                          // 0% (swing high)
-            high - 0.236 * diff,           // 23.6%
-            high - 0.382 * diff,           // 38.2%
-            high - 0.500 * diff,           // 50%
-            high - 0.618 * diff,           // 61.8%
-            high - 0.786 * diff,           // 78.6%
-            low,                           // 100% (swing low)
+            high,                // 0% (swing high)
+            high - 0.236 * diff, // 23.6%
+            high - 0.382 * diff, // 38.2%
+            high - 0.500 * diff, // 50%
+            high - 0.618 * diff, // 61.8%
+            high - 0.786 * diff, // 78.6%
+            low,                 // 100% (swing low)
         ]
     }
 }
@@ -262,8 +257,12 @@ mod tests {
 
     #[test]
     fn test_parabolic_sar() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
+        ]);
 
         let psar = ParabolicSAR::new(0.02, 0.02, 0.2).unwrap();
         let result = psar.calculate_hl(high.view(), low.view()).unwrap();
@@ -301,7 +300,9 @@ mod tests {
         let close = arr1(&[108.0, 112.0, 118.0]);
 
         let pp = PivotPoints::new();
-        let result = pp.calculate_hlc(high.view(), low.view(), close.view()).unwrap();
+        let result = pp
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap();
 
         // Should have 6 secondary outputs (R1, R2, R3, S1, S2, S3)
         assert_eq!(result.secondary.len(), 6);

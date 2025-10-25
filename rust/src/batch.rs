@@ -40,51 +40,105 @@ use ndarray::ArrayView1;
 use std::collections::HashMap;
 
 use crate::indicators::{
-    Indicator, MultiOutputIndicator, IndicatorError,
-    RSI, ROC, WilliamsR, Stochastic, Aroon, CCI, MACD, TSI,
-    ATR, BollingerBands, KeltnerChannels, DonchianChannels, ElderRay,
-    SMA, EMA, WMA, VWMA, DEMA, TEMA, HMA,
-    OBV, VWAP, CMF, VolumeProfile,
-    ParabolicSAR, PivotPoints,
+    ATR, Aroon, BollingerBands, CCI, CMF, DEMA, DonchianChannels, EMA, ElderRay, HMA, Indicator,
+    IndicatorError, KeltnerChannels, MACD, MultiOutputIndicator, OBV, ParabolicSAR, PivotPoints,
+    ROC, RSI, SMA, Stochastic, TEMA, TSI, VWAP, VWMA, VolumeProfile, WMA, WilliamsR,
 };
 
 /// Indicator request specification
 #[derive(Debug, Clone)]
+#[allow(clippy::upper_case_acronyms)] // Technical indicators use standard acronyms
 pub enum IndicatorRequest {
     // Moving Averages
-    SMA { period: usize },
-    EMA { period: usize },
-    WMA { period: usize },
-    VWMA { period: usize },
-    DEMA { period: usize },
-    TEMA { period: usize },
-    HMA { period: usize },
+    SMA {
+        period: usize,
+    },
+    EMA {
+        period: usize,
+    },
+    WMA {
+        period: usize,
+    },
+    VWMA {
+        period: usize,
+    },
+    DEMA {
+        period: usize,
+    },
+    TEMA {
+        period: usize,
+    },
+    HMA {
+        period: usize,
+    },
 
     // Momentum
-    RSI { period: usize },
-    ROC { period: usize },
-    WilliamsR { period: usize },
-    Stochastic { k_period: usize, d_period: usize },
-    Aroon { period: usize },
-    CCI { period: usize },
-    MACD { fast_period: usize, slow_period: usize, signal_period: usize },
-    TSI { long_period: usize, short_period: usize, signal_period: usize },
+    RSI {
+        period: usize,
+    },
+    ROC {
+        period: usize,
+    },
+    WilliamsR {
+        period: usize,
+    },
+    Stochastic {
+        k_period: usize,
+        d_period: usize,
+    },
+    Aroon {
+        period: usize,
+    },
+    CCI {
+        period: usize,
+    },
+    MACD {
+        fast_period: usize,
+        slow_period: usize,
+        signal_period: usize,
+    },
+    TSI {
+        long_period: usize,
+        short_period: usize,
+        signal_period: usize,
+    },
 
     // Volatility
-    ATR { period: usize },
-    BollingerBands { period: usize, std_dev: f64 },
-    KeltnerChannels { ema_period: usize, atr_period: usize, atr_multiplier: f64 },
-    DonchianChannels { period: usize },
-    ElderRay { ema_period: usize },
+    ATR {
+        period: usize,
+    },
+    BollingerBands {
+        period: usize,
+        std_dev: f64,
+    },
+    KeltnerChannels {
+        ema_period: usize,
+        atr_period: usize,
+        atr_multiplier: f64,
+    },
+    DonchianChannels {
+        period: usize,
+    },
+    ElderRay {
+        ema_period: usize,
+    },
 
     // Volume
     OBV,
     VWAP,
-    CMF { period: usize },
-    VolumeProfile { num_bins: usize },
+    CMF {
+        period: usize,
+    },
+    VolumeProfile {
+        num_bins: usize,
+    },
 
     // Trend
-    ParabolicSAR { af_start: f64, af_increment: f64, af_max: f64 },
+    ParabolicSAR {
+        af_start: f64,
+        af_increment: f64,
+        af_max: f64,
+    },
     PivotPoints,
 }
 
@@ -92,6 +146,7 @@ pub enum IndicatorRequest {
 pub struct OHLCVBatch<'a> {
     pub high: ArrayView1<'a, f64>,
     pub low: ArrayView1<'a, f64>,
+    #[allow(dead_code)] // May be used in future indicators
     pub open: ArrayView1<'a, f64>,
     pub close: ArrayView1<'a, f64>,
     pub volume: ArrayView1<'a, f64>,
@@ -250,16 +305,28 @@ pub fn calculate_batch(
                 let result = indicator.calculate_hlc(ohlcv.high, ohlcv.low, ohlcv.close)?;
                 IndicatorBatchOutput::single(result.to_vec())
             }
-            IndicatorRequest::MACD { fast_period, slow_period, signal_period } => {
+            IndicatorRequest::MACD {
+                fast_period,
+                slow_period,
+                signal_period,
+            } => {
                 let indicator = MACD::new(fast_period, slow_period, signal_period)?;
                 let output = indicator.calculate_multi(ohlcv.close)?;
                 IndicatorBatchOutput::multiple(
                     output.primary.to_vec(),
                     output.secondary.iter().map(|a| a.to_vec()).collect(),
-                    vec!["line".to_string(), "signal".to_string(), "histogram".to_string()],
+                    vec![
+                        "line".to_string(),
+                        "signal".to_string(),
+                        "histogram".to_string(),
+                    ],
                 )
             }
-            IndicatorRequest::TSI { long_period, short_period, signal_period } => {
+            IndicatorRequest::TSI {
+                long_period,
+                short_period,
+                signal_period,
+            } => {
                 let indicator = TSI::new(long_period, short_period, signal_period)?;
                 let output = indicator.calculate_multi(ohlcv.close)?;
                 IndicatorBatchOutput::multiple(
@@ -281,16 +348,28 @@ pub fn calculate_batch(
                 IndicatorBatchOutput::multiple(
                     output.primary.to_vec(),
                     output.secondary.iter().map(|a| a.to_vec()).collect(),
-                    vec!["middle".to_string(), "upper".to_string(), "lower".to_string()],
+                    vec![
+                        "middle".to_string(),
+                        "upper".to_string(),
+                        "lower".to_string(),
+                    ],
                 )
             }
-            IndicatorRequest::KeltnerChannels { ema_period, atr_period, atr_multiplier } => {
+            IndicatorRequest::KeltnerChannels {
+                ema_period,
+                atr_period,
+                atr_multiplier,
+            } => {
                 let indicator = KeltnerChannels::new(ema_period, atr_period, atr_multiplier)?;
                 let output = indicator.calculate_hlc(ohlcv.high, ohlcv.low, ohlcv.close)?;
                 IndicatorBatchOutput::multiple(
                     output.primary.to_vec(),
                     output.secondary.iter().map(|a| a.to_vec()).collect(),
-                    vec!["middle".to_string(), "upper".to_string(), "lower".to_string()],
+                    vec![
+                        "middle".to_string(),
+                        "upper".to_string(),
+                        "lower".to_string(),
+                    ],
                 )
             }
             IndicatorRequest::DonchianChannels { period } => {
@@ -299,7 +378,11 @@ pub fn calculate_batch(
                 IndicatorBatchOutput::multiple(
                     output.primary.to_vec(),
                     output.secondary.iter().map(|a| a.to_vec()).collect(),
-                    vec!["middle".to_string(), "upper".to_string(), "lower".to_string()],
+                    vec![
+                        "middle".to_string(),
+                        "upper".to_string(),
+                        "lower".to_string(),
+                    ],
                 )
             }
             IndicatorRequest::ElderRay { ema_period } => {
@@ -320,22 +403,29 @@ pub fn calculate_batch(
             }
             IndicatorRequest::VWAP => {
                 let indicator = VWAP::new();
-                let result = indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
+                let result =
+                    indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
                 IndicatorBatchOutput::single(result.to_vec())
             }
             IndicatorRequest::CMF { period } => {
                 let indicator = CMF::new(period)?;
-                let result = indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
+                let result =
+                    indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
                 IndicatorBatchOutput::single(result.to_vec())
             }
             IndicatorRequest::VolumeProfile { num_bins } => {
                 let indicator = VolumeProfile::new(num_bins)?;
-                let result = indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
+                let result =
+                    indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
                 IndicatorBatchOutput::single(result.to_vec())
             }
 
             // Trend
-            IndicatorRequest::ParabolicSAR { af_start, af_increment, af_max } => {
+            IndicatorRequest::ParabolicSAR {
+                af_start,
+                af_increment,
+                af_max,
+            } => {
                 let indicator = ParabolicSAR::new(af_start, af_increment, af_max)?;
                 let result = indicator.calculate_hl(ohlcv.high, ohlcv.low)?;
                 IndicatorBatchOutput::single(result.to_vec())
@@ -372,16 +462,26 @@ mod tests {
 
     #[test]
     fn test_batch_single_indicator() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0, 136.0, 140.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0, 131.0, 135.0]);
-        let open = arr1(&[107.0, 111.0, 116.0, 114.0, 119.0, 122.0, 120.0, 123.0, 127.0, 125.0,
-                          129.0, 132.0, 130.0, 133.0, 137.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0, 134.0, 138.0]);
-        let volume = arr1(&[100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0,
-                            200.0, 260.0, 150.0, 210.0, 270.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0,
+        ]);
+        let open = arr1(&[
+            107.0, 111.0, 116.0, 114.0, 119.0, 122.0, 120.0, 123.0, 127.0, 125.0, 129.0, 132.0,
+            130.0, 133.0, 137.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0,
+        ]);
+        let volume = arr1(&[
+            100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0, 200.0, 260.0,
+            150.0, 210.0, 270.0,
+        ]);
 
         let ohlcv = OHLCVBatch {
             high: high.view(),
@@ -391,9 +491,7 @@ mod tests {
             volume: volume.view(),
         };
 
-        let requests = vec![
-            ("rsi".to_string(), IndicatorRequest::RSI { period: 14 }),
-        ];
+        let requests = vec![("rsi".to_string(), IndicatorRequest::RSI { period: 14 })];
 
         let results = calculate_batch(&ohlcv, requests).unwrap();
 
@@ -408,21 +506,31 @@ mod tests {
 
     #[test]
     fn test_batch_multiple_indicators() {
-        let high = arr1(&[110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-                          132.0, 135.0, 133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
-                          150.0, 148.0, 152.0, 155.0, 153.0, 156.0, 160.0, 158.0, 162.0, 165.0]);
-        let low = arr1(&[105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-                         127.0, 130.0, 128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
-                         145.0, 143.0, 147.0, 150.0, 148.0, 151.0, 155.0, 153.0, 157.0, 160.0]);
-        let open = arr1(&[107.0, 111.0, 116.0, 114.0, 119.0, 122.0, 120.0, 123.0, 127.0, 125.0,
-                          129.0, 132.0, 130.0, 133.0, 137.0, 135.0, 139.0, 142.0, 140.0, 143.0,
-                          147.0, 145.0, 149.0, 152.0, 150.0, 153.0, 157.0, 155.0, 159.0, 162.0]);
-        let close = arr1(&[108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-                           130.0, 133.0, 131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
-                           148.0, 146.0, 150.0, 153.0, 151.0, 154.0, 158.0, 156.0, 160.0, 163.0]);
-        let volume = arr1(&[100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0,
-                            200.0, 260.0, 150.0, 210.0, 270.0, 160.0, 220.0, 280.0, 170.0, 230.0,
-                            290.0, 180.0, 240.0, 300.0, 190.0, 250.0, 310.0, 200.0, 260.0, 320.0]);
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0, 150.0, 148.0, 152.0, 155.0,
+            153.0, 156.0, 160.0, 158.0, 162.0, 165.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0, 145.0, 143.0, 147.0, 150.0,
+            148.0, 151.0, 155.0, 153.0, 157.0, 160.0,
+        ]);
+        let open = arr1(&[
+            107.0, 111.0, 116.0, 114.0, 119.0, 122.0, 120.0, 123.0, 127.0, 125.0, 129.0, 132.0,
+            130.0, 133.0, 137.0, 135.0, 139.0, 142.0, 140.0, 143.0, 147.0, 145.0, 149.0, 152.0,
+            150.0, 153.0, 157.0, 155.0, 159.0, 162.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0, 148.0, 146.0, 150.0, 153.0,
+            151.0, 154.0, 158.0, 156.0, 160.0, 163.0,
+        ]);
+        let volume = arr1(&[
+            100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0, 200.0, 260.0,
+            150.0, 210.0, 270.0, 160.0, 220.0, 280.0, 170.0, 230.0, 290.0, 180.0, 240.0, 300.0,
+            190.0, 250.0, 310.0, 200.0, 260.0, 320.0,
+        ]);
 
         let ohlcv = OHLCVBatch {
             high: high.view(),
@@ -436,7 +544,14 @@ mod tests {
             ("rsi".to_string(), IndicatorRequest::RSI { period: 14 }),
             ("sma".to_string(), IndicatorRequest::SMA { period: 20 }),
             ("atr".to_string(), IndicatorRequest::ATR { period: 14 }),
-            ("macd".to_string(), IndicatorRequest::MACD { fast_period: 12, slow_period: 26, signal_period: 9 }),
+            (
+                "macd".to_string(),
+                IndicatorRequest::MACD {
+                    fast_period: 12,
+                    slow_period: 26,
+                    signal_period: 9,
+                },
+            ),
         ];
 
         let results = calculate_batch(&ohlcv, requests).unwrap();
@@ -449,7 +564,11 @@ mod tests {
 
         // MACD should have multiple outputs
         match &results["macd"] {
-            IndicatorBatchOutput::Multiple { primary, secondary, names } => {
+            IndicatorBatchOutput::Multiple {
+                primary,
+                secondary,
+                names,
+            } => {
                 assert_eq!(primary.len(), 30);
                 assert_eq!(secondary.len(), 2); // signal, histogram
                 assert_eq!(names.len(), 3); // line, signal, histogram
