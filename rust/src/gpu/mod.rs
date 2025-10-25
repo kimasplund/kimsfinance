@@ -33,6 +33,12 @@
 pub mod device;
 
 #[cfg(feature = "gpu")]
+pub mod memory_pool;
+
+#[cfg(feature = "gpu")]
+pub mod streams;
+
+#[cfg(feature = "gpu")]
 pub mod stochastic;
 
 #[cfg(feature = "gpu")]
@@ -55,6 +61,12 @@ pub mod cci;
 
 #[cfg(feature = "gpu")]
 pub use device::GpuDevice;
+
+#[cfg(feature = "gpu")]
+pub use memory_pool::{GpuMemoryPool, IndicatorType};
+
+#[cfg(feature = "gpu")]
+pub use streams::{IndicatorSpeed, StreamManager};
 
 #[cfg(feature = "gpu")]
 pub use stochastic::stochastic_gpu;
@@ -88,3 +100,12 @@ pub mod macd;
 
 #[cfg(feature = "gpu")]
 pub use macd::macd_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod batch;
+
+#[cfg(feature = "gpu")]
+pub use batch::{
+    BatchIndicatorParams, BatchIndicatorType, IndicatorRequest, IndicatorResult,
+    calculate_indicator_gpu, calculate_indicators_batch_gpu,
+};
