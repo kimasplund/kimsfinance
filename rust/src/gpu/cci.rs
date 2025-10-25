@@ -282,7 +282,8 @@ mod tests {
             131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0, 148.0,
         ]);
 
-        let cci = cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
+        let cci =
+            cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
 
         // Verify first period-1 elements are NaN
         for i in 0..13 {
@@ -322,7 +323,8 @@ mod tests {
         let low = arr1(&[100.0; 20]);
         let close = arr1(&[100.0; 20]);
 
-        let cci = cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
+        let cci =
+            cci_gpu(&device, &high, &low, &close, 14, None).expect("CCI GPU calculation failed");
 
         // All values should be NaN (including period onwards due to MAD == 0)
         for i in 0..cci.len() {
@@ -345,7 +347,8 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 0.01).collect());
 
         let start = std::time::Instant::now();
-        let cci = cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
+        let cci =
+            cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
         let elapsed = start.elapsed();
 
         println!(
@@ -404,7 +407,8 @@ mod tests {
         let low = Array1::from_vec((0..n).map(|i| 95.0 + (i as f64) * 2.0).collect());
         let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64) * 2.0).collect());
 
-        let cci = cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
+        let cci =
+            cci_gpu(&device, &high, &low, &close, 20, None).expect("CCI GPU calculation failed");
 
         // Check trend: most CCI values should be positive in uptrend
         let valid_cci: Vec<f64> = cci

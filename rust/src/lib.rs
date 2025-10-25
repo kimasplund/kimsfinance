@@ -51,6 +51,8 @@ pub mod cpu;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+pub mod autotuner;
+
 use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch};
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};

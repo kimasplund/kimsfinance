@@ -301,8 +301,8 @@ mod tests {
         let high_arr = Array1::from_vec(high);
         let low_arr = Array1::from_vec(low);
 
-        let (aroon_up, aroon_down) =
-            aroon_gpu(&device, &high_arr, &low_arr, 14, None).expect("Aroon GPU calculation failed");
+        let (aroon_up, aroon_down) = aroon_gpu(&device, &high_arr, &low_arr, 14, None)
+            .expect("Aroon GPU calculation failed");
 
         // Aroon Up should be 100 (highest high at position 0 periods ago)
         assert!((aroon_up[19] - 100.0).abs() < 0.001);

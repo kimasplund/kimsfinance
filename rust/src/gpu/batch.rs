@@ -367,9 +367,9 @@ pub fn calculate_indicators_batch_gpu(
     let mut results = HashMap::new();
 
     // Group indicators by speed classification for optimal stream assignment
-    let mut fast_indicators = Vec::new();    // ROC, Williams %R, CCI
-    let mut medium_indicators = Vec::new();  // RSI, ATR, Bollinger, Aroon
-    let mut slow_indicators = Vec::new();    // Stochastic, MACD
+    let mut fast_indicators = Vec::new(); // ROC, Williams %R, CCI
+    let mut medium_indicators = Vec::new(); // RSI, ATR, Bollinger, Aroon
+    let mut slow_indicators = Vec::new(); // Stochastic, MACD
 
     for &indicator in indicators {
         match classify_indicator(indicator) {
@@ -391,21 +391,24 @@ pub fn calculate_indicators_batch_gpu(
     // Calculate fast indicators (would use fast stream in future)
     for &indicator in &fast_indicators {
         let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result = calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
+        let result =
+            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
         results.insert(indicator, result);
     }
 
     // Calculate medium indicators (would use medium stream in future)
     for &indicator in &medium_indicators {
         let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result = calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
+        let result =
+            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
         results.insert(indicator, result);
     }
 
     // Calculate slow indicators (would use slow stream in future)
     for &indicator in &slow_indicators {
         let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result = calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
+        let result =
+            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
         results.insert(indicator, result);
     }
 
