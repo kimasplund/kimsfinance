@@ -96,8 +96,10 @@ def calculate_atr(
     # span = 2 * period - 1
     atr_expr = pl.col("tr").ewm_mean(span=2 * period - 1, adjust=False)
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="atr", data_size=len(highs_arr))
-    result = df.lazy().select(atr=atr_expr).collect(engine=exec_engine)
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="atr", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(atr=atr_expr).collect(engine=polars_engine)
 
     return result["atr"].to_numpy()

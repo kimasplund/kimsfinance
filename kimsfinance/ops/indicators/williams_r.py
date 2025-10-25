@@ -63,10 +63,10 @@ def calculate_williams_r(
     # Calculate Williams %R
     wr_expr = -100 * ((highest_high - pl.col("close")) / (highest_high - lowest_low + 1e-10))
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
         engine, operation="williams_r", data_size=len(highs_arr)
     )
-    result = df.lazy().select(wr=wr_expr).collect(engine=exec_engine)
+    result = df.lazy().select(wr=wr_expr).collect(engine=polars_engine)
 
     return result["wr"].to_numpy()

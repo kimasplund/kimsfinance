@@ -79,8 +79,10 @@ def calculate_rsi(prices: ArrayLike, period: int = 14, *, engine: Engine = "auto
     rs = avg_gain / (avg_loss + 1e-10)
     rsi_expr = (100 - (100 / (1 + rs))).alias("rsi")
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="rsi", data_size=len(prices_arr))
-    result = df.lazy().select(rsi=rsi_expr).collect(engine=exec_engine)
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="rsi", data_size=len(prices_arr)
+    )
+    result = df.lazy().select(rsi=rsi_expr).collect(engine=polars_engine)
 
     return result["rsi"].to_numpy()

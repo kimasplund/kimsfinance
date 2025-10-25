@@ -79,10 +79,10 @@ def calculate_stochastic_oscillator(
     # Calculate %D (3-period SMA of %K)
     d_percent = k_percent.rolling_mean(window_size=3)
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
         engine, operation="stochastic", data_size=len(highs_arr)
     )
-    result = df.lazy().select(k=k_percent, d=d_percent).collect(engine=exec_engine)
+    result = df.lazy().select(k=k_percent, d=d_percent).collect(engine=polars_engine)
 
     return (result["k"].to_numpy(), result["d"].to_numpy())

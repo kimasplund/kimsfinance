@@ -70,8 +70,10 @@ def calculate_cci(
     # Calculate CCI
     cci_expr = (tp - sma_tp) / (constant * mean_deviation + 1e-10)
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="cci", data_size=len(highs_arr))
-    result = df.lazy().select(cci=cci_expr).collect(engine=exec_engine)
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="cci", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(cci=cci_expr).collect(engine=polars_engine)
 
     return result["cci"].to_numpy()

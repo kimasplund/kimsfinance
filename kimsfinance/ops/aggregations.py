@@ -36,6 +36,7 @@ from ..core import (
     EngineManager,
     GPUNotAvailableError,
 )
+from ..core.engine import POLARS_GPU_AVAILABLE
 from ..utils.array_utils import to_numpy_array
 
 
@@ -184,7 +185,8 @@ def ohlc_resample(
     if isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
-        polars_df = df.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = df.collect(engine=exec_engine)
     else:
         polars_df = df
 
@@ -368,7 +370,8 @@ def group_aggregation(
     if isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
-        polars_df = df.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = df.collect(engine=exec_engine)
     else:
         polars_df = df
 
@@ -440,7 +443,8 @@ def tick_to_ohlc(
     if isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
-        polars_df = ticks.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = ticks.collect(engine=exec_engine)
     else:
         polars_df = ticks
 
@@ -521,7 +525,8 @@ def volume_to_ohlc(
     if isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
-        polars_df = ticks.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = ticks.collect(engine=exec_engine)
     else:
         polars_df = ticks
 
@@ -608,7 +613,8 @@ def range_to_ohlc(
     if isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
-        polars_df = ticks.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = ticks.collect(engine=exec_engine)
     else:
         polars_df = ticks
 
@@ -728,7 +734,8 @@ def kagi_to_ohlc(
     if isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
-        polars_df = ticks.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = ticks.collect(engine=exec_engine)
     else:
         polars_df = ticks
 
@@ -924,7 +931,8 @@ def three_line_break_to_ohlc(
     if isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
-        polars_df = ticks.collect()
+        exec_engine = 'gpu' if POLARS_GPU_AVAILABLE else None
+        polars_df = ticks.collect(engine=exec_engine)
     else:
         polars_df = ticks
 

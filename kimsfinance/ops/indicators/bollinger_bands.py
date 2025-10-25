@@ -57,7 +57,7 @@ def calculate_bollinger_bands(
     df = pl.DataFrame({"price": prices_arr})
 
     # Select execution engine
-    exec_engine = EngineManager.select_engine(
+    polars_engine = EngineManager.select_polars_engine(
         engine, operation="bollinger", data_size=len(prices_arr)
     )
 
@@ -68,7 +68,7 @@ def calculate_bollinger_bands(
             middle=pl.col("price").rolling_mean(window_size=period),
             std_dev=pl.col("price").rolling_std(window_size=period),
         )
-        .collect(engine=exec_engine)
+        .collect(engine=polars_engine)
     )
 
     middle_band = result["middle"].to_numpy()

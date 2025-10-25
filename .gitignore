@@ -151,6 +151,9 @@ test_svg_*.svg
 test_*.webp
 test_*.png
 
+# Visual regression artifacts
+tests/visual_diffs/
+
 # GPU profiling data
 # (already covered above: *.nsys-rep, *.sqlite, *.qdrep)
 

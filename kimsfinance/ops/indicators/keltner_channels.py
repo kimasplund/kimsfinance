@@ -120,8 +120,8 @@ def calculate_keltner_channels(
         }
     )
 
-    # Select execution engine
-    exec_engine = EngineManager.select_engine(
+    # Select execution engine for Polars
+    polars_engine = EngineManager.select_polars_engine(
         engine, operation="keltner", data_size=len(closes_arr)
     )
 
@@ -147,7 +147,7 @@ def calculate_keltner_channels(
     result = (
         df.lazy()
         .select(upper=upper_expr, middle=middle_expr, lower=lower_expr)
-        .collect(engine=exec_engine)
+        .collect(engine=polars_engine)
     )
 
     return (result["upper"].to_numpy(), result["middle"].to_numpy(), result["lower"].to_numpy())

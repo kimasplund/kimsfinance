@@ -63,9 +63,11 @@ def calculate_vwap(
         (pl.col("high") + pl.col("low") + pl.col("close")) / 3 * pl.col("volume")
     ).cum_sum() / pl.col("volume").cum_sum()
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="vwap", data_size=len(highs_arr))
-    result = df.lazy().select(vwap=vwap_expr).collect(engine=exec_engine)
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="vwap", data_size=len(highs_arr)
+    )
+    result = df.lazy().select(vwap=vwap_expr).collect(engine=polars_engine)
 
     return result["vwap"].to_numpy()
 
@@ -118,10 +120,10 @@ def calculate_vwap_anchored(
         (pl.col("high") + pl.col("low") + pl.col("close")) / 3 * pl.col("volume")
     ).cum_sum().over(session_id) / pl.col("volume").cum_sum().over(session_id)
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
         engine, operation="vwap_anchored", data_size=len(highs_arr)
     )
-    result = df.lazy().select(anchored_vwap=vwap_expr).collect(engine=exec_engine)
+    result = df.lazy().select(anchored_vwap=vwap_expr).collect(engine=polars_engine)
 
     return result["anchored_vwap"].to_numpy()

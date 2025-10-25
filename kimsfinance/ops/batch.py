@@ -29,6 +29,7 @@ from ..core import (
     EngineManager,
     MACDResult,
 )
+from ..core.engine import POLARS_GPU_AVAILABLE
 from ..core.exceptions import ConfigurationError
 
 
@@ -360,14 +361,18 @@ def calculate_indicators_batch(
         engine, operation="batch_indicators", data_size=data_size
     )
     # Execute lazy evaluation with streaming support
+    # Determine which engine to use for Polars collect()
+    if use_streaming:
+        polars_engine = "streaming"
+    elif exec_engine == "gpu" and POLARS_GPU_AVAILABLE:
+        polars_engine = "gpu"
+    else:
+        polars_engine = None  # CPU default
+
     result = (
         df.lazy()
         .select(**expressions)
-        .collect(
-            engine=(
-                "streaming" if use_streaming else exec_engine
-            )  # Process data in chunks if enabled
-        )
+        .collect(engine=polars_engine)
     )
 
     # ========================================================================

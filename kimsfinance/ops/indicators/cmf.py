@@ -122,8 +122,10 @@ def calculate_cmf(
         }
     )
 
-    # Select execution engine
-    exec_engine = EngineManager.select_engine(engine, operation="cmf", data_size=len(closes_arr))
+    # Select execution engine for Polars
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="cmf", data_size=len(closes_arr)
+    )
 
     # Calculate Money Flow Multiplier
     # MF Multiplier = ((Close - Low) - (High - Close)) / (High - Low)
@@ -142,6 +144,6 @@ def calculate_cmf(
     )
 
     # Execute calculation
-    result = df.lazy().select(cmf=cmf_expr).collect(engine=exec_engine)
+    result = df.lazy().select(cmf=cmf_expr).collect(engine=polars_engine)
 
     return result["cmf"].to_numpy()

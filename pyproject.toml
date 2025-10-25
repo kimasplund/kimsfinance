@@ -25,6 +25,7 @@ classifiers = [
     "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Office/Business :: Financial",
@@ -46,8 +47,8 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = [
-    "cudf-cu12>=24.12",
-    "cupy-cuda12x>=13.0",
+    "cudf-cu13>=25.12",  # CUDA 13 support (RTX 3500 Ada)
+    "cupy-cuda13x>=13.0",  # CUDA 13 support
 ]
 jit = [
     "numba>=0.59",  # Python 3.13 support
@@ -57,14 +58,19 @@ dev = [
     "pytest-cov>=4.0",
     "black>=23.0",
     "mypy>=1.0",
+    "tox>=4.0",
 ]
 test = [
     "kimsfinance[dev]",
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-benchmark>=5.1.0",
     "mplfinance>=0.12.10b0",
     "pyarrow>=15.0",
     "svgwrite>=1.4",
+]
+all = [
+    "kimsfinance[gpu,jit,dev,test]",
 ]
 
 [project.urls]
@@ -84,7 +90,7 @@ kimsfinance = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py313', 'py314']
 
 [tool.mypy]
 python_version = "3.13"

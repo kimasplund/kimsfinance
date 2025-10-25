@@ -62,8 +62,10 @@ def calculate_obv(closes: ArrayLike, volumes: ArrayLike, *, engine: Engine = "au
         .alias("obv")
     )
 
-    # Execute with selected engine
-    exec_engine = EngineManager.select_engine(engine, operation="obv", data_size=len(closes_arr))
-    result = df.lazy().select(obv).collect(engine=exec_engine)
+    # Execute with selected Polars engine (GPU if available)
+    polars_engine = EngineManager.select_polars_engine(
+        engine, operation="obv", data_size=len(closes_arr)
+    )
+    result = df.lazy().select(obv).collect(engine=polars_engine)
 
     return result["obv"].to_numpy()

@@ -21,12 +21,29 @@ from .autotune import load_tuned_thresholds, run_autotune
 from ..config.gpu_thresholds import get_threshold
 
 
+# Check if Polars GPU is available
+def _check_polars_gpu() -> bool:
+    """Check if Polars GPU engine is available (production-ready in 2025)."""
+    try:
+        import polars as pl
+        # Test GPU engine availability with simple operation
+        test_df = pl.LazyFrame({'test': [1, 2, 3]})
+        test_df.collect(engine='gpu')
+        return True
+    except Exception:
+        return False
+
+
+POLARS_GPU_AVAILABLE = _check_polars_gpu()
+
+
 __all__ = [
     "EngineManager",
     "with_engine_fallback",
     "GPUNotAvailableError",
     "GPU_CROSSOVER_THRESHOLDS",
     "run_autotune",
+    "POLARS_GPU_AVAILABLE",
 ]
 
 
@@ -57,13 +74,15 @@ class EngineManager:
     Manages execution engine selection and GPU availability detection (thread-safe).
     """
 
-    _gpu_available: bool | None = None  # Cache GPU availability check
+    _gpu_available: bool | None = None  # Cache GPU availability check (cuDF/cupy)
     _gpu_check_lock = threading.Lock()  # Lock for GPU availability check
 
     @classmethod
     def check_gpu_available(cls) -> bool:
         """
         Check if GPU acceleration is available (thread-safe, double-checked locking).
+
+        This checks for cuDF/cupy GPU availability.
 
         Thread-safe: Yes (double-checked locking pattern)
 
@@ -92,6 +111,18 @@ class EngineManager:
                 cls._gpu_available = False
 
             return cls._gpu_available
+
+    @classmethod
+    def check_polars_gpu_available(cls) -> bool:
+        """
+        Check if Polars GPU engine is available.
+
+        Returns module-level cached value (already checked at import time).
+
+        Returns:
+            bool: True if Polars GPU engine is available, False otherwise
+        """
+        return POLARS_GPU_AVAILABLE
 
     @classmethod
     def reset_gpu_cache(cls) -> None:
@@ -147,6 +178,52 @@ class EngineManager:
                 raise ConfigurationError(f"Invalid engine: {engine!r}")
 
     @classmethod
+    def select_polars_engine(
+        cls, engine: Engine, operation: str | None = None, data_size: int | None = None
+    ) -> Literal["cpu", "gpu"] | None:
+        """
+        Select Polars execution engine for .collect() with GPU support.
+
+        Returns 'gpu' for Polars GPU engine, 'cpu' for CPU, or None for default.
+        Polars GPU engine provides 13x speedup on aggregations when available.
+
+        Args:
+            engine: Requested engine ("cpu", "gpu", or "auto")
+            operation: Operation name for threshold-based selection
+            data_size: Dataset size for threshold check
+
+        Returns:
+            Selected engine ("cpu", "gpu", or None for Polars default)
+        """
+        if engine not in ("cpu", "gpu", "auto"):
+            raise ConfigurationError(f"Invalid engine: {engine!r}")
+
+        match engine:
+            case "cpu":
+                return "cpu"
+            case "gpu":
+                # Check Polars GPU availability
+                if not cls.check_polars_gpu_available():
+                    raise GPUNotAvailableError("Polars GPU engine not available")
+                return "gpu"
+            case "auto":
+                # Auto selection: use Polars GPU if available
+                if not cls.check_polars_gpu_available():
+                    return None  # Use Polars default (CPU)
+
+                # Apply threshold-based selection if provided
+                if operation and data_size is not None:
+                    threshold = GPU_CROSSOVER_THRESHOLDS.get(
+                        operation, GPU_CROSSOVER_THRESHOLDS["default"]
+                    )
+                    return "gpu" if data_size >= threshold else None
+
+                return None  # Conservative default for "auto"
+            case _:
+                # This should never be reached due to validation above
+                raise ConfigurationError(f"Invalid engine: {engine!r}")
+
+    @classmethod
     def get_optimal_engine(
         cls, operation: str, data_size: int, *, force_cpu: bool = False
     ) -> Engine:
@@ -180,10 +257,12 @@ class EngineManager:
             Dict with engine information
         """
         gpu_available = cls.check_gpu_available()
+        polars_gpu_available = cls.check_polars_gpu_available()
 
         info: dict[str, str | bool] = {
             "cpu_available": True,
             "gpu_available": gpu_available,
+            "polars_gpu_available": polars_gpu_available,
             "default_engine": "auto",
         }
 
@@ -194,6 +273,14 @@ class EngineManager:
                 info["cudf_version"] = str(cudf.__version__)
             except ImportError:
                 info["cudf_version"] = "Not installed"
+
+        if polars_gpu_available:
+            try:
+                import polars as pl
+
+                info["polars_version"] = str(pl.__version__)
+            except ImportError:
+                info["polars_version"] = "Not installed"
 
         return info
 
