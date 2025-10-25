@@ -47,7 +47,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = [
-    "cudf-cu13>=25.12",  # CUDA 13 support (RTX 3500 Ada)
+    "cudf-cu13>=25.10",  # CUDA 13 support (RTX 3500 Ada) - 25.10 is latest available
     "cupy-cuda13x>=13.0",  # CUDA 13 support
 ]
 jit = [

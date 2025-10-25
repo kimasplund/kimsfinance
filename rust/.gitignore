@@ -1,0 +1,27 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo lock for libraries (comment out for binaries)
+# Cargo.lock
+
+# Python wheels
+*.whl
+*.egg-info/
+dist/
+build/
+
+# PyO3 build artifacts
+.maturin/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
