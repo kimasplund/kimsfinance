@@ -41,6 +41,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 mod batch;
+pub mod binance;
 mod coordinates;
 pub mod indicators;
 mod types;
