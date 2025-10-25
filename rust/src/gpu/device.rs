@@ -64,7 +64,11 @@ impl GpuDevice {
     pub fn copy_to_device(&self, data: &[f64]) -> Result<CudaSlice<f64>, GpuError> {
         // Allocate device buffer
         let mut buffer = self.stream.alloc_zeros::<f64>(data.len()).map_err(|e| {
-            GpuError::AllocationError(format!("Failed to allocate {} elements: {:?}", data.len(), e))
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} elements: {:?}",
+                data.len(),
+                e
+            ))
         })?;
 
         // Copy data into buffer

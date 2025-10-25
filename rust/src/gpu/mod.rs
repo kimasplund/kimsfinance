@@ -36,7 +36,55 @@ pub mod device;
 pub mod stochastic;
 
 #[cfg(feature = "gpu")]
+pub mod roc;
+
+#[cfg(feature = "gpu")]
+pub mod williams_r;
+
+#[cfg(feature = "gpu")]
+pub mod bollinger;
+
+#[cfg(feature = "gpu")]
+pub mod aroon;
+
+#[cfg(feature = "gpu")]
+pub mod atr;
+
+#[cfg(feature = "gpu")]
+pub mod cci;
+
+#[cfg(feature = "gpu")]
 pub use device::GpuDevice;
 
 #[cfg(feature = "gpu")]
 pub use stochastic::stochastic_gpu;
+
+#[cfg(feature = "gpu")]
+pub use roc::roc_gpu;
+
+#[cfg(feature = "gpu")]
+pub use williams_r::williams_r_gpu;
+
+#[cfg(feature = "gpu")]
+pub use bollinger::bollinger_bands_gpu;
+
+#[cfg(feature = "gpu")]
+pub use aroon::aroon_gpu;
+
+#[cfg(feature = "gpu")]
+pub use atr::atr_gpu;
+
+#[cfg(feature = "gpu")]
+pub use cci::cci_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod rsi;
+
+#[cfg(feature = "gpu")]
+pub use rsi::rsi_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod macd;
+
+#[cfg(feature = "gpu")]
+pub use macd::macd_gpu;
