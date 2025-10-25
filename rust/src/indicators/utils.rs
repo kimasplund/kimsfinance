@@ -1,0 +1,430 @@
+//! Utility functions for technical indicator calculations
+//!
+//! Provides optimized array operations with SIMD vectorization, normalization,
+//! and common computations used across multiple indicators.
+//!
+//! Performance optimizations:
+//! - ndarray Zip for SIMD vectorization
+//! - Rolling sum algorithms (O(n) instead of O(n*period))
+//! - Cache-friendly memory access patterns
+//! - Rayon parallelization for large datasets
+
+use ndarray::{Array1, ArrayView1, Zip, s};
+use rayon::prelude::*;
+
+/// Threshold for parallel computation
+const PARALLEL_THRESHOLD: usize = 5000;
+
+/// Calculate Simple Moving Average (SMA)
+///
+/// Core building block for many indicators. Uses SIMD-optimized operations.
+///
+/// # Arguments
+/// * `data` - Input price array
+/// * `period` - Window size for averaging
+///
+/// # Returns
+/// Array with NaN for first (period-1) elements, then SMA values
+#[inline]
+pub fn sma(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period {
+        return result;
+    }
+
+    // Calculate first SMA value
+    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
+    result[period - 1] = first_sum / period as f64;
+
+    // Use rolling sum for efficiency: O(n) instead of O(n*period)
+    for i in period..n {
+        let prev_sma = result[i - 1];
+        let new_value = data[i];
+        let old_value = data[i - period];
+        result[i] = prev_sma + (new_value - old_value) / period as f64;
+    }
+
+    result
+}
+
+/// Calculate Exponential Moving Average (EMA)
+///
+/// Uses standard EMA formula with smoothing factor alpha = 2 / (period + 1)
+///
+/// # Arguments
+/// * `data` - Input price array
+/// * `period` - Lookback period
+///
+/// # Returns
+/// Array with NaN for warmup period, then EMA values
+pub fn ema(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period {
+        return result;
+    }
+
+    let alpha = 2.0 / (period as f64 + 1.0);
+
+    // Initialize with SMA for first value
+    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
+    result[period - 1] = first_sum / period as f64;
+
+    // Calculate EMA recursively
+    for i in period..n {
+        result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+    }
+
+    result
+}
+
+/// Calculate Wilder's Smoothing (used in RSI, ATR, etc)
+///
+/// Similar to EMA but with alpha = 1 / period (slower decay)
+///
+/// # Arguments
+/// * `data` - Input array
+/// * `period` - Smoothing period
+///
+/// # Returns
+/// Smoothed array with NaN for warmup period
+pub fn wilders_smoothing(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period {
+        return result;
+    }
+
+    let alpha = 1.0 / period as f64;
+
+    // Initialize with SMA
+    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
+    result[period - 1] = first_sum / period as f64;
+
+    // Apply Wilder's smoothing
+    for i in period..n {
+        result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+    }
+
+    result
+}
+
+/// Calculate standard deviation for a rolling window
+///
+/// Used in Bollinger Bands, Keltner Channels, etc.
+/// Optimized with SIMD vectorization and optional parallelization.
+///
+/// # Arguments
+/// * `data` - Input price array
+/// * `period` - Window size
+///
+/// # Returns
+/// Array of rolling standard deviations
+pub fn rolling_std(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period {
+        return result;
+    }
+
+    let period_f64 = period as f64;
+
+    // Parallel vs sequential based on data size
+    if n >= PARALLEL_THRESHOLD {
+        // Parallel computation for large datasets using Rayon
+        let values: Vec<f64> = ((period - 1)..n)
+            .into_par_iter()
+            .map(|i| {
+                let window = data.slice(s![i - period + 1..=i]);
+                let mean = window.mean().unwrap_or(0.0);
+
+                // Variance = E[(X - mean)^2] using SIMD
+                let variance: f64 = window
+                    .iter()
+                    .map(|&x| {
+                        let diff = x - mean;
+                        diff * diff
+                    })
+                    .sum::<f64>()
+                    / period_f64;
+
+                variance.sqrt()
+            })
+            .collect();
+
+        // Copy results back using slice assignment
+        result.slice_mut(s![period - 1..]).assign(&Array1::from(values));
+    } else {
+        // Sequential with SIMD for small datasets
+        for i in (period - 1)..n {
+            let window = data.slice(s![i - period + 1..=i]);
+            let mean = window.mean().unwrap_or(0.0);
+
+            // Variance = E[(X - mean)^2] using SIMD
+            let variance: f64 = window
+                .iter()
+                .map(|&x| {
+                    let diff = x - mean;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / period_f64;
+
+            result[i] = variance.sqrt();
+        }
+    }
+
+    result
+}
+
+/// Calculate True Range (used in ATR)
+///
+/// TR = max(high - low, |high - prev_close|, |low - prev_close|)
+///
+/// # Arguments
+/// * `high` - High prices
+/// * `low` - Low prices
+/// * `close` - Close prices
+///
+/// # Returns
+/// Array of true range values
+pub fn true_range(
+    high: ArrayView1<f64>,
+    low: ArrayView1<f64>,
+    close: ArrayView1<f64>,
+) -> Array1<f64> {
+    let n = high.len();
+    let mut tr = Array1::from_elem(n, f64::NAN);
+
+    // First value is simply high - low
+    tr[0] = high[0] - low[0];
+
+    // Subsequent values use previous close
+    for i in 1..n {
+        let hl = high[i] - low[i];
+        let hc = (high[i] - close[i - 1]).abs();
+        let lc = (low[i] - close[i - 1]).abs();
+
+        tr[i] = hl.max(hc).max(lc);
+    }
+
+    tr
+}
+
+/// Calculate array differences (price changes)
+///
+/// diff[i] = data[i] - data[i-1]
+/// Optimized with SIMD vectorization.
+///
+/// # Arguments
+/// * `data` - Input array
+///
+/// # Returns
+/// Array of differences with NaN at index 0
+pub fn diff(data: ArrayView1<f64>) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < 2 {
+        return result;
+    }
+
+    // Vectorized computation using Zip for SIMD
+    let current = data.slice(s![1..]);
+    let previous = data.slice(s![..n - 1]);
+
+    Zip::from(&mut result.slice_mut(s![1..]))
+        .and(&current)
+        .and(&previous)
+        .for_each(|r, &curr, &prev| {
+            *r = curr - prev;
+        });
+
+    result
+}
+
+/// Calculate cumulative sum
+///
+/// # Arguments
+/// * `data` - Input array
+///
+/// # Returns
+/// Array of cumulative sums
+#[inline]
+pub fn cumsum(data: ArrayView1<f64>) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::zeros(n);
+
+    if n == 0 {
+        return result;
+    }
+
+    result[0] = data[0];
+    for i in 1..n {
+        result[i] = result[i - 1] + data[i];
+    }
+
+    result
+}
+
+/// Normalize array to 0-100 range
+///
+/// Used for oscillators like RSI, Stochastic, etc.
+///
+/// # Arguments
+/// * `data` - Input array
+/// * `min` - Minimum value for normalization
+/// * `max` - Maximum value for normalization
+///
+/// # Returns
+/// Normalized array (0-100 range)
+pub fn normalize_0_100(data: ArrayView1<f64>, min: f64, max: f64) -> Array1<f64> {
+    let range = max - min;
+    if range == 0.0 {
+        return Array1::from_elem(data.len(), 50.0); // Return midpoint if no range
+    }
+
+    let mut result = Array1::zeros(data.len());
+    Zip::from(&mut result)
+        .and(&data)
+        .for_each(|r, &d| {
+            *r = ((d - min) / range) * 100.0;
+        });
+
+    result
+}
+
+/// Calculate highest value in rolling window
+///
+/// # Arguments
+/// * `data` - Input array
+/// * `period` - Window size
+///
+/// # Returns
+/// Array of highest values in each window
+pub fn rolling_max(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period || period == 0 {
+        return result;
+    }
+
+    for i in (period - 1)..n {
+        // Calculate window start safely to avoid underflow in debug mode
+        let window_start = i.saturating_sub(period - 1);
+        let window = data.slice(ndarray::s![window_start..=i]);
+        result[i] = window
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+    }
+
+    result
+}
+
+/// Calculate lowest value in rolling window
+///
+/// # Arguments
+/// * `data` - Input array
+/// * `period` - Window size
+///
+/// # Returns
+/// Array of lowest values in each window
+pub fn rolling_min(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    let n = data.len();
+    let mut result = Array1::from_elem(n, f64::NAN);
+
+    if n < period || period == 0 {
+        return result;
+    }
+
+    for i in (period - 1)..n {
+        // Calculate window start safely to avoid underflow in debug mode
+        let window_start = i.saturating_sub(period - 1);
+        let window = data.slice(ndarray::s![window_start..=i]);
+        result[i] = window
+            .iter()
+            .copied()
+            .fold(f64::INFINITY, f64::min);
+    }
+
+    result
+}
+
+/// Parallel version of SMA for large datasets (>10K)
+///
+/// Uses Rayon for parallel computation (currently disabled - sequential for simplicity)
+pub fn sma_parallel(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
+    // Note: Parallel version requires ndarray-parallel crate
+    // For now, just use sequential version
+    sma(data, period)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::arr1;
+
+    #[test]
+    fn test_sma() {
+        let data = arr1(&[1.0, 2.0, 3.0, 4.0, 5.0]);
+        let result = sma(data.view(), 3);
+
+        assert!(result[0].is_nan());
+        assert!(result[1].is_nan());
+        assert!((result[2] - 2.0).abs() < 1e-10); // (1+2+3)/3 = 2
+        assert!((result[3] - 3.0).abs() < 1e-10); // (2+3+4)/3 = 3
+        assert!((result[4] - 4.0).abs() < 1e-10); // (3+4+5)/3 = 4
+    }
+
+    #[test]
+    fn test_ema() {
+        let data = arr1(&[1.0, 2.0, 3.0, 4.0, 5.0]);
+        let result = ema(data.view(), 3);
+
+        assert!(result[0].is_nan());
+        assert!(result[1].is_nan());
+        assert!((result[2] - 2.0).abs() < 1e-10); // Starts with SMA
+    }
+
+    #[test]
+    fn test_diff() {
+        let data = arr1(&[100.0, 102.0, 101.0, 105.0]);
+        let result = diff(data.view());
+
+        assert!(result[0].is_nan());
+        assert!((result[1] - 2.0).abs() < 1e-10);
+        assert!((result[2] - (-1.0)).abs() < 1e-10);
+        assert!((result[3] - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rolling_max() {
+        let data = arr1(&[1.0, 5.0, 3.0, 4.0, 2.0]);
+        let result = rolling_max(data.view(), 3);
+
+        assert!(result[0].is_nan());
+        assert!(result[1].is_nan());
+        assert!((result[2] - 5.0).abs() < 1e-10);
+        assert!((result[3] - 5.0).abs() < 1e-10);
+        assert!((result[4] - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_rolling_min() {
+        let data = arr1(&[3.0, 1.0, 4.0, 2.0, 5.0]);
+        let result = rolling_min(data.view(), 3);
+
+        assert!(result[0].is_nan());
+        assert!(result[1].is_nan());
+        assert!((result[2] - 1.0).abs() < 1e-10);
+        assert!((result[3] - 1.0).abs() < 1e-10);
+        assert!((result[4] - 2.0).abs() < 1e-10);
+    }
+}

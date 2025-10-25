@@ -42,6 +42,7 @@ use pyo3::types::PyDict;
 
 mod coordinates;
 mod types;
+pub mod indicators;
 
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};
