@@ -219,6 +219,27 @@ impl GpuDevice {
     pub fn context(&self) -> &Arc<CudaContext> {
         &self.context
     }
+
+    /// Allocate GPU memory buffer for f32
+    pub fn alloc_buffer_f32(&self, len: usize) -> Result<CudaSlice<f32>, GpuError> {
+        self.stream.alloc_zeros::<f32>(len).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate {} f32 elements: {:?}", len, e))
+        })
+    }
+
+    /// Copy f32 data from host to device
+    pub fn copy_to_device_f32(&self, data: &[f32]) -> Result<CudaSlice<f32>, GpuError> {
+        let mut buffer = self.alloc_buffer_f32(data.len())?;
+        self.stream.memcpy_htod(data, &mut buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy {} f32 elements to device: {:?}", data.len(), e))
+        })?;
+        Ok(buffer)
+    }
+
+    /// Copy f32 data from device to host
+    pub fn copy_to_host_f32(&self, buffer: &CudaSlice<f32>) -> Result<Vec<f32>, GpuError> {
+        self.stream.memcpy_dtov(buffer).map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy f32 from device: {:?}", e)))
+    }
 }
 
 /// GPU operation errors
