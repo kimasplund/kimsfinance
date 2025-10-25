@@ -18,7 +18,11 @@ from __future__ import annotations
 
 import numpy as np
 import polars as pl
-import pandas as pd
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 try:
     import cupy as cp
@@ -181,7 +185,7 @@ def ohlc_resample(
         GPU provides minimal additional benefit due to memory overhead
     """
     # Convert to Polars if needed
-    if isinstance(df, pd.DataFrame):
+    if pd and isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
         polars_df = df.collect()
@@ -365,7 +369,7 @@ def group_aggregation(
         >>> group_aggregation(df, "symbol", "volume", "sum")
     """
     # Convert to Polars if needed
-    if isinstance(df, pd.DataFrame):
+    if pd and isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
         polars_df = df.collect()
@@ -437,7 +441,7 @@ def tick_to_ohlc(
         - Volume-independent time frames
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         polars_df = ticks.collect()
@@ -518,7 +522,7 @@ def volume_to_ohlc(
         Processes 1M ticks in <200ms using Polars
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         polars_df = ticks.collect()
@@ -605,7 +609,7 @@ def range_to_ohlc(
         - Renko charts: Fixed price movement per brick (directional)
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         polars_df = ticks.collect()
@@ -725,7 +729,7 @@ def kagi_to_ohlc(
         Kagi charts are best visualized as line charts or custom renderers.
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         polars_df = ticks.collect()
@@ -921,7 +925,7 @@ def three_line_break_to_ohlc(
         - Each "line" is a full OHLC bar
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         polars_df = ticks.collect()
