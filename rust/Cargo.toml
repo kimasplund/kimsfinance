@@ -1,6 +1,6 @@
 [package]
 name = "kimsfinance_core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.90.0"
 
@@ -22,7 +22,25 @@ zip = "6.0.0"
 packed_simd_2 = { version = "0.3.8", optional = true }
 
 # Optional GPU support with cudarc (v0.17.3 - pinned for stability)
-# Note: Using cuda-12080 (CUDA 12.8.0) - compatible with your CUDA 13.0 driver
+# CUDA Toolkit Compatibility:
+#   - Feature flag: cuda-12080 (CUDA 12.8.0 PTX compilation)
+#   - Runtime compatible with CUDA 13.0 driver (forward compatibility)
+#   - Current driver: 580.82.07 (CUDA 13.0) ✅
+#
+# CUDA 13.0 Performance Improvements (runtime-enabled, no code changes needed):
+#   - Math library optimizations:
+#     * ldexp(): 3x faster (double precision)
+#     * sinh()/cosh(): 50% faster (hyperbolic functions)
+#     * Improved accuracy for edge cases
+#   - Stream-ordered memory allocator: 10-20% faster allocation
+#   - CUDA Graphs: 30-50% launch overhead reduction (requires API integration)
+#   - Better GPU occupancy for small kernels
+#
+# Note: cudarc 0.17.3 is latest stable. CUDA 13.0 runtime features are automatically
+# enabled when driver supports them. No library upgrade needed for:
+#   ✅ Math library speedups (automatic)
+#   ⚠️ Stream-ordered malloc (requires cudarc API addition)
+#   ⚠️ CUDA Graphs (requires cudarc API addition)
 cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-12080"] }
 half = { version = "2.4", optional = true }  # For f16 support
 
@@ -67,5 +85,25 @@ harness = false
 
 [[bench]]
 name = "binance_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "launch_overhead"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "parameter_sweep_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "shared_memory_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "cpu_gpu_hybrid_benchmark"
 harness = false
 required-features = ["gpu"]
