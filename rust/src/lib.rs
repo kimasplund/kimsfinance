@@ -46,6 +46,8 @@ mod coordinates;
 pub mod indicators;
 mod types;
 
+pub mod cpu;
+
 #[cfg(feature = "gpu")]
 pub mod gpu;
 

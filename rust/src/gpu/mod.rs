@@ -60,7 +60,10 @@ pub mod atr;
 pub mod cci;
 
 #[cfg(feature = "gpu")]
-pub use device::GpuDevice;
+pub mod keltner;
+
+#[cfg(feature = "gpu")]
+pub use device::{GpuDevice, GpuError};
 
 #[cfg(feature = "gpu")]
 pub use memory_pool::{GpuMemoryPool, IndicatorType};
@@ -90,6 +93,9 @@ pub use atr::atr_gpu;
 pub use cci::cci_gpu;
 
 #[cfg(feature = "gpu")]
+pub use keltner::keltner_channels_gpu;
+
+#[cfg(feature = "gpu")]
 pub mod rsi;
 
 #[cfg(feature = "gpu")]
@@ -102,6 +108,35 @@ pub mod macd;
 pub use macd::macd_gpu;
 
 #[cfg(feature = "gpu")]
+pub mod donchian;
+
+#[cfg(feature = "gpu")]
+pub use donchian::donchian_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod sma;
+
+#[cfg(feature = "gpu")]
+pub use sma::{sma_gpu, sma_gpu_shared};
+
+#[cfg(feature = "gpu")]
+pub mod wma;
+
+#[cfg(feature = "gpu")]
+pub use wma::wma_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod elder_ray;
+
+#[cfg(feature = "gpu")]
+pub use elder_ray::elder_ray_gpu;
+#[cfg(feature = "gpu")]
+pub mod ema;
+
+#[cfg(feature = "gpu")]
+pub use ema::ema_gpu;
+
+#[cfg(feature = "gpu")]
 pub mod batch;
 
 #[cfg(feature = "gpu")]
@@ -109,3 +144,43 @@ pub use batch::{
     BatchIndicatorParams, BatchIndicatorType, IndicatorRequest, IndicatorResult,
     calculate_indicator_gpu, calculate_indicators_batch_gpu,
 };
+
+#[cfg(feature = "gpu")]
+pub mod obv;
+
+#[cfg(feature = "gpu")]
+pub use obv::obv_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod cmf;
+
+#[cfg(feature = "gpu")]
+pub use cmf::cmf_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod vwma;
+
+#[cfg(feature = "gpu")]
+pub use vwma::vwma_gpu;
+
+// TODO: Fix sweep module conflicts before re-enabling
+// #[cfg(feature = "gpu")]
+// pub mod sweep;
+//
+// #[cfg(feature = "gpu")]
+// pub use sweep::{
+//     IndicatorData, IndicatorType, OptimizationMetric, OptimalParameter, ParameterSweep,
+//     SweepBatch, SweepResult,
+// };
+
+#[cfg(feature = "gpu")]
+pub mod persistent;
+
+#[cfg(feature = "gpu")]
+pub use persistent::{PersistentKernelManager, TaskBatch};
+
+#[cfg(feature = "gpu")]
+pub mod cuda_graphs;
+
+#[cfg(feature = "gpu")]
+pub use cuda_graphs::{IndicatorGraph, IndicatorGraphBuilder};
