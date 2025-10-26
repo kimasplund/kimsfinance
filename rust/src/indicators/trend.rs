@@ -143,6 +143,12 @@ impl Indicator for ParabolicSAR {
 /// Returns pivot point, resistance levels (R1, R2, R3), and support levels (S1, S2, S3).
 pub struct PivotPoints;
 
+impl Default for PivotPoints {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PivotPoints {
     pub fn new() -> Self {
         Self
@@ -227,6 +233,12 @@ impl Indicator for PivotPoints {
 /// Returns levels: 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%
 pub struct FibonacciRetracement;
 
+impl Default for FibonacciRetracement {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FibonacciRetracement {
     pub fn new() -> Self {
         Self
@@ -271,10 +283,13 @@ mod tests {
         assert!(!result[1].is_nan());
         assert!(result[1] > 0.0);
 
-        // SAR should be within price range
+        // SAR should be within overall price range (not necessarily current bar)
+        // During reversals, SAR can be set to extreme points from previous bars
+        let overall_low = low.iter().cloned().fold(f64::INFINITY, f64::min);
+        let overall_high = high.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         for i in 1..result.len() {
-            assert!(result[i] >= low[i] - 10.0); // Allow some flexibility
-            assert!(result[i] <= high[i] + 10.0);
+            assert!(result[i] >= overall_low - 10.0, "SAR {} below overall_low {} at index {}", result[i], overall_low, i);
+            assert!(result[i] <= overall_high + 10.0, "SAR {} above overall_high {} at index {}", result[i], overall_high, i);
         }
     }
 

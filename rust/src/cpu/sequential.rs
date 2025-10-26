@@ -50,6 +50,22 @@ use std::fmt;
 pub enum GpuError {
     InvalidParameter(String),
     ComputationError(String),
+
+    // ===== Static Error Variants (Zero-Allocation) =====
+    /// Empty OHLCV data provided
+    EmptyOhlcvData,
+
+    /// OHLCV arrays have mismatched lengths
+    OhlcvLengthMismatch,
+
+    /// Parameter grid is empty
+    EmptyParameterGrid,
+
+    /// Invalid parameter with static message
+    InvalidParameterStatic(&'static str),
+
+    /// Computation error with static message
+    ComputationErrorStatic(&'static str),
 }
 
 #[cfg(not(feature = "gpu"))]
@@ -58,6 +74,12 @@ impl fmt::Display for GpuError {
         match self {
             GpuError::InvalidParameter(msg) => write!(f, "Invalid parameter: {}", msg),
             GpuError::ComputationError(msg) => write!(f, "Computation error: {}", msg),
+            // Static error variants (zero-allocation)
+            GpuError::EmptyOhlcvData => write!(f, "Empty OHLCV data"),
+            GpuError::OhlcvLengthMismatch => write!(f, "OHLCV arrays must have same length"),
+            GpuError::EmptyParameterGrid => write!(f, "Parameter grid is empty"),
+            GpuError::InvalidParameterStatic(msg) => write!(f, "Invalid parameter: {}", msg),
+            GpuError::ComputationErrorStatic(msg) => write!(f, "Computation error: {}", msg),
         }
     }
 }
@@ -100,12 +122,13 @@ pub fn sma_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 
     // Validate inputs
     if period == 0 {
-        return Err(GpuError::InvalidParameter(
-            "SMA period must be >= 1".to_string(),
+        return Err(GpuError::InvalidParameterStatic(
+            "SMA period must be >= 1",
         ));
     }
 
     if n < period {
+        // Keep dynamic for detailed error message
         return Err(GpuError::InvalidParameter(format!(
             "Insufficient data: need at least {} elements, got {}",
             period, n

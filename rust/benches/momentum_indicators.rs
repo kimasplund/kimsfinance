@@ -5,7 +5,7 @@
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::indicators::*;
-use ndarray::{Array1, arr1};
+use ndarray::Array1;
 use std::f64::consts::PI;
 
 /// Generate synthetic price data for benchmarking

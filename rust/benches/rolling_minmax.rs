@@ -81,7 +81,7 @@ fn bench_rolling_min_sizes(c: &mut Criterion) {
 
 /// Benchmark Williams %R (uses both rolling_max and rolling_min)
 fn bench_williams_r(c: &mut Criterion) {
-    use kimsfinance_core::indicators::{Indicator, WilliamsR};
+    use kimsfinance_core::indicators::WilliamsR;
 
     let mut group = c.benchmark_group("williams_r");
 

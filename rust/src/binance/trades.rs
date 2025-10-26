@@ -396,8 +396,8 @@ pub fn stream_aggregate_csv<P: AsRef<Path>>(
 
         let line = line_result?;
 
-        // Skip header
-        if line_num == 1 && line.starts_with("trade_id") {
+        // Skip header (can be "trade_id" or "id")
+        if line_num == 1 && (line.starts_with("trade_id") || line.starts_with("id")) {
             continue;
         }
 
@@ -480,8 +480,8 @@ pub fn process_binance_month<P: AsRef<Path>>(
     for line in csv_content.lines() {
         line_num += 1;
 
-        // Skip header
-        if line_num == 1 && line.starts_with("trade_id") {
+        // Skip header (can be "trade_id" or "id")
+        if line_num == 1 && (line.starts_with("trade_id") || line.starts_with("id")) {
             continue;
         }
 

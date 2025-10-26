@@ -36,7 +36,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
-use cudarc::nvrtc::compile_ptx;
+use crate::gpu::compile::compile_ptx_optimized;
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -158,7 +158,7 @@ pub fn elder_ray_gpu(
     let ema = ema_cpu(close.view(), ema_period);
 
     // Step 2: Compile GPU kernel for parallel subtraction
-    let ptx = compile_ptx(ELDER_RAY_KERNEL).map_err(|e| {
+    let ptx = compile_ptx_optimized(ELDER_RAY_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile Elder Ray kernel: {:?}", e))
     })?;
 

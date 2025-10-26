@@ -15,7 +15,9 @@
 use kimsfinance_core::gpu::{
     GpuDevice, IndicatorData, IndicatorType, OptimizationMetric, ParameterSweep,
 };
+#[cfg(feature = "gpu")]
 use ndarray::Array1;
+#[cfg(feature = "gpu")]
 use std::sync::Arc;
 
 #[cfg(feature = "gpu")]

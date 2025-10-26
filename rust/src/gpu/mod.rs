@@ -39,6 +39,18 @@ pub mod memory_pool;
 pub mod streams;
 
 #[cfg(feature = "gpu")]
+pub mod compile;
+
+#[cfg(feature = "gpu")]
+pub mod l2_cache;
+
+#[cfg(feature = "gpu")]
+pub use l2_cache::{
+    calculate_l2_chunk_size, set_l2_persist_policy, clear_l2_persist_policy,
+    L2CachePolicy, AccessProperty,
+};
+
+#[cfg(feature = "gpu")]
 pub mod stochastic;
 
 #[cfg(feature = "gpu")]
@@ -184,3 +196,9 @@ pub mod cuda_graphs;
 
 #[cfg(feature = "gpu")]
 pub use cuda_graphs::{IndicatorGraph, IndicatorGraphBuilder};
+
+#[cfg(feature = "gpu")]
+pub mod kernels_3d;
+
+#[cfg(feature = "gpu")]
+pub use kernels_3d::{rsi_sweep_3d_gpu, sma_sweep_3d_gpu, sharpe_reduction_gpu, SweepResult3D};

@@ -23,6 +23,7 @@
 use kimsfinance_core::autotuner::{AutoTuneProfile, ExecutionStrategy};
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::GpuDevice;
+#[cfg(feature = "gpu")]
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]

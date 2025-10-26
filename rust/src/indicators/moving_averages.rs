@@ -126,7 +126,7 @@ impl Indicator for WMA {
             let values: Vec<f64> = indices
                 .par_iter()
                 .map(|&i| {
-                    let window = prices.slice(s![i - self.period + 1..=i]);
+                    let window = prices.slice(s![i + 1 - self.period..=i]);
 
                     // Vectorized weighted sum
                     let weighted_sum: f64 = window
@@ -146,7 +146,7 @@ impl Indicator for WMA {
         } else {
             // Sequential with SIMD for small datasets
             for i in (self.period - 1)..n {
-                let window = prices.slice(s![i - self.period + 1..=i]);
+                let window = prices.slice(s![i + 1 - self.period..=i]);
 
                 // Vectorized weighted sum
                 let weighted_sum: f64 = window
@@ -216,8 +216,8 @@ impl VWMA {
             let values: Vec<f64> = indices
                 .par_iter()
                 .map(|&i| {
-                    let price_window = prices.slice(s![i - self.period + 1..=i]);
-                    let volume_window = volumes.slice(s![i - self.period + 1..=i]);
+                    let price_window = prices.slice(s![i + 1 - self.period..=i]);
+                    let volume_window = volumes.slice(s![i + 1 - self.period..=i]);
 
                     // Vectorized computation using Zip for SIMD
                     let mut price_volume_sum = 0.0;
@@ -245,8 +245,8 @@ impl VWMA {
         } else {
             // Sequential with SIMD for small datasets
             for i in (self.period - 1)..n {
-                let price_window = prices.slice(s![i - self.period + 1..=i]);
-                let volume_window = volumes.slice(s![i - self.period + 1..=i]);
+                let price_window = prices.slice(s![i + 1 - self.period..=i]);
+                let volume_window = volumes.slice(s![i + 1 - self.period..=i]);
 
                 // Vectorized computation using Zip for SIMD
                 let mut price_volume_sum = 0.0;
@@ -436,7 +436,7 @@ impl HMA {
 
         // Sequential computation (HMA windows are typically small)
         for i in (period - 1)..n {
-            let window = data.slice(s![i - period + 1..=i]);
+            let window = data.slice(s![i + 1 - period..=i]);
 
             // Vectorized weighted sum
             let weighted_sum: f64 = window

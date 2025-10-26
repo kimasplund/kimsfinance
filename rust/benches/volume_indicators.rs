@@ -1,6 +1,6 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::indicators::*;
-use ndarray::{Array1, arr1};
+use ndarray::Array1;
 
 fn generate_ohlcv(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
     let high: Array1<f64> = (0..n).map(|i| 100.0 + (i as f64) * 0.1).collect();

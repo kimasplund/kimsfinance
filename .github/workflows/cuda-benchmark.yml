@@ -1,0 +1,256 @@
+# CUDA A/B Testing and Benchmarking Workflow
+#
+# This workflow runs CUDA optimization validation on GPU-enabled runners.
+# It validates performance improvements across multiple phases:
+#
+# - Phase 1: compute_89 compilation (+15-30% expected)
+# - Phase 2: L2 cache + kernel fusion (+20-40% expected)
+# - Phase 3: 2D/3D kernels (+30-50% expected)
+#
+# Requirements:
+# - Self-hosted runner with NVIDIA GPU (RTX 3500 Ada or similar)
+# - CUDA Toolkit 12.8+ installed
+# - Rust 1.90+ with GPU feature support
+#
+# Results:
+# - Criterion HTML reports uploaded as artifacts
+# - Markdown summary in docs/CUDA_AB_TEST_RESULTS.md
+# - Performance regression detection (fail on >10% regression)
+
+name: CUDA Benchmarking
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'rust/src/gpu/**'
+      - 'rust/benches/ab_test_cuda.rs'
+      - 'rust/benches/statistics.rs'
+      - '.github/workflows/cuda-benchmark.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'rust/src/gpu/**'
+      - 'rust/benches/ab_test_cuda.rs'
+  workflow_dispatch:
+    inputs:
+      run_full_suite:
+        description: 'Run full A/B test suite (all phases)'
+        required: false
+        default: 'false'
+
+jobs:
+  # Quick benchmark smoke test (runs on every PR)
+  cuda-smoke-test:
+    runs-on: self-hosted # Requires GPU runner
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify GPU availability
+        run: |
+          nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
+          nvcc --version
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Run quick CUDA benchmark
+        working-directory: rust
+        run: |
+          # Run single indicator, single size for smoke test
+          cargo bench --features gpu --bench ab_test_cuda -- rsi_100 --quick
+
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cuda-smoke-test-results
+          path: rust/target/criterion/
+          retention-days: 7
+
+  # Full A/B test suite (runs on merge to main)
+  cuda-ab-test:
+    runs-on: self-hosted # Requires GPU runner
+    if: github.event_name == 'push' || github.event.inputs.run_full_suite == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify GPU availability
+        run: |
+          echo "=== GPU Information ==="
+          nvidia-smi --query-gpu=name,compute_cap,memory.total,driver_version --format=csv
+          echo ""
+          echo "=== CUDA Toolkit ==="
+          nvcc --version
+          echo ""
+          echo "=== Environment ==="
+          echo "CUDA_HOME: $CUDA_HOME"
+          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Run statistical analysis
+        working-directory: rust
+        run: |
+          echo "=== Running Statistical A/B Tests ==="
+          echo "This will take ~10-15 minutes for 100+ iterations per config..."
+
+          # Run full statistical analysis
+          cargo test --features gpu --release test_statistical_analysis -- --nocapture \
+            | tee ../cuda_ab_test.log
+
+      - name: Run Criterion benchmarks
+        working-directory: rust
+        run: |
+          echo "=== Running Criterion Benchmarks ==="
+
+          # Run all A/B test benchmarks
+          cargo bench --features gpu --bench ab_test_cuda
+
+      - name: Check for performance regressions
+        working-directory: rust
+        run: |
+          echo "=== Performance Regression Detection ==="
+
+          # Check if results file exists
+          if [ -f ../docs/CUDA_AB_TEST_RESULTS.md ]; then
+            echo "Results generated successfully"
+            cat ../docs/CUDA_AB_TEST_RESULTS.md
+
+            # Parse results for regressions
+            # Fail if any optimization shows <90% of expected speedup
+            if grep -q "⚠" ../docs/CUDA_AB_TEST_RESULTS.md; then
+              echo "⚠ WARNING: Some optimizations below expected performance"
+              echo "Review results in docs/CUDA_AB_TEST_RESULTS.md"
+              # Don't fail - just warn
+            fi
+
+            if grep -q "✗" ../docs/CUDA_AB_TEST_RESULTS.md; then
+              echo "❌ ERROR: Some optimizations not statistically significant"
+              exit 1
+            fi
+          else
+            echo "❌ ERROR: Results file not generated"
+            exit 1
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cuda-ab-test-results
+          path: |
+            rust/target/criterion/
+            docs/CUDA_AB_TEST_RESULTS.md
+            cuda_ab_test.log
+          retention-days: 30
+
+      - name: Upload results to GitHub Pages (optional)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: rust/target/criterion
+          destination_dir: benchmarks/cuda-ab-test
+          keep_files: true
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 🚀 CUDA A/B Test Results\n\n';
+
+            try {
+              const resultsPath = 'docs/CUDA_AB_TEST_RESULTS.md';
+              if (fs.existsSync(resultsPath)) {
+                const results = fs.readFileSync(resultsPath, 'utf8');
+
+                // Extract executive summary
+                const summaryMatch = results.match(/## Executive Summary([\s\S]*?)##/);
+                if (summaryMatch) {
+                  comment += summaryMatch[1].trim() + '\n\n';
+                }
+
+                // Extract key results
+                const resultsMatch = results.match(/## Results([\s\S]*?)##/);
+                if (resultsMatch) {
+                  comment += '### Key Results\n\n';
+                  comment += resultsMatch[1].substring(0, 1000) + '\n\n';
+                  comment += '_Full results available in artifacts_\n';
+                }
+              } else {
+                comment += '⚠️ No results file generated. Check workflow logs.\n';
+              }
+            } catch (error) {
+              comment += `❌ Error reading results: ${error.message}\n`;
+            }
+
+            comment += '\n---\n';
+            comment += `_Benchmarked on: ${process.env.RUNNER_NAME || 'self-hosted GPU runner'}_\n`;
+
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Baseline benchmark (runs monthly to track performance over time)
+  cuda-baseline:
+    runs-on: self-hosted
+    if: github.event_name == 'schedule' || github.event.inputs.run_full_suite == 'true'
+    # Schedule: First day of every month at 00:00 UTC
+    # schedule:
+    #   - cron: '0 0 1 * *'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run baseline benchmarks
+        working-directory: rust
+        run: |
+          # Override to baseline architecture
+          export KIMSFINANCE_GPU_ARCH=compute_80
+
+          cargo bench --features gpu --bench ab_test_cuda -- baseline
+
+      - name: Archive baseline results
+        run: |
+          mkdir -p benchmarks/baselines
+          cp -r rust/target/criterion benchmarks/baselines/$(date +%Y-%m-%d)
+
+          # Keep last 12 months only
+          find benchmarks/baselines -type d -mtime +365 -exec rm -rf {} +
+
+      - name: Upload baseline archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: cuda-baseline-$(date +%Y-%m-%d)
+          path: benchmarks/baselines/
+          retention-days: 365

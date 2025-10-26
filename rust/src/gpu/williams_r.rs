@@ -5,7 +5,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
-use cudarc::nvrtc::compile_ptx;
+use crate::gpu::compile::compile_ptx_optimized;
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -135,7 +135,7 @@ pub fn williams_r_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx(WILLIAMS_R_KERNEL)
+    let ptx = compile_ptx_optimized(WILLIAMS_R_KERNEL)
         .map_err(|e| GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e)))?;
 
     // Load module (use context, not stream)

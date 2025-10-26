@@ -563,7 +563,7 @@ impl CCI {
             let cci_values: Vec<f64> = ((self.period - 1)..n)
                 .into_par_iter()
                 .map(|i| {
-                    let window_start = i - self.period + 1;
+                    let window_start = i + 1 - self.period;  // Reorder to avoid underflow
                     let sma_val = sma_tp[i];
 
                     // Vectorized mean deviation calculation
@@ -590,7 +590,7 @@ impl CCI {
             let constant = 0.015;
 
             for i in (self.period - 1)..n {
-                let window_start = i - self.period + 1;
+                let window_start = i + 1 - self.period;  // Reorder to avoid underflow
                 let sma_val = sma_tp[i];
 
                 // Cache-friendly mean deviation with unrolled accumulation

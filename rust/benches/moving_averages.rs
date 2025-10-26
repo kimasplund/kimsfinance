@@ -1,6 +1,6 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::indicators::{DEMA, EMA, HMA, Indicator, SMA, TEMA, VWMA, WMA};
-use ndarray::{Array1, arr1};
+use ndarray::Array1;
 
 fn benchmark_sma(c: &mut Criterion) {
     let mut group = c.benchmark_group("SMA");

@@ -1,6 +1,13 @@
+//! Test SMA Shared Memory Implementation
+//!
+//! This example requires GPU feature to be enabled.
+
+#[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::{GpuDevice, sma_gpu, sma_gpu_shared};
+#[cfg(feature = "gpu")]
 use ndarray::Array1;
 
+#[cfg(feature = "gpu")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = GpuDevice::new()?;
     

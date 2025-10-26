@@ -242,11 +242,30 @@ pub enum GpuError {
     /// Device synchronization failed
     SynchronizationError(String),
 
-    /// Invalid parameters
+    /// Invalid parameters (dynamic message)
     InvalidParameter(String),
 
     /// cudarc driver error
     DriverError(DriverError),
+
+    /// Computation error (dynamic message)
+    ComputationError(String),
+
+    // ===== Static Error Variants (Zero-Allocation) =====
+    /// Empty OHLCV data provided
+    EmptyOhlcvData,
+
+    /// OHLCV arrays have mismatched lengths
+    OhlcvLengthMismatch,
+
+    /// Parameter grid is empty
+    EmptyParameterGrid,
+
+    /// Invalid parameter with static message
+    InvalidParameterStatic(&'static str),
+
+    /// Computation error with static message
+    ComputationErrorStatic(&'static str),
 }
 
 impl std::fmt::Display for GpuError {
@@ -260,6 +279,13 @@ impl std::fmt::Display for GpuError {
             GpuError::SynchronizationError(msg) => write!(f, "GPU synchronization error: {}", msg),
             GpuError::InvalidParameter(msg) => write!(f, "Invalid GPU parameter: {}", msg),
             GpuError::DriverError(e) => write!(f, "CUDA driver error: {:?}", e),
+            GpuError::ComputationError(msg) => write!(f, "Computation error: {}", msg),
+            // Static error variants (zero-allocation)
+            GpuError::EmptyOhlcvData => write!(f, "Empty OHLCV data"),
+            GpuError::OhlcvLengthMismatch => write!(f, "OHLCV arrays must have same length"),
+            GpuError::EmptyParameterGrid => write!(f, "Parameter grid is empty"),
+            GpuError::InvalidParameterStatic(msg) => write!(f, "Invalid GPU parameter: {}", msg),
+            GpuError::ComputationErrorStatic(msg) => write!(f, "Computation error: {}", msg),
         }
     }
 }

@@ -5,7 +5,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
-use cudarc::nvrtc::compile_ptx;
+use crate::gpu::compile::compile_ptx_optimized;
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -144,7 +144,7 @@ pub fn vwma_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx(VWMA_KERNEL).map_err(|e| {
+    let ptx = compile_ptx_optimized(VWMA_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile VWMA kernel: {:?}", e))
     })?;
 

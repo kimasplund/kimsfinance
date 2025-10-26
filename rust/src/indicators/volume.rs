@@ -20,6 +20,12 @@ use rayon::prelude::*;
 /// Cumulative volume indicator that adds volume on up days, subtracts on down days.
 pub struct OBV;
 
+impl Default for OBV {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OBV {
     pub fn new() -> Self {
         Self
@@ -73,6 +79,12 @@ impl Indicator for OBV {
 ///
 /// Average price weighted by volume, typically calculated from market open.
 pub struct VWAP;
+
+impl Default for VWAP {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl VWAP {
     pub fn new() -> Self {
