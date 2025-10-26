@@ -53,9 +53,15 @@ pub mod gpu;
 
 pub mod autotuner;
 
+pub mod backtest;
+
+pub mod strategies;
+
 use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch};
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};
+
+use backtest::{BacktestEngine, BacktestConfig, Signal, OHLCVBar, IndicatorConfig, Strategy, IndicatorValues};
 
 /// Calculate coordinates for candlestick chart rendering (Rust-accelerated)
 ///
@@ -1072,7 +1078,27 @@ fn calculate_volume_profile<'py>(
 /// * `open_prices` - Array of open prices
 /// * `close` - Array of close prices
 /// * `volume` - Array of volume data
-/// * `requests` - List of (indicator_name, json_params) tuples
+/// * `requests` - List of indicator requests (see formats below)
+///
+/// # Request Formats
+///
+/// ## 2-tuple format (backwards compatible):
+/// ```python
+/// requests = [
+///     ("sma", '{"period": 14}'),  # Output key: "sma"
+///     ("rsi", '{"period": 14}'),  # Output key: "rsi"
+/// ]
+/// ```
+///
+/// ## 3-tuple format (allows duplicate indicators with different parameters):
+/// ```python
+/// requests = [
+///     ("sma_14", "sma", '{"period": 14}'),  # Output key: "sma_14"
+///     ("sma_50", "sma", '{"period": 50}'),  # Output key: "sma_50"
+///     ("rsi_7", "rsi", '{"period": 7}'),    # Output key: "rsi_7"
+///     ("rsi_14", "rsi", '{"period": 14}'),  # Output key: "rsi_14"
+/// ]
+/// ```
 ///
 /// # JSON Parameters Format
 ///
@@ -1109,7 +1135,7 @@ fn calculate_volume_profile<'py>(
 /// ```
 ///
 /// # Returns
-/// Dictionary mapping indicator names to their results:
+/// Dictionary mapping output names to their results:
 /// - Single-output indicators: NumPy array
 /// - Multi-output indicators: Nested dict with named arrays
 ///
@@ -1124,6 +1150,7 @@ fn calculate_volume_profile<'py>(
 /// close = np.array([108.0, 112.0, 118.0, ...])
 /// volume = np.array([1000.0, 1500.0, 2000.0, ...])
 ///
+/// # 2-tuple format (backwards compatible)
 /// results = kimsfinance_core.calculate_indicators_batch(
 ///     high, low, open_prices, close, volume,
 ///     requests=[
@@ -1134,8 +1161,21 @@ fn calculate_volume_profile<'py>(
 ///     ]
 /// )
 ///
+/// # 3-tuple format (allows duplicates)
+/// results = kimsfinance_core.calculate_indicators_batch(
+///     high, low, open_prices, close, volume,
+///     requests=[
+///         ("sma_14", "sma", '{"period": 14}'),
+///         ("sma_50", "sma", '{"period": 50}'),
+///         ("rsi_7", "rsi", '{"period": 7}'),
+///         ("rsi_14", "rsi", '{"period": 14}'),
+///     ]
+/// )
+///
 /// # Access results
-/// rsi = results['rsi']  # NumPy array
+/// rsi = results['rsi']  # NumPy array (2-tuple format)
+/// sma_14 = results['sma_14']  # NumPy array (3-tuple format)
+/// sma_50 = results['sma_50']  # NumPy array (3-tuple format)
 /// macd_line = results['macd']['macd']  # Nested dict for multi-output
 /// macd_signal = results['macd']['signal']
 /// macd_histogram = results['macd']['histogram']
@@ -1152,7 +1192,7 @@ fn calculate_indicators_batch<'py>(
     open_prices: PyReadonlyArray1<'_, f64>,
     close: PyReadonlyArray1<'_, f64>,
     volume: PyReadonlyArray1<'_, f64>,
-    requests: Vec<(String, String)>,
+    requests: &Bound<'py, pyo3::types::PyList>,
 ) -> PyResult<Bound<'py, PyDict>> {
     // Convert PyReadonlyArray to ArrayView (zero-copy)
     let high_view = high.as_array();
@@ -1170,18 +1210,49 @@ fn calculate_indicators_batch<'py>(
         volume: volume_view,
     };
 
-    // Parse JSON parameters to IndicatorRequest
+    // Parse requests - support both 2-tuple and 3-tuple formats
     let parsed_requests: Result<Vec<(String, IndicatorRequest)>, PyErr> = requests
-        .into_iter()
-        .map(|(name, json_params)| {
-            parse_indicator_request(&name, &json_params)
-                .map(|req| (name.clone(), req))
-                .map_err(|e| {
-                    PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                        "Failed to parse params for '{}': {}",
-                        name, e
-                    ))
-                })
+        .iter()
+        .map(|item| {
+            let tuple = item.downcast::<pyo3::types::PyTuple>()?;
+            let len = tuple.len();
+
+            match len {
+                2 => {
+                    // 2-tuple format: (indicator_type, params_json)
+                    // Use indicator_type as both output name and indicator type
+                    let indicator_type: String = tuple.get_item(0)?.extract()?;
+                    let params_json: String = tuple.get_item(1)?.extract()?;
+
+                    parse_indicator_request(&indicator_type, &params_json)
+                        .map(|req| (indicator_type.clone(), req))
+                        .map_err(|e| {
+                            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                                "Failed to parse 2-tuple request for '{}': {}",
+                                indicator_type, e
+                            ))
+                        })
+                }
+                3 => {
+                    // 3-tuple format: (output_name, indicator_type, params_json)
+                    let output_name: String = tuple.get_item(0)?.extract()?;
+                    let indicator_type: String = tuple.get_item(1)?.extract()?;
+                    let params_json: String = tuple.get_item(2)?.extract()?;
+
+                    parse_indicator_request(&indicator_type, &params_json)
+                        .map(|req| (output_name.clone(), req))
+                        .map_err(|e| {
+                            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                                "Failed to parse 3-tuple request for '{}' (indicator: '{}'): {}",
+                                output_name, indicator_type, e
+                            ))
+                        })
+                }
+                _ => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid request format: expected 2-tuple (indicator_type, params_json) or 3-tuple (output_name, indicator_type, params_json), got {}-tuple",
+                    len
+                ))),
+            }
         })
         .collect();
 
@@ -1343,6 +1414,297 @@ fn parse_indicator_request(
     }
 }
 
+// ============================================================================
+// BACKTESTING API - Python Strategy Interface
+// ============================================================================
+
+/// Python strategy wrapper that calls user-defined Python code
+struct PyStrategyWrapper {
+    strategy_obj: Py<pyo3::types::PyAny>,
+    initial_capital: f64,
+}
+
+impl PyStrategyWrapper {
+    fn new(strategy_obj: Py<pyo3::types::PyAny>, initial_capital: f64) -> Self {
+        Self {
+            strategy_obj,
+            initial_capital,
+        }
+    }
+}
+
+impl Strategy for PyStrategyWrapper {
+    fn on_data(&mut self, bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
+        #[allow(deprecated)]
+        Python::with_gil(|py| {
+            // Convert bar to Python dict
+            let bar_dict = PyDict::new(py);
+            bar_dict.set_item("timestamp", bar.timestamp).ok()?;
+            bar_dict.set_item("open", bar.open).ok()?;
+            bar_dict.set_item("high", bar.high).ok()?;
+            bar_dict.set_item("low", bar.low).ok()?;
+            bar_dict.set_item("close", bar.close).ok()?;
+            bar_dict.set_item("volume", bar.volume).ok()?;
+
+            // Convert indicators to Python dict
+            let indicators_dict = PyDict::new(py);
+            for (key, value) in indicators {
+                indicators_dict.set_item(key, value).ok()?;
+            }
+
+            // Call Python strategy.on_data(bar, indicators)
+            let result = self
+                .strategy_obj
+                .call_method1(py, "on_data", (bar_dict, indicators_dict))
+                .ok()?;
+
+            // Convert Python string to Signal
+            let signal_str: String = result.extract(py).ok()?;
+            Some(match signal_str.to_lowercase().as_str() {
+                "buy" => Signal::Buy,
+                "sell" => Signal::Sell,
+                "hold" => Signal::Hold,
+                "short" => Signal::Short,
+                "cover" => Signal::Cover,
+                _ => Signal::Hold,
+            })
+        })
+        .unwrap_or(Signal::Hold)
+    }
+
+    fn indicators(&self) -> Vec<IndicatorConfig> {
+        #[allow(deprecated)]
+        Python::with_gil(|py| {
+            // Call Python strategy.get_indicators()
+            let result = self
+                .strategy_obj
+                .call_method0(py, "get_indicators")
+                .ok()?;
+
+            // Convert Python list of strings to IndicatorConfig
+            let indicators_list: Vec<String> = result.extract(py).ok()?;
+            let mut configs = Vec::new();
+
+            for indicator_str in indicators_list {
+                // Parse "indicator_period" format (e.g., "rsi_14", "atr_20")
+                let parts: Vec<&str> = indicator_str.split('_').collect();
+                if parts.len() >= 2 {
+                    let indicator_type = parts[0];
+                    let period: usize = parts[1].parse().unwrap_or(14);
+
+                    let config = match indicator_type {
+                        "rsi" => IndicatorConfig::RSI { period },
+                        "atr" => IndicatorConfig::ATR { period },
+                        "sma" => IndicatorConfig::SMA { period },
+                        "ema" => IndicatorConfig::EMA { period },
+                        "cci" => IndicatorConfig::CCI { period },
+                        "roc" => IndicatorConfig::ROC { period },
+                        "williamsr" | "williams" => IndicatorConfig::WilliamsR { period },
+                        _ => continue,
+                    };
+                    configs.push(config);
+                }
+            }
+
+            Some(configs)
+        })
+        .unwrap_or_default()
+    }
+
+    fn initial_capital(&self) -> f64 {
+        self.initial_capital
+    }
+
+    fn position_size(&self, equity: f64, signal: Signal) -> f64 {
+        #[allow(deprecated)]
+        Python::with_gil(|py| {
+            // Call Python strategy.position_size(equity, signal) if exists
+            let signal_str = match signal {
+                Signal::Buy => "buy",
+                Signal::Sell => "sell",
+                Signal::Hold => "hold",
+                Signal::Short => "short",
+                Signal::Cover => "cover",
+            };
+
+            self.strategy_obj
+                .call_method1(py, "position_size", (equity, signal_str))
+                .ok()?
+                .extract::<f64>(py)
+                .ok()
+        })
+        .unwrap_or(1.0) // Default: 100% allocation
+    }
+}
+
+/// Run backtest on OHLCV data with Python strategy
+///
+/// # Arguments
+///
+/// * `high` - Array of high prices
+/// * `low` - Array of low prices
+/// * `close` - Array of close prices
+/// * `open_prices` - Array of open prices
+/// * `volume` - Array of volume data
+/// * `timestamps` - Array of Unix timestamps
+/// * `strategy` - Python strategy object with on_data() and get_indicators() methods
+/// * `initial_capital` - Starting capital (default: 10000.0)
+/// * `trading_fee` - Trading fee per trade (default: 0.001 = 0.1%)
+/// * `slippage` - Slippage per trade (default: 0.0005 = 0.05%)
+/// * `use_gpu` - Enable GPU acceleration if available (default: True)
+///
+/// # Returns
+///
+/// Dictionary with backtest results:
+/// - `final_equity`: Final equity value
+/// - `total_return`: Total return percentage
+/// - `sharpe_ratio`: Annualized Sharpe ratio
+/// - `max_drawdown`: Maximum drawdown percentage
+/// - `win_rate`: Win rate percentage
+/// - `num_trades`: Number of trades executed
+/// - `profit_factor`: Gross profit / gross loss
+/// - `equity_curve`: NumPy array of equity values over time
+/// - `trades`: List of trade dictionaries
+///
+/// # Example
+///
+/// ```python
+/// import kimsfinance_core
+/// import numpy as np
+///
+/// class SimpleRSI:
+///     def on_data(self, bar, indicators):
+///         rsi = indicators.get('rsi_14', 50.0)
+///         if rsi < 30:
+///             return 'buy'
+///         elif rsi > 70:
+///             return 'sell'
+///         return 'hold'
+///
+///     def get_indicators(self):
+///         return ['rsi_14']
+///
+/// result = kimsfinance_core.run_backtest(
+///     high=df['high'].values,
+///     low=df['low'].values,
+///     close=df['close'].values,
+///     open_prices=df['open'].values,
+///     volume=df['volume'].values,
+///     timestamps=df['timestamp'].values,
+///     strategy=SimpleRSI(),
+///     use_gpu=True
+/// )
+///
+/// print(f"Sharpe: {result['sharpe_ratio']:.2f}")
+/// print(f"Return: {result['total_return']:.2f}%")
+/// ```
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (
+    high,
+    low,
+    close,
+    open_prices,
+    volume,
+    timestamps,
+    strategy,
+    initial_capital = 10_000.0,
+    trading_fee = 0.001,
+    slippage = 0.0005,
+    use_gpu = true
+))]
+fn run_backtest<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'_, f64>,
+    low: PyReadonlyArray1<'_, f64>,
+    close: PyReadonlyArray1<'_, f64>,
+    open_prices: PyReadonlyArray1<'_, f64>,
+    volume: PyReadonlyArray1<'_, f64>,
+    timestamps: PyReadonlyArray1<'_, i64>,
+    strategy: Py<pyo3::types::PyAny>,
+    initial_capital: f64,
+    trading_fee: f64,
+    slippage: f64,
+    use_gpu: bool,
+) -> PyResult<Bound<'py, PyDict>> {
+    use ndarray::Array1;
+
+    // Convert PyReadonlyArray to Array1 (owned)
+    let high_array = Array1::from_vec(high.as_slice()?.to_vec());
+    let low_array = Array1::from_vec(low.as_slice()?.to_vec());
+    let close_array = Array1::from_vec(close.as_slice()?.to_vec());
+    let open_array = Array1::from_vec(open_prices.as_slice()?.to_vec());
+    let volume_array = Array1::from_vec(volume.as_slice()?.to_vec());
+    let timestamps_vec = timestamps.as_slice()?.to_vec();
+
+    // Create backtest configuration
+    let config = BacktestConfig {
+        initial_capital,
+        trading_fee,
+        slippage,
+        use_gpu,
+        force_cpu: !use_gpu,
+    };
+
+    // Create backtest engine
+    let engine = BacktestEngine::with_config(config);
+
+    // Wrap Python strategy
+    let mut py_strategy = PyStrategyWrapper::new(strategy, initial_capital);
+
+    // Run backtest
+    let result = engine
+        .run(
+            &mut py_strategy,
+            &timestamps_vec,
+            &open_array,
+            &high_array,
+            &low_array,
+            &close_array,
+            &volume_array,
+        )
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+    // Convert BacktestResult to Python dictionary
+    let result_dict = PyDict::new(py);
+
+    result_dict.set_item("final_equity", result.final_equity)?;
+    result_dict.set_item("total_return", result.total_return)?;
+    result_dict.set_item("sharpe_ratio", result.sharpe_ratio)?;
+    result_dict.set_item("max_drawdown", result.max_drawdown)?;
+    result_dict.set_item("win_rate", result.win_rate)?;
+    result_dict.set_item("num_trades", result.num_trades)?;
+    result_dict.set_item("profit_factor", result.profit_factor)?;
+
+    // Convert equity curve to NumPy array
+    let equity_curve_array = Array1::from_vec(result.equity_curve);
+    result_dict.set_item("equity_curve", equity_curve_array.into_pyarray(py))?;
+
+    // Convert trades to list of dictionaries
+    let mut trades_list = Vec::new();
+    for trade in result.trades {
+        let trade_dict = PyDict::new(py);
+        trade_dict.set_item("entry_time", trade.entry_time)?;
+        trade_dict.set_item("exit_time", trade.exit_time)?;
+        trade_dict.set_item("entry_price", trade.entry_price)?;
+        trade_dict.set_item("exit_price", trade.exit_price)?;
+        trade_dict.set_item("quantity", trade.quantity)?;
+        trade_dict.set_item(
+            "direction",
+            match trade.direction {
+                backtest::TradeDirection::Long => "long",
+                backtest::TradeDirection::Short => "short",
+            },
+        )?;
+        trade_dict.set_item("pnl", trade.pnl)?;
+        trade_dict.set_item("pnl_percent", trade.pnl_percent)?;
+        trades_list.push(trade_dict);
+    }
+    result_dict.set_item("trades", trades_list)?;
+
+    Ok(result_dict)
+}
+
 /// Python module for kimsfinance core functionality
 #[pymodule]
 fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -1386,11 +1748,14 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Batch API (FFI overhead reduction)
     m.add_function(wrap_pyfunction!(calculate_indicators_batch, m)?)?;
 
+    // Backtesting API
+    m.add_function(wrap_pyfunction!(run_backtest, m)?)?;
+
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add(
         "__doc__",
-        "High-performance Rust implementation for kimsfinance (coordinates + 24 technical indicators + batch API)"
+        "High-performance Rust implementation for kimsfinance (coordinates + 24 technical indicators + batch API + backtesting)"
     )?;
 
     Ok(())
