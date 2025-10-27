@@ -861,7 +861,7 @@ mod tests {
 
     #[test]
     fn test_task_batch_creation() {
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
         assert_eq!(batch.len(), 0);
         assert!(batch.is_empty());
 
@@ -901,7 +901,7 @@ mod tests {
     fn test_persistent_single_task() {
         let device = GpuDevice::new().expect("GPU required");
 
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
         let data = vec![100.0, 102.0, 101.0, 103.0, 105.0, 104.0];
         batch.add_task(data.clone(), 3); // ROC period 3
 
@@ -948,7 +948,7 @@ mod tests {
     fn test_persistent_multi_task_batch() {
         let device = GpuDevice::new().expect("GPU required");
 
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
 
         // Task 1: ROC(14) on 100 points
         batch.add_task((0..100).map(|i| 100.0 + i as f64).collect(), 14);
@@ -1012,7 +1012,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_persistent_empty_batch_error() {
         let device = GpuDevice::new().expect("GPU required");
-        let batch = TaskBatch::new(); // Empty
+        let batch = RocBatch::new(); // Empty
 
         let result = execute_batch(&device, &batch);
         assert!(result.is_err(), "Empty batch should return error");
@@ -1033,7 +1033,7 @@ mod tests {
     fn test_persistent_large_batch() {
         let device = GpuDevice::new().expect("GPU required");
 
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
 
         // Add 100 tasks
         for i in 0..100 {
@@ -1104,7 +1104,7 @@ mod tests {
     fn test_persistent_single_element_task() {
         let device = GpuDevice::new().expect("GPU required");
 
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
         batch.add_task(vec![100.0], 1); // Single element, period=1
 
         let results = execute_batch(&device, &batch).expect("Execute failed");
@@ -1122,7 +1122,7 @@ mod tests {
     fn test_persistent_varying_periods() {
         let device = GpuDevice::new().expect("GPU required");
 
-        let mut batch = TaskBatch::new();
+        let mut batch = RocBatch::new();
         let data: Vec<f64> = (0..100).map(|i| 100.0 + i as f64).collect();
 
         // Same data, different periods

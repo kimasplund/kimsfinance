@@ -218,3 +218,12 @@ pub mod kernels_3d;
 
 #[cfg(feature = "gpu")]
 pub use kernels_3d::{SweepResult3D, rsi_sweep_3d_gpu, sharpe_reduction_gpu, sma_sweep_3d_gpu};
+
+#[cfg(feature = "gpu")]
+pub mod candles;
+
+#[cfg(feature = "gpu")]
+pub use candles::{
+    CandleAggregator, OHLCVCandle, RangeBarAggregator, RangeBarParams, RenkoAggregator,
+    RenkoParams, TradeData,
+};

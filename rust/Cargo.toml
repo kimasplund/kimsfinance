@@ -55,6 +55,7 @@ half = { version = "2.4", optional = true }  # For f16 support
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 chrono = "0.4"
+tempfile = "3.14"
 
 [profile.release]
 opt-level = 3
