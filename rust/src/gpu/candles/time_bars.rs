@@ -48,7 +48,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use super::super::persistent::traits::PersistentIndicator;
+use super::super::persistent::traits::{MultiOutputIndicator, PersistentIndicator};
 use super::traits::{CandleAggregator, TradeBasedAggregator};
 use super::types::{TradeData, OHLCVCandle};
 
@@ -137,9 +137,11 @@ const TIME_BAR_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
 
-// Define NAN constant for NVRTC
+// Define constants for NVRTC
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 #define CUDART_INF __longlong_as_double(0x7ff0000000000000ULL)
+#define LONG_MAX 9223372036854775807L
+#define LONG_MIN (-LONG_MAX - 1L)
 
 // TimeBarParams struct (must match Rust layout)
 struct TimeBarParams {
@@ -191,123 +193,94 @@ extern "C" __global__ void persistent_time_bars_kernel(
         const double* prices = input + n;
         const double* volumes = input + 2 * n;
 
-        // Step 1: Find number of unique buckets (single thread)
+        // Step 1: Find number of unique buckets (single thread per task)
+        // Use task_id % grid_size to assign one thread per task
         long min_bucket = LONG_MAX;
         long max_bucket = LONG_MIN;
+        int num_buckets = 0;
 
-        if (global_tid == 0) {
+        if (global_tid == task_id % grid_size) {
             for (int i = 0; i < n; i++) {
                 long ts = (long)timestamps[i];
                 long bucket = ts / interval;
                 if (bucket < min_bucket) min_bucket = bucket;
                 if (bucket > max_bucket) max_bucket = bucket;
             }
+            num_buckets = (int)(max_bucket - min_bucket + 1);
         }
 
-        // Broadcast min/max bucket to all threads (use shared memory)
-        __shared__ long shared_min_bucket;
-        __shared__ long shared_max_bucket;
-
-        if (threadIdx.x == 0) {
-            // Block 0 writes to shared memory
-            if (blockIdx.x == 0 && global_tid == 0) {
-                shared_min_bucket = min_bucket;
-                shared_max_bucket = max_bucket;
-            }
-        }
-
-        grid.sync(); // Wait for thread 0 to compute buckets
-
-        // All threads read from block 0's shared memory
-        if (blockIdx.x == 0) {
-            min_bucket = shared_min_bucket;
-            max_bucket = shared_max_bucket;
-        }
-
-        grid.sync(); // Broadcast to all blocks
-
-        int num_buckets = (int)(max_bucket - min_bucket + 1);
+        grid.sync(); // Ensure bucket calculation is complete
 
         if (num_buckets <= 0) {
             grid.sync();
             continue;
         }
 
-        // Output layout: [open(m), high(m), low(m), close(m), volume(m)]
-        double* out_open = output;
-        double* out_high = output + num_buckets;
-        double* out_low = output + 2 * num_buckets;
-        double* out_close = output + 3 * num_buckets;
-        double* out_volume = output + 4 * num_buckets;
+        // Single thread per task does all the work (sequential)
+        if (global_tid == task_id % grid_size) {
+            // Output layout: [open(m), high(m), low(m), close(m), volume(m)]
+            double* out_open = output;
+            double* out_high = output + num_buckets;
+            double* out_low = output + 2 * num_buckets;
+            double* out_close = output + 3 * num_buckets;
+            double* out_volume = output + 4 * num_buckets;
 
-        // Step 2: Initialize buckets to NaN (parallel)
-        for (int bucket_idx = global_tid; bucket_idx < num_buckets; bucket_idx += grid_size) {
-            out_open[bucket_idx] = CUDART_NAN;
-            out_high[bucket_idx] = -CUDART_INF;
-            out_low[bucket_idx] = CUDART_INF;
-            out_close[bucket_idx] = CUDART_NAN;
-            out_volume[bucket_idx] = 0.0;
-        }
+            // Step 2: Initialize buckets with sentinel values
+            for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
+                out_open[bucket_idx] = -1.0; // Sentinel (prices are always positive)
+                out_high[bucket_idx] = -CUDART_INF;
+                out_low[bucket_idx] = CUDART_INF;
+                out_close[bucket_idx] = -1.0; // Sentinel
+                out_volume[bucket_idx] = 0.0;
+            }
 
-        grid.sync();
+            // Step 3: Aggregate trades into buckets (sequential)
+            for (int i = 0; i < n; i++) {
+                long ts = (long)timestamps[i];
+                double price = prices[i];
+                double vol = volumes[i];
 
-        // Step 3: Aggregate trades into buckets (parallel with atomics)
-        for (int i = global_tid; i < n; i += grid_size) {
-            long ts = (long)timestamps[i];
-            double price = prices[i];
-            double vol = volumes[i];
+                long bucket = ts / interval;
+                int bucket_idx = (int)(bucket - min_bucket);
 
-            long bucket = ts / interval;
-            int bucket_idx = (int)(bucket - min_bucket);
-
-            if (bucket_idx >= 0 && bucket_idx < num_buckets) {
-                // Open: First trade in bucket (atomic CAS)
-                // If current value is NaN, set to price
-                unsigned long long* open_ptr = (unsigned long long*)&out_open[bucket_idx];
-                unsigned long long nan_bits = 0x7ff8000000000000ULL;
-                unsigned long long price_bits = __double_as_longlong(price);
-                atomicCAS(open_ptr, nan_bits, price_bits);
-
-                // High: Maximum price (atomic max)
-                atomicMax((unsigned long long*)&out_high[bucket_idx], __double_as_longlong(price));
-
-                // Low: Minimum price (atomic min)
-                // Note: Using unsigned comparison, so need to handle negative correctly
-                unsigned long long old_low;
-                unsigned long long* low_ptr = (unsigned long long*)&out_low[bucket_idx];
-                do {
-                    old_low = *low_ptr;
-                    double old_low_val = __longlong_as_double(old_low);
-                    if (price < old_low_val) {
-                        unsigned long long new_low = __double_as_longlong(price);
-                        if (atomicCAS(low_ptr, old_low, new_low) == old_low) {
-                            break;
-                        }
-                    } else {
-                        break;
+                if (bucket_idx >= 0 && bucket_idx < num_buckets) {
+                    // Open: First trade in bucket (check sentinel)
+                    if (out_open[bucket_idx] < 0.0) {
+                        out_open[bucket_idx] = price;
                     }
-                } while (true);
 
-                // Close: Last trade in bucket (always update)
-                // Simple approach: use atomic exchange (not perfect for "last" but close enough)
-                atomicExch((unsigned long long*)&out_close[bucket_idx], price_bits);
+                    // High: Maximum price
+                    if (price > out_high[bucket_idx]) {
+                        out_high[bucket_idx] = price;
+                    }
 
-                // Volume: Sum all volumes (atomic add)
-                atomicAdd(&out_volume[bucket_idx], vol);
+                    // Low: Minimum price
+                    if (price < out_low[bucket_idx]) {
+                        out_low[bucket_idx] = price;
+                    }
+
+                    // Close: Last trade (always update)
+                    out_close[bucket_idx] = price;
+
+                    // Volume: Sum
+                    out_volume[bucket_idx] += vol;
+                }
             }
-        }
 
-        grid.sync();
-
-        // Step 4: Clean up high/low infinities (parallel)
-        for (int bucket_idx = global_tid; bucket_idx < num_buckets; bucket_idx += grid_size) {
-            // If high is still -INF, set to NaN
-            if (out_high[bucket_idx] == -CUDART_INF) {
-                out_high[bucket_idx] = CUDART_NAN;
-            }
-            // If low is still +INF, set to NaN
-            if (out_low[bucket_idx] == CUDART_INF) {
-                out_low[bucket_idx] = CUDART_NAN;
+            // Step 4: Clean up sentinel/infinity values to NaN for empty buckets
+            for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
+                if (out_open[bucket_idx] < 0.0) {
+                    out_open[bucket_idx] = CUDART_NAN;
+                }
+                if (out_high[bucket_idx] == -CUDART_INF) {
+                    out_high[bucket_idx] = CUDART_NAN;
+                }
+                if (out_low[bucket_idx] == CUDART_INF) {
+                    out_low[bucket_idx] = CUDART_NAN;
+                }
+                if (out_close[bucket_idx] < 0.0) {
+                    out_close[bucket_idx] = CUDART_NAN;
+                }
             }
         }
 
@@ -336,6 +309,8 @@ impl PersistentIndicator for TimeBarAggregator {
         5 // open, high, low, close, volume
     }
 }
+
+impl MultiOutputIndicator for TimeBarAggregator {}
 
 impl CandleAggregator for TimeBarAggregator {
     type InputData = TradeData;
@@ -407,14 +382,16 @@ mod tests {
 
         assert_eq!(results.len(), 1);
 
-        // Should produce 1 candle with 5 values (OHLCV)
+        // Multi-output format: results[0] contains [opens, highs, lows, closes, volumes]
+        // For 1 candle: [open, high, low, close, volume] = 5 values total
         assert_eq!(results[0].len(), 5, "Should have 1 candle (5 values)");
 
-        let open = results[0][0];
-        let high = results[0][1];
-        let low = results[0][2];
-        let close = results[0][3];
-        let volume = results[0][4];
+        // Extract from multi-output format (each output is 1 value for 1 candle)
+        let open = results[0][0];   // First (and only) open
+        let high = results[0][1];   // First (and only) high
+        let low = results[0][2];    // First (and only) low
+        let close = results[0][3];  // First (and only) close
+        let volume = results[0][4]; // First (and only) volume
 
         // Validate OHLCV
         assert!((open - 50000.0).abs() < 1e-6, "Open should be first trade: {}", open);
