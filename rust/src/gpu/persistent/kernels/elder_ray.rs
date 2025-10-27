@@ -28,8 +28,8 @@ pub struct ElderRayIndicator;
 
 /// CUDA kernel for persistent Elder Ray calculation
 ///
-/// Requires three input arrays: high, low, ema (pre-calculated on CPU)
-/// Produces two outputs: bull_power, bear_power
+/// Input buffer layout: [high(n), low(n), ema(n)] - concatenated
+/// Output buffer layout: [bull_power(n), bear_power(n)] - concatenated
 const ELDER_RAY_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -38,9 +38,7 @@ namespace cg = cooperative_groups;
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 
 extern "C" __global__ void persistent_elder_ray_kernel(
-    const double** __restrict__ high_batch,      // Array of high price pointers
-    const double** __restrict__ low_batch,       // Array of low price pointers
-    const double** __restrict__ ema_batch,       // Array of EMA pointers (pre-calculated)
+    const double** __restrict__ input_batch,     // Array of input pointers (high+low+ema concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (bull+bear)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const int* __restrict__ ema_periods,         // Array of EMA periods (for NaN range)
@@ -54,12 +52,16 @@ extern "C" __global__ void persistent_elder_ray_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* high = high_batch[task_id];
-        const double* low = low_batch[task_id];
-        const double* ema = ema_batch[task_id];
-        double* output = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
         int ema_period = ema_periods[task_id];
+
+        // Split input buffer: [high(n), low(n), ema(n)]
+        const double* high = input;           // First n elements
+        const double* low = input + n;        // Next n elements
+        const double* ema = input + 2*n;      // Last n elements
+
+        double* output = output_batch[task_id];
 
         // Output layout: [bull_power[0..n], bear_power[0..n]]
         double* bull_power = output;

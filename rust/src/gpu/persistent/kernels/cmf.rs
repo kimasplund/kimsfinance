@@ -26,6 +26,8 @@ use super::super::traits::{PersistentIndicator, SingleOutputIndicator};
 pub struct CmfIndicator;
 
 /// CUDA kernel for persistent CMF calculation
+///
+/// Input buffer layout: [high(n), low(n), close(n), volume(n)] - concatenated
 const CMF_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -34,10 +36,7 @@ namespace cg = cooperative_groups;
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 
 extern "C" __global__ void persistent_cmf_kernel(
-    const double** __restrict__ high_batch,      // Array of high price pointers
-    const double** __restrict__ low_batch,       // Array of low price pointers
-    const double** __restrict__ close_batch,     // Array of close price pointers
-    const double** __restrict__ volume_batch,    // Array of volume pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (high+low+close+volume concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (CMF)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const int* __restrict__ periods,             // Array of CMF periods
@@ -51,13 +50,17 @@ extern "C" __global__ void persistent_cmf_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* high = high_batch[task_id];
-        const double* low = low_batch[task_id];
-        const double* close = close_batch[task_id];
-        const double* volume = volume_batch[task_id];
-        double* cmf = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
         int period = periods[task_id];
+
+        // Split input buffer: [high(n), low(n), close(n), volume(n)]
+        const double* high = input;           // First n elements
+        const double* low = input + n;        // Next n elements
+        const double* close = input + 2*n;    // Next n elements
+        const double* volume = input + 3*n;   // Last n elements
+
+        double* cmf = output_batch[task_id];
 
         // Grid-stride loop for this task's data
         for (int idx = global_tid; idx < n; idx += grid_size) {

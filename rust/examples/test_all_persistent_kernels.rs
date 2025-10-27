@@ -311,7 +311,12 @@ fn test_macd(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error:
 
 fn test_atr(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = AtrBatch::new();
-    batch.add_task(data.to_vec(), 14);
+    // ATR expects concatenated [high, low, close]
+    // For simple test, use same data for all three
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data);  // close
+    batch.add_task(combined, 14);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());

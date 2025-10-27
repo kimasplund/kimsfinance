@@ -58,8 +58,8 @@ impl StochasticParams {
 
 /// CUDA kernel for persistent Stochastic calculation
 ///
-/// Requires three input arrays: high, low, close
-/// Produces two outputs: %K line, %D line
+/// Input buffer layout: [high(n), low(n), close(n)] - concatenated
+/// Output buffer layout: [k_line(n), d_line(n)] - concatenated
 const STOCHASTIC_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -75,9 +75,7 @@ struct StochasticParams {
 };
 
 extern "C" __global__ void persistent_stochastic_kernel(
-    const double** __restrict__ high_batch,      // Array of high price pointers
-    const double** __restrict__ low_batch,       // Array of low price pointers
-    const double** __restrict__ close_batch,     // Array of close price pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (high+low+close concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (%K + %D concatenated)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const StochasticParams* __restrict__ params, // Array of Stochastic parameters
@@ -91,11 +89,15 @@ extern "C" __global__ void persistent_stochastic_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* high = high_batch[task_id];
-        const double* low = low_batch[task_id];
-        const double* close = close_batch[task_id];
-        double* output = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
+
+        // Split input buffer: [high(n), low(n), close(n)]
+        const double* high = input;           // First n elements
+        const double* low = input + n;        // Next n elements
+        const double* close = input + 2*n;    // Last n elements
+
+        double* output = output_batch[task_id];
 
         // Output layout: [k_line (n), d_line (n)]
         double* k_line = output;         // First n elements

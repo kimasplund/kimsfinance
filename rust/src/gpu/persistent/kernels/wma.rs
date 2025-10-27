@@ -39,7 +39,7 @@ namespace cg = cooperative_groups;
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 
 extern "C" __global__ void persistent_wma_kernel(
-    const double** __restrict__ close_batch,     // Array of close price pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (close prices)
     double** __restrict__ output_batch,          // Array of output pointers (WMA)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const int* __restrict__ periods,             // Array of WMA periods
@@ -53,7 +53,7 @@ extern "C" __global__ void persistent_wma_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* close = close_batch[task_id];
+        const double* close = input_batch[task_id];  // Single input: close prices
         double* wma = output_batch[task_id];
         int n = sizes[task_id];
         int period = periods[task_id];

@@ -31,8 +31,8 @@ pub struct DonchianIndicator;
 
 /// CUDA kernel for persistent Donchian Channels calculation
 ///
-/// Requires two input arrays: high, low
-/// Produces three outputs: upper, middle, lower (stored contiguously)
+/// Input buffer layout: [high(n), low(n)] - concatenated
+/// Output buffer layout: [upper(n), middle(n), lower(n)] - concatenated
 const DONCHIAN_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -42,8 +42,7 @@ namespace cg = cooperative_groups;
 #define CUDART_INF __longlong_as_double(0x7ff0000000000000ULL)
 
 extern "C" __global__ void persistent_donchian_kernel(
-    const double** __restrict__ high_batch,      // Array of high price pointers
-    const double** __restrict__ low_batch,       // Array of low price pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (high+low concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (upper+middle+lower concatenated)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const int* __restrict__ periods,             // Array of periods
@@ -57,11 +56,15 @@ extern "C" __global__ void persistent_donchian_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* high = high_batch[task_id];
-        const double* low = low_batch[task_id];
-        double* output = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
         int period = periods[task_id];
+
+        // Split input buffer: [high(n), low(n)]
+        const double* high = input;           // First n elements
+        const double* low = input + n;        // Next n elements
+
+        double* output = output_batch[task_id];
 
         // Output layout: [upper (n), middle (n), lower (n)]
         double* upper = output;              // First n elements

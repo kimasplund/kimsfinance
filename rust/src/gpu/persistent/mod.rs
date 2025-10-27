@@ -406,8 +406,11 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         }
     } else {
         // Allocate pinned output buffers (single contiguous buffer per task)
+        let num_inputs = I::num_inputs();
         for task in batch.tasks() {
-            let output_size = task.data.len() * num_outputs;
+            // For multi-input indicators, data is concatenated so divide by num_inputs first
+            let n = task.data.len() / num_inputs;
+            let output_size = n * num_outputs;
             match PinnedBuffer::new(output_size) {
                 Ok(pinned) => h_outputs.push(vec![Some(pinned)]),
                 Err(e) => {
@@ -431,6 +434,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
     let mut d_inputs = Vec::with_capacity(num_tasks);
     let mut d_outputs = Vec::with_capacity(num_tasks);
 
+    let num_inputs = I::num_inputs();
     for task in batch.tasks() {
         let input_buf = device.allocate_device_buffer(task.data.len())?;
         d_inputs.push(input_buf);
@@ -438,7 +442,9 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         // Allocate single contiguous buffer for all outputs
         // Multi-output (e.g., MACD with 3 outputs): allocate size = n * num_outputs
         // Single-output (e.g., ROC with 1 output): allocate size = n
-        let output_size = task.data.len() * num_outputs;
+        // For multi-input indicators, data is concatenated so divide by num_inputs first
+        let n = task.data.len() / num_inputs;
+        let output_size = n * num_outputs;
         let output_buf = device.allocate_device_buffer(output_size)?;
         d_outputs.push(vec![output_buf]);  // Wrap in vec for consistency
     }
@@ -481,19 +487,31 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         })?;
 
     // Copy sizes and parameters
-    let sizes: Vec<i32> = batch.tasks().iter().map(|t| t.data.len() as i32).collect();
+    // For multi-input indicators, data is concatenated so divide by num_inputs
+    let num_inputs = I::num_inputs() as i32;
+    let sizes: Vec<i32> = batch
+        .tasks()
+        .iter()
+        .map(|t| (t.data.len() as i32) / num_inputs)
+        .collect();
     let d_sizes = device.copy_to_device_i32(&sizes)?;
 
     // Extract parameters - for i32 params (ROC, RSI, ATR), we can directly copy
     // For complex types like MacdParams, this will need special handling
+    // For zero-sized types like () (OBV), use dummy value
     let periods: Vec<i32> = batch
         .tasks()
         .iter()
         .map(|t| {
-            // SAFETY: This assumes I::Params is either i32 or can be safely transmuted to i32.
-            // For MacdParams (12 bytes), this will copy first 4 bytes (fast_period).
-            // This works for ROC/RSI/ATR (i32 params), but may need refinement for MACD.
-            unsafe { std::mem::transmute_copy::<I::Params, i32>(&t.params) }
+            if std::mem::size_of::<I::Params>() == 0 {
+                // Zero-sized type (e.g., () for OBV) - use dummy value
+                0i32
+            } else {
+                // SAFETY: This assumes I::Params is either i32 or can be safely transmuted to i32.
+                // For MacdParams (12 bytes), this will copy first 4 bytes (fast_period).
+                // This works for ROC/RSI/ATR (i32 params), but may need refinement for MACD.
+                unsafe { std::mem::transmute_copy::<I::Params, i32>(&t.params) }
+            }
         })
         .collect();
     let d_periods = device.copy_to_device_i32(&periods)?;

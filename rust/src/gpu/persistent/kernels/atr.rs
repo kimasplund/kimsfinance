@@ -32,7 +32,7 @@ pub struct AtrIndicator;
 
 /// CUDA kernel for persistent ATR calculation
 ///
-/// Requires three input arrays: high, low, close
+/// Input buffer layout: [high(n), low(n), close(n)] - concatenated
 const ATR_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -41,9 +41,7 @@ namespace cg = cooperative_groups;
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 
 extern "C" __global__ void persistent_atr_kernel(
-    const double** __restrict__ high_batch,      // Array of high price pointers
-    const double** __restrict__ low_batch,       // Array of low price pointers
-    const double** __restrict__ close_batch,     // Array of close price pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (high+low+close concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (ATR values)
     const int* __restrict__ sizes,               // Array of dataset sizes
     const int* __restrict__ periods,             // Array of ATR periods
@@ -57,12 +55,16 @@ extern "C" __global__ void persistent_atr_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* high = high_batch[task_id];
-        const double* low = low_batch[task_id];
-        const double* close = close_batch[task_id];
-        double* atr = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
         int period = periods[task_id];
+
+        // Split input buffer: [high(n), low(n), close(n)]
+        const double* high = input;           // First n elements
+        const double* low = input + n;        // Next n elements
+        const double* close = input + 2*n;    // Last n elements
+
+        double* atr = output_batch[task_id];
 
         // Sequential calculation (one thread per task for dependency handling)
         if (global_tid == task_id % grid_size) {

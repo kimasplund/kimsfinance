@@ -27,6 +27,8 @@ use super::super::traits::{PersistentIndicator, SingleOutputIndicator};
 pub struct ObvIndicator;
 
 /// CUDA kernel for persistent OBV calculation
+///
+/// Input buffer layout: [close(n), volume(n)] - concatenated
 const OBV_KERNEL: &str = r#"
 #include <cooperative_groups.h>
 namespace cg = cooperative_groups;
@@ -35,10 +37,10 @@ namespace cg = cooperative_groups;
 #define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
 
 extern "C" __global__ void persistent_obv_kernel(
-    const double** __restrict__ close_batch,     // Array of close price pointers
-    const double** __restrict__ volume_batch,    // Array of volume pointers
+    const double** __restrict__ input_batch,     // Array of input pointers (close+volume concatenated)
     double** __restrict__ output_batch,          // Array of output pointers (OBV)
     const int* __restrict__ sizes,               // Array of dataset sizes
+    const void* __restrict__ dummy_params,       // Unused (OBV has no parameters)
     int num_tasks                                // Number of tasks to process
 ) {
     // Get grid group for cooperative synchronization
@@ -49,10 +51,14 @@ extern "C" __global__ void persistent_obv_kernel(
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
-        const double* close = close_batch[task_id];
-        const double* volume = volume_batch[task_id];
-        double* obv = output_batch[task_id];
+        const double* input = input_batch[task_id];
         int n = sizes[task_id];
+
+        // Split input buffer: [close(n), volume(n)]
+        const double* close = input;           // First n elements
+        const double* volume = input + n;      // Next n elements
+
+        double* obv = output_batch[task_id];
 
         // Sequential calculation (one thread per task for dependency handling)
         // Use modulo to assign one thread per task
