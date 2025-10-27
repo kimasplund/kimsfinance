@@ -1015,6 +1015,7 @@ All indicators are GPU-accelerated (optional) for massive datasets:
 - [Tutorial 3: Batch Processing](docs/tutorials/03_batch_processing.md) - High-volume chart generation
 - [Tutorial 4: Custom Themes](docs/tutorials/04_custom_themes.md) - Themes, colors, and styling
 - [Tutorial 5: Performance Tuning](docs/tutorials/05_performance_tuning.md) - Optimization techniques
+- [Tutorial 6: Backtesting](docs/tutorials/06_backtesting.md) - GPU-accelerated strategy testing (194x faster)
 
 ### Advanced Topics
 
