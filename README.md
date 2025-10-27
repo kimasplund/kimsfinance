@@ -49,7 +49,7 @@
 - **🚀 194x Faster**: Rust CPU implementation demolishes mplfinance (validated across 4 indicators)
 - **⚡ Peak Throughput**: 6,249 images/sec in batch processing mode with optimal settings
 - **🦀 Rust Performance**: 764x faster ATR, 3-5x faster moving averages vs mplfinance
-- **🔥 GPU Batch Processing**: 41x speedup with persistent kernels for batch indicator calculation
+- **🔥 GPU Batch Processing**: 41x speedup with persistent kernels - calculate 1000+ indicators in constant time
 - **📊 Superior Quality**: "OLED vs CRT TV" level improvement - sharper, clearer charts
 - **🎨 4 Professional Themes**: Classic, Modern, TradingView, Light - production-ready aesthetics
 - **💾 79% Smaller Files**: WebP lossless compression (0.5 KB vs 2.57 KB PNG)
@@ -122,7 +122,7 @@ kf.plot(df, output="chart.webp", theme="modern")
 
 | Metric | Benefit | Notes |
 |--------|---------|-------|
-| **GPU Batch Processing** | **41x faster** | Persistent kernels for batch indicators |
+| **GPU Batch Processing** | **41x faster** | Persistent kernels - 1000+ indicators in ~35ms constant time |
 | **Image Encoding** | **61x faster** | WebP fast mode (22ms vs 1,331ms) |
 | **File Size** | **79% smaller** | WebP lossless (0.5 KB vs 2.57 KB PNG) |
 | **Visual Quality** | **OLED-level** | Superior clarity over mplfinance |

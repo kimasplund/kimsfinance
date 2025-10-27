@@ -280,7 +280,7 @@ We're launching well within safe occupancy limits (128 blocks × 256 threads = 3
 
 ```bash
 # Clone repository
-git clone https://github.com/your-repo/kimsfinance
+git clone https://github.com/kimasplund/kimsfinance
 cd kimsfinance/rust
 
 # Build and run reproduction example
