@@ -69,9 +69,7 @@ struct MacdParams {
 
 extern "C" __global__ void persistent_macd_kernel(
     const double** __restrict__ input_batch,      // Array of input pointers (close prices)
-    double** __restrict__ macd_batch,             // Array of MACD line output pointers
-    double** __restrict__ signal_batch,           // Array of signal line output pointers
-    double** __restrict__ histogram_batch,        // Array of histogram output pointers
+    double** __restrict__ output_batch,           // Array of output pointers (macd+signal+histogram concatenated)
     const int* __restrict__ sizes,                // Array of dataset sizes
     const MacdParams* __restrict__ params,        // Array of MACD parameters
     int num_tasks                                 // Number of tasks to process
@@ -85,10 +83,13 @@ extern "C" __global__ void persistent_macd_kernel(
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
         const double* close = input_batch[task_id];
-        double* macd_line = macd_batch[task_id];
-        double* signal_line = signal_batch[task_id];
-        double* histogram = histogram_batch[task_id];
+        double* output = output_batch[task_id];
         int n = sizes[task_id];
+
+        // Output layout: [macd_line (n), signal_line (n), histogram (n)]
+        double* macd_line = output;              // First n elements
+        double* signal_line = output + n;        // Next n elements
+        double* histogram = output + 2*n;        // Last n elements
 
         MacdParams p = params[task_id];
         int fast_period = p.fast_period;

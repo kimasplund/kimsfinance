@@ -301,8 +301,8 @@ impl PersistentKernelManager {
 struct BatchBuffers {
     /// Host pinned memory for input buffers (if available)
     h_inputs: Vec<Option<PinnedBuffer<f64>>>,
-    /// Host pinned memory for output buffers (if available)
-    h_outputs: Vec<Option<PinnedBuffer<f64>>>,
+    /// Host pinned memory for output buffers (if available) - [task][output_idx]
+    h_outputs: Vec<Vec<Option<PinnedBuffer<f64>>>>,
     /// Whether pinned memory is being used (false = pageable fallback)
     using_pinned: bool,
 
@@ -312,8 +312,8 @@ struct BatchBuffers {
     d_output_ptrs: CudaSlice<u64>,
     /// Individual input buffers
     d_inputs: Vec<CudaSlice<f64>>,
-    /// Individual output buffers
-    d_outputs: Vec<CudaSlice<f64>>,
+    /// Individual output buffers - [task][output_idx]
+    d_outputs: Vec<Vec<CudaSlice<f64>>>,
     /// Dataset sizes
     d_sizes: CudaSlice<i32>,
     /// ROC periods
@@ -324,10 +324,11 @@ impl BatchBuffers {
     /// Get memory usage information for logging
     pub fn memory_info(&self) -> String {
         if self.using_pinned {
+            let total_outputs: usize = self.h_outputs.iter().map(|v| v.len()).sum();
             format!(
                 "✅ Using pinned memory ({} input buffers, {} output buffers)",
                 self.h_inputs.len(),
-                self.h_outputs.len()
+                total_outputs
             )
         } else {
             "⚠️  Using pageable memory (pinned allocation failed, expect 20-30% slower transfers)"
@@ -382,18 +383,27 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         }
     }
 
+    // Get number of outputs for this indicator type
+    let num_outputs = I::num_outputs();
+
     // If pinned allocation failed, clear and use None placeholders
     if !using_pinned {
         h_inputs.clear();
         for _ in 0..num_tasks {
             h_inputs.push(None);
-            h_outputs.push(None);
+            // Allocate Vec for each task's outputs
+            let mut task_outputs = Vec::with_capacity(num_outputs);
+            for _ in 0..num_outputs {
+                task_outputs.push(None);
+            }
+            h_outputs.push(task_outputs);
         }
     } else {
-        // Allocate pinned output buffers
+        // Allocate pinned output buffers (single contiguous buffer per task)
         for task in batch.tasks() {
-            match PinnedBuffer::new(task.data.len()) {
-                Ok(pinned) => h_outputs.push(Some(pinned)),
+            let output_size = task.data.len() * num_outputs;
+            match PinnedBuffer::new(output_size) {
+                Ok(pinned) => h_outputs.push(vec![Some(pinned)]),
                 Err(e) => {
                     eprintln!("⚠️  Pinned output buffer allocation failed: {:?}", e);
                     eprintln!("   Falling back to pageable memory");
@@ -403,7 +413,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
                     h_outputs.clear();
                     for _ in 0..num_tasks {
                         h_inputs.push(None);
-                        h_outputs.push(None);
+                        h_outputs.push(vec![None]);
                     }
                     break;
                 }
@@ -417,19 +427,27 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
 
     for task in batch.tasks() {
         let input_buf = device.allocate_device_buffer(task.data.len())?;
-        let output_buf = device.allocate_device_buffer(task.data.len())?;
         d_inputs.push(input_buf);
-        d_outputs.push(output_buf);
+
+        // Allocate single contiguous buffer for all outputs
+        // Multi-output (e.g., MACD with 3 outputs): allocate size = n * num_outputs
+        // Single-output (e.g., ROC with 1 output): allocate size = n
+        let output_size = task.data.len() * num_outputs;
+        let output_buf = device.allocate_device_buffer(output_size)?;
+        d_outputs.push(vec![output_buf]);  // Wrap in vec for consistency
     }
 
     // Create host-side pointer arrays
     let mut input_ptrs_host = Vec::with_capacity(num_tasks);
     let mut output_ptrs_host = Vec::with_capacity(num_tasks);
 
-    for (input_buf, output_buf) in d_inputs.iter().zip(d_outputs.iter()) {
+    for (input_buf, task_outputs) in d_inputs.iter().zip(d_outputs.iter()) {
         let (input_ptr, _) = input_buf.device_ptr(&device.stream);
-        let (output_ptr, _) = output_buf.device_ptr(&device.stream);
         input_ptrs_host.push(input_ptr as u64);
+
+        // Use first output for pointer array (maintains ROC/RSI/ATR compatibility)
+        // TODO: Full multi-output requires separate pointer arrays for each output
+        let (output_ptr, _) = task_outputs[0].device_ptr(&device.stream);
         output_ptrs_host.push(output_ptr as u64);
     }
 
@@ -577,18 +595,18 @@ fn download_batch_results(
 
     if buffers.using_pinned {
         // Fast path: Use pinned memory (20-30% faster)
-        for (i, d_output) in buffers.d_outputs.iter().enumerate() {
-            if let Some(pinned) = &mut buffers.h_outputs[i] {
-                // DMA transfer from device to pinned (fast!)
-                device.dtoh_pinned(d_output, pinned)?;
-                // Copy from pinned to Vec
+        for (task_idx, task_outputs) in buffers.d_outputs.iter().enumerate() {
+            // Download single contiguous buffer (contains all outputs)
+            if let Some(pinned) = &mut buffers.h_outputs[task_idx][0] {
+                device.dtoh_pinned(&task_outputs[0], pinned)?;
                 results.push(pinned.as_slice().to_vec());
             }
         }
     } else {
         // Fallback: Use pageable memory (traditional approach)
-        for output_buf in &buffers.d_outputs {
-            let result = device.copy_to_host(output_buf)?;
+        for task_outputs in &buffers.d_outputs {
+            // Download single contiguous buffer (contains all outputs)
+            let result = device.copy_to_host(&task_outputs[0])?;
             results.push(result);
         }
     }

@@ -78,15 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Test 3: MACD (Moving Average Convergence Divergence) - Trend indicator
-    // TODO: Multi-output support required (MACD has 3 outputs)
-    // Currently causes segfault due to single-output buffer allocation
     println!("3. Testing MACD (Moving Average Convergence Divergence)...");
-    println!("   ⚠️  MACD skipped: Multi-output support not yet implemented");
-    println!("   - MACD requires 3 output buffers per task (macd_line, signal_line, histogram)");
-    println!("   - Current implementation only allocates 1 output buffer per task");
-    println!("   - Fix estimate: 2-4 hours to implement multi-output buffer allocation\n");
-
-    /* Commented out until multi-output support is implemented:
     let mut macd_batch = MacdBatch::new();
     let macd_data: Vec<f64> = (0..100).map(|i| 100.0 + i as f64 * 0.5).collect();
     macd_batch.add_task(macd_data.clone(), MacdParams::standard());
@@ -100,7 +92,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let macd_results = execute_batch(&device, &macd_batch)?;
     println!("   ✓ MACD: {} tasks completed", macd_results.len());
-    **/
+    println!(
+        "   - MACD has {} outputs (macd_line, signal_line, histogram)",
+        3
+    );
+    println!(
+        "   - Result length for task 1: {} ({}x{} candles × 3 outputs)",
+        macd_results[0].len(),
+        macd_results[0].len() / 3,
+        3
+    );
+    println!(
+        "   - MACD[50] = {:.4}",
+        macd_results[0]
+            .get(50)
+            .copied()
+            .unwrap_or(f64::NAN)
+    );
+    println!(
+        "   - Signal[50] = {:.4}",
+        macd_results[0]
+            .get(150)
+            .copied()
+            .unwrap_or(f64::NAN)
+    );
+    println!(
+        "   - Histogram[50] = {:.4}\n",
+        macd_results[0]
+            .get(250)
+            .copied()
+            .unwrap_or(f64::NAN)
+    );
 
     // Test 4: ATR (Average True Range) - Volatility indicator
     println!("4. Testing ATR (Average True Range)...");
@@ -130,9 +152,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Summary
     println!("=== Summary ===");
-    println!("✓ 3/4 indicators tested successfully!");
-    println!("✓ Total tasks executed: 8 (3 ROC + 3 RSI + 2 ATR)");
-    println!("⚠️  MACD skipped (multi-output support pending)");
+    println!("✓ 4/4 indicators tested successfully!");
+    println!("✓ Total tasks executed: 10 (3 ROC + 3 RSI + 2 MACD + 2 ATR)");
+    println!("✓ Multi-output support working (MACD: 3 outputs per task)");
     println!("✓ Type safety enforced at compile time");
     println!("✓ Zero-cost abstraction with generic execute_batch");
     println!("✓ Dynamic occupancy query working (ROC: 192 blocks, RSI: 128 blocks)");
