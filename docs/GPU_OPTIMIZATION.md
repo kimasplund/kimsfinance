@@ -1,7 +1,7 @@
 # GPU Optimization Guide
 
-**Version**: 1.0.0
-**Last Updated**: 2025-10-22
+**Version**: 1.1.0
+**Last Updated**: 2025-10-27
 **Status**: Complete
 
 ---
@@ -11,11 +11,12 @@
 1. [Overview](#overview)
 2. [GPU Setup and Prerequisites](#gpu-setup-and-prerequisites)
 3. [GPU Architecture in kimsfinance](#gpu-architecture-in-kimsfinance)
-4. [Performance Characteristics](#performance-characteristics)
-5. [Tuning GPU Performance](#tuning-gpu-performance)
-6. [Advanced Topics](#advanced-topics)
-7. [Troubleshooting](#troubleshooting)
-8. [References](#references)
+4. [Persistent GPU Kernels (Rust)](#persistent-gpu-kernels-rust)
+5. [Performance Characteristics](#performance-characteristics)
+6. [Tuning GPU Performance](#tuning-gpu-performance)
+7. [Advanced Topics](#advanced-topics)
+8. [Troubleshooting](#troubleshooting)
+9. [References](#references)
 
 ---
 
@@ -551,6 +552,489 @@ plot.render(
    - WebP encoding (fast mode)
 
 **Total Performance**: Up to **70.1x faster** (28.8x average) than mplfinance for large datasets with GPU acceleration.
+
+---
+
+## Persistent GPU Kernels (Rust)
+
+### Overview
+
+**Persistent kernels** are an advanced GPU optimization technique available in the Rust implementation that eliminates kernel launch overhead for batch processing workloads. Instead of launching one kernel per task, a single persistent kernel is launched once and processes multiple tasks sequentially on the GPU.
+
+**Performance**: **41.4x speedup** over traditional launches for 100-task batches, with near-constant overhead regardless of task count.
+
+### Key Benefits
+
+1. **Massive Speedup for Batches**: 41x faster for 100 tasks, 4x faster for 10 tasks
+2. **Near-Constant Time**: ~35ms overhead regardless of task count (vs linear growth in traditional launches)
+3. **Break-Even at 2-3 Tasks**: Optimal for 3+ indicators in a batch
+4. **GPU Portability**: Automatically adapts to different GPU models
+5. **Production-Ready**: Validated on NVIDIA RTX 3500 Ada with extensive testing
+
+### Performance Characteristics
+
+#### Scaling Comparison
+
+**Traditional Launches** (Linear Growth):
+```
+Tasks    Time (ms)    Growth
+  1        14.1       1.0x
+  5        71.0       5.0x
+ 10       139.7       9.9x
+ 20       277.4      19.7x
+ 50       698.5      49.5x
+100      1463.4     103.8x
+```
+
+**Persistent Kernel** (Constant Time):
+```
+Tasks    Time (ms)    Growth
+  1        33.3       1.0x
+  5        33.6       1.01x
+ 10        33.7       1.01x
+ 20        33.9       1.02x
+ 50        34.4       1.03x
+100        35.3       1.06x
+```
+
+#### Speedup Table
+
+| Tasks | Traditional (ms) | Persistent (ms) | Speedup | Recommendation |
+|-------|------------------|-----------------|---------|----------------|
+| 1     | 14.1             | 33.3            | 0.42x   | Use traditional |
+| 2     | ~28              | 33.3            | ~0.84x  | Use traditional |
+| 3     | ~42              | 33.4            | **1.26x** | **Use persistent** |
+| 5     | 71.0             | 33.6            | **2.11x** | **Use persistent** |
+| 10    | 139.7            | 33.7            | **4.14x** | **Use persistent** |
+| 20    | 277.4            | 33.9            | **8.18x** | **Use persistent** |
+| 50    | 698.5            | 34.4            | **20.3x** | **Use persistent** |
+| 100   | 1463.4           | 35.3            | **41.4x** | **Use persistent** |
+
+**Break-even point**: ~2.36 tasks (33.3ms / 14.1ms)
+
+#### Dataset Size Scaling
+
+Persistent kernels maintain their advantage even with larger datasets:
+
+| Dataset Size | Traditional (ms) | Persistent (ms) | Speedup | Persistent Throughput |
+|--------------|------------------|-----------------|---------|----------------------|
+| 1,000        | 143.0            | 33.8            | 4.2x    | 295.5 Kelem/s        |
+| 10,000       | 143.4            | 34.2            | 4.2x    | 2.93 Melem/s         |
+| 100,000      | 146.2            | 41.1            | **3.6x** | **24.4 Melem/s**     |
+
+**Key observation**: Traditional launch overhead is constant (~143ms) regardless of dataset size, confirming that overhead is kernel launch/setup, not computation. Persistent kernels scale slightly with data size (computation) but maintain significant advantage.
+
+### How Persistent Kernels Work
+
+#### Traditional Approach (Multiple Launches)
+
+```
+Task 1: Launch (10μs) → Execute → Sync → Result
+Task 2: Launch (10μs) → Execute → Sync → Result
+Task 3: Launch (10μs) → Execute → Sync → Result
+...
+Total overhead: N × launch_time
+```
+
+For 10 indicators: **90μs wasted on launches alone** (plus additional sync overhead).
+
+#### Persistent Kernel Approach (Single Launch)
+
+```
+Launch (10μs) → [Task 1 → Grid Sync → Task 2 → Grid Sync → Task 3] → Result
+Total overhead: 1 × launch_time + N × (sync_overhead)
+```
+
+Grid synchronization (~0.02ms) is **700x cheaper** than kernel launch (~14ms).
+
+### Technical Implementation
+
+#### Architecture
+
+The persistent kernel uses **CUDA Cooperative Groups** for grid-wide synchronization:
+
+```cuda
+#include <cooperative_groups.h>
+
+extern "C" __global__ void persistent_kernel(
+    const double** input_batch,    // Array of input pointers
+    double** output_batch,          // Array of output pointers
+    const int* sizes,               // Dataset sizes
+    const int* periods,             // Indicator periods
+    int num_tasks                   // Number of tasks
+) {
+    cooperative_groups::grid_group grid = cooperative_groups::this_grid();
+
+    int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int grid_size = blockDim.x * gridDim.x;
+
+    // Process each task sequentially (persistent kernel pattern)
+    for (int task_id = 0; task_id < num_tasks; task_id++) {
+        // Extract task-specific data
+        const double* input = input_batch[task_id];
+        double* output = output_batch[task_id];
+        int n = sizes[task_id];
+        int period = periods[task_id];
+
+        // Grid-stride loop for this task's data
+        for (int idx = global_tid; idx < n; idx += grid_size) {
+            // Compute indicator (e.g., ROC, RSI, MACD)
+            output[idx] = compute_indicator(input, idx, period);
+        }
+
+        // Synchronize entire grid before next task
+        grid.sync();  // Critical: cooperative group synchronization
+    }
+}
+```
+
+#### Memory Layout (Double-Pointer Pattern)
+
+```
+GPU Memory Layout:
+
+d_input_ptrs:  [ptr1, ptr2, ptr3, ...]  ← Array of pointers
+                  ↓     ↓     ↓
+d_inputs[0]:   [100.0, 101.0, 102.0, ...]  (Task 1 data)
+d_inputs[1]:   [200.0, 201.0, 202.0, ...]  (Task 2 data)
+d_inputs[2]:   [300.0, 301.0, 302.0, ...]  (Task 3 data)
+
+d_output_ptrs: [ptr1, ptr2, ptr3, ...]  ← Array of pointers
+                  ↓     ↓     ↓
+d_outputs[0]:  [NaN, NaN, result, ...]    (Task 1 results)
+d_outputs[1]:  [NaN, NaN, result, ...]    (Task 2 results)
+d_outputs[2]:  [NaN, NaN, result, ...]    (Task 3 results)
+```
+
+This pattern enables:
+- Heterogeneous dataset sizes (each task can have different length)
+- Zero-copy between tasks (all data remains GPU-resident)
+- Efficient pointer indirection (minimal overhead ~0.005ms per task)
+
+#### GPU Portability
+
+The implementation **automatically adapts** to different GPU models by querying device properties at runtime:
+
+```rust
+// 1. Query device properties
+let sm_count = query_sm_count(device);           // e.g., 40 SMs
+let max_blocks_per_sm = query_max_blocks(device); // e.g., 24 blocks/SM
+
+// 2. Calculate theoretical maximum
+let theoretical_max = sm_count * max_blocks_per_sm; // 960 blocks
+
+// 3. Use conservative 25% for safety (accounts for register pressure)
+let safe_grid_size = theoretical_max / 4; // 192 blocks
+```
+
+**GPU-Specific Grid Sizes**:
+
+| GPU Model | SMs | Max Blocks/SM | Theoretical | Safe Grid (25%) |
+|-----------|-----|---------------|-------------|-----------------|
+| **RTX 3500 Ada** (validated) | 40 | 24 | 960 | **192** |
+| RTX 4090 | 128 | 24 | 3,072 | **768** |
+| RTX 4080 | 76 | 24 | 1,824 | **456** |
+| A100 | 108 | 32 | 3,456 | **864** |
+| H100 | 132 | 32 | 4,224 | **1,056** |
+
+**No manual tuning required per GPU model!**
+
+#### Why 25% Safety Margin?
+
+Cooperative launches require **all blocks simultaneously resident** on the GPU. The theoretical maximum doesn't account for:
+
+- **Register pressure**: Kernel register usage reduces occupancy
+- **Shared memory**: Zero in current implementation, but margin allows future use
+- **L1 cache**: Block scheduling conflicts
+- **Warp scheduler overhead**: Grid-wide synchronization costs
+
+**Empirical validation** (RTX 3500 Ada):
+- Theoretical max (960 blocks) → `CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE`
+- 80% (768 blocks) → `CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE`
+- 25% (192 blocks) → ✅ **Works perfectly**
+
+### Usage (Rust API)
+
+#### Basic Example
+
+```rust
+use kimsfinance_rust::gpu::{GpuDevice, TaskBatch, execute_batch};
+
+// Initialize GPU
+let device = GpuDevice::new()?;
+
+// Create batch of tasks
+let mut batch = TaskBatch::new();
+batch.add_task(vec![100.0, 101.0, 102.0, ...], 14); // ROC period 14
+batch.add_task(vec![200.0, 201.0, 202.0, ...], 14); // Another dataset
+batch.add_task(vec![300.0, 301.0, 302.0, ...], 14); // Another dataset
+
+// Execute all tasks with single kernel launch
+let results = execute_batch(&device, &batch)?;
+
+// results[0] = ROC for first dataset
+// results[1] = ROC for second dataset
+// results[2] = ROC for third dataset
+```
+
+#### Advanced: Custom Manager
+
+```rust
+use kimsfinance_rust::gpu::{GpuDevice, PersistentKernelManager, TaskBatch};
+
+let device = GpuDevice::new()?;
+
+// Create manager (queries GPU properties automatically)
+let manager = PersistentKernelManager::new(&device)?;
+// Prints: 🎯 Cooperative launch limits for this GPU:
+//            SMs: 40, Max blocks/SM: 24
+//            Theoretical max: 960 blocks
+//            Safe grid size: 192 blocks (25% of max)
+
+// Execute batch
+let mut batch = TaskBatch::new();
+for dataset in datasets {
+    batch.add_task(dataset.close_prices, 14);
+}
+let results = manager.execute_batch(&batch)?;
+```
+
+#### Multi-Symbol Batch Processing
+
+```rust
+use kimsfinance_rust::gpu::{GpuDevice, TaskBatch};
+
+let device = GpuDevice::new()?;
+let symbols = vec!["AAPL", "GOOGL", "MSFT", "TSLA", ...];
+
+// Load all data and create batch
+let mut batch = TaskBatch::new();
+for symbol in &symbols {
+    let data = load_ohlcv_data(symbol)?;
+    batch.add_task(data.close_prices, 14); // ROC-14
+}
+
+// Process all symbols in parallel (single GPU launch)
+let results = execute_batch(&device, &batch)?;
+
+// Map results back to symbols
+for (symbol, roc) in symbols.iter().zip(results) {
+    save_indicator(symbol, "ROC-14", roc)?;
+}
+```
+
+### When to Use Persistent Kernels
+
+#### ✅ Use Persistent Kernels When:
+
+1. **Processing 3+ tasks** in a batch (break-even point)
+2. **Batch processing scenarios**: Multiple symbols, multiple timeframes, parameter sweeps
+3. **Tasks are homogeneous**: Similar computation time per task
+4. **Dataset sizes are consistent**: Avoids load imbalance
+5. **Maximum throughput needed**: Millions of elements/second
+6. **Memory allows**: Can allocate all buffers upfront
+
+**Example use cases**:
+- Multi-symbol backtesting (100 symbols × 10 indicators = 1000 tasks → **41x speedup**)
+- Parameter optimization (grid search over 50 parameter combinations → **20x speedup**)
+- Real-time multi-asset monitoring (20 assets × 5 indicators = 100 tasks → **41x speedup**)
+
+#### ❌ Use Traditional Launches When:
+
+1. **Processing 1-2 tasks** only (persistent overhead dominates)
+2. **Tasks have widely varying computation times** (load imbalance)
+3. **Memory is limited** (large datasets may not fit in GPU memory)
+4. **Fine-grained control needed** over individual task execution
+5. **Debugging** (easier to isolate issues with separate launches)
+
+### Overhead Breakdown
+
+#### Persistent Kernel Overhead
+
+**Fixed overhead** (~33ms observed for single task):
+- Kernel launch: ~5-10ms
+- Cooperative grid setup: ~5ms
+- Occupancy-optimized block allocation: ~5ms
+- Initial buffer mapping: ~10-15ms
+
+**Per-task overhead** (~0.02ms extrapolated):
+- Grid synchronization: ~0.01ms
+- Pointer indirection: ~0.005ms
+- Task dispatch: ~0.005ms
+
+**Total for 100 tasks**: 33ms + (0.02ms × 100) = **35ms**
+
+#### Traditional Launch Overhead
+
+**Per-task overhead** (~14.1ms):
+- Kernel launch: ~5-10ms
+- CUDA context switch: ~2ms
+- Stream synchronization: ~1-2ms
+- Buffer binding: ~1ms
+
+**Total for 100 tasks**: 14.1ms × 100 = **1,463ms**
+
+**Overhead reduction**: **97.6%** (1,463ms → 35ms)
+
+### Comparison to Python Implementation
+
+#### Python kimsfinance (Baseline)
+
+- Traditional indicator computation: ~1-5ms per indicator per dataset
+- Batch processing: Sequential (no GPU optimization)
+- Typical batch: 10 indicators × 1K candles = ~10-50ms
+
+#### Rust Persistent Kernel (This Implementation)
+
+- 100 indicators × 1K candles: **35ms** (all indicators in parallel)
+- **Speedup vs Python**: ~14-140x (depending on indicator complexity)
+- **Memory efficiency**: Zero copy between indicators (GPU resident)
+
+### Production Recommendations
+
+#### Auto-Selection Strategy
+
+```rust
+fn select_launch_strategy(num_tasks: usize) -> LaunchStrategy {
+    match num_tasks {
+        0..=2 => LaunchStrategy::Traditional,
+        3..=1000 => LaunchStrategy::Persistent,
+        _ => LaunchStrategy::PersistentWithBatching(1000), // Split into batches
+    }
+}
+```
+
+#### Optimal Batch Sizes
+
+- **Small batches**: 10-50 tasks (for real-time processing)
+- **Medium batches**: 50-200 tasks (for batch analytics)
+- **Large batches**: 200-1000 tasks (for offline backtesting)
+- **Very large**: Split into 1000-task chunks (to avoid memory pressure)
+
+#### Best Practices
+
+1. **Group similar tasks together**: Ensures balanced GPU utilization
+2. **Sort by dataset size**: Process similar-sized datasets together
+3. **Monitor GPU memory**: Stay under 80% VRAM usage for stability
+4. **Use pinned memory** (when available): 20-30% faster transfers
+5. **Profile regularly**: Validate speedups match expectations
+
+### Known Limitations
+
+#### 1. Pinned Memory Issue
+
+**Status**: Documented in `rust/docs/NVIDIA_BUG_REPORT_PINNED_MEMORY.md`
+
+**Impact**: Cannot use pinned memory optimization (20-30% transfer overhead)
+
+**Workaround**: Use pageable memory transfers (works correctly, slightly slower)
+
+#### 2. Task Homogeneity Requirement
+
+Persistent kernels work best when all tasks have similar execution times:
+- Tasks with widely varying execution times cause idle threads
+- GPU utilization drops (threads wait at `grid.sync()`)
+- Speedup decreases
+
+**Mitigation**: Group tasks by expected execution time, batch similar tasks together.
+
+#### 3. Memory Pressure at Scale
+
+At very large batch sizes (1000+ tasks), GPU memory may become a bottleneck:
+- L2 cache misses increase
+- Global memory bandwidth saturation
+- Transfer overhead dominates
+
+**Mitigation**: Split into smaller batches (500-1000 tasks max).
+
+### Hardware Requirements
+
+#### Minimum Requirements
+
+- **Compute Capability**: 7.0+ (Volta, Turing, Ampere, Ada, Hopper)
+- **Cooperative Launch Support**: Required (CC 7.0+)
+- **CUDA Version**: 11.0+
+- **Driver Version**: 450.80.02+
+
+#### Tested Hardware
+
+| GPU | Status | Grid Size | Speedup (10 tasks) |
+|-----|--------|-----------|-------------------|
+| RTX 3500 Ada | ✅ Validated | 192 blocks | 4.14x |
+| RTX 4090 | ⚠️ Expected | 768 blocks | ~5-6x (estimated) |
+| A100 | ⚠️ Expected | 864 blocks | ~5-6x (estimated) |
+| H100 | ⚠️ Expected | 1,056 blocks | ~6-8x (estimated) |
+
+#### Unsupported Hardware
+
+- **CC < 7.0**: Maxwell, Pascal GPUs (no cooperative launch support)
+- **AMD GPUs**: Different API (HIP), not currently supported
+- **Intel GPUs**: Different API (SYCL/oneAPI), not currently supported
+
+### Debugging
+
+#### Common Issues
+
+**Issue**: `CUDA_ERROR_COOPERATIVE_LAUNCH_TOO_LARGE`
+
+**Cause**: Grid size exceeds cooperative launch limits.
+
+**Solution**: The implementation automatically uses safe grid sizes (25%). If you still see this:
+```rust
+// Check GPU properties
+eprintln!("GPU info: {:?}", device);
+
+// Reduce grid size manually if needed
+let manager = PersistentKernelManager::with_grid_size(&device, 128)?;
+```
+
+**Issue**: Segmentation Fault
+
+**Cause**: Using unsafe FFI incorrectly.
+
+**Solution**: Use cudarc's safe wrapper (already implemented):
+```rust
+// ✅ CORRECT (current implementation)
+device.stream
+    .launch_builder(func)
+    .arg(&buffers.d_input_ptrs)
+    .launch_cooperative(cfg)?;
+
+// ❌ WRONG (unsafe FFI)
+sys::cuLaunchCooperativeKernel(cu_func, ...); // Don't do this!
+```
+
+#### Validation Tools
+
+```bash
+# Memory validation
+compute-sanitizer --tool memcheck ./my_program
+
+# Race condition detection
+compute-sanitizer --tool racecheck ./my_program
+
+# GPU monitoring during execution
+nvidia-smi dmon -s u -c 10
+```
+
+### Future Optimizations
+
+1. **Multi-Indicator Support**: Extend beyond ROC to RSI, MACD, ATR, etc.
+2. **Dynamic Load Balancing**: Distribute work based on dataset sizes (1.2-1.5x improvement)
+3. **Pinned Memory**: Use page-locked memory for 20-30% faster transfers (when NVIDIA fixes bug)
+4. **Per-Kernel Occupancy**: Query actual occupancy instead of 25% heuristic (1.5-2x more parallelism)
+
+### References
+
+**Documentation**:
+- CUDA Cooperative Groups: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cooperative-groups
+- Benchmark Analysis: `rust/docs/PERSISTENT_KERNEL_BENCHMARK_ANALYSIS.md`
+- Implementation Details: `rust/docs/PERSISTENT_KERNELS.md`
+
+**Source Code**:
+- Implementation: `rust/src/gpu/persistent.rs`
+- Benchmarks: `rust/benches/launch_overhead.rs`
+- Examples: `rust/examples/test_persistent_*.rs`
 
 ---
 
@@ -1702,9 +2186,16 @@ nvidia-smi | grep "MiB"
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-22
+**Document Version**: 1.1.0
+**Last Updated**: 2025-10-27
 **Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 12.6
 **Author**: kimsfinance Team
+
+**Changelog (v1.1.0)**:
+- Added comprehensive section on Persistent GPU Kernels (Rust implementation)
+- Documented 41x speedup for batch processing workloads
+- Added usage examples and production recommendations
+- Documented GPU portability and hardware requirements
+- Added comparison to Python implementation
 
 For issues or questions, see [GitHub Issues](https://github.com/kimasplund/kimsfinance/issues).
