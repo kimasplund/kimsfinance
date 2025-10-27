@@ -3,6 +3,7 @@
 //! Handles CUDA context and stream initialization, memory allocation, and error handling.
 
 use cudarc::driver::{CudaContext, CudaSlice, CudaStream, result::DriverError};
+use cudarc::nvrtc::CompileError;
 use std::sync::Arc;
 
 /// GPU device handle with memory management
@@ -195,6 +196,33 @@ impl GpuDevice {
         Ok(buffer)
     }
 
+    /// Copy i32 data from host to device
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Host data slice of i32 values
+    pub fn copy_to_device_i32(&self, data: &[i32]) -> Result<CudaSlice<i32>, GpuError> {
+        // Allocate device buffer
+        let mut buffer = self.stream.alloc_zeros::<i32>(data.len()).map_err(|e| {
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} i32 elements: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        // Copy data into buffer
+        self.stream.memcpy_htod(data, &mut buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!(
+                "Failed to copy {} i32 elements to device: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        Ok(buffer)
+    }
+
     /// Copy data from device to host
     ///
     /// # Arguments
@@ -295,6 +323,12 @@ impl std::error::Error for GpuError {}
 impl From<DriverError> for GpuError {
     fn from(e: DriverError) -> Self {
         GpuError::DriverError(e)
+    }
+}
+
+impl From<CompileError> for GpuError {
+    fn from(e: CompileError) -> Self {
+        GpuError::CompilationError(format!("{:?}", e))
     }
 }
 

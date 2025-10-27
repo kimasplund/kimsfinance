@@ -13,7 +13,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use super::compile::compile_ptx_optimized;
-use cudarc::driver::LaunchConfig;
+use cudarc::driver::{LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 
 /// CUDA kernel source for 3D parameter sweep and optimization
@@ -426,7 +426,7 @@ pub fn rsi_sweep_3d_gpu(
     // === Step 1: GPU - Calculate gains/losses (3D parallel) ===
     let d_close = device.copy_to_device(close_batch)?;
     let periods_i32: Vec<i32> = periods.iter().map(|&p| p as i32).collect();
-    let d_periods = device.copy_to_device(&periods_i32)?;
+    let d_periods = device.copy_to_device_i32(&periods_i32)?;
 
     let mut d_gains = device.alloc_buffer(n_periods * n_assets * n_candles)?;
     let mut d_losses = device.alloc_buffer(n_periods * n_assets * n_candles)?;
@@ -441,14 +441,18 @@ pub fn rsi_sweep_3d_gpu(
         shared_mem_bytes: 0,
     };
 
+    let n_periods_i32 = n_periods as i32;
+    let n_assets_i32 = n_assets as i32;
+    let n_candles_i32 = n_candles as i32;
+
     let mut builder = device.stream.launch_builder(&gains_losses_kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_gains);
     builder.arg(&mut d_losses);
     builder.arg(&d_periods);
-    builder.arg(&(n_periods as i32));
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
+    builder.arg(&n_periods_i32);
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
@@ -493,9 +497,9 @@ pub fn rsi_sweep_3d_gpu(
     builder.arg(&d_avg_loss);
     builder.arg(&mut d_rsi_sweep);
     builder.arg(&d_periods);
-    builder.arg(&(n_periods as i32));
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
+    builder.arg(&n_periods_i32);
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
@@ -528,7 +532,7 @@ pub fn sma_sweep_3d_gpu(
 
     let d_close = device.copy_to_device(close_batch)?;
     let periods_i32: Vec<i32> = periods.iter().map(|&p| p as i32).collect();
-    let d_periods = device.copy_to_device(&periods_i32)?;
+    let d_periods = device.copy_to_device_i32(&periods_i32)?;
     let mut d_sma_sweep = device.alloc_buffer(n_periods * n_assets * n_candles)?;
 
     let config = LaunchConfig {
@@ -541,13 +545,17 @@ pub fn sma_sweep_3d_gpu(
         shared_mem_bytes: 0,
     };
 
+    let n_periods_i32 = n_periods as i32;
+    let n_assets_i32 = n_assets as i32;
+    let n_candles_i32 = n_candles as i32;
+
     let mut builder = device.stream.launch_builder(&kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_sma_sweep);
     builder.arg(&d_periods);
-    builder.arg(&(n_periods as i32));
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
+    builder.arg(&n_periods_i32);
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
@@ -599,12 +607,16 @@ pub fn sharpe_reduction_gpu(
         shared_mem_bytes,
     };
 
+    let n_periods_i32 = n_periods as i32;
+    let n_assets_i32 = n_assets as i32;
+    let n_candles_i32 = n_candles as i32;
+
     let mut builder = device.stream.launch_builder(&kernel);
     builder.arg(&d_indicator);
     builder.arg(&mut d_sharpe);
-    builder.arg(&(n_periods as i32));
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
+    builder.arg(&n_periods_i32);
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
