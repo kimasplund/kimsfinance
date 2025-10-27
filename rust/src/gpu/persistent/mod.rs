@@ -110,6 +110,9 @@ pub mod pinned_memory;
 // Multi-input/multi-output support (Agent 3)
 pub mod generic;
 
+// Diagnostic tools (temporarily commented out due to compilation error)
+// pub mod buffer_diagnostic;
+
 // Re-export trait and kernel types
 pub use kernels::{
     AroonIndicator, AtrIndicator, BollingerIndicator, BollingerParams, CciIndicator,
@@ -365,11 +368,19 @@ fn compile_persistent_kernel(device: &GpuDevice) -> Result<CudaFunction, GpuErro
 }
 
 /// Allocate GPU buffers for batch processing with pinned memory optimization
-fn allocate_batch_buffers<I: PersistentIndicator>(
+pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
     device: &GpuDevice,
     batch: &TaskBatch<I>,
 ) -> Result<BatchBuffers, GpuError> {
     let num_tasks = batch.len();
+
+    eprintln!("DEBUG: allocate_batch_buffers called");
+    eprintln!("DEBUG: num_tasks={}", num_tasks);
+    eprintln!("DEBUG: num_inputs={}", I::num_inputs());
+    eprintln!("DEBUG: num_outputs={}", I::num_outputs());
+    if !batch.is_empty() {
+        eprintln!("DEBUG: Task 0 data length: {}", batch.tasks()[0].data.len());
+    }
 
     // Try to allocate pinned memory for all input buffers
     let mut h_inputs = Vec::with_capacity(num_tasks);
@@ -435,7 +446,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
     let mut d_outputs = Vec::with_capacity(num_tasks);
 
     let num_inputs = I::num_inputs();
-    for task in batch.tasks() {
+    for (task_idx, task) in batch.tasks().iter().enumerate() {
         let input_buf = device.allocate_device_buffer(task.data.len())?;
         d_inputs.push(input_buf);
 
@@ -445,6 +456,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         // For multi-input indicators, data is concatenated so divide by num_inputs first
         let n = task.data.len() / num_inputs;
         let output_size = n * num_outputs;
+        eprintln!("DEBUG: Task {} - n={}, output_size={}", task_idx, n, output_size);
         let output_buf = device.allocate_device_buffer(output_size)?;
         d_outputs.push(vec![output_buf]);  // Wrap in vec for consistency
     }
@@ -453,7 +465,8 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
     let mut input_ptrs_host = Vec::with_capacity(num_tasks);
     let mut output_ptrs_host = Vec::with_capacity(num_tasks);
 
-    for (input_buf, task_outputs) in d_inputs.iter().zip(d_outputs.iter()) {
+    eprintln!("DEBUG: Creating pointer arrays...");
+    for (task_idx, (input_buf, task_outputs)) in d_inputs.iter().zip(d_outputs.iter()).enumerate() {
         let (input_ptr, _) = input_buf.device_ptr(&device.stream);
         input_ptrs_host.push(input_ptr as u64);
 
@@ -461,6 +474,9 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         // TODO: Full multi-output requires separate pointer arrays for each output
         let (output_ptr, _) = task_outputs[0].device_ptr(&device.stream);
         output_ptrs_host.push(output_ptr as u64);
+
+        eprintln!("DEBUG: Task {} - input_ptr={:#x}, output_ptr={:#x}",
+                  task_idx, input_ptr as u64, output_ptr as u64);
     }
 
     // Allocate GPU memory for pointer arrays and copy
@@ -494,6 +510,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
         .iter()
         .map(|t| (t.data.len() as i32) / num_inputs)
         .collect();
+    eprintln!("DEBUG: sizes array: {:?}", sizes);
     let d_sizes = device.copy_to_device_i32(&sizes)?;
 
     // Extract parameters - for i32 params (ROC, RSI, ATR), we can directly copy
@@ -514,6 +531,7 @@ fn allocate_batch_buffers<I: PersistentIndicator>(
             }
         })
         .collect();
+    eprintln!("DEBUG: periods array: {:?}", periods);
     let d_periods = device.copy_to_device_i32(&periods)?;
 
     let buffers = BatchBuffers {
@@ -539,6 +557,8 @@ fn upload_batch_data<I: PersistentIndicator>(
     batch: &TaskBatch<I>,
     buffers: &mut BatchBuffers,
 ) -> Result<(), GpuError> {
+    eprintln!("DEBUG: upload_batch_data called, using_pinned={}", buffers.using_pinned);
+
     if buffers.using_pinned {
         // Fast path: Use pinned memory (20-30% faster)
         for (i, task) in batch.tasks().iter().enumerate() {
@@ -547,11 +567,14 @@ fn upload_batch_data<I: PersistentIndicator>(
                 pinned.copy_from_slice(&task.data);
                 // DMA transfer from pinned to device (fast!)
                 device.htod_pinned(pinned, &mut buffers.d_inputs[i])?;
+                eprintln!("DEBUG: Task {} uploaded via pinned memory ({} elements)", i, task.data.len());
             }
         }
     } else {
         // Fallback: Use pageable memory (traditional approach)
         for (i, task) in batch.tasks().iter().enumerate() {
+            eprintln!("DEBUG: Task {} - uploading {} elements: first few = {:?}",
+                      i, task.data.len(), &task.data[0..task.data.len().min(5)]);
             device
                 .stream
                 .memcpy_htod(&task.data, &mut buffers.d_inputs[i])
@@ -560,6 +583,22 @@ fn upload_batch_data<I: PersistentIndicator>(
                 })?;
         }
     }
+
+    // Verify data upload by reading back first few elements of first task
+    if !batch.is_empty() {
+        let full_size = batch.tasks()[0].data.len();
+        let display_size = full_size.min(5);
+        let mut readback = vec![0.0f64; full_size];  // Allocate full buffer
+        if let Ok(()) = device.stream.memcpy_dtoh(
+            &buffers.d_inputs[0],
+            &mut readback,
+        ) {
+            eprintln!("DEBUG: Task 0 input data readback (first few of {}): {:?}", full_size, &readback[0..display_size]);
+        } else {
+            eprintln!("DEBUG: Failed to read back task 0 input data");
+        }
+    }
+
     Ok(())
 }
 
@@ -580,9 +619,45 @@ fn launch_cooperative_kernel(
 ) -> Result<(), GpuError> {
     use cudarc::driver::PushKernelArg;
 
+    eprintln!("DEBUG: launch_cooperative_kernel called");
+    eprintln!("DEBUG: num_tasks={}, grid_size={}", num_tasks, grid_size);
+
     // Launch configuration using GPU-specific limits
     let block_dim = (256u32, 1u32, 1u32);
     let grid_dim = (grid_size, 1u32, 1u32);
+
+    // Log pointer information
+    let (input_ptrs_ptr, _) = buffers.d_input_ptrs.device_ptr(&device.stream);
+    let (output_ptrs_ptr, _) = buffers.d_output_ptrs.device_ptr(&device.stream);
+    let (sizes_ptr, _) = buffers.d_sizes.device_ptr(&device.stream);
+    let (periods_ptr, _) = buffers.d_periods.device_ptr(&device.stream);
+
+    eprintln!("DEBUG: d_input_ptrs address: {:#x}", input_ptrs_ptr as u64);
+    eprintln!("DEBUG: d_output_ptrs address: {:#x}", output_ptrs_ptr as u64);
+    eprintln!("DEBUG: d_sizes address: {:#x}", sizes_ptr as u64);
+    eprintln!("DEBUG: d_periods address: {:#x}", periods_ptr as u64);
+
+    // Read back first values to verify data was copied correctly
+    let mut sizes_readback = vec![0i32; num_tasks as usize];
+    let mut periods_readback = vec![0i32; num_tasks as usize];
+
+    if let Ok(()) = device.stream.memcpy_dtoh(
+        &buffers.d_sizes,
+        &mut sizes_readback,
+    ) {
+        eprintln!("DEBUG: d_sizes readback (first few): {:?}", &sizes_readback[0..num_tasks.min(5) as usize]);
+    } else {
+        eprintln!("DEBUG: Failed to read back d_sizes");
+    }
+
+    if let Ok(()) = device.stream.memcpy_dtoh(
+        &buffers.d_periods,
+        &mut periods_readback,
+    ) {
+        eprintln!("DEBUG: d_periods readback (first few): {:?}", &periods_readback[0..num_tasks.min(5) as usize]);
+    } else {
+        eprintln!("DEBUG: Failed to read back d_periods");
+    }
 
     // Launch cooperative kernel using cudarc's safe wrapper
     let cfg = cudarc::driver::LaunchConfig {
@@ -590,6 +665,10 @@ fn launch_cooperative_kernel(
         block_dim,
         shared_mem_bytes: 0,
     };
+
+    eprintln!("DEBUG: Launching kernel with grid_dim=({},{},{}), block_dim=({},{},{})",
+              cfg.grid_dim.0, cfg.grid_dim.1, cfg.grid_dim.2,
+              cfg.block_dim.0, cfg.block_dim.1, cfg.block_dim.2);
 
     unsafe {
         device
@@ -601,11 +680,21 @@ fn launch_cooperative_kernel(
             .arg(&buffers.d_periods)
             .arg(&num_tasks)
             .launch_cooperative(cfg)
-            .map_err(|e| GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e)))?;
+            .map_err(|e| {
+                eprintln!("❌ CUDA launch_cooperative error: {:?}", e);
+                GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e))
+            })?;
     }
 
-    // Synchronize
-    device.synchronize()?;
+    eprintln!("DEBUG: Kernel launched, synchronizing...");
+
+    // Synchronize and check errors
+    device.synchronize().map_err(|e| {
+        eprintln!("❌ CUDA synchronization error: {:?}", e);
+        e
+    })?;
+
+    eprintln!("✅ Kernel synchronized successfully");
 
     Ok(())
 }
@@ -615,6 +704,8 @@ fn download_batch_results(
     device: &GpuDevice,
     buffers: &mut BatchBuffers,
 ) -> Result<Vec<Vec<f64>>, GpuError> {
+    eprintln!("DEBUG: download_batch_results called");
+
     let mut results = Vec::with_capacity(buffers.d_outputs.len());
 
     if buffers.using_pinned {
@@ -623,14 +714,19 @@ fn download_batch_results(
             // Download single contiguous buffer (contains all outputs)
             if let Some(pinned) = &mut buffers.h_outputs[task_idx][0] {
                 device.dtoh_pinned(&task_outputs[0], pinned)?;
-                results.push(pinned.as_slice().to_vec());
+                let result = pinned.as_slice().to_vec();
+                eprintln!("DEBUG: Task {} downloaded via pinned ({} elements), first few: {:?}",
+                          task_idx, result.len(), &result[0..result.len().min(5)]);
+                results.push(result);
             }
         }
     } else {
         // Fallback: Use pageable memory (traditional approach)
-        for task_outputs in &buffers.d_outputs {
+        for (task_idx, task_outputs) in buffers.d_outputs.iter().enumerate() {
             // Download single contiguous buffer (contains all outputs)
             let result = device.copy_to_host(&task_outputs[0])?;
+            eprintln!("DEBUG: Task {} downloaded via pageable ({} elements), first few: {:?}",
+                      task_idx, result.len(), &result[0..result.len().min(5)]);
             results.push(result);
         }
     }
