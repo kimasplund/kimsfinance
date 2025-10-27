@@ -164,16 +164,47 @@ impl PersistentKernelManager {
     /// Create new persistent kernel manager
     ///
     /// Queries device properties to determine optimal launch configuration
-    pub fn new(_device: &GpuDevice) -> Result<Self, GpuError> {
-        // Query device properties for cooperative launch limits
-        // For now, use conservative defaults that work on most GPUs
-        let max_grid_size = 128; // Will be tuned per GPU
-        let optimal_block_size = 256;
+    pub fn new(device: &GpuDevice) -> Result<Self, GpuError> {
+        use cudarc::driver::sys;
+
+        // Query GPU properties
+        let (multiprocessor_count, max_blocks_per_sm) = unsafe {
+            let mut sm_count = 0;
+            let mut max_blocks = 0;
+
+            sys::cuDeviceGetAttribute(
+                &mut sm_count,
+                sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT,
+                device.context.cu_device(),
+            )
+            .result()
+            .map_err(|e| GpuError::InitializationError(format!("Failed to query SM count: {:?}", e)))?;
+
+            sys::cuDeviceGetAttribute(
+                &mut max_blocks,
+                sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_MAX_BLOCKS_PER_MULTIPROCESSOR,
+                device.context.cu_device(),
+            )
+            .result()
+            .map_err(|e| GpuError::InitializationError(format!("Failed to query max blocks/SM: {:?}", e)))?;
+
+            (sm_count as u32, max_blocks as u32)
+        };
+
+        // For cooperative launch, use 80% of theoretical maximum to be safe
+        // This accounts for register pressure and other resource constraints
+        let max_cooperative_blocks = (multiprocessor_count * max_blocks_per_sm) as f32 * 0.8;
+        let max_grid_size = max_cooperative_blocks as u32;
+
+        eprintln!("🎯 Cooperative launch limits for this GPU:");
+        eprintln!("   SMs: {}, Max blocks/SM: {}", multiprocessor_count, max_blocks_per_sm);
+        eprintln!("   Theoretical max: {} blocks", multiprocessor_count * max_blocks_per_sm);
+        eprintln!("   Safe grid size: {} blocks (80% of max)", max_grid_size);
 
         Ok(Self {
             _device: Arc::new(GpuDevice::with_device_id(0)?),
             max_grid_size,
-            optimal_block_size,
+            optimal_block_size: 256,
         })
     }
 
@@ -206,12 +237,25 @@ impl PersistentKernelManager {
         }
 
         let func = compile_persistent_kernel(&self._device)?;
+
+        // Use conservative grid size (25% of theoretical max)
+        // Accounts for actual kernel resource usage without needing occupancy query
+        // RTX 3500 Ada: 960 theoretical → 240 safe (matches empirical 6 blocks/SM)
+        let safe_grid_size = self.max_grid_size / 4;
+
         let mut buffers = allocate_batch_buffers(&self._device, batch)?;
         upload_batch_data(&self._device, batch, &mut buffers)?;
-        launch_cooperative_kernel(&self._device, &func, &buffers, batch.len() as i32)?;
+        launch_cooperative_kernel(
+            &self._device,
+            &func,
+            &buffers,
+            batch.len() as i32,
+            safe_grid_size,  // Use conservative grid size
+        )?;
         download_batch_results(&self._device, &buffers)
     }
 }
+
 
 /// GPU buffer set for batch execution
 struct BatchBuffers {
@@ -328,21 +372,26 @@ fn upload_batch_data(
     Ok(())
 }
 
-/// Launch cooperative kernel using FFI
+/// Launch cooperative kernel using cudarc's safe wrapper
+///
+/// # Parameters
+/// - `device`: GPU device
+/// - `func`: Compiled CUDA function
+/// - `buffers`: Batch buffers (inputs, outputs, sizes, periods)
+/// - `num_tasks`: Number of tasks in batch
+/// - `grid_size`: GPU-specific grid size (from PersistentKernelManager)
 fn launch_cooperative_kernel(
     device: &GpuDevice,
     func: &CudaFunction,
     buffers: &BatchBuffers,
     num_tasks: i32,
+    grid_size: u32,
 ) -> Result<(), GpuError> {
     use cudarc::driver::{sys, PushKernelArg};
 
-    // Launch configuration for cooperative launch
-    // CRITICAL: Cooperative launches have STRICT grid size limits!
-    // RTX 3500 Ada: 40 SMs, cooperative launch requires all blocks resident simultaneously
-    // Start ultra-conservative: 8 blocks
+    // Launch configuration using GPU-specific limits
     let block_dim = (256u32, 1u32, 1u32);
-    let grid_dim = (8u32, 1u32, 1u32); // Very small to ensure cooperative launch works
+    let grid_dim = (grid_size, 1u32, 1u32);
 
     // Launch cooperative kernel using cudarc's safe wrapper
     let cfg = cudarc::driver::LaunchConfig {
