@@ -1106,7 +1106,5 @@ impl Default for BacktestEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // TODO: Add comprehensive tests once metrics module is implemented
 }
