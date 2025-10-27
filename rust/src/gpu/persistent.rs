@@ -335,54 +335,33 @@ fn launch_cooperative_kernel(
     buffers: &BatchBuffers,
     num_tasks: i32,
 ) -> Result<(), GpuError> {
-    use cudarc::driver::sys;
+    use cudarc::driver::{sys, PushKernelArg};
 
-    // Launch configuration: 256 threads/block, enough blocks for all tasks
+    // Launch configuration for cooperative launch
+    // CRITICAL: Cooperative launches have STRICT grid size limits!
+    // RTX 3500 Ada: 40 SMs, cooperative launch requires all blocks resident simultaneously
+    // Start ultra-conservative: 8 blocks
     let block_dim = (256u32, 1u32, 1u32);
-    let grid_dim = (128u32, 1u32, 1u32); // Conservative for cooperative launch
+    let grid_dim = (8u32, 1u32, 1u32); // Very small to ensure cooperative launch works
 
-    // Get device pointers for kernel arguments
-    let (input_ptrs_ptr, _guard1) = buffers.d_input_ptrs.device_ptr(&device.stream);
-    let (output_ptrs_ptr, _guard2) = buffers.d_output_ptrs.device_ptr(&device.stream);
-    let (sizes_ptr, _guard3) = buffers.d_sizes.device_ptr(&device.stream);
-    let (periods_ptr, _guard4) = buffers.d_periods.device_ptr(&device.stream);
+    // Launch cooperative kernel using cudarc's safe wrapper
+    let cfg = cudarc::driver::LaunchConfig {
+        grid_dim,
+        block_dim,
+        shared_mem_bytes: 0,
+    };
 
-    // Prepare kernel arguments as raw pointers
-    let mut args: Vec<*mut std::ffi::c_void> = vec![
-        &input_ptrs_ptr as *const _ as *mut std::ffi::c_void,
-        &output_ptrs_ptr as *const _ as *mut std::ffi::c_void,
-        &sizes_ptr as *const _ as *mut std::ffi::c_void,
-        &periods_ptr as *const _ as *mut std::ffi::c_void,
-        &num_tasks as *const i32 as *mut std::ffi::c_void,
-    ];
-
-    // Launch cooperative kernel via FFI
-    // Note: Accessing cu_function via unsafe transmute since it's pub(crate)
     unsafe {
-        // Get the raw CUfunction handle from CudaFunction
-        // CudaFunction is a thin wrapper around sys::CUfunction with a module Arc
-        let cu_func: sys::CUfunction = std::mem::transmute_copy(func);
-
-        let result = sys::cuLaunchCooperativeKernel(
-            cu_func,
-            grid_dim.0,
-            grid_dim.1,
-            grid_dim.2,
-            block_dim.0,
-            block_dim.1,
-            block_dim.2,
-            0, // shared memory bytes
-            device.stream.cu_stream(),
-            args.as_mut_ptr(),
-        );
-
-        // Check for errors
-        if result != sys::CUresult::CUDA_SUCCESS {
-            return Err(GpuError::ExecutionError(format!(
-                "Cooperative kernel launch failed: {:?}",
-                result
-            )));
-        }
+        device
+            .stream
+            .launch_builder(func)
+            .arg(&buffers.d_input_ptrs)
+            .arg(&buffers.d_output_ptrs)
+            .arg(&buffers.d_sizes)
+            .arg(&buffers.d_periods)
+            .arg(&num_tasks)
+            .launch_cooperative(cfg)
+            .map_err(|e| GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e)))?;
     }
 
     // Synchronize

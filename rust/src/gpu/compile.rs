@@ -134,7 +134,14 @@ pub fn get_compile_options() -> &'static CompileOptions {
 
             // No additional compile options
             options: Vec::new(),
-            include_paths: Vec::new(),
+
+            // Include CUDA headers for cooperative_groups.h and other system headers
+            // Standard paths: /usr/include (Debian/Ubuntu) and /usr/local/cuda/include (NVIDIA installer)
+            include_paths: vec![
+                "/usr/include".to_string(),
+                "/usr/local/cuda/include".to_string(),
+            ],
+
             name: None,
         }
     })
