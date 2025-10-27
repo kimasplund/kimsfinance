@@ -44,6 +44,8 @@ ENV/
 env.bak/
 venv.bak/
 .venv-freethreaded/
+rust/.venv314t/
+.venv-py314
 
 # ==============================================================================
 # Testing / Coverage

@@ -1437,8 +1437,8 @@ impl PyStrategyWrapper {
 
 impl Strategy for PyStrategyWrapper {
     fn on_data(&mut self, bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
-        #[allow(deprecated)]
-        Python::with_gil(|py| {
+        // Acquire GIL to call into Python (PyO3 0.27+)
+        Python::attach(|py| {
             // Convert bar to Python dict
             let bar_dict = PyDict::new(py);
             bar_dict.set_item("timestamp", bar.timestamp).ok()?;
@@ -1475,8 +1475,8 @@ impl Strategy for PyStrategyWrapper {
     }
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
-        #[allow(deprecated)]
-        Python::with_gil(|py| {
+        // Acquire GIL to call into Python (PyO3 0.27+)
+        Python::attach(|py| {
             // Call Python strategy.get_indicators()
             let result = self.strategy_obj.call_method0(py, "get_indicators").ok()?;
 
@@ -1515,8 +1515,8 @@ impl Strategy for PyStrategyWrapper {
     }
 
     fn position_size(&self, equity: f64, signal: Signal) -> f64 {
-        #[allow(deprecated)]
-        Python::with_gil(|py| {
+        // Acquire GIL to call into Python (PyO3 0.27+)
+        Python::attach(|py| {
             // Call Python strategy.position_size(equity, signal) if exists
             let signal_str = match signal {
                 Signal::Buy => "buy",
@@ -1705,7 +1705,10 @@ fn run_backtest<'py>(
 }
 
 /// Python module for kimsfinance core functionality
-#[pymodule]
+///
+/// This module declares support for Python 3.14 free-threading (no-GIL).
+/// All functions are thread-safe and can be called concurrently without GIL.
+#[pymodule(gil_used = false)]
 fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Coordinate calculations
     m.add_function(wrap_pyfunction!(calculate_coordinates_py, m)?)?;

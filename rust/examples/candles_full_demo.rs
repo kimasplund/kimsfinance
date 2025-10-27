@@ -1,7 +1,7 @@
 //! Comprehensive Custom Candle Generation Demo
 //!
 //! End-to-end pipeline demonstrating:
-//! 1. Load trades from CSV
+//! 1. Generate synthetic trade data
 //! 2. Aggregate to 1-minute candles
 //! 3. Transform to Heikin-Ashi
 //! 4. Generate volume bars
@@ -26,31 +26,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("✅ GPU Device initialized\n");
 
     // ========================================================================
-    // Step 1: Load BTC trades from CSV
+    // Step 1: Load BTC OHLC data from Binance 2024 dataset
     // ========================================================================
-    println!("📊 Step 1: Loading BTC trades from CSV...");
+    println!("📊 Step 1: Loading BTC OHLC data from Binance...");
 
-    // Note: Update path to actual CSV file location
-    let csv_path = "tests/data/sample_trades.csv";
+    // Path to real Binance data (1-minute OHLC candles from 2024)
+    let binance_path = "/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv";
 
-    let all_trades = match TradeData::from_csv(csv_path) {
-        Ok(trades) => {
-            println!("   ✅ Loaded {} trades from CSV", trades.len());
-            trades
-        }
-        Err(e) => {
-            eprintln!("   ❌ Failed to load CSV: {}", e);
-            eprintln!("   Note: Run from project root or adjust CSV path");
-            return Err(e);
-        }
-    };
+    // For demo, we'll generate trade data from OHLC to test TimeBar aggregator
+    // In production, you'd use actual trade-level data
+    let btc_sample = generate_sample_trades(47000.0, 30);
+    let sample_size = btc_sample.len() / 3;
 
-    // Filter to first 30 BTC trades for demo
-    let btc_data = all_trades.concat_buffers();
-    let sample_size = 30.min(btc_data.len() / 3);
-    let btc_sample: Vec<f64> = btc_data.iter().take(sample_size * 3).copied().collect();
-
-    println!("   Using first {} trades for demo\n", sample_size);
+    println!("   ✅ Using {} synthetic trades for TimeBar demo", sample_size);
+    println!("   (Note: Binance CSV has OHLC data at {})", binance_path);
+    println!("   (We'll use it for Heikin-Ashi transformation)\n");
 
     // ========================================================================
     // Step 2: Create 1-Minute Time Bars
@@ -86,28 +76,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!();
 
     // ========================================================================
-    // Step 3: Transform to Heikin-Ashi
+    // Step 3: Transform to Heikin-Ashi using Real Binance Data
     // ========================================================================
-    println!("📊 Step 3: Transforming to Heikin-Ashi candles...");
+    println!("📊 Step 3: Transforming real Binance OHLC to Heikin-Ashi...");
 
-    // Extract OHLC from 1-minute candles
-    let mut ohlc_data = Vec::new();
-    for i in 0..num_candles {
-        let idx = i * 5;
-        ohlc_data.push(candles_1m[idx]); // Open
-    }
-    for i in 0..num_candles {
-        let idx = i * 5;
-        ohlc_data.push(candles_1m[idx + 1]); // High
-    }
-    for i in 0..num_candles {
-        let idx = i * 5;
-        ohlc_data.push(candles_1m[idx + 2]); // Low
-    }
-    for i in 0..num_candles {
-        let idx = i * 5;
-        ohlc_data.push(candles_1m[idx + 3]); // Close
-    }
+    // Load 100 1-minute candles from Binance 2024 data
+    let ohlc_data = load_binance_ohlc(binance_path, 100)?;
+    let num_real_candles = ohlc_data.len() / 4;
+
+    println!("   ✅ Loaded {} candles from Binance", num_real_candles);
 
     let mut ha_batch = HeikinAshiBatch::new();
     ha_batch.add_task(ohlc_data, 0);
@@ -115,18 +92,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ha_results = execute_batch(&device, &ha_batch)?;
     let ha_candles = &ha_results[0];
 
-    println!("   ✅ Generated {} Heikin-Ashi candles", num_candles);
+    println!("   ✅ Generated {} Heikin-Ashi candles", num_real_candles);
 
     // Display first 3 HA candles
-    println!("\n   First 3 Heikin-Ashi candles:");
-    for i in 0..3.min(num_candles) {
+    println!("\n   First 3 Heikin-Ashi candles (from real BTC data):");
+    for i in 0..3.min(num_real_candles) {
         println!(
             "   HA {}: O={:.2} H={:.2} L={:.2} C={:.2}",
             i + 1,
             ha_candles[i],
-            ha_candles[num_candles + i],
-            ha_candles[2 * num_candles + i],
-            ha_candles[3 * num_candles + i]
+            ha_candles[num_real_candles + i],
+            ha_candles[2 * num_real_candles + i],
+            ha_candles[3 * num_real_candles + i]
         );
     }
     println!();
@@ -260,6 +237,43 @@ fn generate_sample_trades(base_price: f64, count: usize) -> Vec<f64> {
     }
 
     data
+}
+
+#[cfg(feature = "gpu")]
+fn load_binance_ohlc(path: &str, limit: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+    use std::fs::File;
+    use std::io::{BufRead, BufReader};
+
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+
+    let mut open = Vec::new();
+    let mut high = Vec::new();
+    let mut low = Vec::new();
+    let mut close = Vec::new();
+
+    for (i, line) in reader.lines().skip(1).enumerate() {
+        if i >= limit { break; }
+
+        let line = line?;
+        let parts: Vec<&str> = line.split(',').collect();
+
+        if parts.len() >= 5 {
+            open.push(parts[1].parse::<f64>()?);
+            high.push(parts[2].parse::<f64>()?);
+            low.push(parts[3].parse::<f64>()?);
+            close.push(parts[4].parse::<f64>()?);
+        }
+    }
+
+    // Concatenate in OHLC order
+    let mut ohlc = Vec::with_capacity(open.len() * 4);
+    ohlc.extend(&open);
+    ohlc.extend(&high);
+    ohlc.extend(&low);
+    ohlc.extend(&close);
+
+    Ok(ohlc)
 }
 
 #[cfg(not(feature = "gpu"))]
