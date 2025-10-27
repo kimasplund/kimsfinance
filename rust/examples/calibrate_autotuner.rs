@@ -6,7 +6,11 @@
 //! # Usage
 //!
 //! ```bash
+//! # With GPU support (requires working GPU code):
 //! cargo run --release --example calibrate_autotuner --features gpu
+//!
+//! # CPU-only mode (recommended if GPU has compilation errors):
+//! cargo run --release --example calibrate_autotuner
 //! ```
 //!
 //! # What It Does
@@ -115,8 +119,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(not(feature = "gpu"))]
-fn main() {
-    eprintln!("Error: This example requires the 'gpu' feature");
-    eprintln!("Run with: cargo run --release --example calibrate_autotuner --features gpu");
-    std::process::exit(1);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use kimsfinance_core::autotuner::AutoTuneProfile;
+
+    println!("🔧 Calibrating kimsfinance for this machine (CPU-only mode)...\n");
+
+    // This will detect hardware, run benchmarks, and cache results
+    // Skips GPU indicator benchmarks but calibrates backtest thresholds
+    let profile = AutoTuneProfile::calibrate_cpu_only()?;
+
+    println!("\n✅ Calibration complete!\n");
+    println!("Backtest Optimization Thresholds:");
+    println!(
+        "  SIMD Sharpe threshold: {} points",
+        profile.backtest_thresholds.simd_sharpe_threshold
+    );
+    println!(
+        "  Parallel eval threshold: {} individuals",
+        profile.backtest_thresholds.parallel_eval_threshold
+    );
+    println!(
+        "  HashMap pre-alloc: {} (investigation found never beneficial)",
+        if profile.backtest_thresholds.use_hashmap_prealloc {
+            "enabled"
+        } else {
+            "disabled"
+        }
+    );
+
+    println!("\nCached to: ~/.cache/kimsfinance/autotune.json");
+    println!("Re-calibrate if hardware changes or performance degrades.");
+
+    Ok(())
 }
