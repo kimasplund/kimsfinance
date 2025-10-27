@@ -596,6 +596,61 @@ impl AutoTuneProfile {
         ))
     }
 
+    /// Calibrate CPU-only profile (no GPU needed)
+    ///
+    /// Focuses on backtest optimizations:
+    /// - SIMD Sharpe ratio crossover
+    /// - Parallel evaluation threshold
+    ///
+    /// This runs the same calibration as the GPU version but skips GPU indicator benchmarks.
+    pub fn calibrate_cpu_only() -> Result<Self, GpuError> {
+        println!("🔧 Running CPU-only calibration...");
+        println!("   (Skipping GPU indicator benchmarks)");
+        println!();
+
+        // 1. Detect hardware specs
+        let hardware_id = Self::generate_hardware_id();
+        let cpu_clock_ghz = Self::detect_cpu_clock()?;
+        let ram_bandwidth_gbs = Self::detect_ram_bandwidth()?;
+
+        println!("📊 Hardware detected:");
+        println!("   CPU: {:.2} GHz", cpu_clock_ghz);
+        println!("   RAM: {:.0} GB/s", ram_bandwidth_gbs);
+        println!();
+
+        // 2. Calibrate backtest optimization thresholds
+        println!("📊 Calibrating backtest optimization thresholds...");
+        let backtest_thresholds = Self::calibrate_backtest_thresholds()?;
+
+        let profile = Self {
+            hardware_id,
+            cpu_clock_ghz,
+            gpu_clock_ghz: 0.0,
+            vram_bandwidth_gbs: 0.0,
+            ram_bandwidth_gbs,
+            thresholds: IndicatorThresholds {
+                ema_crossover: usize::MAX,
+                wilders_crossover: usize::MAX,
+                stochastic_crossover: usize::MAX,
+                roc_crossover: usize::MAX,
+                williams_r_crossover: usize::MAX,
+                bollinger_crossover: usize::MAX,
+                macd_crossover: usize::MAX,
+                parallel_operations: usize::MAX,
+            },
+            backtest_thresholds,
+            calibration_timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+
+        // 3. Save to cache
+        profile.save_to_cache()?;
+
+        Ok(profile)
+    }
+
     /// Find crossover point for Stochastic Oscillator
     ///
     /// Benchmarks CPU vs GPU at different sizes to find where GPU becomes faster.
