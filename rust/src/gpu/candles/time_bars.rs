@@ -164,16 +164,29 @@ extern "C" __global__ void persistent_time_bars_kernel(
     const int* __restrict__ intervals,           // Array of interval_seconds (int, not struct)
     int num_tasks                                // Number of tasks to process
 ) {
+    // DEBUG: MINIMAL TEST - just write a constant
+    int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (global_tid == 0) {
+        output_batch[0][0] = 12345.0;
+        return; // Exit immediately after canary
+    }
+    return; // All other threads exit immediately
+
     // Get grid group for cooperative synchronization
     cg::grid_group grid = cg::this_grid();
 
-    int global_tid = blockIdx.x * blockDim.x + threadIdx.x;
     int grid_size = blockDim.x * gridDim.x;
 
     // Process each task sequentially (persistent kernel pattern)
     for (int task_id = 0; task_id < num_tasks; task_id++) {
         const double* input = input_batch[task_id];
         double* output = output_batch[task_id];
+
+        // DEBUG: Canary to verify kernel entry (thread 0 writes to first output)
+        if (global_tid == 0 && task_id == 0) {
+            output[0] = 88888.0;
+        }
+
         int n = sizes[task_id]; // Number of trades
         int interval = intervals[task_id];
 
@@ -368,7 +381,9 @@ mod tests {
             1.5, 2.0, 1.0,                              // volumes
         ];
 
+        println!("DEBUG: trades vec length = {}", trades.len());
         batch.add_task(trades, 60); // 60 seconds = 1 minute
+        println!("DEBUG: batch has {} tasks, task 0 data length = {}", batch.tasks().len(), batch.tasks()[0].data.len());
 
         let results = crate::gpu::persistent::execute_batch(&device, &batch)
             .expect("Execute failed");

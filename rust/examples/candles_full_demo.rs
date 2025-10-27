@@ -60,10 +60,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut time_batch = TimeBarBatch::new();
     time_batch.add_task(
         btc_sample.clone(),
-        TimeBarParams {
-            interval_seconds: 60,
-        },
-    ); // 60 seconds
+        60, // 60 seconds = 1 minute
+    );
 
     let time_results = execute_batch(&device, &time_batch)?;
     let candles_1m = &time_results[0];
@@ -210,7 +208,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut multi_batch = TimeBarBatch::new();
 
     for (_symbol, data) in &symbols {
-        multi_batch.add_task(data.clone(), TimeBarParams { interval_seconds: 60 });
+        multi_batch.add_task(data.clone(), 60); // 60 seconds = 1 minute
     }
 
     let multi_results = execute_batch(&device, &multi_batch)?;
