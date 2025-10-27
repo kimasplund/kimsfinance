@@ -113,9 +113,10 @@ pub mod generic;
 // Re-export trait and kernel types
 pub use kernels::{
     AroonIndicator, AtrIndicator, BollingerIndicator, BollingerParams, CciIndicator,
-    DonchianIndicator, EmaIndicator, KeltnerIndicator, KeltnerParams, MacdIndicator, MacdParams,
-    RocIndicator, RsiIndicator, SmaIndicator, StochasticIndicator, StochasticParams,
-    WilliamsRIndicator,
+    CmfIndicator, DonchianIndicator, ElderRayIndicator, EmaIndicator, KeltnerIndicator,
+    KeltnerParams, MacdIndicator, MacdParams, ObvIndicator, RocIndicator, RsiIndicator,
+    SmaIndicator, StochasticIndicator, StochasticParams, VwmaIndicator, WilliamsRIndicator,
+    WmaIndicator,
 };
 pub use traits::{MultiOutputIndicator, PersistentIndicator, SingleOutputIndicator};
 
@@ -821,21 +822,20 @@ pub type EmaBatch = TaskBatch<EmaIndicator>;
 /// Type alias for Bollinger batch
 pub type BollingerBatch = TaskBatch<BollingerIndicator>;
 
-// TODO: Uncomment when these indicators are fully implemented by other agents
-// /// Type alias for Elder Ray batch
-// pub type ElderRayBatch = TaskBatch<ElderRayIndicator>;
-//
-// /// Type alias for OBV batch
-// pub type ObvBatch = TaskBatch<ObvIndicator>;
-//
-// /// Type alias for CMF batch
-// pub type CmfBatch = TaskBatch<CmfIndicator>;
-//
-// /// Type alias for VWMA batch
-// pub type VwmaBatch = TaskBatch<VwmaIndicator>;
-//
-// /// Type alias for WMA batch
-// pub type WmaBatch = TaskBatch<WmaIndicator>;
+/// Type alias for Elder Ray batch
+pub type ElderRayBatch = TaskBatch<ElderRayIndicator>;
+
+/// Type alias for OBV batch
+pub type ObvBatch = TaskBatch<ObvIndicator>;
+
+/// Type alias for CMF batch
+pub type CmfBatch = TaskBatch<CmfIndicator>;
+
+/// Type alias for VWMA batch
+pub type VwmaBatch = TaskBatch<VwmaIndicator>;
+
+/// Type alias for WMA batch
+pub type WmaBatch = TaskBatch<WmaIndicator>;
 
 #[cfg(test)]
 mod tests {

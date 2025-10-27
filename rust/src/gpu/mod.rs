@@ -193,6 +193,18 @@ pub use persistent::{
     execute_batch, execute_generic_batch, AtrBatch, AtrIndicator, GenericBatch, MacdBatch,
     MacdIndicator, MacdParams, PersistentIndicator, PersistentKernelManager, RocBatch,
     RocIndicator, RsiBatch, RsiIndicator, Task, TaskBatch,
+    // Agent 1 indicators
+    SmaBatch, SmaIndicator, EmaBatch, EmaIndicator, BollingerBatch, BollingerIndicator,
+    BollingerParams,
+    // Agent 2 indicators
+    StochasticBatch, StochasticIndicator, StochasticParams, WilliamsRBatch, WilliamsRIndicator,
+    CciBatch, CciIndicator,
+    // Agent 3 indicators
+    DonchianBatch, DonchianIndicator, KeltnerBatch, KeltnerIndicator, KeltnerParams, AroonBatch,
+    AroonIndicator,
+    // Agent 4 indicators
+    ElderRayBatch, ElderRayIndicator, ObvBatch, ObvIndicator, CmfBatch, CmfIndicator, VwmaBatch,
+    VwmaIndicator, WmaBatch, WmaIndicator,
 };
 
 #[cfg(feature = "gpu")]
