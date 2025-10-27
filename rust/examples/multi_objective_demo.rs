@@ -18,8 +18,8 @@
 //! ```
 
 use kimsfinance_core::backtest::{
-    BacktestEngine, IndicatorConfig, IndicatorValues, MultiObjectiveOptimizer, Objective,
-    OHLCVBar, ParameterGrid, ParameterRange, Signal, Strategy,
+    BacktestEngine, IndicatorConfig, IndicatorValues, MultiObjectiveOptimizer, OHLCVBar, Objective,
+    ParameterGrid, ParameterRange, Signal, Strategy,
 };
 use ndarray::Array1;
 
@@ -80,7 +80,16 @@ impl Strategy for ComboStrategy {
 }
 
 /// Generate synthetic OHLCV data
-fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -195,7 +204,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_objective(Objective::MinimizeDrawdown)
         .add_objective(Objective::MaximizeWinRate)
         .population_size(50) // Smaller population for demo
-        .generations(20)     // Fewer generations for demo
+        .generations(20) // Fewer generations for demo
         .mutation_rate(0.15)
         .crossover_rate(0.9);
 
@@ -222,7 +231,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Display results
     println!("\n=== Optimization Results ===\n");
-    println!("Pareto frontier size: {} solutions", result.pareto_front.len());
+    println!(
+        "Pareto frontier size: {} solutions",
+        result.pareto_front.len()
+    );
     println!("Total solutions explored: {}\n", result.all_solutions.len());
 
     // Display Pareto front
@@ -249,9 +261,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("    {}: {:.3}", obj_name, display_value);
         }
         println!("  Performance:");
-        println!("    Total Return: {:.2}%", solution.backtest_result.total_return);
+        println!(
+            "    Total Return: {:.2}%",
+            solution.backtest_result.total_return
+        );
         println!("    Trades: {}", solution.backtest_result.num_trades);
-        println!("    Profit Factor: {:.2}", solution.backtest_result.profit_factor);
+        println!(
+            "    Profit Factor: {:.2}",
+            solution.backtest_result.profit_factor
+        );
         println!();
     }
 
@@ -268,7 +286,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(best_sortino) = result.best_for_objective(Objective::MaximizeSortino) {
         println!("Best Sortino Ratio: {:.3}", best_sortino.objectives[1]);
         println!("  Parameters: {:?}", best_sortino.parameters);
-        println!("  Return: {:.2}%", best_sortino.backtest_result.total_return);
+        println!(
+            "  Return: {:.2}%",
+            best_sortino.backtest_result.total_return
+        );
         println!();
     }
 
@@ -300,9 +321,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  Max Drawdown: {:.2}%", -balanced.objectives[2]);
         println!("  Win Rate: {:.1}%", balanced.objectives[3]);
         println!("\nPerformance:");
-        println!("  Total Return: {:.2}%", balanced.backtest_result.total_return);
+        println!(
+            "  Total Return: {:.2}%",
+            balanced.backtest_result.total_return
+        );
         println!("  Trades: {}", balanced.backtest_result.num_trades);
-        println!("  Profit Factor: {:.2}", balanced.backtest_result.profit_factor);
+        println!(
+            "  Profit Factor: {:.2}",
+            balanced.backtest_result.profit_factor
+        );
     }
 
     println!("\n=== Key Insights ===");

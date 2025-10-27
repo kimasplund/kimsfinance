@@ -93,7 +93,8 @@ pub fn calculate_sharpe_ratio_scalar(equity_curve: &[f64]) -> f64 {
     }
 
     // Calculate returns with scalar implementation
-    let returns = calculate_returns_scalar(equity_curve, Vec::with_capacity(equity_curve.len() - 1));
+    let returns =
+        calculate_returns_scalar(equity_curve, Vec::with_capacity(equity_curve.len() - 1));
 
     if returns.is_empty() {
         return 0.0;
@@ -433,11 +434,8 @@ pub fn calculate_sortino_ratio(equity_curve: &[f64], target_return: f64) -> f64 
         return f64::INFINITY; // No downside risk
     }
 
-    let downside_variance = downside_returns
-        .iter()
-        .map(|r| r.powi(2))
-        .sum::<f64>()
-        / downside_returns.len() as f64;
+    let downside_variance =
+        downside_returns.iter().map(|r| r.powi(2)).sum::<f64>() / downside_returns.len() as f64;
     let downside_std_dev = downside_variance.sqrt();
 
     if downside_std_dev == 0.0 {
@@ -492,9 +490,7 @@ mod tests {
     #[test]
     fn test_sharpe_ratio_positive() {
         // Upward trending equity curve
-        let equity = vec![
-            10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0,
-        ];
+        let equity = vec![10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0];
         let sharpe = calculate_sharpe_ratio(&equity);
         assert!(sharpe > 0.0, "Sharpe should be positive for uptrend");
     }
@@ -502,9 +498,7 @@ mod tests {
     #[test]
     fn test_sharpe_ratio_negative() {
         // Downward trending equity curve
-        let equity = vec![
-            10000.0, 9900.0, 9800.0, 9700.0, 9600.0, 9500.0,
-        ];
+        let equity = vec![10000.0, 9900.0, 9800.0, 9700.0, 9600.0, 9500.0];
         let sharpe = calculate_sharpe_ratio(&equity);
         assert!(sharpe < 0.0, "Sharpe should be negative for downtrend");
     }
@@ -512,9 +506,7 @@ mod tests {
     #[test]
     fn test_max_drawdown_no_losses() {
         // No drawdown
-        let equity = vec![
-            10000.0, 10100.0, 10200.0, 10300.0,
-        ];
+        let equity = vec![10000.0, 10100.0, 10200.0, 10300.0];
         let dd = calculate_max_drawdown(&equity);
         assert_eq!(dd, 0.0, "No drawdown expected");
     }
@@ -522,9 +514,7 @@ mod tests {
     #[test]
     fn test_max_drawdown_with_loss() {
         // Drawdown from 10500 to 9000 = 14.29%
-        let equity = vec![
-            10000.0, 10500.0, 10000.0, 9000.0, 9500.0,
-        ];
+        let equity = vec![10000.0, 10500.0, 10000.0, 9000.0, 9500.0];
         let dd = calculate_max_drawdown(&equity);
         assert!((dd - 14.29).abs() < 0.1, "Drawdown should be ~14.29%");
     }
@@ -616,9 +606,7 @@ mod tests {
     #[test]
     fn test_sortino_ratio_positive() {
         // Upward trending equity curve
-        let equity = vec![
-            10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0,
-        ];
+        let equity = vec![10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0];
         let sortino = calculate_sortino_ratio(&equity, 0.0);
         assert!(sortino > 0.0, "Sortino should be positive for uptrend");
     }
@@ -626,9 +614,7 @@ mod tests {
     #[test]
     fn test_calmar_ratio() {
         // 50% return with 10% drawdown = 5.0 Calmar
-        let equity = vec![
-            10000.0, 12000.0, 10800.0, 15000.0,
-        ];
+        let equity = vec![10000.0, 12000.0, 10800.0, 15000.0];
         let calmar = calculate_calmar_ratio(&equity);
         assert!(calmar > 0.0, "Calmar should be positive");
     }
@@ -637,18 +623,29 @@ mod tests {
     fn test_simd_returns_correctness() {
         // Test SIMD return calculation against scalar baseline
         let equity = vec![
-            10000.0, 10100.0, 10200.0, 10150.0, 10300.0, 10250.0,
-            10400.0, 10500.0, 10450.0, 10600.0, 10700.0, 10650.0,
+            10000.0, 10100.0, 10200.0, 10150.0, 10300.0, 10250.0, 10400.0, 10500.0, 10450.0,
+            10600.0, 10700.0, 10650.0,
         ];
 
         let simd_returns = calculate_returns_simd(&equity);
         let scalar_returns = calculate_returns_scalar(&equity, Vec::new());
 
-        assert_eq!(simd_returns.len(), scalar_returns.len(), "SIMD and scalar should produce same number of returns");
+        assert_eq!(
+            simd_returns.len(),
+            scalar_returns.len(),
+            "SIMD and scalar should produce same number of returns"
+        );
 
         for (i, (simd, scalar)) in simd_returns.iter().zip(scalar_returns.iter()).enumerate() {
             let diff = (simd - scalar).abs();
-            assert!(diff < 1e-10, "SIMD return {} differs from scalar at index {}: {} vs {}", diff, i, simd, scalar);
+            assert!(
+                diff < 1e-10,
+                "SIMD return {} differs from scalar at index {}: {} vs {}",
+                diff,
+                i,
+                simd,
+                scalar
+            );
         }
     }
 
@@ -656,8 +653,8 @@ mod tests {
     fn test_simd_sharpe_ratio_correctness() {
         // Test SIMD Sharpe ratio calculation
         let equity = vec![
-            10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0,
-            10600.0, 10700.0, 10800.0, 10900.0, 11000.0, 11100.0,
+            10000.0, 10100.0, 10200.0, 10300.0, 10400.0, 10500.0, 10600.0, 10700.0, 10800.0,
+            10900.0, 11000.0, 11100.0,
         ];
 
         let sharpe = calculate_sharpe_ratio(&equity);
@@ -667,7 +664,10 @@ mod tests {
 
         // Verify reproducibility
         let sharpe2 = calculate_sharpe_ratio(&equity);
-        assert_eq!(sharpe, sharpe2, "Sharpe calculation should be deterministic");
+        assert_eq!(
+            sharpe, sharpe2,
+            "Sharpe calculation should be deterministic"
+        );
     }
 
     #[test]
@@ -677,12 +677,18 @@ mod tests {
         // Empty equity curve
         let empty: Vec<f64> = vec![];
         let returns = calculate_returns_simd(&empty);
-        assert!(returns.is_empty(), "Empty input should produce empty output");
+        assert!(
+            returns.is_empty(),
+            "Empty input should produce empty output"
+        );
 
         // Single element
         let single = vec![10000.0];
         let returns = calculate_returns_simd(&single);
-        assert!(returns.is_empty(), "Single element should produce empty output");
+        assert!(
+            returns.is_empty(),
+            "Single element should produce empty output"
+        );
 
         // Two elements
         let two = vec![10000.0, 10100.0];
@@ -712,11 +718,17 @@ mod tests {
 
         // All returns should be positive (monotonic increase)
         for ret in &returns {
-            assert!(*ret > 0.0, "All returns should be positive for monotonic increase");
+            assert!(
+                *ret > 0.0,
+                "All returns should be positive for monotonic increase"
+            );
         }
 
         // Sharpe ratio should be positive and finite
         let sharpe = calculate_sharpe_ratio(&equity);
-        assert!(sharpe > 0.0 && sharpe.is_finite(), "Sharpe should be positive and finite");
+        assert!(
+            sharpe > 0.0 && sharpe.is_finite(),
+            "Sharpe should be positive and finite"
+        );
     }
 }

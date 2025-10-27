@@ -87,8 +87,12 @@ impl Strategy for EMACrossover {
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
         vec![
-            IndicatorConfig::EMA { period: self.fast_period },
-            IndicatorConfig::EMA { period: self.slow_period },
+            IndicatorConfig::EMA {
+                period: self.fast_period,
+            },
+            IndicatorConfig::EMA {
+                period: self.slow_period,
+            },
         ]
     }
 
@@ -96,11 +100,19 @@ impl Strategy for EMACrossover {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "fast_period",
-            ParameterRange::Int { min: 20, max: 100, step: 10 },
+            ParameterRange::Int {
+                min: 20,
+                max: 100,
+                step: 10,
+            },
         );
         grid.add_range(
             "slow_period",
-            ParameterRange::Int { min: 100, max: 250, step: 25 },
+            ParameterRange::Int {
+                min: 100,
+                max: 250,
+                step: 25,
+            },
         );
         grid
     }
@@ -187,9 +199,15 @@ impl Strategy for TripleEMATrend {
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
         vec![
-            IndicatorConfig::EMA { period: self.short_period },
-            IndicatorConfig::EMA { period: self.medium_period },
-            IndicatorConfig::EMA { period: self.long_period },
+            IndicatorConfig::EMA {
+                period: self.short_period,
+            },
+            IndicatorConfig::EMA {
+                period: self.medium_period,
+            },
+            IndicatorConfig::EMA {
+                period: self.long_period,
+            },
         ]
     }
 
@@ -197,15 +215,27 @@ impl Strategy for TripleEMATrend {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "short_period",
-            ParameterRange::Int { min: 5, max: 15, step: 2 },
+            ParameterRange::Int {
+                min: 5,
+                max: 15,
+                step: 2,
+            },
         );
         grid.add_range(
             "medium_period",
-            ParameterRange::Int { min: 15, max: 30, step: 5 },
+            ParameterRange::Int {
+                min: 15,
+                max: 30,
+                step: 5,
+            },
         );
         grid.add_range(
             "long_period",
-            ParameterRange::Int { min: 40, max: 100, step: 10 },
+            ParameterRange::Int {
+                min: 40,
+                max: 100,
+                step: 10,
+            },
         );
         grid
     }
@@ -290,7 +320,11 @@ impl Strategy for DonchianBreakout {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "channel_period",
-            ParameterRange::Int { min: 10, max: 40, step: 5 },
+            ParameterRange::Int {
+                min: 10,
+                max: 40,
+                step: 5,
+            },
         );
         grid
     }
@@ -382,15 +416,27 @@ impl Strategy for KeltnerTrend {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "ema_period",
-            ParameterRange::Int { min: 10, max: 30, step: 5 },
+            ParameterRange::Int {
+                min: 10,
+                max: 30,
+                step: 5,
+            },
         );
         grid.add_range(
             "atr_period",
-            ParameterRange::Int { min: 5, max: 20, step: 5 },
+            ParameterRange::Int {
+                min: 5,
+                max: 20,
+                step: 5,
+            },
         );
         grid.add_range(
             "atr_multiplier",
-            ParameterRange::Float { min: 1.5, max: 3.0, step: 0.5 },
+            ParameterRange::Float {
+                min: 1.5,
+                max: 3.0,
+                step: 0.5,
+            },
         );
         grid
     }

@@ -41,7 +41,7 @@
 //! cargo bench --features gpu --bench backtest_gpu_cpu_comparison 2>&1 | tee backtest_results.txt
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 use std::time::Duration;
 
@@ -56,7 +56,7 @@ use kimsfinance_core::gpu::GpuDevice;
 #[path = "statistics.rs"]
 mod statistics;
 
-use statistics::{compare_distributions, BenchmarkStats};
+use statistics::{BenchmarkStats, compare_distributions};
 
 /// Simple RSI strategy for benchmarking
 struct RSIStrategy {
@@ -150,7 +150,16 @@ impl Strategy for MultiIndicatorStrategy {
 }
 
 /// Generate realistic OHLCV data for benchmarking
-fn generate_ohlcv_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
@@ -225,25 +234,21 @@ fn bench_single_backtest(c: &mut Criterion) {
             let engine = BacktestEngine::with_config(config);
 
             group.throughput(Throughput::Elements(size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("CPU", size),
-                &size,
-                |b, _| {
-                    b.iter(|| {
-                        engine
-                            .run(
-                                black_box(&mut strategy),
-                                black_box(&timestamps),
-                                black_box(&open),
-                                black_box(&high),
-                                black_box(&low),
-                                black_box(&close),
-                                black_box(&volume),
-                            )
-                            .expect("CPU backtest failed")
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("CPU", size), &size, |b, _| {
+                b.iter(|| {
+                    engine
+                        .run(
+                            black_box(&mut strategy),
+                            black_box(&timestamps),
+                            black_box(&open),
+                            black_box(&high),
+                            black_box(&low),
+                            black_box(&close),
+                            black_box(&volume),
+                        )
+                        .expect("CPU backtest failed")
+                });
+            });
         }
 
         // GPU benchmark
@@ -263,25 +268,21 @@ fn bench_single_backtest(c: &mut Criterion) {
             let engine = BacktestEngine::with_config(config);
 
             group.throughput(Throughput::Elements(size as u64));
-            group.bench_with_input(
-                BenchmarkId::new("GPU", size),
-                &size,
-                |b, _| {
-                    b.iter(|| {
-                        engine
-                            .run(
-                                black_box(&mut strategy),
-                                black_box(&timestamps),
-                                black_box(&open),
-                                black_box(&high),
-                                black_box(&low),
-                                black_box(&close),
-                                black_box(&volume),
-                            )
-                            .expect("GPU backtest failed")
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("GPU", size), &size, |b, _| {
+                b.iter(|| {
+                    engine
+                        .run(
+                            black_box(&mut strategy),
+                            black_box(&timestamps),
+                            black_box(&open),
+                            black_box(&high),
+                            black_box(&low),
+                            black_box(&close),
+                            black_box(&volume),
+                        )
+                        .expect("GPU backtest failed")
+                });
+            });
         }
     }
 
@@ -352,26 +353,22 @@ fn bench_parameter_sweep(c: &mut Criterion) {
             let engine = BacktestEngine::with_config(config);
 
             group.throughput(Throughput::Elements(grid.size() as u64));
-            group.bench_with_input(
-                BenchmarkId::new("CPU_Sweep", size),
-                &size,
-                |b, _| {
-                    b.iter(|| {
-                        engine
-                            .run_sweep(
-                                black_box(&mut strategy),
-                                black_box(&timestamps),
-                                black_box(&open),
-                                black_box(&high),
-                                black_box(&low),
-                                black_box(&close),
-                                black_box(&volume),
-                                black_box(&grid),
-                            )
-                            .expect("CPU sweep failed")
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("CPU_Sweep", size), &size, |b, _| {
+                b.iter(|| {
+                    engine
+                        .run_sweep(
+                            black_box(&mut strategy),
+                            black_box(&timestamps),
+                            black_box(&open),
+                            black_box(&high),
+                            black_box(&low),
+                            black_box(&close),
+                            black_box(&volume),
+                            black_box(&grid),
+                        )
+                        .expect("CPU sweep failed")
+                });
+            });
         }
 
         // GPU sweep
@@ -390,26 +387,22 @@ fn bench_parameter_sweep(c: &mut Criterion) {
             let engine = BacktestEngine::with_config(config);
 
             group.throughput(Throughput::Elements(grid.size() as u64));
-            group.bench_with_input(
-                BenchmarkId::new("GPU_Sweep", size),
-                &size,
-                |b, _| {
-                    b.iter(|| {
-                        engine
-                            .run_sweep(
-                                black_box(&mut strategy),
-                                black_box(&timestamps),
-                                black_box(&open),
-                                black_box(&high),
-                                black_box(&low),
-                                black_box(&close),
-                                black_box(&volume),
-                                black_box(&grid),
-                            )
-                            .expect("GPU sweep failed")
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("GPU_Sweep", size), &size, |b, _| {
+                b.iter(|| {
+                    engine
+                        .run_sweep(
+                            black_box(&mut strategy),
+                            black_box(&timestamps),
+                            black_box(&open),
+                            black_box(&high),
+                            black_box(&low),
+                            black_box(&close),
+                            black_box(&volume),
+                            black_box(&grid),
+                        )
+                        .expect("GPU sweep failed")
+                });
+            });
         }
     }
 
@@ -525,6 +518,10 @@ criterion_group!(
 );
 
 #[cfg(not(feature = "gpu"))]
-criterion_group!(backtest_benches, bench_single_backtest, bench_multi_indicator);
+criterion_group!(
+    backtest_benches,
+    bench_single_backtest,
+    bench_multi_indicator
+);
 
 criterion_main!(backtest_benches);

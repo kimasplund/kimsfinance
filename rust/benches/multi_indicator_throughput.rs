@@ -59,7 +59,7 @@
 //! cargo bench --features gpu --bench multi_indicator_throughput -- memory_profile
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 use std::time::Duration;
 
@@ -189,8 +189,10 @@ impl Strategy for FiveIndicatorStrategy {
             + (roc < -5.0) as i32
             + (williams < -80.0) as i32;
 
-        let sell_score =
-            (rsi > 70.0) as i32 + (cci > 100.0) as i32 + (roc > 5.0) as i32 + (williams > -20.0) as i32;
+        let sell_score = (rsi > 70.0) as i32
+            + (cci > 100.0) as i32
+            + (roc > 5.0) as i32
+            + (williams > -20.0) as i32;
 
         if buy_score >= 3 {
             Signal::Buy
@@ -237,9 +239,11 @@ impl Strategy for SevenIndicatorStrategy {
         let bb_middle = indicators.get("bb_20_2.0_middle").copied().unwrap_or(0.0);
 
         // Skip if any indicator is NaN
-        if [rsi, atr, cci, roc, williams, stoch_k, stoch_d, bb_upper, bb_lower, bb_middle]
-            .iter()
-            .any(|v| v.is_nan())
+        if [
+            rsi, atr, cci, roc, williams, stoch_k, stoch_d, bb_upper, bb_lower, bb_middle,
+        ]
+        .iter()
+        .any(|v| v.is_nan())
         {
             return Signal::Hold;
         }
@@ -292,7 +296,16 @@ impl Strategy for SevenIndicatorStrategy {
 }
 
 /// Generate realistic OHLCV data
-fn generate_ohlcv_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);

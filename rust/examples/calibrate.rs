@@ -78,12 +78,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("🎯 Optimal Thresholds:");
-    println!("   Stochastic: {} candles", profile.thresholds.stochastic_crossover);
+    println!(
+        "   Stochastic: {} candles",
+        profile.thresholds.stochastic_crossover
+    );
     println!("   ROC: {} candles", profile.thresholds.roc_crossover);
-    println!("   Williams %R: {} candles", profile.thresholds.williams_r_crossover);
-    println!("   Bollinger: {} candles", profile.thresholds.bollinger_crossover);
+    println!(
+        "   Williams %R: {} candles",
+        profile.thresholds.williams_r_crossover
+    );
+    println!(
+        "   Bollinger: {} candles",
+        profile.thresholds.bollinger_crossover
+    );
     println!("   MACD: {} candles", profile.thresholds.macd_crossover);
-    println!("   Parallel ops: {} elements", profile.thresholds.parallel_operations);
+    println!(
+        "   Parallel ops: {} elements",
+        profile.thresholds.parallel_operations
+    );
     println!();
 
     println!("💾 Cache saved to:");
@@ -94,7 +106,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Calibration successful!");
     println!();
     println!("Next steps:");
-    println!("  1. Run auto-tuner demo: cargo run --release --features gpu --example autotuner_demo");
+    println!(
+        "  1. Run auto-tuner demo: cargo run --release --features gpu --example autotuner_demo"
+    );
     println!("  2. Use in your code: AutoTuneProfile::get_or_init(&device)");
     println!();
 
@@ -121,7 +135,15 @@ fn format_timestamp(unix_timestamp: u64) -> String {
     match datetime.duration_since(UNIX_EPOCH) {
         Ok(d) => {
             let days = d.as_secs() / 86400;
-            format!("{} days ago", (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() / 86400).saturating_sub(days))
+            format!(
+                "{} days ago",
+                (SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    / 86400)
+                    .saturating_sub(days)
+            )
         }
         Err(_) => "unknown".to_string(),
     }

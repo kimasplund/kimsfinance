@@ -22,7 +22,7 @@
 use kimsfinance_core::backtest::{
     BacktestConfig, BacktestEngine, IndicatorConfig, IndicatorValues, OHLCVBar, Signal, Strategy,
 };
-use kimsfinance_core::binance::{process_binance_month, Timeframe};
+use kimsfinance_core::binance::{Timeframe, process_binance_month};
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::error::Error;
@@ -227,8 +227,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create backtest engine
     let config = BacktestConfig {
         initial_capital: 10_000.0,
-        trading_fee: 0.001,  // 0.1% Binance futures taker fee
-        slippage: 0.0005,    // 0.05% slippage
+        trading_fee: 0.001, // 0.1% Binance futures taker fee
+        slippage: 0.0005,   // 0.05% slippage
         use_gpu: cfg!(feature = "gpu"),
         force_cpu: false,
     };
@@ -313,7 +313,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             for trade in best_result.trades.iter().take(10) {
                 println!(
                     "{:<20} {:>12.2} {:>12.2} {:>12.2} {:>10.2}",
-                    trade.exit_time, trade.entry_price, trade.exit_price, trade.pnl, trade.pnl_percent
+                    trade.exit_time,
+                    trade.entry_price,
+                    trade.exit_price,
+                    trade.pnl,
+                    trade.pnl_percent
                 );
             }
 
@@ -335,10 +339,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Average time per strategy: {:.2}ms",
         total_backtest_time.as_secs_f64() * 1000.0 / results.len() as f64
     );
-    println!("Candles per second: {:.0}",
+    println!(
+        "Candles per second: {:.0}",
         (n * results.len()) as f64 / total_backtest_time.as_secs_f64()
     );
 
     Ok(())
 }
-

@@ -94,7 +94,7 @@ use serde::{Deserialize, Serialize};
 use crate::gpu::{GpuDevice, GpuError};
 
 // Import backtest metrics for calibration
-use crate::backtest::metrics::{calculate_sharpe_ratio_scalar};
+use crate::backtest::metrics::calculate_sharpe_ratio_scalar;
 
 #[cfg(target_arch = "x86_64")]
 use crate::backtest::metrics::calculate_sharpe_ratio_simd;
@@ -265,9 +265,9 @@ pub struct BacktestThresholds {
 impl Default for BacktestThresholds {
     fn default() -> Self {
         Self {
-            simd_sharpe_threshold: 10_000,  // Conservative default from investigation
-            parallel_eval_threshold: 20,     // Current hardcoded value
-            use_hashmap_prealloc: false,     // Never beneficial per investigation
+            simd_sharpe_threshold: 10_000, // Conservative default from investigation
+            parallel_eval_threshold: 20,   // Current hardcoded value
+            use_hashmap_prealloc: false,   // Never beneficial per investigation
             calibrated_at: 0,
         }
     }
@@ -330,13 +330,11 @@ impl AutoTuneProfile {
     pub fn save_to_cache(&self) -> Result<(), GpuError> {
         let cache_file = Self::cache_file()?;
 
-        let json = serde_json::to_string_pretty(self).map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to serialize profile: {}", e))
-        })?;
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to serialize profile: {}", e)))?;
 
-        fs::write(&cache_file, json).map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to write cache file: {}", e))
-        })?;
+        fs::write(&cache_file, json)
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to write cache file: {}", e)))?;
 
         Ok(())
     }
@@ -360,9 +358,10 @@ impl AutoTuneProfile {
 
         for line in cpuinfo.lines() {
             if line.starts_with("model name")
-                && let Some(model) = line.split(':').nth(1) {
-                    return Ok(model.trim().to_string());
-                }
+                && let Some(model) = line.split(':').nth(1)
+            {
+                return Ok(model.trim().to_string());
+            }
         }
 
         Err(GpuError::ExecutionError(
@@ -381,9 +380,7 @@ impl AutoTuneProfile {
             .output()
             .map_err(|e| GpuError::ExecutionError(format!("nvidia-smi failed: {}", e)))?;
 
-        let name = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
         if name.is_empty() {
             return Err(GpuError::ExecutionError("GPU name is empty".to_string()));
@@ -422,16 +419,16 @@ impl AutoTuneProfile {
     ///
     /// Reads from `/proc/cpuinfo` (reports current/base clock, not boost)
     fn detect_cpu_clock() -> Result<f64, GpuError> {
-        let cpuinfo = fs::read_to_string("/proc/cpuinfo").map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to read cpuinfo: {}", e))
-        })?;
+        let cpuinfo = fs::read_to_string("/proc/cpuinfo")
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to read cpuinfo: {}", e)))?;
 
         for line in cpuinfo.lines() {
             if line.starts_with("cpu MHz")
-                && let Some(mhz_str) = line.split(':').nth(1) {
-                    let mhz: f64 = mhz_str.trim().parse().unwrap_or(3000.0);
-                    return Ok(mhz / 1000.0); // Convert to GHz
-                }
+                && let Some(mhz_str) = line.split(':').nth(1)
+            {
+                let mhz: f64 = mhz_str.trim().parse().unwrap_or(3000.0);
+                return Ok(mhz / 1000.0); // Convert to GHz
+            }
         }
 
         Ok(3.0) // Fallback
@@ -567,8 +564,8 @@ impl AutoTuneProfile {
             vram_bandwidth_gbs,
             ram_bandwidth_gbs,
             thresholds: IndicatorThresholds {
-                ema_crossover: usize::MAX,        // Never use GPU for sequential EMA
-                wilders_crossover: usize::MAX,    // Never use GPU for Wilder's
+                ema_crossover: usize::MAX,     // Never use GPU for sequential EMA
+                wilders_crossover: usize::MAX, // Never use GPU for Wilder's
                 stochastic_crossover,
                 roc_crossover,
                 williams_r_crossover,
@@ -667,8 +664,8 @@ impl AutoTuneProfile {
             let (high, low, close) = Self::generate_test_hlc(size);
 
             // Benchmark CPU (10 iterations)
-            let stochastic = Stochastic::new(14, 3)
-                .map_err(|e| GpuError::ExecutionError(e.to_string()))?;
+            let stochastic =
+                Stochastic::new(14, 3).map_err(|e| GpuError::ExecutionError(e.to_string()))?;
 
             let cpu_start = Instant::now();
             for _ in 0..10 {
@@ -758,8 +755,8 @@ impl AutoTuneProfile {
             let (high, low, close) = Self::generate_test_hlc(size);
 
             // Benchmark CPU
-            let williams = WilliamsR::new(14)
-                .map_err(|e| GpuError::ExecutionError(e.to_string()))?;
+            let williams =
+                WilliamsR::new(14).map_err(|e| GpuError::ExecutionError(e.to_string()))?;
 
             let cpu_start = Instant::now();
             for _ in 0..10 {
@@ -839,7 +836,7 @@ impl AutoTuneProfile {
     #[cfg(feature = "gpu")]
     fn find_macd_crossover(device: &GpuDevice) -> Result<usize, GpuError> {
         use crate::gpu::macd_gpu;
-        use crate::indicators::{MultiOutputIndicator, MACD};
+        use crate::indicators::{MACD, MultiOutputIndicator};
         use std::time::Instant;
 
         let sizes = vec![100, 500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000];
@@ -848,8 +845,7 @@ impl AutoTuneProfile {
             let close = Self::generate_test_prices(size);
 
             // Benchmark CPU
-            let macd = MACD::new(12, 26, 9)
-                .map_err(|e| GpuError::ExecutionError(e.to_string()))?;
+            let macd = MACD::new(12, 26, 9).map_err(|e| GpuError::ExecutionError(e.to_string()))?;
 
             let cpu_start = Instant::now();
             for _ in 0..10 {
@@ -909,12 +905,15 @@ impl AutoTuneProfile {
         println!();
         println!("✅ Backtest thresholds calibrated:");
         println!("   SIMD Sharpe threshold: {} points", simd_threshold);
-        println!("   Parallel eval threshold: {} individuals", parallel_threshold);
+        println!(
+            "   Parallel eval threshold: {} individuals",
+            parallel_threshold
+        );
 
         Ok(BacktestThresholds {
             simd_sharpe_threshold: simd_threshold,
             parallel_eval_threshold: parallel_threshold,
-            use_hashmap_prealloc: false,  // Investigation showed never beneficial
+            use_hashmap_prealloc: false, // Investigation showed never beneficial
             calibrated_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -940,7 +939,7 @@ impl AutoTuneProfile {
         // Test sizes: focus on large datasets where performance matters
         // User insight: small datasets are fast anyway, don't over-optimize
         let test_sizes = vec![1_000, 5_000, 10_000, 50_000, 100_000, 500_000];
-        let iterations = 50;  // Run each size multiple times for accuracy
+        let iterations = 50; // Run each size multiple times for accuracy
 
         for &size in &test_sizes {
             // Generate test equity curve (realistic pattern: some volatility)
@@ -983,8 +982,7 @@ impl AutoTuneProfile {
                 } else if size >= 10_000 {
                     println!(
                         "   • SIMD at {} points: {:.2}x (scalar still faster or equal)",
-                        size,
-                        speedup
+                        size, speedup
                     );
                 }
             }
@@ -1042,10 +1040,11 @@ impl AutoTuneProfile {
         PROFILE.get_or_init(|| {
             // Check for manual override
             if let Ok(force_cpu) = std::env::var("KIMSFINANCE_FORCE_CPU")
-                && force_cpu == "1" {
-                    println!("⚠️  KIMSFINANCE_FORCE_CPU=1 detected, forcing CPU-only mode");
-                    return Self::cpu_only_profile();
-                }
+                && force_cpu == "1"
+            {
+                println!("⚠️  KIMSFINANCE_FORCE_CPU=1 detected, forcing CPU-only mode");
+                return Self::cpu_only_profile();
+            }
 
             // Try loading from cache
             if let Some(cached) = Self::load_from_cache() {
@@ -1238,10 +1237,7 @@ mod tests {
         );
 
         // Wilder's should always be CPU
-        assert_eq!(
-            profile.select_wilders_strategy(100),
-            ExecutionStrategy::CPU
-        );
+        assert_eq!(profile.select_wilders_strategy(100), ExecutionStrategy::CPU);
         assert_eq!(
             profile.select_wilders_strategy(1_000_000),
             ExecutionStrategy::CPU

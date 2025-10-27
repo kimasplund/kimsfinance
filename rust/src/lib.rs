@@ -61,7 +61,9 @@ use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch}
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};
 
-use backtest::{BacktestEngine, BacktestConfig, Signal, OHLCVBar, IndicatorConfig, Strategy, IndicatorValues};
+use backtest::{
+    BacktestConfig, BacktestEngine, IndicatorConfig, IndicatorValues, OHLCVBar, Signal, Strategy,
+};
 
 /// Calculate coordinates for candlestick chart rendering (Rust-accelerated)
 ///
@@ -1476,10 +1478,7 @@ impl Strategy for PyStrategyWrapper {
         #[allow(deprecated)]
         Python::with_gil(|py| {
             // Call Python strategy.get_indicators()
-            let result = self
-                .strategy_obj
-                .call_method0(py, "get_indicators")
-                .ok()?;
+            let result = self.strategy_obj.call_method0(py, "get_indicators").ok()?;
 
             // Convert Python list of strings to IndicatorConfig
             let indicators_list: Vec<String> = result.extract(py).ok()?;

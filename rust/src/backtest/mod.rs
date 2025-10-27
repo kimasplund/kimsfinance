@@ -68,30 +68,30 @@
 pub mod core;
 pub mod engine;
 pub mod metrics;
+pub mod multi_objective;
 pub mod optimizer;
+pub mod portfolio;
 pub mod sweep;
 pub mod walkforward;
-pub mod multi_objective;
-pub mod portfolio;
 
 // Re-export main types for convenience
 pub use core::{
     BacktestResult, IndicatorConfig, IndicatorValues, OHLCVBar, ParameterGrid, ParameterRange,
     Signal, Strategy, Trade, TradeDirection,
 };
-pub use engine::{BacktestEngine, BacktestConfig};
+pub use engine::{BacktestConfig, BacktestEngine};
 pub use metrics::{
-    calculate_max_drawdown, calculate_sharpe_ratio, calculate_win_rate, calculate_sortino_ratio,
-    calculate_calmar_ratio, calculate_profit_factor,
+    calculate_calmar_ratio, calculate_max_drawdown, calculate_profit_factor,
+    calculate_sharpe_ratio, calculate_sortino_ratio, calculate_win_rate,
 };
+pub use multi_objective::{MultiObjectiveOptimizer, MultiObjectiveResult, Objective, Solution};
 pub use optimizer::{GeneticOptimizer, OptimizerResult};
-pub use walkforward::{WalkForwardAnalyzer, WalkForwardConfig, WalkForwardResult, WalkForwardWindow};
-pub use multi_objective::{
-    MultiObjectiveOptimizer, MultiObjectiveResult, Objective, Solution,
-};
 pub use portfolio::{
-    PortfolioBacktest, PortfolioConfig, PortfolioResult, PortfolioStrategy, AssetData,
-    AllocationStrategy, RebalanceFrequency,
+    AllocationStrategy, AssetData, PortfolioBacktest, PortfolioConfig, PortfolioResult,
+    PortfolioStrategy, RebalanceFrequency,
+};
+pub use walkforward::{
+    WalkForwardAnalyzer, WalkForwardConfig, WalkForwardResult, WalkForwardWindow,
 };
 
 #[cfg(feature = "gpu")]

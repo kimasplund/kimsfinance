@@ -35,8 +35,8 @@
 //! But CPU smoothing is so much faster than single-thread GPU that it's still a net win.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -250,9 +250,9 @@ pub fn rsi_gpu(
     builder.arg(&period_i32);
 
     unsafe {
-        builder.launch(config).map_err(|e| {
-            GpuError::ExecutionError(format!("RSI kernel launch failed: {:?}", e))
-        })?;
+        builder
+            .launch(config)
+            .map_err(|e| GpuError::ExecutionError(format!("RSI kernel launch failed: {:?}", e)))?;
     }
 
     kernel_stream.synchronize().map_err(|e| {

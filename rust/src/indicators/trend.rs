@@ -288,8 +288,20 @@ mod tests {
         let overall_low = low.iter().cloned().fold(f64::INFINITY, f64::min);
         let overall_high = high.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         for i in 1..result.len() {
-            assert!(result[i] >= overall_low - 10.0, "SAR {} below overall_low {} at index {}", result[i], overall_low, i);
-            assert!(result[i] <= overall_high + 10.0, "SAR {} above overall_high {} at index {}", result[i], overall_high, i);
+            assert!(
+                result[i] >= overall_low - 10.0,
+                "SAR {} below overall_low {} at index {}",
+                result[i],
+                overall_low,
+                i
+            );
+            assert!(
+                result[i] <= overall_high + 10.0,
+                "SAR {} above overall_high {} at index {}",
+                result[i],
+                overall_high,
+                i
+            );
         }
     }
 

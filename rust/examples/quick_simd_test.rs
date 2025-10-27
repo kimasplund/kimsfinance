@@ -1,8 +1,9 @@
 /// Quick SIMD performance validation for Agent 2
 ///
 /// This is a micro-benchmark to quickly validate the SIMD fix performance.
-
-use kimsfinance_core::backtest::metrics::{calculate_sharpe_ratio_scalar, calculate_sharpe_ratio_simd};
+use kimsfinance_core::backtest::metrics::{
+    calculate_sharpe_ratio_scalar, calculate_sharpe_ratio_simd,
+};
 use std::time::Instant;
 
 fn main() {
@@ -27,7 +28,13 @@ fn main() {
         }
 
         // Benchmark scalar
-        let iterations = if size < 1000 { 10000 } else if size < 10000 { 1000 } else { 100 };
+        let iterations = if size < 1000 {
+            10000
+        } else if size < 10000 {
+            1000
+        } else {
+            100
+        };
         let start = Instant::now();
         for _ in 0..iterations {
             std::hint::black_box(calculate_sharpe_ratio_scalar(std::hint::black_box(&equity)));

@@ -59,8 +59,8 @@ use crate::gpu::GpuError;
 #[cfg(not(feature = "gpu"))]
 use crate::cpu::sequential::GpuError;
 use ndarray::Array1;
-use rand::prelude::*;
 use rand::Rng;
+use rand::prelude::*;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -95,7 +95,7 @@ impl GeneticOptimizer {
             mutation_rate: 0.1,
             crossover_rate: 0.8,
             fp8_exploration_ratio: 0.8, // 80% exploration, 20% refinement
-            elitism_rate: 0.1,           // Top 10% survive
+            elitism_rate: 0.1,          // Top 10% survive
             tournament_size: 5,
         }
     }
@@ -290,9 +290,7 @@ impl GeneticOptimizer {
                         rng.gen_range(*min as f64..=*max as f64).round()
                     }
                     ParameterRange::Float { min, max, .. } => rng.gen_range(*min..=*max),
-                    ParameterRange::Values(values) => {
-                        values[rng.gen_range(0..values.len())]
-                    }
+                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
                 };
 
                 parameters.insert(name.clone(), value);
@@ -359,9 +357,9 @@ impl GeneticOptimizer {
             .map(|(idx, individual)| {
                 // Lock strategy for this evaluation
                 // Note: This serializes strategy access but parallelizes everything else
-                let mut strategy_guard = strategy_mutex
-                    .lock()
-                    .map_err(|_| GpuError::InvalidParameter("Strategy mutex poisoned".to_string()))?;
+                let mut strategy_guard = strategy_mutex.lock().map_err(|_| {
+                    GpuError::InvalidParameter("Strategy mutex poisoned".to_string())
+                })?;
 
                 let result = self.evaluate_individual(
                     individual,
@@ -522,12 +520,7 @@ impl GeneticOptimizer {
     }
 
     /// Mutate individual with Gaussian noise
-    fn mutate(
-        &self,
-        individual: &mut Individual,
-        param_grid: &ParameterGrid,
-        rng: &mut ThreadRng,
-    ) {
+    fn mutate(&self, individual: &mut Individual, param_grid: &ParameterGrid, rng: &mut ThreadRng) {
         for (name, range) in &param_grid.ranges {
             if rng.gen_range(0.0..1.0) < self.mutation_rate {
                 let current = individual.parameters.get(name).copied().unwrap_or(0.0);

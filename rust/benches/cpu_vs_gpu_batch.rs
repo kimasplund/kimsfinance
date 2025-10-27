@@ -46,19 +46,19 @@
 //! cargo bench --features gpu --bench cpu_vs_gpu_batch -- large_batch
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::{
-    batch::{calculate_indicators_batch_gpu, IndicatorRequest},
     GpuDevice,
+    batch::{IndicatorRequest, calculate_indicators_batch_gpu},
 };
 
 use kimsfinance_core::indicators::{
+    core::Indicator,
     momentum::{Aroon, CCI, ROC, RSI, Stochastic, WilliamsR},
     volatility::ATR,
-    core::Indicator,
 };
 
 /// Generate realistic OHLCV test data
@@ -76,10 +76,8 @@ fn generate_ohlcv_data(size: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, A
         let t = i as f64;
 
         // Price with trend, sine wave oscillation, and noise
-        let price = base_price
-            + trend * t
-            + volatility * (t * 0.01).sin()
-            + (t * 0.123).sin() * 0.5;
+        let price =
+            base_price + trend * t + volatility * (t * 0.01).sin() + (t * 0.123).sin() * 0.5;
 
         // OHLC with realistic spread
         let spread = volatility * 0.5;
@@ -199,7 +197,10 @@ fn calculate_batch_gpu(
     low: &Array1<f64>,
     close: &Array1<f64>,
     num_indicators: usize,
-) -> Result<std::collections::HashMap<kimsfinance_core::gpu::batch::BatchIndicatorType, Vec<Array1<f64>>>, kimsfinance_core::gpu::GpuError> {
+) -> Result<
+    std::collections::HashMap<kimsfinance_core::gpu::batch::BatchIndicatorType, Vec<Array1<f64>>>,
+    kimsfinance_core::gpu::GpuError,
+> {
     let mut requests = Vec::new();
 
     // Create same indicator set as CPU
@@ -277,14 +278,17 @@ fn bench_small_batch_9_indicators(c: &mut Criterion) {
     // GPU batch
     group.bench_function("gpu_9_indicators", |b| {
         b.iter(|| {
-            black_box(calculate_batch_gpu(
-                black_box(&device),
-                black_box(&open),
-                black_box(&high),
-                black_box(&low),
-                black_box(&close),
-                9,
-            ).expect("GPU batch failed"))
+            black_box(
+                calculate_batch_gpu(
+                    black_box(&device),
+                    black_box(&open),
+                    black_box(&high),
+                    black_box(&low),
+                    black_box(&close),
+                    9,
+                )
+                .expect("GPU batch failed"),
+            )
         })
     });
 
@@ -319,14 +323,17 @@ fn bench_medium_batch_25_indicators(c: &mut Criterion) {
     // GPU batch
     group.bench_function("gpu_25_indicators", |b| {
         b.iter(|| {
-            black_box(calculate_batch_gpu(
-                black_box(&device),
-                black_box(&open),
-                black_box(&high),
-                black_box(&low),
-                black_box(&close),
-                25,
-            ).expect("GPU batch failed"))
+            black_box(
+                calculate_batch_gpu(
+                    black_box(&device),
+                    black_box(&open),
+                    black_box(&high),
+                    black_box(&low),
+                    black_box(&close),
+                    25,
+                )
+                .expect("GPU batch failed"),
+            )
         })
     });
 
@@ -361,14 +368,17 @@ fn bench_large_batch_50_indicators(c: &mut Criterion) {
     // GPU batch
     group.bench_function("gpu_50_indicators", |b| {
         b.iter(|| {
-            black_box(calculate_batch_gpu(
-                black_box(&device),
-                black_box(&open),
-                black_box(&high),
-                black_box(&low),
-                black_box(&close),
-                50,
-            ).expect("GPU batch failed"))
+            black_box(
+                calculate_batch_gpu(
+                    black_box(&device),
+                    black_box(&open),
+                    black_box(&high),
+                    black_box(&low),
+                    black_box(&close),
+                    50,
+                )
+                .expect("GPU batch failed"),
+            )
         })
     });
 

@@ -187,7 +187,9 @@ impl IndicatorGraphBuilder {
                 self.state = GraphState::Capturing;
 
                 // PLACEHOLDER: Print informational message
-                eprintln!("INFO: CUDA Graph capture requested but not yet implemented in cudarc 0.17.3");
+                eprintln!(
+                    "INFO: CUDA Graph capture requested but not yet implemented in cudarc 0.17.3"
+                );
                 eprintln!("      This is a placeholder for future CUDA 13.0 optimization");
                 eprintln!("      Expected performance: 30-50% launch overhead reduction");
 
@@ -371,11 +373,11 @@ pub mod optimization_guide {
     /// Expected performance improvements for different batch sizes
     pub const PERFORMANCE_TARGETS: &[(usize, f64, f64)] = &[
         // (num_indicators, traditional_ms, graph_ms)
-        (1, 0.007, 0.107),   // Single: graph overhead > savings
-        (2, 0.014, 0.104),   // Small: marginal benefit
-        (5, 0.035, 0.103),   // Medium: 70% reduction
-        (10, 0.070, 0.103),  // Large: 85% reduction
-        (20, 0.140, 0.103),  // Very large: 92% reduction
+        (1, 0.007, 0.107),  // Single: graph overhead > savings
+        (2, 0.014, 0.104),  // Small: marginal benefit
+        (5, 0.035, 0.103),  // Medium: 70% reduction
+        (10, 0.070, 0.103), // Large: 85% reduction
+        (20, 0.140, 0.103), // Very large: 92% reduction
     ];
 
     /// Minimum batch size for graph benefits
@@ -404,14 +406,17 @@ pub mod optimization_guide {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::optimization_guide::*;
+    use super::*;
 
     #[test]
     fn test_break_even_calculations() {
         // Small batch (2 indicators): very high break-even
         let iterations = break_even_iterations(2);
-        assert!(iterations > 100, "Small batches should have high break-even");
+        assert!(
+            iterations > 100,
+            "Small batches should have high break-even"
+        );
 
         // Medium batch (5 indicators): reasonable break-even
         let iterations = break_even_iterations(5);
@@ -473,8 +478,8 @@ mod tests {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
 
         // Test builder creation
-        let mut builder = IndicatorGraphBuilder::new(&device)
-            .expect("Failed to create graph builder");
+        let mut builder =
+            IndicatorGraphBuilder::new(&device).expect("Failed to create graph builder");
 
         // Test capture begin
         builder.begin_capture().expect("Failed to begin capture");
@@ -495,6 +500,9 @@ mod tests {
         // Cannot end capture before beginning
         let builder = IndicatorGraphBuilder::new(&device).unwrap();
         let result = builder.end_capture();
-        assert!(result.is_err(), "Should fail when ending capture without beginning");
+        assert!(
+            result.is_err(),
+            "Should fail when ending capture without beginning"
+        );
     }
 }

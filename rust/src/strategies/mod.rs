@@ -28,39 +28,21 @@
 //! println!("Sharpe Ratio: {:.2}", result.sharpe_ratio);
 //! ```
 
+pub mod composite;
 pub mod momentum;
 pub mod trend;
 pub mod volatility;
-pub mod composite;
 
 // Re-export all strategies for convenience
 pub use momentum::{
-    RSIMeanReversion,
-    RSIOversoldOverbought,
-    MACDTrendFollowing,
-    MACDDivergence,
-    StochasticOscillator,
-    ROCBreakout,
-    CCIReversal,
+    CCIReversal, MACDDivergence, MACDTrendFollowing, ROCBreakout, RSIMeanReversion,
+    RSIOversoldOverbought, StochasticOscillator,
 };
 
-pub use trend::{
-    EMACrossover,
-    TripleEMATrend,
-    DonchianBreakout,
-    KeltnerTrend,
-};
+pub use trend::{DonchianBreakout, EMACrossover, KeltnerTrend, TripleEMATrend};
 
-pub use volatility::{
-    BollingerBandsSqueeze,
-    BollingerBandsExpansion,
-    ATRVolatilityBreakout,
-};
+pub use volatility::{ATRVolatilityBreakout, BollingerBandsExpansion, BollingerBandsSqueeze};
 
 pub use composite::{
-    RSIWithATR,
-    MACDWithEMA,
-    BollingerWithStochastic,
-    TripleConfirmation,
-    VolatilityMomentum,
+    BollingerWithStochastic, MACDWithEMA, RSIWithATR, TripleConfirmation, VolatilityMomentum,
 };

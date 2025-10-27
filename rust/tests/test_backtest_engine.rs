@@ -118,11 +118,11 @@ fn test_rsi_strategy_cpu_only() {
     println!("  Profit Factor: {:.2}", result.profit_factor);
 
     // Basic sanity checks
-    assert!(result.equity_curve.len() == n, "Equity curve length mismatch");
     assert!(
-        result.final_equity > 0.0,
-        "Final equity should be positive"
+        result.equity_curve.len() == n,
+        "Equity curve length mismatch"
     );
+    assert!(result.final_equity > 0.0, "Final equity should be positive");
     assert!(
         result.num_trades > 0,
         "Should have executed at least one trade"

@@ -4,8 +4,8 @@
 //! VWMA is perfectly parallelizable - each thread calculates one window independently.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 

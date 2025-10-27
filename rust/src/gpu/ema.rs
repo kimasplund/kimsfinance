@@ -58,8 +58,8 @@
 //! - ATR: 2-3x faster with hybrid approach
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -225,10 +225,10 @@ extern "C" __global__ void ema_kernel(
 /// let ema = ema_hybrid(&device, &close, 20, None)?;  // Uses CPU internally
 /// ```
 pub fn ema_hybrid(
-    _device: &GpuDevice,  // Unused but kept for API compatibility
+    _device: &GpuDevice, // Unused but kept for API compatibility
     close: &Array1<f64>,
     period: usize,
-    _stream: Option<&Arc<CudaStream>>,  // Unused
+    _stream: Option<&Arc<CudaStream>>, // Unused
 ) -> Result<Array1<f64>, GpuError> {
     ema_cpu(close, period)
 }
@@ -412,8 +412,8 @@ mod tests {
     #[test]
     fn test_ema_hybrid_equals_cpu() {
         let close = arr1(&[
-            100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0,
-            111.0, 110.0, 112.0, 114.0, 113.0, 115.0, 117.0, 116.0, 118.0, 120.0,
+            100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0, 111.0, 110.0,
+            112.0, 114.0, 113.0, 115.0, 117.0, 116.0, 118.0, 120.0,
         ]);
 
         // Direct CPU call

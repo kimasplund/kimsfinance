@@ -43,11 +43,7 @@ pub struct RSIMeanReversion {
 }
 
 impl RSIMeanReversion {
-    pub fn new(
-        rsi_period: usize,
-        buy_threshold: f64,
-        sell_threshold: f64,
-    ) -> Self {
+    pub fn new(rsi_period: usize, buy_threshold: f64, sell_threshold: f64) -> Self {
         Self {
             rsi_period,
             buy_threshold,
@@ -89,15 +85,27 @@ impl Strategy for RSIMeanReversion {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "rsi_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "buy_threshold",
-            ParameterRange::Float { min: 20.0, max: 35.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 20.0,
+                max: 35.0,
+                step: 5.0,
+            },
         );
         grid.add_range(
             "sell_threshold",
-            ParameterRange::Float { min: 50.0, max: 65.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 50.0,
+                max: 65.0,
+                step: 5.0,
+            },
         );
         grid
     }
@@ -144,11 +152,7 @@ pub struct RSIOversoldOverbought {
 }
 
 impl RSIOversoldOverbought {
-    pub fn new(
-        rsi_period: usize,
-        oversold_threshold: f64,
-        overbought_threshold: f64,
-    ) -> Self {
+    pub fn new(rsi_period: usize, oversold_threshold: f64, overbought_threshold: f64) -> Self {
         Self {
             rsi_period,
             oversold_threshold,
@@ -190,15 +194,27 @@ impl Strategy for RSIOversoldOverbought {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "rsi_period",
-            ParameterRange::Int { min: 9, max: 21, step: 3 },
+            ParameterRange::Int {
+                min: 9,
+                max: 21,
+                step: 3,
+            },
         );
         grid.add_range(
             "oversold_threshold",
-            ParameterRange::Float { min: 15.0, max: 30.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 15.0,
+                max: 30.0,
+                step: 5.0,
+            },
         );
         grid.add_range(
             "overbought_threshold",
-            ParameterRange::Float { min: 70.0, max: 85.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 70.0,
+                max: 85.0,
+                step: 5.0,
+            },
         );
         grid
     }
@@ -269,7 +285,10 @@ impl Default for MACDTrendFollowing {
 
 impl Strategy for MACDTrendFollowing {
     fn on_data(&mut self, _bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
-        let key = format!("macd_{}_{}_{}", self.fast_period, self.slow_period, self.signal_period);
+        let key = format!(
+            "macd_{}_{}_{}",
+            self.fast_period, self.slow_period, self.signal_period
+        );
         let macd_key = format!("{}_macd", key);
         let signal_key = format!("{}_signal", key);
 
@@ -302,15 +321,27 @@ impl Strategy for MACDTrendFollowing {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "fast_period",
-            ParameterRange::Int { min: 8, max: 16, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 16,
+                step: 2,
+            },
         );
         grid.add_range(
             "slow_period",
-            ParameterRange::Int { min: 20, max: 30, step: 2 },
+            ParameterRange::Int {
+                min: 20,
+                max: 30,
+                step: 2,
+            },
         );
         grid.add_range(
             "signal_period",
-            ParameterRange::Int { min: 7, max: 12, step: 1 },
+            ParameterRange::Int {
+                min: 7,
+                max: 12,
+                step: 1,
+            },
         );
         grid
     }
@@ -380,7 +411,10 @@ impl Default for MACDDivergence {
 
 impl Strategy for MACDDivergence {
     fn on_data(&mut self, _bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
-        let key = format!("macd_{}_{}_{}", self.fast_period, self.slow_period, self.signal_period);
+        let key = format!(
+            "macd_{}_{}_{}",
+            self.fast_period, self.slow_period, self.signal_period
+        );
         let histogram_key = format!("{}_histogram", key);
 
         let histogram = indicators.get(&histogram_key).copied().unwrap_or(0.0);
@@ -406,11 +440,19 @@ impl Strategy for MACDDivergence {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "fast_period",
-            ParameterRange::Int { min: 8, max: 16, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 16,
+                step: 2,
+            },
         );
         grid.add_range(
             "slow_period",
-            ParameterRange::Int { min: 20, max: 30, step: 2 },
+            ParameterRange::Int {
+                min: 20,
+                max: 30,
+                step: 2,
+            },
         );
         grid
     }
@@ -522,19 +564,35 @@ impl Strategy for StochasticOscillator {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "k_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "d_period",
-            ParameterRange::Int { min: 3, max: 7, step: 1 },
+            ParameterRange::Int {
+                min: 3,
+                max: 7,
+                step: 1,
+            },
         );
         grid.add_range(
             "oversold_threshold",
-            ParameterRange::Float { min: 15.0, max: 25.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 15.0,
+                max: 25.0,
+                step: 5.0,
+            },
         );
         grid.add_range(
             "overbought_threshold",
-            ParameterRange::Float { min: 75.0, max: 85.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 75.0,
+                max: 85.0,
+                step: 5.0,
+            },
         );
         grid
     }
@@ -623,15 +681,27 @@ impl Strategy for ROCBreakout {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "roc_period",
-            ParameterRange::Int { min: 8, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "buy_threshold",
-            ParameterRange::Float { min: 1.0, max: 5.0, step: 1.0 },
+            ParameterRange::Float {
+                min: 1.0,
+                max: 5.0,
+                step: 1.0,
+            },
         );
         grid.add_range(
             "sell_threshold",
-            ParameterRange::Float { min: -5.0, max: -1.0, step: 1.0 },
+            ParameterRange::Float {
+                min: -5.0,
+                max: -1.0,
+                step: 1.0,
+            },
         );
         grid
     }
@@ -678,11 +748,7 @@ pub struct CCIReversal {
 }
 
 impl CCIReversal {
-    pub fn new(
-        cci_period: usize,
-        oversold_threshold: f64,
-        overbought_threshold: f64,
-    ) -> Self {
+    pub fn new(cci_period: usize, oversold_threshold: f64, overbought_threshold: f64) -> Self {
         Self {
             cci_period,
             oversold_threshold,
@@ -724,15 +790,27 @@ impl Strategy for CCIReversal {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "cci_period",
-            ParameterRange::Int { min: 14, max: 30, step: 2 },
+            ParameterRange::Int {
+                min: 14,
+                max: 30,
+                step: 2,
+            },
         );
         grid.add_range(
             "oversold_threshold",
-            ParameterRange::Float { min: -150.0, max: -80.0, step: 10.0 },
+            ParameterRange::Float {
+                min: -150.0,
+                max: -80.0,
+                step: 10.0,
+            },
         );
         grid.add_range(
             "overbought_threshold",
-            ParameterRange::Float { min: 80.0, max: 150.0, step: 10.0 },
+            ParameterRange::Float {
+                min: 80.0,
+                max: 150.0,
+                step: 10.0,
+            },
         );
         grid
     }

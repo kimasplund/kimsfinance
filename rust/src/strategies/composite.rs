@@ -105,8 +105,12 @@ impl Strategy for RSIWithATR {
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
         vec![
-            IndicatorConfig::RSI { period: self.rsi_period },
-            IndicatorConfig::ATR { period: self.atr_period },
+            IndicatorConfig::RSI {
+                period: self.rsi_period,
+            },
+            IndicatorConfig::ATR {
+                period: self.atr_period,
+            },
         ]
     }
 
@@ -114,23 +118,43 @@ impl Strategy for RSIWithATR {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "rsi_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "atr_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "rsi_oversold",
-            ParameterRange::Float { min: 25.0, max: 35.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 25.0,
+                max: 35.0,
+                step: 5.0,
+            },
         );
         grid.add_range(
             "rsi_overbought",
-            ParameterRange::Float { min: 65.0, max: 75.0, step: 5.0 },
+            ParameterRange::Float {
+                min: 65.0,
+                max: 75.0,
+                step: 5.0,
+            },
         );
         grid.add_range(
             "min_atr_pct",
-            ParameterRange::Float { min: 0.003, max: 0.010, step: 0.001 },
+            ParameterRange::Float {
+                min: 0.003,
+                max: 0.010,
+                step: 0.001,
+            },
         );
         grid
     }
@@ -210,7 +234,10 @@ impl Default for MACDWithEMA {
 
 impl Strategy for MACDWithEMA {
     fn on_data(&mut self, bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
-        let macd_key = format!("macd_{}_{}_{}",  self.macd_fast, self.macd_slow, self.macd_signal);
+        let macd_key = format!(
+            "macd_{}_{}_{}",
+            self.macd_fast, self.macd_slow, self.macd_signal
+        );
         let macd_line_key = format!("{}_macd", macd_key);
         let signal_line_key = format!("{}_signal", macd_key);
         let ema_key = format!("ema_{}", self.trend_ema_period);
@@ -241,7 +268,9 @@ impl Strategy for MACDWithEMA {
                 slow: self.macd_slow,
                 signal: self.macd_signal,
             },
-            IndicatorConfig::EMA { period: self.trend_ema_period },
+            IndicatorConfig::EMA {
+                period: self.trend_ema_period,
+            },
         ]
     }
 
@@ -249,15 +278,27 @@ impl Strategy for MACDWithEMA {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "macd_fast",
-            ParameterRange::Int { min: 8, max: 16, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 16,
+                step: 2,
+            },
         );
         grid.add_range(
             "macd_slow",
-            ParameterRange::Int { min: 20, max: 30, step: 2 },
+            ParameterRange::Int {
+                min: 20,
+                max: 30,
+                step: 2,
+            },
         );
         grid.add_range(
             "trend_ema_period",
-            ParameterRange::Int { min: 100, max: 250, step: 50 },
+            ParameterRange::Int {
+                min: 100,
+                max: 250,
+                step: 50,
+            },
         );
         grid
     }
@@ -374,15 +415,27 @@ impl Strategy for BollingerWithStochastic {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "bb_period",
-            ParameterRange::Int { min: 15, max: 30, step: 5 },
+            ParameterRange::Int {
+                min: 15,
+                max: 30,
+                step: 5,
+            },
         );
         grid.add_range(
             "bb_std_dev",
-            ParameterRange::Float { min: 1.5, max: 2.5, step: 0.25 },
+            ParameterRange::Float {
+                min: 1.5,
+                max: 2.5,
+                step: 0.25,
+            },
         );
         grid.add_range(
             "stoch_k_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid
     }
@@ -437,7 +490,13 @@ pub struct TripleConfirmation {
 }
 
 impl TripleConfirmation {
-    pub fn new(rsi_period: usize, macd_fast: usize, macd_slow: usize, macd_signal: usize, ema_period: usize) -> Self {
+    pub fn new(
+        rsi_period: usize,
+        macd_fast: usize,
+        macd_slow: usize,
+        macd_signal: usize,
+        ema_period: usize,
+    ) -> Self {
         Self {
             rsi_period,
             macd_fast,
@@ -464,7 +523,10 @@ impl Default for TripleConfirmation {
 impl Strategy for TripleConfirmation {
     fn on_data(&mut self, bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
         let rsi_key = format!("rsi_{}", self.rsi_period);
-        let macd_key = format!("macd_{}_{}_{}",  self.macd_fast, self.macd_slow, self.macd_signal);
+        let macd_key = format!(
+            "macd_{}_{}_{}",
+            self.macd_fast, self.macd_slow, self.macd_signal
+        );
         let macd_line_key = format!("{}_macd", macd_key);
         let signal_line_key = format!("{}_signal", macd_key);
         let ema_key = format!("ema_{}", self.ema_period);
@@ -491,13 +553,17 @@ impl Strategy for TripleConfirmation {
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
         vec![
-            IndicatorConfig::RSI { period: self.rsi_period },
+            IndicatorConfig::RSI {
+                period: self.rsi_period,
+            },
             IndicatorConfig::MACD {
                 fast: self.macd_fast,
                 slow: self.macd_slow,
                 signal: self.macd_signal,
             },
-            IndicatorConfig::EMA { period: self.ema_period },
+            IndicatorConfig::EMA {
+                period: self.ema_period,
+            },
         ]
     }
 
@@ -505,15 +571,27 @@ impl Strategy for TripleConfirmation {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "rsi_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "macd_fast",
-            ParameterRange::Int { min: 8, max: 16, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 16,
+                step: 2,
+            },
         );
         grid.add_range(
             "ema_period",
-            ParameterRange::Int { min: 30, max: 100, step: 10 },
+            ParameterRange::Int {
+                min: 30,
+                max: 100,
+                step: 10,
+            },
         );
         grid
     }
@@ -620,8 +698,12 @@ impl Strategy for VolatilityMomentum {
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
         vec![
-            IndicatorConfig::ATR { period: self.atr_period },
-            IndicatorConfig::ROC { period: self.roc_period },
+            IndicatorConfig::ATR {
+                period: self.atr_period,
+            },
+            IndicatorConfig::ROC {
+                period: self.roc_period,
+            },
         ]
     }
 
@@ -629,19 +711,35 @@ impl Strategy for VolatilityMomentum {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "atr_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "roc_period",
-            ParameterRange::Int { min: 8, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 8,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "min_atr_pct",
-            ParameterRange::Float { min: 0.003, max: 0.010, step: 0.001 },
+            ParameterRange::Float {
+                min: 0.003,
+                max: 0.010,
+                step: 0.001,
+            },
         );
         grid.add_range(
             "roc_buy_threshold",
-            ParameterRange::Float { min: 1.0, max: 5.0, step: 1.0 },
+            ParameterRange::Float {
+                min: 1.0,
+                max: 5.0,
+                step: 1.0,
+            },
         );
         grid
     }

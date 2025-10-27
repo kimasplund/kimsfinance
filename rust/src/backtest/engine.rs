@@ -31,9 +31,9 @@ use std::collections::HashMap;
 
 #[cfg(feature = "gpu")]
 use crate::gpu::{
+    GpuError,
     batch::{BatchIndicatorParams, BatchIndicatorType, IndicatorResult},
     device::GpuDevice,
-    GpuError,
 };
 
 #[cfg(not(feature = "gpu"))]
@@ -149,14 +149,8 @@ impl BacktestEngine {
         let indicator_configs = strategy.indicators();
 
         // Calculate all indicators upfront (batch processing for efficiency)
-        let indicator_values = self.calculate_indicators(
-            &indicator_configs,
-            high,
-            low,
-            close,
-            open,
-            volume,
-        )?;
+        let indicator_values =
+            self.calculate_indicators(&indicator_configs, high, low, close, open, volume)?;
 
         // Run strategy bar-by-bar
         let mut position = 0.0; // Current position size (0 = no position, 1 = full long, -1 = full short)
@@ -208,7 +202,8 @@ impl BacktestEngine {
                             pnl_percent,
                         });
 
-                        equity += pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
+                        equity +=
+                            pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
                     }
 
                     // Open long position
@@ -284,7 +279,8 @@ impl BacktestEngine {
                             pnl_percent,
                         });
 
-                        equity += pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
+                        equity +=
+                            pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
                         position = 0.0;
                     }
                 }
@@ -458,7 +454,9 @@ impl BacktestEngine {
 
         // If no threshold, just run normal backtest
         if min_sharpe_threshold.is_none() {
-            return self.run(strategy, timestamps, open, high, low, close, volume).map(Some);
+            return self
+                .run(strategy, timestamps, open, high, low, close, volume)
+                .map(Some);
         }
 
         let threshold = min_sharpe_threshold.unwrap();
@@ -468,14 +466,8 @@ impl BacktestEngine {
         let indicator_configs = strategy.indicators();
 
         // Calculate all indicators upfront (batch processing for efficiency)
-        let indicator_values = self.calculate_indicators(
-            &indicator_configs,
-            high,
-            low,
-            close,
-            open,
-            volume,
-        )?;
+        let indicator_values =
+            self.calculate_indicators(&indicator_configs, high, low, close, open, volume)?;
 
         // Run strategy bar-by-bar with early exit checks
         let mut position = 0.0;
@@ -536,7 +528,8 @@ impl BacktestEngine {
                             pnl_percent,
                         });
 
-                        equity += pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
+                        equity +=
+                            pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
                     }
 
                     // Open long position
@@ -612,7 +605,8 @@ impl BacktestEngine {
                             pnl_percent,
                         });
 
-                        equity += pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
+                        equity +=
+                            pnl - (entry_price.abs() + exit_price.abs()) * self.config.trading_fee;
                         position = 0.0;
                     }
                 }
@@ -878,10 +872,7 @@ impl BacktestEngine {
                         },
                     );
                 }
-                IndicatorConfig::Stochastic {
-                    k_period,
-                    d_period,
-                } => {
+                IndicatorConfig::Stochastic { k_period, d_period } => {
                     indicators.push(BatchIndicatorType::Stochastic);
                     params.insert(
                         BatchIndicatorType::Stochastic,
@@ -998,7 +989,7 @@ impl BacktestEngine {
         use crate::indicators::core::{Indicator, MultiOutputIndicator};
         use crate::indicators::momentum::{CCI, MACD, ROC, RSI, Stochastic, WilliamsR};
         use crate::indicators::moving_averages::{EMA, SMA};
-        use crate::indicators::volatility::{BollingerBands, ATR};
+        use crate::indicators::volatility::{ATR, BollingerBands};
 
         let mut output = HashMap::new();
 
@@ -1007,24 +998,24 @@ impl BacktestEngine {
             match config {
                 // Momentum Indicators (single-output)
                 IndicatorConfig::RSI { period } => {
-                    let indicator = RSI::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        RSI::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate(close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     output.insert(key, values.to_vec());
                 }
                 IndicatorConfig::ROC { period } => {
-                    let indicator = ROC::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        ROC::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate(close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     output.insert(key, values.to_vec());
                 }
                 IndicatorConfig::CCI { period } => {
-                    let indicator = CCI::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        CCI::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate_hlc(high.view(), low.view(), close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;
@@ -1041,8 +1032,8 @@ impl BacktestEngine {
 
                 // Volatility Indicators
                 IndicatorConfig::ATR { period } => {
-                    let indicator = ATR::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        ATR::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate_hlc(high.view(), low.view(), close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;
@@ -1051,16 +1042,16 @@ impl BacktestEngine {
 
                 // Moving Averages
                 IndicatorConfig::SMA { period } => {
-                    let indicator = SMA::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        SMA::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate(close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     output.insert(key, values.to_vec());
                 }
                 IndicatorConfig::EMA { period } => {
-                    let indicator = EMA::new(*period)
-                        .map_err(|e| GpuError::ComputationError(e.to_string()))?;
+                    let indicator =
+                        EMA::new(*period).map_err(|e| GpuError::ComputationError(e.to_string()))?;
                     let values = indicator
                         .calculate(close.view())
                         .map_err(|e| GpuError::ComputationError(e.to_string()))?;

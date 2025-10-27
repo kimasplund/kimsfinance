@@ -11,8 +11,8 @@
 //! - Multi-timeframe: +45-55% speedup over sequential processing
 //! - Sharpe reduction: <100μs for 1M data points
 
-use super::device::{GpuDevice, GpuError};
 use super::compile::compile_ptx_optimized;
+use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 
@@ -409,11 +409,15 @@ pub fn rsi_sweep_3d_gpu(
 
     // Validate
     if close_batch.len() != n_assets * n_candles {
-        return Err(GpuError::InvalidParameter("close_batch length mismatch".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "close_batch length mismatch".to_string(),
+        ));
     }
 
     if periods.is_empty() {
-        return Err(GpuError::InvalidParameter("periods cannot be empty".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "periods cannot be empty".to_string(),
+        ));
     }
 
     // Compile kernels
@@ -433,9 +437,9 @@ pub fn rsi_sweep_3d_gpu(
 
     let config = LaunchConfig {
         grid_dim: (
-            ((n_candles + 255) / 256) as u32,  // x: candle chunks
-            n_periods as u32,                   // y: period sweep
-            n_assets as u32,                    // z: asset batch
+            ((n_candles + 255) / 256) as u32, // x: candle chunks
+            n_periods as u32,                 // y: period sweep
+            n_assets as u32,                  // z: asset batch
         ),
         block_dim: (256, 1, 1),
         shared_mem_bytes: 0,
@@ -523,7 +527,9 @@ pub fn sma_sweep_3d_gpu(
     let n_periods = periods.len();
 
     if close_batch.len() != n_assets * n_candles {
-        return Err(GpuError::InvalidParameter("close_batch length mismatch".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "close_batch length mismatch".to_string(),
+        ));
     }
 
     let ptx = compile_ptx_optimized(SWEEP_3D_KERNELS)?;
@@ -588,7 +594,9 @@ pub fn sharpe_reduction_gpu(
     n_candles: usize,
 ) -> Result<Vec<f64>, GpuError> {
     if indicator_sweep.len() != n_periods * n_assets * n_candles {
-        return Err(GpuError::InvalidParameter("indicator_sweep length mismatch".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "indicator_sweep length mismatch".to_string(),
+        ));
     }
 
     let ptx = compile_ptx_optimized(SWEEP_3D_KERNELS)?;
@@ -628,8 +636,8 @@ pub fn sharpe_reduction_gpu(
 #[derive(Debug, Clone)]
 pub struct SweepResult3D {
     pub periods: Vec<usize>,
-    pub indicator_values: Vec<f64>,  // [n_periods, n_assets, n_candles]
-    pub sharpe_scores: Vec<f64>,     // [n_periods, n_assets]
+    pub indicator_values: Vec<f64>, // [n_periods, n_assets, n_candles]
+    pub sharpe_scores: Vec<f64>,    // [n_periods, n_assets]
     pub n_assets: usize,
     pub n_candles: usize,
 }
@@ -659,9 +667,9 @@ impl SweepResult3D {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use super::super::sma::sma_gpu;
     use super::super::rsi::rsi_gpu;
+    use super::super::sma::sma_gpu;
+    use super::*;
 
     fn generate_test_asset(n: usize, seed: f64) -> Vec<f64> {
         (0..n)
@@ -694,9 +702,8 @@ mod tests {
                 let sma_ind = sma_gpu(&device, &close, period, None).unwrap();
 
                 for candle_idx in 0..n_candles {
-                    let sweep_idx = period_idx * (n_assets * n_candles) +
-                                    asset_idx * n_candles +
-                                    candle_idx;
+                    let sweep_idx =
+                        period_idx * (n_assets * n_candles) + asset_idx * n_candles + candle_idx;
                     let v_sweep = sma_sweep[sweep_idx];
                     let v_ind = sma_ind[candle_idx];
 
@@ -706,7 +713,11 @@ mod tests {
                         assert!(
                             (v_ind - v_sweep).abs() < 1e-10,
                             "Period {}, asset {}, candle {}: {:.15} vs {:.15}",
-                            period, asset_idx, candle_idx, v_ind, v_sweep
+                            period,
+                            asset_idx,
+                            candle_idx,
+                            v_ind,
+                            v_sweep
                         );
                     }
                 }
@@ -739,9 +750,8 @@ mod tests {
                 let rsi_ind = rsi_gpu(&device, &close, period, None).unwrap();
 
                 for candle_idx in 0..n_candles {
-                    let sweep_idx = period_idx * (n_assets * n_candles) +
-                                    asset_idx * n_candles +
-                                    candle_idx;
+                    let sweep_idx =
+                        period_idx * (n_assets * n_candles) + asset_idx * n_candles + candle_idx;
                     let v_sweep = rsi_sweep[sweep_idx];
                     let v_ind = rsi_ind[candle_idx];
 
@@ -752,7 +762,12 @@ mod tests {
                         assert!(
                             diff < 1e-8,
                             "Period {}, asset {}, candle {}: {:.15} vs {:.15} (diff: {:.2e})",
-                            period, asset_idx, candle_idx, v_ind, v_sweep, diff
+                            period,
+                            asset_idx,
+                            candle_idx,
+                            v_ind,
+                            v_sweep,
+                            diff
                         );
                     }
                 }
@@ -773,18 +788,19 @@ mod tests {
         for period_idx in 0..n_periods {
             for asset_idx in 0..n_assets {
                 for candle_idx in 0..n_candles {
-                    let idx = period_idx * (n_assets * n_candles) +
-                              asset_idx * n_candles +
-                              candle_idx;
-                    indicator_sweep[idx] = 100.0 + (candle_idx as f64) * 0.1 +
-                                           (period_idx as f64) * 5.0 +
-                                           (asset_idx as f64) * 2.0;
+                    let idx =
+                        period_idx * (n_assets * n_candles) + asset_idx * n_candles + candle_idx;
+                    indicator_sweep[idx] = 100.0
+                        + (candle_idx as f64) * 0.1
+                        + (period_idx as f64) * 5.0
+                        + (asset_idx as f64) * 2.0;
                 }
             }
         }
 
-        let sharpe_scores = sharpe_reduction_gpu(&device, &indicator_sweep, n_periods, n_assets, n_candles)
-            .expect("Sharpe reduction failed");
+        let sharpe_scores =
+            sharpe_reduction_gpu(&device, &indicator_sweep, n_periods, n_assets, n_candles)
+                .expect("Sharpe reduction failed");
 
         assert_eq!(sharpe_scores.len(), n_periods * n_assets);
 

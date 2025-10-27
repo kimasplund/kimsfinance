@@ -19,13 +19,13 @@
 //! cargo bench --bench cpu_batch_only
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 
 use kimsfinance_core::indicators::{
+    core::Indicator,
     momentum::{CCI, ROC, RSI},
     volatility::ATR,
-    core::Indicator,
 };
 
 /// Generate realistic OHLCV data
@@ -69,19 +69,34 @@ fn calculate_9_indicators_cpu(
     results.push(RSI::new(14).unwrap().calculate(close.view()).unwrap());
 
     // 2. ATR (period 14)
-    results.push(ATR::new(14).unwrap().calculate_hlc(high.view(), low.view(), close.view()).unwrap());
+    results.push(
+        ATR::new(14)
+            .unwrap()
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap(),
+    );
 
     // 3. ROC (period 12)
     results.push(ROC::new(12).unwrap().calculate(close.view()).unwrap());
 
     // 4. CCI (period 20)
-    results.push(CCI::new(20).unwrap().calculate_hlc(high.view(), low.view(), close.view()).unwrap());
+    results.push(
+        CCI::new(20)
+            .unwrap()
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap(),
+    );
 
     // 5. RSI (period 7)
     results.push(RSI::new(7).unwrap().calculate(close.view()).unwrap());
 
     // 6. ATR (period 10)
-    results.push(ATR::new(10).unwrap().calculate_hlc(high.view(), low.view(), close.view()).unwrap());
+    results.push(
+        ATR::new(10)
+            .unwrap()
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap(),
+    );
 
     // 7. RSI (period 21)
     results.push(RSI::new(21).unwrap().calculate(close.view()).unwrap());
@@ -90,7 +105,12 @@ fn calculate_9_indicators_cpu(
     results.push(ROC::new(6).unwrap().calculate(close.view()).unwrap());
 
     // 9. CCI (period 14)
-    results.push(CCI::new(14).unwrap().calculate_hlc(high.view(), low.view(), close.view()).unwrap());
+    results.push(
+        CCI::new(14)
+            .unwrap()
+            .calculate_hlc(high.view(), low.view(), close.view())
+            .unwrap(),
+    );
 
     results
 }

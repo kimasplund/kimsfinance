@@ -61,7 +61,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{GpuDevice, stochastic_gpu, rsi_gpu, atr_gpu};
+use kimsfinance_core::gpu::{GpuDevice, atr_gpu, rsi_gpu, stochastic_gpu};
 
 mod statistics;
 use statistics::ComparisonResult;
@@ -94,7 +94,7 @@ impl OptimizationPhase {
             OptimizationPhase::Baseline => 1.0,
             OptimizationPhase::Phase1Compute89 => 1.20, // +20% (conservative estimate)
             OptimizationPhase::Phase2CacheFusion => 1.30, // +30% cumulative
-            OptimizationPhase::Phase32D3D => 1.45,        // +45% cumulative
+            OptimizationPhase::Phase32D3D => 1.45,      // +45% cumulative
         }
     }
 
@@ -158,12 +158,7 @@ fn generate_ohlc_data(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
 
 /// Measure GPU indicator with proper synchronization
 #[cfg(feature = "gpu")]
-fn measure_gpu_indicator<F>(
-    device: &GpuDevice,
-    f: F,
-    iterations: usize,
-    warmup: usize,
-) -> Vec<f64>
+fn measure_gpu_indicator<F>(device: &GpuDevice, f: F, iterations: usize, warmup: usize) -> Vec<f64>
 where
     F: Fn(&GpuDevice) -> Result<(), Box<dyn std::error::Error>>,
 {
@@ -229,12 +224,7 @@ fn bench_rsi_ab_test(c: &mut Criterion) {
 
             group.bench_function(&phase_name, |b| {
                 b.iter(|| {
-                    let _ = rsi_gpu(
-                        black_box(&device),
-                        black_box(&close),
-                        black_box(14),
-                        None,
-                    );
+                    let _ = rsi_gpu(black_box(&device), black_box(&close), black_box(14), None);
                 });
             });
         }
@@ -404,7 +394,10 @@ fn test_statistical_analysis() {
                 expected, comparison.speedup
             );
         } else {
-            println!("    ✗ Not statistically significant (p = {:.4})", comparison.p_value);
+            println!(
+                "    ✗ Not statistically significant (p = {:.4})",
+                comparison.p_value
+            );
         }
 
         all_results
@@ -453,7 +446,11 @@ fn generate_markdown_report(results: &HashMap<String, Vec<ComparisonResult>>) ->
         report.push_str("|--------------|---------------|--------------|---------|---------|-------------|-------------|\n");
 
         for comparison in comparisons {
-            let significant = if comparison.is_significant { "✓" } else { "✗" };
+            let significant = if comparison.is_significant {
+                "✓"
+            } else {
+                "✗"
+            };
             report.push_str(&format!(
                 "| {} | {:.2} ± {:.2} | {:.2} ± {:.2} | {:.2}x | {:.4} | {:.2} ({}) | {} |\n",
                 "TBD", // Size extracted from indicator name
@@ -484,7 +481,8 @@ fn generate_markdown_report(results: &HashMap<String, Vec<ComparisonResult>>) ->
     report.push_str("# Run A/B tests\n");
     report.push_str("cargo bench --features gpu --bench ab_test_cuda\n\n");
     report.push_str("# Run statistical analysis\n");
-    report.push_str("cargo test --features gpu --release test_statistical_analysis -- --nocapture\n");
+    report
+        .push_str("cargo test --features gpu --release test_statistical_analysis -- --nocapture\n");
     report.push_str("```\n");
 
     report

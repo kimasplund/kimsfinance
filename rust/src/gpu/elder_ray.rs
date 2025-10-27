@@ -22,7 +22,7 @@
 //! ```
 //!
 //! **New (v0.2.0)**:
-//! ```text
+//! ```textfi
 //! CPU: EMA (~25μs)
 //! GPU: Parallel subtraction (~15μs)
 //! Total: ~100μs (2x faster!)
@@ -35,8 +35,8 @@
 //! 3. Bear Power = low - EMA_13 - **GPU parallel**
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 

@@ -6,7 +6,16 @@ use kimsfinance_core::backtest::{BacktestEngine, Strategy};
 use kimsfinance_core::strategies::*;
 use ndarray::Array1;
 
-fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -43,7 +52,17 @@ fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f
     )
 }
 
-fn generate_trending_data(n: usize, trend: f64) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_trending_data(
+    n: usize,
+    trend: f64,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -456,6 +475,9 @@ fn test_parameter_grid_coverage() {
 
     for strategy in strategies {
         let grid = strategy.parameters();
-        assert!(grid.size() > 1, "Strategy should have optimization parameters");
+        assert!(
+            grid.size() > 1,
+            "Strategy should have optimization parameters"
+        );
     }
 }

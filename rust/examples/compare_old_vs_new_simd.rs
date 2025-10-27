@@ -1,7 +1,6 @@
 /// Compare OLD (buggy) vs NEW (fixed) SIMD implementation
 ///
 /// This demonstrates the actual performance fix from Agent 2.
-
 use std::time::Instant;
 
 #[cfg(target_arch = "x86_64")]
@@ -122,7 +121,13 @@ fn main() {
         }
 
         // Benchmark scalar
-        let iterations = if size < 1000 { 100000 } else if size < 10000 { 10000 } else { 1000 };
+        let iterations = if size < 1000 {
+            100000
+        } else if size < 10000 {
+            10000
+        } else {
+            1000
+        };
         let start = Instant::now();
         for _ in 0..iterations {
             std::hint::black_box(calculate_returns_scalar(std::hint::black_box(&equity)));
@@ -158,10 +163,16 @@ fn main() {
             let new_vs_scalar = scalar_ns as f64 / new_simd_ns as f64;
             let new_vs_old = old_simd_ns as f64 / new_simd_ns as f64;
 
-            println!("  OLD SIMD: {:>8} ns/op ({:.2}x vs scalar) {}",
-                old_simd_ns, old_vs_scalar,
-                if old_vs_scalar < 1.0 { "SLOWER!" } else { "" });
-            println!("  NEW SIMD: {:>8} ns/op ({:.2}x vs scalar)", new_simd_ns, new_vs_scalar);
+            println!(
+                "  OLD SIMD: {:>8} ns/op ({:.2}x vs scalar) {}",
+                old_simd_ns,
+                old_vs_scalar,
+                if old_vs_scalar < 1.0 { "SLOWER!" } else { "" }
+            );
+            println!(
+                "  NEW SIMD: {:>8} ns/op ({:.2}x vs scalar)",
+                new_simd_ns, new_vs_scalar
+            );
             println!("  Improvement: {:.2}x (NEW vs OLD)", new_vs_old);
 
             if new_vs_old > 1.0 {

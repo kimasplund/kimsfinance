@@ -38,7 +38,7 @@ use ndarray::Array1;
 use std::collections::HashMap;
 
 #[cfg(feature = "gpu")]
-use crate::gpu::{device::GpuDevice, rsi::rsi_gpu, GpuError};
+use crate::gpu::{GpuError, device::GpuDevice, rsi::rsi_gpu};
 
 #[cfg(not(feature = "gpu"))]
 use crate::cpu::sequential::GpuError;
@@ -148,9 +148,7 @@ pub fn run_parameter_sweep_gpu(
         .iter()
         .filter(|(name, _)| name.as_str() != "rsi_period")
         .map(|(name, range)| {
-            let values: Vec<f64> = (0..range.len())
-                .filter_map(|i| range.get(i))
-                .collect();
+            let values: Vec<f64> = (0..range.len()).filter_map(|i| range.get(i)).collect();
             (name.clone(), values)
         })
         .collect();
@@ -170,16 +168,7 @@ pub fn run_parameter_sweep_gpu(
             params.insert("rsi_period".to_string(), period as f64);
 
             let result = run_single_backtest_with_indicators(
-                engine,
-                strategy,
-                timestamps,
-                open,
-                high,
-                low,
-                close,
-                volume,
-                &rsi_key,
-                rsi_values,
+                engine, strategy, timestamps, open, high, low, close, volume, &rsi_key, rsi_values,
                 params,
             )?;
 
@@ -192,17 +181,8 @@ pub fn run_parameter_sweep_gpu(
                 params.insert("rsi_period".to_string(), period as f64);
 
                 let result = run_single_backtest_with_indicators(
-                    engine,
-                    strategy,
-                    timestamps,
-                    open,
-                    high,
-                    low,
-                    close,
-                    volume,
-                    &rsi_key,
-                    rsi_values,
-                    params,
+                    engine, strategy, timestamps, open, high, low, close, volume, &rsi_key,
+                    rsi_values, params,
                 )?;
 
                 results.push(result);
@@ -284,8 +264,7 @@ fn run_single_backtest_with_indicators(
                         pnl_percent: (entry_price - exit_price) / entry_price * 100.0,
                     });
 
-                    equity += pnl
-                        - (entry_price.abs() + exit_price.abs()) * config.trading_fee;
+                    equity += pnl - (entry_price.abs() + exit_price.abs()) * config.trading_fee;
                 }
 
                 let position_size = strategy.position_size(equity, signal);
@@ -452,9 +431,7 @@ pub fn run_parameter_sweep_cpu(
         .iter()
         .map(|name| {
             let range = &grid.ranges[name];
-            (0..range.len())
-                .filter_map(|i| range.get(i))
-                .collect()
+            (0..range.len()).filter_map(|i| range.get(i)).collect()
         })
         .collect();
 
@@ -508,9 +485,9 @@ mod tests {
         // Verify all combinations exist
         for a in &[1.0, 2.0] {
             for b in &[10.0, 20.0, 30.0] {
-                let found = combinations.iter().any(|combo| {
-                    combo.get("a") == Some(a) && combo.get("b") == Some(b)
-                });
+                let found = combinations
+                    .iter()
+                    .any(|combo| combo.get("a") == Some(a) && combo.get("b") == Some(b));
                 assert!(found, "Combination a={}, b={} not found", a, b);
             }
         }

@@ -121,9 +121,10 @@ impl L2CachePolicy {
         hit_ratio: f32,
     ) -> Result<Self, GpuError> {
         if !(0.0..=1.0).contains(&hit_ratio) {
-            return Err(GpuError::InvalidParameter(
-                format!("Hit ratio must be 0.0-1.0, got {}", hit_ratio)
-            ));
+            return Err(GpuError::InvalidParameter(format!(
+                "Hit ratio must be 0.0-1.0, got {}",
+                hit_ratio
+            )));
         }
 
         let (device_ptr, _guard) = buffer.device_ptr(stream);

@@ -22,7 +22,7 @@
 use kimsfinance_core::backtest::{
     BacktestConfig, BacktestEngine, IndicatorConfig, IndicatorValues, OHLCVBar, Signal, Strategy,
 };
-use kimsfinance_core::binance::{process_binance_month, Timeframe};
+use kimsfinance_core::binance::{Timeframe, process_binance_month};
 use ndarray::Array1;
 use std::error::Error;
 use std::fs::File;
@@ -169,20 +169,21 @@ impl Strategy for MACDStrategy {
             return Signal::Hold;
         }
 
-        let result = if let (Some(last_macd), Some(last_signal)) = (self.last_macd, self.last_signal) {
-            // Bullish crossover: MACD crosses above signal line
-            if last_macd <= last_signal && *macd > *signal_line {
-                Signal::Buy
-            }
-            // Bearish crossover: MACD crosses below signal line
-            else if last_macd >= last_signal && *macd < *signal_line {
-                Signal::Sell
+        let result =
+            if let (Some(last_macd), Some(last_signal)) = (self.last_macd, self.last_signal) {
+                // Bullish crossover: MACD crosses above signal line
+                if last_macd <= last_signal && *macd > *signal_line {
+                    Signal::Buy
+                }
+                // Bearish crossover: MACD crosses below signal line
+                else if last_macd >= last_signal && *macd < *signal_line {
+                    Signal::Sell
+                } else {
+                    Signal::Hold
+                }
             } else {
                 Signal::Hold
-            }
-        } else {
-            Signal::Hold
-        };
+            };
 
         self.last_macd = Some(*macd);
         self.last_signal = Some(*signal_line);
@@ -262,17 +263,32 @@ fn run_backtest_for_timeframe(
     let mut strategies: Vec<(String, Box<dyn Strategy>)> = vec![];
 
     // RSI strategies
-    strategies.push(("RSI(14, 30, 70)".to_string(), Box::new(RSIStrategy::new(14, 30.0, 70.0))));
-    strategies.push(("RSI(14, 25, 75)".to_string(), Box::new(RSIStrategy::new(14, 25.0, 75.0))));
-    strategies.push(("RSI(21, 30, 70)".to_string(), Box::new(RSIStrategy::new(21, 30.0, 70.0))));
+    strategies.push((
+        "RSI(14, 30, 70)".to_string(),
+        Box::new(RSIStrategy::new(14, 30.0, 70.0)),
+    ));
+    strategies.push((
+        "RSI(14, 25, 75)".to_string(),
+        Box::new(RSIStrategy::new(14, 25.0, 75.0)),
+    ));
+    strategies.push((
+        "RSI(21, 30, 70)".to_string(),
+        Box::new(RSIStrategy::new(21, 30.0, 70.0)),
+    ));
 
     // ATR strategies
     strategies.push(("ATR(14)".to_string(), Box::new(ATRStrategy::new(14))));
     strategies.push(("ATR(7)".to_string(), Box::new(ATRStrategy::new(7))));
 
     // MACD strategies
-    strategies.push(("MACD(12, 26, 9)".to_string(), Box::new(MACDStrategy::new(12, 26, 9))));
-    strategies.push(("MACD(5, 13, 5)".to_string(), Box::new(MACDStrategy::new(5, 13, 5))));
+    strategies.push((
+        "MACD(12, 26, 9)".to_string(),
+        Box::new(MACDStrategy::new(12, 26, 9)),
+    ));
+    strategies.push((
+        "MACD(5, 13, 5)".to_string(),
+        Box::new(MACDStrategy::new(5, 13, 5)),
+    ));
 
     // Create engine
     let config = BacktestConfig {
@@ -329,7 +345,8 @@ fn generate_markdown_report(
     data_path: &str,
     total_duration: std::time::Duration,
 ) -> Result<(), Box<dyn Error>> {
-    let mut file = File::create("/home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
+    let mut file =
+        File::create("/home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
 
     writeln!(file, "# Binance BTCUSDT Futures Backtest Results\n")?;
     writeln!(file, "## Test Configuration\n")?;
@@ -338,8 +355,20 @@ fn generate_markdown_report(
     writeln!(file, "- **Initial Capital**: $10,000")?;
     writeln!(file, "- **Trading Fee**: 0.1% (Binance futures taker fee)")?;
     writeln!(file, "- **Slippage**: 0.05%")?;
-    writeln!(file, "- **GPU Acceleration**: {}", if cfg!(feature = "gpu") { "ENABLED" } else { "DISABLED (CPU)" })?;
-    writeln!(file, "- **Total Test Duration**: {:.2}s\n", total_duration.as_secs_f64())?;
+    writeln!(
+        file,
+        "- **GPU Acceleration**: {}",
+        if cfg!(feature = "gpu") {
+            "ENABLED"
+        } else {
+            "DISABLED (CPU)"
+        }
+    )?;
+    writeln!(
+        file,
+        "- **Total Test Duration**: {:.2}s\n",
+        total_duration.as_secs_f64()
+    )?;
 
     // Summary by timeframe
     writeln!(file, "## Results by Timeframe\n")?;
@@ -355,8 +384,14 @@ fn generate_markdown_report(
         }
 
         writeln!(file, "### {} Timeframe\n", timeframe)?;
-        writeln!(file, "| Strategy | Return % | Sharpe | Max DD % | Win Rate % | Trades | Profit Factor | Final Equity |")?;
-        writeln!(file, "|----------|----------|--------|----------|------------|--------|---------------|--------------|")?;
+        writeln!(
+            file,
+            "| Strategy | Return % | Sharpe | Max DD % | Win Rate % | Trades | Profit Factor | Final Equity |"
+        )?;
+        writeln!(
+            file,
+            "|----------|----------|--------|----------|------------|--------|---------------|--------------|"
+        )?;
 
         for result in &timeframe_results {
             writeln!(
@@ -382,8 +417,14 @@ fn generate_markdown_report(
     by_return.sort_by(|a, b| b.return_pct.partial_cmp(&a.return_pct).unwrap());
 
     writeln!(file, "### Top 5 by Total Return\n")?;
-    writeln!(file, "| Rank | Strategy | Timeframe | Return % | Sharpe | Trades |")?;
-    writeln!(file, "|------|----------|-----------|----------|--------|--------|")?;
+    writeln!(
+        file,
+        "| Rank | Strategy | Timeframe | Return % | Sharpe | Trades |"
+    )?;
+    writeln!(
+        file,
+        "|------|----------|-----------|----------|--------|--------|"
+    )?;
     for (i, result) in by_return.iter().take(5).enumerate() {
         writeln!(
             file,
@@ -398,12 +439,21 @@ fn generate_markdown_report(
     }
     writeln!(file)?;
 
-    let mut by_sharpe: Vec<_> = all_results.iter().filter(|r| r.sharpe.is_finite()).collect();
+    let mut by_sharpe: Vec<_> = all_results
+        .iter()
+        .filter(|r| r.sharpe.is_finite())
+        .collect();
     by_sharpe.sort_by(|a, b| b.sharpe.partial_cmp(&a.sharpe).unwrap());
 
     writeln!(file, "### Top 5 by Sharpe Ratio\n")?;
-    writeln!(file, "| Rank | Strategy | Timeframe | Sharpe | Return % | Max DD % |")?;
-    writeln!(file, "|------|----------|-----------|--------|----------|----------|")?;
+    writeln!(
+        file,
+        "| Rank | Strategy | Timeframe | Sharpe | Return % | Max DD % |"
+    )?;
+    writeln!(
+        file,
+        "|------|----------|-----------|--------|----------|----------|"
+    )?;
     for (i, result) in by_sharpe.iter().take(5).enumerate() {
         writeln!(
             file,
@@ -435,14 +485,24 @@ fn generate_markdown_report(
             .collect();
 
         writeln!(file, "### {}\n", strategy)?;
-        writeln!(file, "| Timeframe | Return % | Sharpe | Max DD % | Trades |")?;
-        writeln!(file, "|-----------|----------|--------|----------|--------|")?;
+        writeln!(
+            file,
+            "| Timeframe | Return % | Sharpe | Max DD % | Trades |"
+        )?;
+        writeln!(
+            file,
+            "|-----------|----------|--------|----------|--------|"
+        )?;
 
         for result in &strategy_results {
             writeln!(
                 file,
                 "| {} | {:.2} | {:.2} | {:.2} | {} |",
-                result.timeframe_name, result.return_pct, result.sharpe, result.max_dd, result.num_trades
+                result.timeframe_name,
+                result.return_pct,
+                result.sharpe,
+                result.max_dd,
+                result.num_trades
             )?;
         }
         writeln!(file)?;
@@ -451,14 +511,22 @@ fn generate_markdown_report(
     // Performance metrics
     writeln!(file, "## Performance Summary\n")?;
     writeln!(file, "- **Total Strategies Tested**: {}", all_results.len())?;
-    writeln!(file, "- **Average Return**: {:.2}%", all_results.iter().map(|r| r.return_pct).sum::<f64>() / all_results.len() as f64)?;
+    writeln!(
+        file,
+        "- **Average Return**: {:.2}%",
+        all_results.iter().map(|r| r.return_pct).sum::<f64>() / all_results.len() as f64
+    )?;
 
     let positive_returns = all_results.iter().filter(|r| r.return_pct > 0.0).count();
-    writeln!(file, "- **Winning Strategies**: {} ({:.1}%)",
+    writeln!(
+        file,
+        "- **Winning Strategies**: {} ({:.1}%)",
         positive_returns,
-        (positive_returns as f64 / all_results.len() as f64) * 100.0)?;
+        (positive_returns as f64 / all_results.len() as f64) * 100.0
+    )?;
 
-    let avg_duration = all_results.iter().map(|r| r.duration_ms).sum::<f64>() / all_results.len() as f64;
+    let avg_duration =
+        all_results.iter().map(|r| r.duration_ms).sum::<f64>() / all_results.len() as f64;
     writeln!(file, "- **Average Backtest Time**: {:.2}ms", avg_duration)?;
 
     writeln!(file)?;
@@ -467,39 +535,77 @@ fn generate_markdown_report(
     writeln!(file, "## Key Findings\n")?;
 
     if let Some(best) = by_return.first() {
-        writeln!(file, "1. **Best Overall Strategy**: {} on {} timeframe with {:.2}% return and {:.2} Sharpe ratio",
-            best.strategy_name, best.timeframe_name, best.return_pct, best.sharpe)?;
+        writeln!(
+            file,
+            "1. **Best Overall Strategy**: {} on {} timeframe with {:.2}% return and {:.2} Sharpe ratio",
+            best.strategy_name, best.timeframe_name, best.return_pct, best.sharpe
+        )?;
     }
 
     if let Some(best_sharpe) = by_sharpe.first() {
-        writeln!(file, "2. **Best Risk-Adjusted Returns**: {} on {} timeframe with {:.2} Sharpe ratio",
-            best_sharpe.strategy_name, best_sharpe.timeframe_name, best_sharpe.sharpe)?;
+        writeln!(
+            file,
+            "2. **Best Risk-Adjusted Returns**: {} on {} timeframe with {:.2} Sharpe ratio",
+            best_sharpe.strategy_name, best_sharpe.timeframe_name, best_sharpe.sharpe
+        )?;
     }
 
-    let rsi_results: Vec<_> = all_results.iter().filter(|r| r.strategy_name.starts_with("RSI")).collect();
-    let atr_results: Vec<_> = all_results.iter().filter(|r| r.strategy_name.starts_with("ATR")).collect();
-    let macd_results: Vec<_> = all_results.iter().filter(|r| r.strategy_name.starts_with("MACD")).collect();
+    let rsi_results: Vec<_> = all_results
+        .iter()
+        .filter(|r| r.strategy_name.starts_with("RSI"))
+        .collect();
+    let atr_results: Vec<_> = all_results
+        .iter()
+        .filter(|r| r.strategy_name.starts_with("ATR"))
+        .collect();
+    let macd_results: Vec<_> = all_results
+        .iter()
+        .filter(|r| r.strategy_name.starts_with("MACD"))
+        .collect();
 
     if !rsi_results.is_empty() {
-        let avg_rsi_return = rsi_results.iter().map(|r| r.return_pct).sum::<f64>() / rsi_results.len() as f64;
-        writeln!(file, "3. **RSI Strategies**: Average return {:.2}% across {} tests", avg_rsi_return, rsi_results.len())?;
+        let avg_rsi_return =
+            rsi_results.iter().map(|r| r.return_pct).sum::<f64>() / rsi_results.len() as f64;
+        writeln!(
+            file,
+            "3. **RSI Strategies**: Average return {:.2}% across {} tests",
+            avg_rsi_return,
+            rsi_results.len()
+        )?;
     }
 
     if !atr_results.is_empty() {
-        let avg_atr_return = atr_results.iter().map(|r| r.return_pct).sum::<f64>() / atr_results.len() as f64;
-        writeln!(file, "4. **ATR Strategies**: Average return {:.2}% across {} tests", avg_atr_return, atr_results.len())?;
+        let avg_atr_return =
+            atr_results.iter().map(|r| r.return_pct).sum::<f64>() / atr_results.len() as f64;
+        writeln!(
+            file,
+            "4. **ATR Strategies**: Average return {:.2}% across {} tests",
+            avg_atr_return,
+            atr_results.len()
+        )?;
     }
 
     if !macd_results.is_empty() {
-        let avg_macd_return = macd_results.iter().map(|r| r.return_pct).sum::<f64>() / macd_results.len() as f64;
-        writeln!(file, "5. **MACD Strategies**: Average return {:.2}% across {} tests", avg_macd_return, macd_results.len())?;
+        let avg_macd_return =
+            macd_results.iter().map(|r| r.return_pct).sum::<f64>() / macd_results.len() as f64;
+        writeln!(
+            file,
+            "5. **MACD Strategies**: Average return {:.2}% across {} tests",
+            avg_macd_return,
+            macd_results.len()
+        )?;
     }
 
     writeln!(file)?;
     writeln!(file, "---\n")?;
-    writeln!(file, "*Report generated on 2025-10-26 using kimsfinance_core backtesting engine*")?;
+    writeln!(
+        file,
+        "*Report generated on 2025-10-26 using kimsfinance_core backtesting engine*"
+    )?;
 
-    println!("\n✓ Report saved to: /home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md");
+    println!(
+        "\n✓ Report saved to: /home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md"
+    );
 
     Ok(())
 }
@@ -543,7 +649,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .max_by(|a, b| a.return_pct.partial_cmp(&b.return_pct).unwrap());
 
     if let Some(best) = best {
-        println!("\n🏆 Best Strategy: {} ({})", best.strategy_name, best.timeframe_name);
+        println!(
+            "\n🏆 Best Strategy: {} ({})",
+            best.strategy_name, best.timeframe_name
+        );
         println!("   Return: {:.2}%", best.return_pct);
         println!("   Sharpe: {:.2}", best.sharpe);
         println!("   Max DD: {:.2}%", best.max_dd);

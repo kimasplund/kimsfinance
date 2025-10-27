@@ -89,7 +89,16 @@ impl Strategy for RSIStrategy {
 }
 
 /// Generate synthetic OHLCV data for demonstration
-fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -153,29 +162,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get parameter grid
     let param_grid = strategy.parameters();
 
-    println!(
-        "Parameter grid size: {} combinations\n",
-        param_grid.size()
-    );
+    println!("Parameter grid size: {} combinations\n", param_grid.size());
 
     // Configure walk-forward analysis
     let wf_config = WalkForwardConfig {
-        train_window: 252 * 24,  // 1 year training (252 trading days * 24 hours)
-        test_window: 63 * 24,    // 1 quarter testing (63 days * 24 hours)
-        step_size: 21 * 24,      // 1 month step (21 days * 24 hours)
-        anchored: false,         // Rolling window (not expanding)
-        min_bars: 300 * 24,      // Minimum 300 days required
+        train_window: 252 * 24, // 1 year training (252 trading days * 24 hours)
+        test_window: 63 * 24,   // 1 quarter testing (63 days * 24 hours)
+        step_size: 21 * 24,     // 1 month step (21 days * 24 hours)
+        anchored: false,        // Rolling window (not expanding)
+        min_bars: 300 * 24,     // Minimum 300 days required
     };
 
     println!("Walk-Forward Configuration:");
-    println!("  Train window: {} bars ({} days)", wf_config.train_window, wf_config.train_window / 24);
-    println!("  Test window: {} bars ({} days)", wf_config.test_window, wf_config.test_window / 24);
-    println!("  Step size: {} bars ({} days)", wf_config.step_size, wf_config.step_size / 24);
-    println!("  Mode: {}", if wf_config.anchored { "Anchored (expanding)" } else { "Rolling" });
     println!(
-        "  Expected windows: {}\n",
-        wf_config.num_splits(n)
+        "  Train window: {} bars ({} days)",
+        wf_config.train_window,
+        wf_config.train_window / 24
     );
+    println!(
+        "  Test window: {} bars ({} days)",
+        wf_config.test_window,
+        wf_config.test_window / 24
+    );
+    println!(
+        "  Step size: {} bars ({} days)",
+        wf_config.step_size,
+        wf_config.step_size / 24
+    );
+    println!(
+        "  Mode: {}",
+        if wf_config.anchored {
+            "Anchored (expanding)"
+        } else {
+            "Rolling"
+        }
+    );
+    println!("  Expected windows: {}\n", wf_config.num_splits(n));
 
     // Create analyzer
     let analyzer = WalkForwardAnalyzer::new(wf_config);
@@ -213,18 +235,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("    Return: {:.2}%", window.in_sample_result.total_return);
         println!("    Max DD: {:.2}%", window.in_sample_result.max_drawdown);
         println!("  Out-of-Sample:");
-        println!("    Sharpe: {:.3}", window.out_of_sample_result.sharpe_ratio);
-        println!("    Return: {:.2}%", window.out_of_sample_result.total_return);
-        println!("    Max DD: {:.2}%", window.out_of_sample_result.max_drawdown);
+        println!(
+            "    Sharpe: {:.3}",
+            window.out_of_sample_result.sharpe_ratio
+        );
+        println!(
+            "    Return: {:.2}%",
+            window.out_of_sample_result.total_return
+        );
+        println!(
+            "    Max DD: {:.2}%",
+            window.out_of_sample_result.max_drawdown
+        );
         println!("  Efficiency Ratio: {:.3}", window.efficiency_ratio());
 
-        let prev = if i > 0 { Some(&result.windows[i - 1]) } else { None };
+        let prev = if i > 0 {
+            Some(&result.windows[i - 1])
+        } else {
+            None
+        };
         println!("  Stability Score: {:.3}", window.stability_score(prev));
     }
 
     println!("\n=== Overfitting Analysis ===");
     println!("Overfitting detected: {}", result.is_overfitted());
-    println!("Performance degradation: {:.1}%", result.degradation_percent);
+    println!(
+        "Performance degradation: {:.1}%",
+        result.degradation_percent
+    );
 
     if result.efficiency_ratio > 0.8 {
         println!("\nStatus: EXCELLENT - Strategy generalizes well to unseen data");
@@ -237,7 +275,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if result.avg_stability < 0.5 {
-        println!("\nWARNING: Low parameter stability - parameters change significantly between windows");
+        println!(
+            "\nWARNING: Low parameter stability - parameters change significantly between windows"
+        );
         println!("This suggests the strategy may be curve-fitting to market noise.");
     }
 

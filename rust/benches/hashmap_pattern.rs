@@ -11,7 +11,7 @@
 //!
 //! Run with: `cargo bench --bench hashmap_pattern`
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::collections::HashMap;
 
 /// Simulate the backtest engine pattern: HashMap<String, f64> with indicator data
@@ -130,25 +130,19 @@ fn bench_hashmap_patterns(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("reuse_with_clear", num_indicators),
             num_indicators,
-            |b, _| {
-                b.iter(|| reuse_with_clear(black_box(&indicator_data), black_box(n_candles)))
-            },
+            |b, _| b.iter(|| reuse_with_clear(black_box(&indicator_data), black_box(n_candles))),
         );
 
         group.bench_with_input(
             BenchmarkId::new("smallvec_pattern", num_indicators),
             num_indicators,
-            |b, _| {
-                b.iter(|| smallvec_pattern(black_box(&indicator_data), black_box(n_candles)))
-            },
+            |b, _| b.iter(|| smallvec_pattern(black_box(&indicator_data), black_box(n_candles))),
         );
 
         group.bench_with_input(
             BenchmarkId::new("vec_pattern", num_indicators),
             num_indicators,
-            |b, _| {
-                b.iter(|| vec_pattern(black_box(&indicator_data), black_box(n_candles)))
-            },
+            |b, _| b.iter(|| vec_pattern(black_box(&indicator_data), black_box(n_candles))),
         );
 
         group.bench_with_input(
@@ -162,17 +156,13 @@ fn bench_hashmap_patterns(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("pre_cloned_keys", num_indicators),
             num_indicators,
-            |b, _| {
-                b.iter(|| pre_cloned_keys(black_box(&indicator_data), black_box(n_candles)))
-            },
+            |b, _| b.iter(|| pre_cloned_keys(black_box(&indicator_data), black_box(n_candles))),
         );
 
         group.bench_with_input(
             BenchmarkId::new("str_references", num_indicators),
             num_indicators,
-            |b, _| {
-                b.iter(|| str_references(black_box(&indicator_data), black_box(n_candles)))
-            },
+            |b, _| b.iter(|| str_references(black_box(&indicator_data), black_box(n_candles))),
         );
     }
 
@@ -220,21 +210,25 @@ fn bench_clear_vs_new(c: &mut Criterion) {
         });
 
         // Benchmark with_capacity() each iteration
-        group.bench_with_input(BenchmarkId::new("with_capacity_each_iter", size), size, |b, &size| {
-            let data: Vec<(String, f64)> = (0..size)
-                .map(|i| (format!("key_{}", i), i as f64))
-                .collect();
+        group.bench_with_input(
+            BenchmarkId::new("with_capacity_each_iter", size),
+            size,
+            |b, &size| {
+                let data: Vec<(String, f64)> = (0..size)
+                    .map(|i| (format!("key_{}", i), i as f64))
+                    .collect();
 
-            b.iter(|| {
-                for _ in 0..100 {
-                    let mut map = HashMap::with_capacity(size);
-                    for (k, v) in &data {
-                        map.insert(k.clone(), *v);
+                b.iter(|| {
+                    for _ in 0..100 {
+                        let mut map = HashMap::with_capacity(size);
+                        for (k, v) in &data {
+                            map.insert(k.clone(), *v);
+                        }
+                        black_box(map);
                     }
-                    black_box(map);
-                }
-            });
-        });
+                });
+            },
+        );
     }
 
     group.finish();

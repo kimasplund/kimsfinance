@@ -38,7 +38,18 @@ impl StrategyResult {
     }
 }
 
-fn generate_realistic_data(n: usize, trend: f64, volatility: f64) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_realistic_data(
+    n: usize,
+    trend: f64,
+    volatility: f64,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
@@ -150,19 +161,52 @@ fn main() {
     println!();
 
     let momentum_strategies: Vec<(String, Box<dyn Strategy>)> = vec![
-        ("RSI Mean Reversion".to_string(), Box::new(momentum::RSIMeanReversion::default())),
-        ("RSI Oversold/Overbought".to_string(), Box::new(momentum::RSIOversoldOverbought::default())),
-        ("MACD Trend Following".to_string(), Box::new(momentum::MACDTrendFollowing::default())),
-        ("MACD Divergence".to_string(), Box::new(momentum::MACDDivergence::default())),
-        ("Stochastic Oscillator".to_string(), Box::new(momentum::StochasticOscillator::default())),
-        ("ROC Breakout".to_string(), Box::new(momentum::ROCBreakout::default())),
-        ("CCI Reversal".to_string(), Box::new(momentum::CCIReversal::default())),
+        (
+            "RSI Mean Reversion".to_string(),
+            Box::new(momentum::RSIMeanReversion::default()),
+        ),
+        (
+            "RSI Oversold/Overbought".to_string(),
+            Box::new(momentum::RSIOversoldOverbought::default()),
+        ),
+        (
+            "MACD Trend Following".to_string(),
+            Box::new(momentum::MACDTrendFollowing::default()),
+        ),
+        (
+            "MACD Divergence".to_string(),
+            Box::new(momentum::MACDDivergence::default()),
+        ),
+        (
+            "Stochastic Oscillator".to_string(),
+            Box::new(momentum::StochasticOscillator::default()),
+        ),
+        (
+            "ROC Breakout".to_string(),
+            Box::new(momentum::ROCBreakout::default()),
+        ),
+        (
+            "CCI Reversal".to_string(),
+            Box::new(momentum::CCIReversal::default()),
+        ),
     ];
 
     for (name, mut strategy) in momentum_strategies {
         print!("Testing: {:<30} ... ", name);
-        let result = run_strategy_comparison(&name, strategy.as_mut(), &timestamps, &open, &high, &low, &close, &volume);
-        println!("Sharpe: {:.2} | Return: {:.2}% | Trades: {}", result.sharpe_ratio, result.total_return, result.num_trades);
+        let result = run_strategy_comparison(
+            &name,
+            strategy.as_mut(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+        );
+        println!(
+            "Sharpe: {:.2} | Return: {:.2}% | Trades: {}",
+            result.sharpe_ratio, result.total_return, result.num_trades
+        );
         results.push(result);
     }
 
@@ -173,16 +217,40 @@ fn main() {
     println!();
 
     let trend_strategies: Vec<(String, Box<dyn Strategy>)> = vec![
-        ("EMA Crossover (50/200)".to_string(), Box::new(trend::EMACrossover::default())),
-        ("Triple EMA Trend".to_string(), Box::new(trend::TripleEMATrend::default())),
-        ("Donchian Breakout".to_string(), Box::new(trend::DonchianBreakout::default())),
-        ("Keltner Trend".to_string(), Box::new(trend::KeltnerTrend::default())),
+        (
+            "EMA Crossover (50/200)".to_string(),
+            Box::new(trend::EMACrossover::default()),
+        ),
+        (
+            "Triple EMA Trend".to_string(),
+            Box::new(trend::TripleEMATrend::default()),
+        ),
+        (
+            "Donchian Breakout".to_string(),
+            Box::new(trend::DonchianBreakout::default()),
+        ),
+        (
+            "Keltner Trend".to_string(),
+            Box::new(trend::KeltnerTrend::default()),
+        ),
     ];
 
     for (name, mut strategy) in trend_strategies {
         print!("Testing: {:<30} ... ", name);
-        let result = run_strategy_comparison(&name, strategy.as_mut(), &timestamps, &open, &high, &low, &close, &volume);
-        println!("Sharpe: {:.2} | Return: {:.2}% | Trades: {}", result.sharpe_ratio, result.total_return, result.num_trades);
+        let result = run_strategy_comparison(
+            &name,
+            strategy.as_mut(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+        );
+        println!(
+            "Sharpe: {:.2} | Return: {:.2}% | Trades: {}",
+            result.sharpe_ratio, result.total_return, result.num_trades
+        );
         results.push(result);
     }
 
@@ -193,15 +261,36 @@ fn main() {
     println!();
 
     let volatility_strategies: Vec<(String, Box<dyn Strategy>)> = vec![
-        ("Bollinger Squeeze".to_string(), Box::new(volatility::BollingerBandsSqueeze::default())),
-        ("Bollinger Expansion".to_string(), Box::new(volatility::BollingerBandsExpansion::default())),
-        ("ATR Volatility Breakout".to_string(), Box::new(volatility::ATRVolatilityBreakout::default())),
+        (
+            "Bollinger Squeeze".to_string(),
+            Box::new(volatility::BollingerBandsSqueeze::default()),
+        ),
+        (
+            "Bollinger Expansion".to_string(),
+            Box::new(volatility::BollingerBandsExpansion::default()),
+        ),
+        (
+            "ATR Volatility Breakout".to_string(),
+            Box::new(volatility::ATRVolatilityBreakout::default()),
+        ),
     ];
 
     for (name, mut strategy) in volatility_strategies {
         print!("Testing: {:<30} ... ", name);
-        let result = run_strategy_comparison(&name, strategy.as_mut(), &timestamps, &open, &high, &low, &close, &volume);
-        println!("Sharpe: {:.2} | Return: {:.2}% | Trades: {}", result.sharpe_ratio, result.total_return, result.num_trades);
+        let result = run_strategy_comparison(
+            &name,
+            strategy.as_mut(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+        );
+        println!(
+            "Sharpe: {:.2} | Return: {:.2}% | Trades: {}",
+            result.sharpe_ratio, result.total_return, result.num_trades
+        );
         results.push(result);
     }
 
@@ -212,17 +301,44 @@ fn main() {
     println!();
 
     let composite_strategies: Vec<(String, Box<dyn Strategy>)> = vec![
-        ("RSI + ATR".to_string(), Box::new(composite::RSIWithATR::default())),
-        ("MACD + EMA".to_string(), Box::new(composite::MACDWithEMA::default())),
-        ("Bollinger + Stochastic".to_string(), Box::new(composite::BollingerWithStochastic::default())),
-        ("Triple Confirmation".to_string(), Box::new(composite::TripleConfirmation::default())),
-        ("Volatility + Momentum".to_string(), Box::new(composite::VolatilityMomentum::default())),
+        (
+            "RSI + ATR".to_string(),
+            Box::new(composite::RSIWithATR::default()),
+        ),
+        (
+            "MACD + EMA".to_string(),
+            Box::new(composite::MACDWithEMA::default()),
+        ),
+        (
+            "Bollinger + Stochastic".to_string(),
+            Box::new(composite::BollingerWithStochastic::default()),
+        ),
+        (
+            "Triple Confirmation".to_string(),
+            Box::new(composite::TripleConfirmation::default()),
+        ),
+        (
+            "Volatility + Momentum".to_string(),
+            Box::new(composite::VolatilityMomentum::default()),
+        ),
     ];
 
     for (name, mut strategy) in composite_strategies {
         print!("Testing: {:<30} ... ", name);
-        let result = run_strategy_comparison(&name, strategy.as_mut(), &timestamps, &open, &high, &low, &close, &volume);
-        println!("Sharpe: {:.2} | Return: {:.2}% | Trades: {}", result.sharpe_ratio, result.total_return, result.num_trades);
+        let result = run_strategy_comparison(
+            &name,
+            strategy.as_mut(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+        );
+        println!(
+            "Sharpe: {:.2} | Return: {:.2}% | Trades: {}",
+            result.sharpe_ratio, result.total_return, result.num_trades
+        );
         results.push(result);
     }
 
@@ -234,12 +350,15 @@ fn main() {
 
     results.sort_by(|a, b| b.fitness_score().partial_cmp(&a.fitness_score()).unwrap());
 
-    println!("{:<35} {:>10} {:>12} {:>12} {:>10} {:>8} {:>10} {:>10}",
-        "Strategy", "Fitness", "Sharpe", "Return %", "Drawdown", "Trades", "Win Rate", "Time (ms)");
+    println!(
+        "{:<35} {:>10} {:>12} {:>12} {:>10} {:>8} {:>10} {:>10}",
+        "Strategy", "Fitness", "Sharpe", "Return %", "Drawdown", "Trades", "Win Rate", "Time (ms)"
+    );
     println!("{}", "-".repeat(125));
 
     for (i, result) in results.iter().enumerate() {
-        println!("{:<2}. {:<32} {:>10.2} {:>12.2} {:>11.2}% {:>9.2}% {:>8} {:>9.2}% {:>10}",
+        println!(
+            "{:<2}. {:<32} {:>10.2} {:>12.2} {:>11.2}% {:>9.2}% {:>8} {:>9.2}% {:>10}",
             i + 1,
             result.name,
             result.fitness_score(),

@@ -4,8 +4,8 @@
 //! WMA assigns higher weight to more recent values in a linear fashion.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 

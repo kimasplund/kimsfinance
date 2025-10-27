@@ -10,8 +10,8 @@
 //! 4. Lower Band = Middle - (std_dev * num_std)
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized;
+use cudarc::driver::{LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 

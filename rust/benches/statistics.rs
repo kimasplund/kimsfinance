@@ -75,7 +75,10 @@ impl BenchmarkStats {
     /// # Panics
     /// Panics if samples is empty
     pub fn from_samples(samples: &[f64]) -> Self {
-        assert!(!samples.is_empty(), "Cannot compute stats from empty sample");
+        assert!(
+            !samples.is_empty(),
+            "Cannot compute stats from empty sample"
+        );
 
         let n = samples.len();
         let mut sorted = samples.to_vec();
@@ -245,10 +248,16 @@ pub fn compare_distributions(baseline: &[f64], optimized: &[f64]) -> ComparisonR
     // Choose appropriate test
     let (p_value, test_name) = if baseline_normal && optimized_normal {
         // Use Welch's t-test (allows unequal variances)
-        (welch_t_test(baseline, optimized), "Welch's t-test".to_string())
+        (
+            welch_t_test(baseline, optimized),
+            "Welch's t-test".to_string(),
+        )
     } else {
         // Use Mann-Whitney U test (non-parametric)
-        (mann_whitney_u_test(baseline, optimized), "Mann-Whitney U".to_string())
+        (
+            mann_whitney_u_test(baseline, optimized),
+            "Mann-Whitney U".to_string(),
+        )
     };
 
     // Calculate effect size (Cohen's d)
@@ -395,16 +404,10 @@ fn normal_cdf(x: f64) -> f64 {
     // Abramowitz and Stegun approximation
     let t = 1.0 / (1.0 + 0.2316419 * x.abs());
     let d = 0.3989423 * (-x * x / 2.0).exp();
-    let p = d
-        * t
-        * (0.3193815
-            + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    let p =
+        d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
 
-    if x >= 0.0 {
-        1.0 - p
-    } else {
-        p
-    }
+    if x >= 0.0 { 1.0 - p } else { p }
 }
 
 /// Mann-Whitney U test (non-parametric)
@@ -499,10 +502,7 @@ pub fn winsorize(samples: &[f64]) -> Vec<f64> {
     let p1 = percentile(&sorted, 1.0);
     let p99 = percentile(&sorted, 99.0);
 
-    samples
-        .iter()
-        .map(|&x| x.clamp(p1, p99))
-        .collect()
+    samples.iter().map(|&x| x.clamp(p1, p99)).collect()
 }
 
 /// Aggregate results across multiple configurations

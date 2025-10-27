@@ -86,9 +86,7 @@ impl Objective {
     pub fn evaluate(&self, result: &BacktestResult) -> f64 {
         match self {
             Objective::MaximizeSharpe => result.sharpe_ratio,
-            Objective::MaximizeSortino => {
-                calculate_sortino_ratio(&result.equity_curve, 0.0)
-            }
+            Objective::MaximizeSortino => calculate_sortino_ratio(&result.equity_curve, 0.0),
             Objective::MaximizeCalmar => calculate_calmar_ratio(&result.equity_curve),
             Objective::MinimizeDrawdown => -result.max_drawdown, // Negate for minimization
             Objective::MaximizeWinRate => result.win_rate,
@@ -179,18 +177,13 @@ pub struct MultiObjectiveResult {
 impl MultiObjectiveResult {
     /// Get best solution for a specific objective
     pub fn best_for_objective(&self, objective: Objective) -> Option<&Solution> {
-        let obj_idx = self
-            .objectives
-            .iter()
-            .position(|&obj| obj == objective)?;
+        let obj_idx = self.objectives.iter().position(|&obj| obj == objective)?;
 
-        self.pareto_front
-            .iter()
-            .max_by(|a, b| {
-                a.objectives[obj_idx]
-                    .partial_cmp(&b.objectives[obj_idx])
-                    .unwrap()
-            })
+        self.pareto_front.iter().max_by(|a, b| {
+            a.objectives[obj_idx]
+                .partial_cmp(&b.objectives[obj_idx])
+                .unwrap()
+        })
     }
 
     /// Get balanced solution (median in each objective)
@@ -202,34 +195,31 @@ impl MultiObjectiveResult {
         // Find solution closest to median in all objectives
         let mut medians = vec![0.0; self.objectives.len()];
         for i in 0..self.objectives.len() {
-            let mut values: Vec<f64> =
-                self.pareto_front.iter().map(|s| s.objectives[i]).collect();
+            let mut values: Vec<f64> = self.pareto_front.iter().map(|s| s.objectives[i]).collect();
             values.sort_by(|a, b| a.partial_cmp(b).unwrap());
             medians[i] = values[values.len() / 2];
         }
 
         // Find solution with minimum Euclidean distance to median point
-        self.pareto_front
-            .iter()
-            .min_by(|a, b| {
-                let dist_a: f64 = a
-                    .objectives
-                    .iter()
-                    .zip(&medians)
-                    .map(|(v, m)| (v - m).powi(2))
-                    .sum::<f64>()
-                    .sqrt();
+        self.pareto_front.iter().min_by(|a, b| {
+            let dist_a: f64 = a
+                .objectives
+                .iter()
+                .zip(&medians)
+                .map(|(v, m)| (v - m).powi(2))
+                .sum::<f64>()
+                .sqrt();
 
-                let dist_b: f64 = b
-                    .objectives
-                    .iter()
-                    .zip(&medians)
-                    .map(|(v, m)| (v - m).powi(2))
-                    .sum::<f64>()
-                    .sqrt();
+            let dist_b: f64 = b
+                .objectives
+                .iter()
+                .zip(&medians)
+                .map(|(v, m)| (v - m).powi(2))
+                .sum::<f64>()
+                .sqrt();
 
-                dist_a.partial_cmp(&dist_b).unwrap()
-            })
+            dist_a.partial_cmp(&dist_b).unwrap()
+        })
     }
 }
 
@@ -333,8 +323,7 @@ impl MultiObjectiveOptimizer {
             let mut combined = population.clone();
 
             // Generate offspring
-            let offspring =
-                self.generate_offspring(&population, param_grid, &mut rng);
+            let offspring = self.generate_offspring(&population, param_grid, &mut rng);
 
             // Evaluate offspring
             let mut offspring_evaluated = offspring;
@@ -381,7 +370,10 @@ impl MultiObjectiveOptimizer {
 
         // Final non-dominated sorting
         let fronts = self.fast_non_dominated_sort(&population);
-        let pareto_front = fronts[0].iter().map(|&idx| population[idx].clone()).collect();
+        let pareto_front = fronts[0]
+            .iter()
+            .map(|&idx| population[idx].clone())
+            .collect();
 
         Ok(MultiObjectiveResult {
             objectives: self.objectives.clone(),
@@ -409,9 +401,7 @@ impl MultiObjectiveOptimizer {
                         rng.gen_range(*min as f64..=*max as f64).round()
                     }
                     ParameterRange::Float { min, max, .. } => rng.gen_range(*min..=*max),
-                    ParameterRange::Values(values) => {
-                        values[rng.gen_range(0..values.len())]
-                    }
+                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
                 };
                 parameters.insert(name.clone(), value);
             }
@@ -443,8 +433,7 @@ impl MultiObjectiveOptimizer {
     ) -> Result<(), GpuError> {
         for solution in population.iter_mut() {
             // Run backtest
-            let mut result =
-                engine.run(strategy, timestamps, open, high, low, close, volume)?;
+            let mut result = engine.run(strategy, timestamps, open, high, low, close, volume)?;
             result.parameters = solution.parameters.clone();
 
             // Evaluate all objectives
@@ -485,9 +474,7 @@ impl MultiObjectiveOptimizer {
         }
 
         // First front (rank 1)
-        let mut current_front: Vec<usize> = (0..n)
-            .filter(|&i| dominated_count[i] == 0)
-            .collect();
+        let mut current_front: Vec<usize> = (0..n).filter(|&i| dominated_count[i] == 0).collect();
         fronts.push(current_front.clone());
 
         // Subsequent fronts
@@ -623,12 +610,7 @@ impl MultiObjectiveOptimizer {
     }
 
     /// Uniform crossover
-    fn crossover(
-        &self,
-        parent1: &Solution,
-        parent2: &Solution,
-        rng: &mut ThreadRng,
-    ) -> Solution {
+    fn crossover(&self, parent1: &Solution, parent2: &Solution, rng: &mut ThreadRng) -> Solution {
         let mut parameters = HashMap::new();
 
         for (key, value1) in &parent1.parameters {
@@ -650,30 +632,21 @@ impl MultiObjectiveOptimizer {
     }
 
     /// Polynomial mutation
-    fn mutate(
-        &self,
-        solution: &mut Solution,
-        param_grid: &ParameterGrid,
-        rng: &mut ThreadRng,
-    ) {
+    fn mutate(&self, solution: &mut Solution, param_grid: &ParameterGrid, rng: &mut ThreadRng) {
         for (name, range) in &param_grid.ranges {
             if rng.gen_bool(self.mutation_rate) {
                 let current = solution.parameters.get(name).copied().unwrap_or(0.0);
 
                 let new_value = match range {
                     ParameterRange::Int { min, max, step } => {
-                        let noise = rng.sample(
-                            rand_distr::Normal::new(0.0, *step as f64).unwrap(),
-                        );
+                        let noise = rng.sample(rand_distr::Normal::new(0.0, *step as f64).unwrap());
                         (current + noise).clamp(*min as f64, *max as f64).round()
                     }
                     ParameterRange::Float { min, max, step } => {
                         let noise = rng.sample(rand_distr::Normal::new(0.0, *step).unwrap());
                         (current + noise).clamp(*min, *max)
                     }
-                    ParameterRange::Values(values) => {
-                        values[rng.gen_range(0..values.len())]
-                    }
+                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
                 };
 
                 solution.parameters.insert(name.clone(), new_value);

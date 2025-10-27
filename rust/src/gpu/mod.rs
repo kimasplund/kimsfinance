@@ -46,8 +46,8 @@ pub mod l2_cache;
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
-    calculate_l2_chunk_size, set_l2_persist_policy, clear_l2_persist_policy,
-    L2CachePolicy, AccessProperty,
+    AccessProperty, L2CachePolicy, calculate_l2_chunk_size, clear_l2_persist_policy,
+    set_l2_persist_policy,
 };
 
 #[cfg(feature = "gpu")]
@@ -189,7 +189,11 @@ pub use vwma::vwma_gpu;
 pub mod persistent;
 
 #[cfg(feature = "gpu")]
-pub use persistent::{PersistentKernelManager, TaskBatch, execute_batch};
+pub use persistent::{
+    execute_batch, execute_generic_batch, AtrBatch, AtrIndicator, GenericBatch, MacdBatch,
+    MacdIndicator, MacdParams, PersistentIndicator, PersistentKernelManager, RocBatch,
+    RocIndicator, RsiBatch, RsiIndicator, Task, TaskBatch,
+};
 
 #[cfg(feature = "gpu")]
 pub mod cuda_graphs;
@@ -201,4 +205,4 @@ pub use cuda_graphs::{IndicatorGraph, IndicatorGraphBuilder};
 pub mod kernels_3d;
 
 #[cfg(feature = "gpu")]
-pub use kernels_3d::{rsi_sweep_3d_gpu, sma_sweep_3d_gpu, sharpe_reduction_gpu, SweepResult3D};
+pub use kernels_3d::{SweepResult3D, rsi_sweep_3d_gpu, sharpe_reduction_gpu, sma_sweep_3d_gpu};

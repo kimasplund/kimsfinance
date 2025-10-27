@@ -152,3 +152,28 @@ harness = false
 [[bench]]
 name = "simd_validation"
 harness = false
+
+[[bench]]
+name = "multi_indicator_persistent_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pinned_memory_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "occupancy_improvement_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pinned_memory_transfer_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "combined_optimizations_benchmark"
+harness = false
+required-features = ["gpu"]

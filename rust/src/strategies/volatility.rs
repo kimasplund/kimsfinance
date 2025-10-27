@@ -105,15 +105,27 @@ impl Strategy for BollingerBandsSqueeze {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "period",
-            ParameterRange::Int { min: 15, max: 30, step: 5 },
+            ParameterRange::Int {
+                min: 15,
+                max: 30,
+                step: 5,
+            },
         );
         grid.add_range(
             "std_dev",
-            ParameterRange::Float { min: 1.5, max: 2.5, step: 0.25 },
+            ParameterRange::Float {
+                min: 1.5,
+                max: 2.5,
+                step: 0.25,
+            },
         );
         grid.add_range(
             "squeeze_threshold",
-            ParameterRange::Float { min: 0.03, max: 0.08, step: 0.01 },
+            ParameterRange::Float {
+                min: 0.03,
+                max: 0.08,
+                step: 0.01,
+            },
         );
         grid
     }
@@ -190,7 +202,9 @@ impl Strategy for BollingerBandsExpansion {
             Signal::Buy
         } else if bar.close >= upper {
             Signal::Sell
-        } else if self.exit_at_middle && (bar.close >= middle * 0.995 && bar.close <= middle * 1.005) {
+        } else if self.exit_at_middle
+            && (bar.close >= middle * 0.995 && bar.close <= middle * 1.005)
+        {
             Signal::Sell
         } else {
             Signal::Hold
@@ -208,11 +222,19 @@ impl Strategy for BollingerBandsExpansion {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "period",
-            ParameterRange::Int { min: 15, max: 30, step: 5 },
+            ParameterRange::Int {
+                min: 15,
+                max: 30,
+                step: 5,
+            },
         );
         grid.add_range(
             "std_dev",
-            ParameterRange::Float { min: 1.5, max: 2.5, step: 0.25 },
+            ParameterRange::Float {
+                min: 1.5,
+                max: 2.5,
+                step: 0.25,
+            },
         );
         grid
     }
@@ -327,15 +349,27 @@ impl Strategy for ATRVolatilityBreakout {
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "atr_period",
-            ParameterRange::Int { min: 10, max: 20, step: 2 },
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
         );
         grid.add_range(
             "breakout_multiplier",
-            ParameterRange::Float { min: 1.5, max: 3.0, step: 0.5 },
+            ParameterRange::Float {
+                min: 1.5,
+                max: 3.0,
+                step: 0.5,
+            },
         );
         grid.add_range(
             "min_atr_pct",
-            ParameterRange::Float { min: 0.003, max: 0.010, step: 0.001 },
+            ParameterRange::Float {
+                min: 0.003,
+                max: 0.010,
+                step: 0.001,
+            },
         );
         grid
     }

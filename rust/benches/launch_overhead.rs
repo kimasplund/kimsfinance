@@ -35,8 +35,10 @@
 //! - **10,000 candles**: Mixed (overhead + compute)
 //! - **100,000 candles**: Compute dominates (traditional may be faster)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use kimsfinance_core::gpu::{GpuDevice, roc_gpu, PersistentKernelManager, TaskBatch, execute_batch};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use kimsfinance_core::gpu::{
+    GpuDevice, PersistentKernelManager, TaskBatch, execute_batch, roc_gpu,
+};
 use ndarray::Array1;
 
 /// Generate test data for benchmarking
@@ -60,26 +62,22 @@ fn bench_traditional_launches(c: &mut Criterion) {
         let data_size = 1000;
 
         group.throughput(Throughput::Elements(*num_tasks as u64));
-        group.bench_with_input(
-            BenchmarkId::new("tasks", num_tasks),
-            num_tasks,
-            |b, &n| {
-                // Pre-generate all test data
-                let datasets: Vec<_> = (0..n)
-                    .map(|_| Array1::from_vec(generate_test_data(data_size)))
-                    .collect();
-                let periods: Vec<_> = (0..n).map(|i| 14 + i % 10).collect(); // Vary periods
+        group.bench_with_input(BenchmarkId::new("tasks", num_tasks), num_tasks, |b, &n| {
+            // Pre-generate all test data
+            let datasets: Vec<_> = (0..n)
+                .map(|_| Array1::from_vec(generate_test_data(data_size)))
+                .collect();
+            let periods: Vec<_> = (0..n).map(|i| 14 + i % 10).collect(); // Vary periods
 
-                b.iter(|| {
-                    // Launch kernel N times (one per task)
-                    for i in 0..n {
-                        let result = roc_gpu(&device, &datasets[i], periods[i], None)
-                            .expect("ROC GPU failed");
-                        black_box(result);
-                    }
-                });
-            },
-        );
+            b.iter(|| {
+                // Launch kernel N times (one per task)
+                for i in 0..n {
+                    let result =
+                        roc_gpu(&device, &datasets[i], periods[i], None).expect("ROC GPU failed");
+                    black_box(result);
+                }
+            });
+        });
     }
 
     group.finish();
@@ -99,26 +97,21 @@ fn bench_persistent_kernel(c: &mut Criterion) {
         let data_size = 1000;
 
         group.throughput(Throughput::Elements(*num_tasks as u64));
-        group.bench_with_input(
-            BenchmarkId::new("tasks", num_tasks),
-            num_tasks,
-            |b, &n| {
-                b.iter(|| {
-                    // Create batch with all tasks
-                    let mut batch = TaskBatch::new();
-                    for i in 0..n {
-                        let data = generate_test_data(data_size);
-                        let period = 14 + i % 10; // Vary periods like traditional
-                        batch.add_task(data, period);
-                    }
+        group.bench_with_input(BenchmarkId::new("tasks", num_tasks), num_tasks, |b, &n| {
+            b.iter(|| {
+                // Create batch with all tasks
+                let mut batch = TaskBatch::new();
+                for i in 0..n {
+                    let data = generate_test_data(data_size);
+                    let period = 14 + i % 10; // Vary periods like traditional
+                    batch.add_task(data, period);
+                }
 
-                    // Single kernel launch for all tasks
-                    let results = execute_batch(&device, &batch)
-                        .expect("Batch execution failed");
-                    black_box(results);
-                });
-            },
-        );
+                // Single kernel launch for all tasks
+                let results = execute_batch(&device, &batch).expect("Batch execution failed");
+                black_box(results);
+            });
+        });
     }
 
     group.finish();
@@ -141,8 +134,8 @@ fn bench_overhead_reduction_10_tasks(c: &mut Criterion) {
 
         b.iter(|| {
             for i in 0..num_tasks {
-                let result = roc_gpu(&device, &datasets[i], periods[i], None)
-                    .expect("ROC GPU failed");
+                let result =
+                    roc_gpu(&device, &datasets[i], periods[i], None).expect("ROC GPU failed");
                 black_box(result);
             }
         });
@@ -157,8 +150,7 @@ fn bench_overhead_reduction_10_tasks(c: &mut Criterion) {
                 batch.add_task(data, period);
             }
             // Execute batch with persistent kernel
-            let results = execute_batch(&device, &batch)
-                .expect("Batch execution failed");
+            let results = execute_batch(&device, &batch).expect("Batch execution failed");
             black_box(results);
         });
     });
@@ -212,8 +204,7 @@ fn bench_dataset_size_scaling(c: &mut Criterion) {
                         batch.add_task(data, period);
                     }
                     // Execute batch
-                    let results = execute_batch(&device, &batch)
-                        .expect("Batch execution failed");
+                    let results = execute_batch(&device, &batch).expect("Batch execution failed");
                     black_box(results);
                 });
             },
@@ -245,8 +236,8 @@ fn bench_throughput(c: &mut Criterion) {
 
         b.iter(|| {
             for i in 0..num_tasks {
-                let result = roc_gpu(&device, &datasets[i], periods[i], None)
-                    .expect("ROC GPU failed");
+                let result =
+                    roc_gpu(&device, &datasets[i], periods[i], None).expect("ROC GPU failed");
                 black_box(result);
             }
         });
@@ -261,8 +252,7 @@ fn bench_throughput(c: &mut Criterion) {
                 batch.add_task(data, period);
             }
             // Execute batch
-            let results = execute_batch(&device, &batch)
-                .expect("Batch execution failed");
+            let results = execute_batch(&device, &batch).expect("Batch execution failed");
             black_box(results);
         });
     });

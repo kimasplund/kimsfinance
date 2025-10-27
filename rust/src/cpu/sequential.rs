@@ -122,9 +122,7 @@ pub fn sma_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 
     // Validate inputs
     if period == 0 {
-        return Err(GpuError::InvalidParameterStatic(
-            "SMA period must be >= 1",
-        ));
+        return Err(GpuError::InvalidParameterStatic("SMA period must be >= 1"));
     }
 
     if n < period {
@@ -264,10 +262,7 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 /// // Third value is average of first 3 values
 /// assert!((rma[2] - 2.0).abs() < 1e-10);
 /// ```
-pub fn wilders_smoothing_cpu(
-    input: &Array1<f64>,
-    period: usize,
-) -> Result<Array1<f64>, GpuError> {
+pub fn wilders_smoothing_cpu(input: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuError> {
     let n = input.len();
 
     // Validate inputs

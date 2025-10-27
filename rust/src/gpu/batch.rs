@@ -34,7 +34,9 @@
 //! for optimal performance. Phase 2 adds `l2_cache` module for cache policy hints.
 
 use super::device::{GpuDevice, GpuError};
-use super::l2_cache::{calculate_l2_chunk_size, set_l2_persist_policy, clear_l2_persist_policy, L2CachePolicy};
+use super::l2_cache::{
+    L2CachePolicy, calculate_l2_chunk_size, clear_l2_persist_policy, set_l2_persist_policy,
+};
 use super::streams::{IndicatorSpeed, StreamManager};
 use super::{
     aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, macd_gpu, roc_gpu, rsi_gpu, stochastic_gpu,
@@ -390,12 +392,7 @@ pub fn calculate_indicators_batch_gpu(
     // If data fits in single chunk, use fast path (no chunking overhead)
     if chunk_size >= n {
         return calculate_indicators_batch_gpu_single_chunk(
-            device,
-            high,
-            low,
-            close,
-            indicators,
-            params,
+            device, high, low, close, indicators, params,
         );
     }
 
@@ -434,10 +431,7 @@ pub fn calculate_indicators_batch_gpu(
 
         // Accumulate results
         for (indicator, result) in chunk_results {
-            results
-                .entry(indicator)
-                .or_default()
-                .push(result);
+            results.entry(indicator).or_default().push(result);
         }
 
         offset = chunk_end;

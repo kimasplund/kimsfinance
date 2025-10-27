@@ -113,16 +113,40 @@ pub trait Strategy: Send + Sync {
 /// Indicator configuration for backtesting
 #[derive(Debug, Clone, PartialEq)]
 pub enum IndicatorConfig {
-    RSI { period: usize },
-    ATR { period: usize },
-    SMA { period: usize },
-    EMA { period: usize },
-    MACD { fast: usize, slow: usize, signal: usize },
-    Stochastic { k_period: usize, d_period: usize },
-    BollingerBands { period: usize, std_dev: f64 },
-    CCI { period: usize },
-    ROC { period: usize },
-    WilliamsR { period: usize },
+    RSI {
+        period: usize,
+    },
+    ATR {
+        period: usize,
+    },
+    SMA {
+        period: usize,
+    },
+    EMA {
+        period: usize,
+    },
+    MACD {
+        fast: usize,
+        slow: usize,
+        signal: usize,
+    },
+    Stochastic {
+        k_period: usize,
+        d_period: usize,
+    },
+    BollingerBands {
+        period: usize,
+        std_dev: f64,
+    },
+    CCI {
+        period: usize,
+    },
+    ROC {
+        period: usize,
+    },
+    WilliamsR {
+        period: usize,
+    },
 }
 
 impl IndicatorConfig {
@@ -133,9 +157,15 @@ impl IndicatorConfig {
             IndicatorConfig::ATR { period } => format!("atr_{}", period),
             IndicatorConfig::SMA { period } => format!("sma_{}", period),
             IndicatorConfig::EMA { period } => format!("ema_{}", period),
-            IndicatorConfig::MACD { fast, slow, signal } => format!("macd_{}_{}_{}",  fast, slow, signal),
-            IndicatorConfig::Stochastic { k_period, d_period } => format!("stoch_{}_{}", k_period, d_period),
-            IndicatorConfig::BollingerBands { period, std_dev } => format!("bb_{}_{}", period, std_dev),
+            IndicatorConfig::MACD { fast, slow, signal } => {
+                format!("macd_{}_{}_{}", fast, slow, signal)
+            }
+            IndicatorConfig::Stochastic { k_period, d_period } => {
+                format!("stoch_{}_{}", k_period, d_period)
+            }
+            IndicatorConfig::BollingerBands { period, std_dev } => {
+                format!("bb_{}_{}", period, std_dev)
+            }
             IndicatorConfig::CCI { period } => format!("cci_{}", period),
             IndicatorConfig::ROC { period } => format!("roc_{}", period),
             IndicatorConfig::WilliamsR { period } => format!("williams_{}", period),
@@ -190,12 +220,8 @@ impl ParameterRange {
     /// Number of values in this range
     pub fn len(&self) -> usize {
         match self {
-            ParameterRange::Int { min, max, step } => {
-                ((*max - *min) / *step + 1) as usize
-            }
-            ParameterRange::Float { min, max, step } => {
-                (((*max - *min) / *step) as usize) + 1
-            }
+            ParameterRange::Int { min, max, step } => ((*max - *min) / *step + 1) as usize,
+            ParameterRange::Float { min, max, step } => (((*max - *min) / *step) as usize) + 1,
             ParameterRange::Values(v) => v.len(),
         }
     }
@@ -208,12 +234,8 @@ impl ParameterRange {
     /// Get value at index
     pub fn get(&self, index: usize) -> Option<f64> {
         match self {
-            ParameterRange::Int { min, step, .. } => {
-                Some((*min + (*step * index as i64)) as f64)
-            }
-            ParameterRange::Float { min, step, .. } => {
-                Some(*min + (*step * index as f64))
-            }
+            ParameterRange::Int { min, step, .. } => Some((*min + (*step * index as i64)) as f64),
+            ParameterRange::Float { min, step, .. } => Some(*min + (*step * index as f64)),
             ParameterRange::Values(v) => v.get(index).copied(),
         }
     }
@@ -306,15 +328,33 @@ mod tests {
     #[test]
     fn test_parameter_grid_size() {
         let mut grid = ParameterGrid::new();
-        grid.add_range("rsi_period", ParameterRange::Int { min: 10, max: 20, step: 2 });
-        grid.add_range("threshold", ParameterRange::Float { min: 30.0, max: 40.0, step: 5.0 });
+        grid.add_range(
+            "rsi_period",
+            ParameterRange::Int {
+                min: 10,
+                max: 20,
+                step: 2,
+            },
+        );
+        grid.add_range(
+            "threshold",
+            ParameterRange::Float {
+                min: 30.0,
+                max: 40.0,
+                step: 5.0,
+            },
+        );
 
         assert_eq!(grid.size(), 6 * 3); // 6 RSI periods × 3 thresholds = 18 combinations
     }
 
     #[test]
     fn test_parameter_range_get() {
-        let range = ParameterRange::Int { min: 10, max: 20, step: 2 };
+        let range = ParameterRange::Int {
+            min: 10,
+            max: 20,
+            step: 2,
+        };
         assert_eq!(range.get(0), Some(10.0));
         assert_eq!(range.get(1), Some(12.0));
         assert_eq!(range.get(5), Some(20.0));
@@ -325,7 +365,11 @@ mod tests {
         let rsi = IndicatorConfig::RSI { period: 14 };
         assert_eq!(rsi.key(), "rsi_14");
 
-        let macd = IndicatorConfig::MACD { fast: 12, slow: 26, signal: 9 };
+        let macd = IndicatorConfig::MACD {
+            fast: 12,
+            slow: 26,
+            signal: 9,
+        };
         assert_eq!(macd.key(), "macd_12_26_9");
     }
 }

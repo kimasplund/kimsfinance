@@ -92,12 +92,11 @@ fn demo_basic_sweep(
     println!("Results:");
     for (period, result) in sweep.iter().take(5) {
         let valid_count = result.iter().filter(|&&x| !x.is_nan()).count();
-        let avg = result
-            .iter()
-            .filter(|&&x| !x.is_nan())
-            .sum::<f64>()
-            / valid_count as f64;
-        println!("  RSI({:2}): {:4} valid values, avg={:.2}", period, valid_count, avg);
+        let avg = result.iter().filter(|&&x| !x.is_nan()).sum::<f64>() / valid_count as f64;
+        println!(
+            "  RSI({:2}): {:4} valid values, avg={:.2}",
+            period, valid_count, avg
+        );
     }
     println!("  ... ({} more parameters)", sweep.parameters.len() - 5);
 
@@ -131,7 +130,10 @@ fn demo_sharpe_optimization(
     }
 
     let best = sweep.find_optimal()?;
-    println!("\n✓ Optimal parameter: RSI({}) with Sharpe = {:.4}", best.parameter, best.score);
+    println!(
+        "\n✓ Optimal parameter: RSI({}) with Sharpe = {:.4}",
+        best.parameter, best.score
+    );
 
     Ok(())
 }
@@ -158,7 +160,10 @@ fn demo_compare_metrics(
             .execute()?;
 
         let best = sweep.find_optimal()?;
-        println!("  {:<15}: RSI({:2}) with score = {:.4}", name, best.parameter, best.score);
+        println!(
+            "  {:<15}: RSI({:2}) with score = {:.4}",
+            name, best.parameter, best.score
+        );
     }
 
     Ok(())
@@ -186,7 +191,10 @@ fn demo_multi_indicator(
             .execute()?;
 
         let best = sweep.find_optimal()?;
-        println!("  {:<5}: period={:2}, Sharpe={:.4}", name, best.parameter, best.score);
+        println!(
+            "  {:<5}: period={:2}, Sharpe={:.4}",
+            name, best.parameter, best.score
+        );
     }
 
     Ok(())
@@ -216,7 +224,10 @@ fn demo_custom_metric(
 
     let best = sweep.find_optimal()?;
     println!("Custom metric (highest final value):");
-    println!("  Optimal: RSI({}) with final value = {:.2}", best.parameter, best.score);
+    println!(
+        "  Optimal: RSI({}) with final value = {:.2}",
+        best.parameter, best.score
+    );
 
     // Show top 3
     let mut metrics_with_params: Vec<_> = sweep
@@ -229,7 +240,12 @@ fn demo_custom_metric(
 
     println!("\n  Top 3:");
     for (i, (period, score)) in metrics_with_params.iter().take(3).enumerate() {
-        println!("    {}. RSI({:2}): final value = {:.2}", i + 1, period, score);
+        println!(
+            "    {}. RSI({:2}): final value = {:.2}",
+            i + 1,
+            period,
+            score
+        );
     }
 
     Ok(())

@@ -53,11 +53,11 @@
 //! - **Speedup**: New / Old (>1.0 means improvement)
 //! - **Confidence Intervals**: Criterion provides statistical validation
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{GpuDevice, ema_gpu, elder_ray_gpu, rsi_gpu, atr_gpu};
+use kimsfinance_core::gpu::{GpuDevice, atr_gpu, elder_ray_gpu, ema_gpu, rsi_gpu};
 
 // Note: CPU implementations pending - will be added when sequential.rs is implemented
 // #[cfg(feature = "gpu")]
@@ -79,10 +79,8 @@ fn generate_test_data(size: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
         let t = i as f64;
 
         // Price with trend, sine wave oscillation, and noise
-        let price = base_price
-            + trend * t
-            + volatility * (t * 0.01).sin()
-            + (t * 0.123).sin() * 0.5; // Additional noise
+        let price =
+            base_price + trend * t + volatility * (t * 0.01).sin() + (t * 0.123).sin() * 0.5; // Additional noise
 
         // OHLC with realistic spread
         let spread = volatility * 0.5;
@@ -136,7 +134,7 @@ fn bench_ema_comparison(c: &mut Criterion) {
             |b, data| {
                 #[allow(deprecated)]
                 b.iter(|| ema_gpu(&device, black_box(data), 20, None))
-            }
+            },
         );
 
         // TODO: Benchmark 2: New CPU
@@ -193,8 +191,10 @@ fn bench_elder_ray_comparison(c: &mut Criterion) {
             BenchmarkId::new("Old_GPU_Pure", size),
             &(&high, &low, &close),
             |b, (h, l, c)| {
-                b.iter(|| elder_ray_gpu(&device, black_box(h), black_box(l), black_box(c), 13, None))
-            }
+                b.iter(|| {
+                    elder_ray_gpu(&device, black_box(h), black_box(l), black_box(c), 13, None)
+                })
+            },
         );
 
         // TODO: Benchmark 2: New hybrid implementation
@@ -249,11 +249,9 @@ fn bench_rsi_comparison(c: &mut Criterion) {
 
         // Benchmark 1: Old pure-GPU implementation
         // Uses single-thread GPU for Wilder's smoothing (2x)
-        group.bench_with_input(
-            BenchmarkId::new("Old_GPU_Pure", size),
-            &close,
-            |b, data| b.iter(|| rsi_gpu(&device, black_box(data), 14, None))
-        );
+        group.bench_with_input(BenchmarkId::new("Old_GPU_Pure", size), &close, |b, data| {
+            b.iter(|| rsi_gpu(&device, black_box(data), 14, None))
+        });
 
         // TODO: Benchmark 2: New hybrid implementation
         // GPU parallel gains/losses + CPU smoothing + GPU parallel RSI
@@ -303,7 +301,7 @@ fn bench_atr_comparison(c: &mut Criterion) {
             &(&high, &low, &close),
             |b, (h, l, c)| {
                 b.iter(|| atr_gpu(&device, black_box(h), black_box(l), black_box(c), 14, None))
-            }
+            },
         );
 
         // TODO: Benchmark 2: New hybrid implementation
@@ -401,7 +399,9 @@ criterion_main!(hybrid_benches);
 // Fallback for when GPU feature is not enabled
 #[cfg(not(feature = "gpu"))]
 fn main() {
-    eprintln!("GPU feature not enabled. Run with: cargo bench --features gpu --bench cpu_gpu_hybrid_benchmark");
+    eprintln!(
+        "GPU feature not enabled. Run with: cargo bench --features gpu --bench cpu_gpu_hybrid_benchmark"
+    );
     std::process::exit(1);
 }
 
@@ -434,16 +434,8 @@ mod tests {
                 "High should be >= close at index {}",
                 i
             );
-            assert!(
-                low[i] <= close[i],
-                "Low should be <= close at index {}",
-                i
-            );
-            assert!(
-                high[i] >= low[i],
-                "High should be >= low at index {}",
-                i
-            );
+            assert!(low[i] <= close[i], "Low should be <= close at index {}", i);
+            assert!(high[i] >= low[i], "High should be >= low at index {}", i);
         }
     }
 

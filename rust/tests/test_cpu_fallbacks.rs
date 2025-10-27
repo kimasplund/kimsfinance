@@ -3,9 +3,7 @@
 //! Verifies that ALL indicators work correctly with CPU-only mode.
 //! Tests ensure graceful degradation when GPU is unavailable.
 
-use kimsfinance_core::backtest::core::{
-    IndicatorConfig, OHLCVBar, Signal, Strategy,
-};
+use kimsfinance_core::backtest::core::{IndicatorConfig, OHLCVBar, Signal, Strategy};
 use kimsfinance_core::backtest::engine::{BacktestConfig, BacktestEngine};
 use ndarray::Array1;
 use std::collections::HashMap;
@@ -37,7 +35,16 @@ impl Strategy for TestStrategy {
 }
 
 /// Helper to create test OHLCV data
-fn create_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn create_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let timestamps: Vec<i64> = (0..n as i64).map(|i| i * 60).collect();
 
     // Create realistic price data with some volatility
@@ -98,7 +105,11 @@ fn test_cpu_fallback_rsi() {
         &volume,
     );
 
-    assert!(result.is_ok(), "RSI CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "RSI CPU fallback failed: {:?}",
+        result.err()
+    );
     let backtest_result = result.unwrap();
     assert_eq!(backtest_result.equity_curve.len(), 100);
 }
@@ -132,7 +143,11 @@ fn test_cpu_fallback_atr() {
         &volume,
     );
 
-    assert!(result.is_ok(), "ATR CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "ATR CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test ROC with CPU-only mode
@@ -164,7 +179,11 @@ fn test_cpu_fallback_roc() {
         &volume,
     );
 
-    assert!(result.is_ok(), "ROC CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "ROC CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test CCI with CPU-only mode
@@ -196,7 +215,11 @@ fn test_cpu_fallback_cci() {
         &volume,
     );
 
-    assert!(result.is_ok(), "CCI CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "CCI CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test WilliamsR with CPU-only mode
@@ -228,7 +251,11 @@ fn test_cpu_fallback_williamsr() {
         &volume,
     );
 
-    assert!(result.is_ok(), "WilliamsR CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "WilliamsR CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test SMA with CPU-only mode
@@ -260,7 +287,11 @@ fn test_cpu_fallback_sma() {
         &volume,
     );
 
-    assert!(result.is_ok(), "SMA CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "SMA CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test EMA with CPU-only mode
@@ -292,7 +323,11 @@ fn test_cpu_fallback_ema() {
         &volume,
     );
 
-    assert!(result.is_ok(), "EMA CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "EMA CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test MACD with CPU-only mode (multi-output indicator)
@@ -313,14 +348,27 @@ fn test_cpu_fallback_macd() {
     impl Strategy for MACDStrategy {
         fn on_data(&mut self, _bar: &OHLCVBar, indicators: &HashMap<String, f64>) -> Signal {
             // Verify all three MACD outputs are present
-            assert!(indicators.contains_key("macd_12_26_9_macd"), "Missing MACD line");
-            assert!(indicators.contains_key("macd_12_26_9_signal"), "Missing signal line");
-            assert!(indicators.contains_key("macd_12_26_9_histogram"), "Missing histogram");
+            assert!(
+                indicators.contains_key("macd_12_26_9_macd"),
+                "Missing MACD line"
+            );
+            assert!(
+                indicators.contains_key("macd_12_26_9_signal"),
+                "Missing signal line"
+            );
+            assert!(
+                indicators.contains_key("macd_12_26_9_histogram"),
+                "Missing histogram"
+            );
             Signal::Hold
         }
 
         fn indicators(&self) -> Vec<IndicatorConfig> {
-            vec![IndicatorConfig::MACD { fast: 12, slow: 26, signal: 9 }]
+            vec![IndicatorConfig::MACD {
+                fast: 12,
+                slow: 26,
+                signal: 9,
+            }]
         }
 
         fn initial_capital(&self) -> f64 {
@@ -341,7 +389,11 @@ fn test_cpu_fallback_macd() {
         &volume,
     );
 
-    assert!(result.is_ok(), "MACD CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "MACD CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test Stochastic with CPU-only mode (multi-output indicator)
@@ -368,7 +420,10 @@ fn test_cpu_fallback_stochastic() {
         }
 
         fn indicators(&self) -> Vec<IndicatorConfig> {
-            vec![IndicatorConfig::Stochastic { k_period: 14, d_period: 3 }]
+            vec![IndicatorConfig::Stochastic {
+                k_period: 14,
+                d_period: 3,
+            }]
         }
 
         fn initial_capital(&self) -> f64 {
@@ -389,7 +444,11 @@ fn test_cpu_fallback_stochastic() {
         &volume,
     );
 
-    assert!(result.is_ok(), "Stochastic CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Stochastic CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test Bollinger Bands with CPU-only mode (multi-output indicator)
@@ -410,14 +469,26 @@ fn test_cpu_fallback_bollinger_bands() {
     impl Strategy for BBStrategy {
         fn on_data(&mut self, _bar: &OHLCVBar, indicators: &HashMap<String, f64>) -> Signal {
             // Verify all three bands are present
-            assert!(indicators.contains_key("bb_20_2_middle"), "Missing middle band");
-            assert!(indicators.contains_key("bb_20_2_upper"), "Missing upper band");
-            assert!(indicators.contains_key("bb_20_2_lower"), "Missing lower band");
+            assert!(
+                indicators.contains_key("bb_20_2_middle"),
+                "Missing middle band"
+            );
+            assert!(
+                indicators.contains_key("bb_20_2_upper"),
+                "Missing upper band"
+            );
+            assert!(
+                indicators.contains_key("bb_20_2_lower"),
+                "Missing lower band"
+            );
             Signal::Hold
         }
 
         fn indicators(&self) -> Vec<IndicatorConfig> {
-            vec![IndicatorConfig::BollingerBands { period: 20, std_dev: 2.0 }]
+            vec![IndicatorConfig::BollingerBands {
+                period: 20,
+                std_dev: 2.0,
+            }]
         }
 
         fn initial_capital(&self) -> f64 {
@@ -438,7 +509,11 @@ fn test_cpu_fallback_bollinger_bands() {
         &volume,
     );
 
-    assert!(result.is_ok(), "Bollinger Bands CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Bollinger Bands CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test multiple indicators with CPU-only mode
@@ -493,7 +568,11 @@ fn test_cpu_fallback_multiple_indicators() {
         &volume,
     );
 
-    assert!(result.is_ok(), "Multiple indicators CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Multiple indicators CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test force_cpu flag overrides use_gpu
@@ -526,7 +605,11 @@ fn test_force_cpu_overrides_gpu() {
         &volume,
     );
 
-    assert!(result.is_ok(), "force_cpu override failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "force_cpu override failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test CPU fallback with small dataset
@@ -559,7 +642,11 @@ fn test_cpu_fallback_small_dataset() {
         &volume,
     );
 
-    assert!(result.is_ok(), "Small dataset CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Small dataset CPU fallback failed: {:?}",
+        result.err()
+    );
 }
 
 /// Test CPU fallback with large dataset
@@ -592,7 +679,11 @@ fn test_cpu_fallback_large_dataset() {
         &volume,
     );
 
-    assert!(result.is_ok(), "Large dataset CPU fallback failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Large dataset CPU fallback failed: {:?}",
+        result.err()
+    );
     let backtest_result = result.unwrap();
     assert_eq!(backtest_result.equity_curve.len(), 1000);
 }

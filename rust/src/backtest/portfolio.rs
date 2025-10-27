@@ -42,7 +42,9 @@
 //! println!("Average correlation: {:.3}", result.avg_correlation);
 //! ```
 
-use super::core::{BacktestResult, IndicatorConfig, OHLCVBar, Signal, Strategy, Trade, TradeDirection};
+use super::core::{
+    BacktestResult, IndicatorConfig, OHLCVBar, Signal, Strategy, Trade, TradeDirection,
+};
 use super::engine::BacktestEngine;
 use super::metrics::{calculate_max_drawdown, calculate_sharpe_ratio, calculate_win_rate};
 use ndarray::Array1;
@@ -279,7 +281,8 @@ impl PortfolioState {
     #[allow(dead_code)]
     #[inline]
     fn get_curve(&self, symbol: &str) -> Option<&[f64]> {
-        self.asset_indices.get(symbol)
+        self.asset_indices
+            .get(symbol)
             .map(|&idx| self.equity_curves[idx].as_slice())
     }
 
@@ -295,7 +298,8 @@ impl PortfolioState {
     /// Iterate over all equity curves (cache-friendly sequential access)
     #[allow(dead_code)]
     fn iter(&self) -> impl Iterator<Item = (&str, &[f64])> {
-        self.asset_symbols.iter()
+        self.asset_symbols
+            .iter()
             .enumerate()
             .map(move |(idx, symbol)| (symbol.as_str(), self.equity_curves[idx].as_slice()))
     }
@@ -379,17 +383,10 @@ pub trait PortfolioStrategy: Strategy {
     ) -> HashMap<String, Signal>;
 
     /// Calculate target allocations for each asset (0.0 to 1.0, sum = 1.0)
-    fn target_allocations(
-        &self,
-        _assets: &[String],
-        _equity: f64,
-    ) -> HashMap<String, f64> {
+    fn target_allocations(&self, _assets: &[String], _equity: f64) -> HashMap<String, f64> {
         // Default: equal weight
         let weight = 1.0 / _assets.len() as f64;
-        _assets
-            .iter()
-            .map(|s| (s.clone(), weight))
-            .collect()
+        _assets.iter().map(|s| (s.clone(), weight)).collect()
     }
 }
 
@@ -453,8 +450,7 @@ impl PortfolioBacktest {
         let indicator_configs = strategy.indicators();
 
         for asset in &self.assets {
-            let indicators =
-                self.calculate_asset_indicators(engine, &indicator_configs, asset)?;
+            let indicators = self.calculate_asset_indicators(engine, &indicator_configs, asset)?;
             asset_indicators.insert(asset.symbol.clone(), indicators);
         }
 
@@ -474,9 +470,7 @@ impl PortfolioBacktest {
             // Build bar data for all assets
             let mut bars = HashMap::new();
             for asset in &self.assets {
-                if let Some(asset_idx) =
-                    asset.timestamps.iter().position(|&t| t == timestamp)
-                {
+                if let Some(asset_idx) = asset.timestamps.iter().position(|&t| t == timestamp) {
                     if let Some(bar) = asset.bar(asset_idx) {
                         bars.insert(asset.symbol.clone(), bar);
                     }
@@ -536,13 +530,12 @@ impl PortfolioBacktest {
                                 quantity: pos.quantity,
                                 direction: TradeDirection::Long,
                                 pnl,
-                                pnl_percent: (exit_price - pos.entry_price)
-                                    / pos.entry_price
+                                pnl_percent: (exit_price - pos.entry_price) / pos.entry_price
                                     * 100.0,
                             });
 
-                            equity += pnl
-                                - (pos.entry_price + exit_price) * self.config.trading_fee;
+                            equity +=
+                                pnl - (pos.entry_price + exit_price) * self.config.trading_fee;
                         }
 
                         // Open new position
@@ -570,13 +563,10 @@ impl PortfolioBacktest {
                             quantity: pos.quantity,
                             direction: TradeDirection::Long,
                             pnl,
-                            pnl_percent: (exit_price - pos.entry_price)
-                                / pos.entry_price
-                                * 100.0,
+                            pnl_percent: (exit_price - pos.entry_price) / pos.entry_price * 100.0,
                         });
 
-                        equity += pnl
-                            - (pos.entry_price + exit_price) * self.config.trading_fee;
+                        equity += pnl - (pos.entry_price + exit_price) * self.config.trading_fee;
                         positions.remove(symbol);
                     }
                     _ => {}
@@ -629,9 +619,8 @@ impl PortfolioBacktest {
 
         // Calculate metrics
         let final_equity = equity;
-        let total_return = (final_equity - self.config.initial_capital)
-            / self.config.initial_capital
-            * 100.0;
+        let total_return =
+            (final_equity - self.config.initial_capital) / self.config.initial_capital * 100.0;
         let sharpe_ratio = calculate_sharpe_ratio(&equity_curve);
         let max_drawdown = calculate_max_drawdown(&equity_curve);
         let win_rate = calculate_win_rate(&all_trades);
@@ -662,8 +651,7 @@ impl PortfolioBacktest {
         let avg_correlation = self.calculate_average_correlation(&correlation_matrix);
 
         // Calculate diversification ratio
-        let diversification_ratio =
-            self.calculate_diversification_ratio(&equity_curves_map);
+        let diversification_ratio = self.calculate_diversification_ratio(&equity_curves_map);
 
         // Build per-asset results (simplified)
         let asset_results = HashMap::new();
@@ -710,12 +698,7 @@ impl PortfolioBacktest {
         configs: &[IndicatorConfig],
         asset: &AssetData,
     ) -> Result<HashMap<String, Vec<f64>>, GpuError> {
-        engine.calculate_indicators_cpu(
-            configs,
-            &asset.high,
-            &asset.low,
-            &asset.close,
-        )
+        engine.calculate_indicators_cpu(configs, &asset.high, &asset.low, &asset.close)
     }
 
     /// Get target allocation for an asset
@@ -792,10 +775,7 @@ impl PortfolioBacktest {
     }
 
     /// Calculate average pairwise correlation
-    fn calculate_average_correlation(
-        &self,
-        matrix: &HashMap<String, HashMap<String, f64>>,
-    ) -> f64 {
+    fn calculate_average_correlation(&self, matrix: &HashMap<String, HashMap<String, f64>>) -> f64 {
         let mut sum = 0.0;
         let mut count = 0;
 
@@ -809,21 +789,14 @@ impl PortfolioBacktest {
             }
         }
 
-        if count == 0 {
-            0.0
-        } else {
-            sum / count as f64
-        }
+        if count == 0 { 0.0 } else { sum / count as f64 }
     }
 
     /// Calculate diversification ratio
     ///
     /// Ratio of weighted average volatility to portfolio volatility
     /// Higher values indicate better diversification
-    fn calculate_diversification_ratio(
-        &self,
-        equity_curves: &HashMap<String, Vec<f64>>,
-    ) -> f64 {
+    fn calculate_diversification_ratio(&self, equity_curves: &HashMap<String, Vec<f64>>) -> f64 {
         if equity_curves.is_empty() {
             return 0.0;
         }

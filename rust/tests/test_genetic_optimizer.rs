@@ -50,7 +50,16 @@ impl Strategy for TunableRSIStrategy {
 }
 
 /// Generate synthetic oscillating price data
-fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
@@ -160,13 +169,14 @@ fn test_genetic_optimizer_basic() {
     println!("  Best Sharpe: {:.2}", result.best_result.sharpe_ratio);
     println!("  Best Drawdown: {:.2}%", result.best_result.max_drawdown);
     println!("  Number of Trades: {}", result.best_result.num_trades);
-    println!(
-        "\nPrecision Breakdown:");
+    println!("\nPrecision Breakdown:");
     println!("  FP8 Generations: {}", result.fp8_generations);
     println!("  FP64 Generations: {}", result.fp64_generations);
     println!(
         "  Expected Speedup: {:.1}x (estimated)",
-        1.0 + (result.fp8_generations as f64 / (result.fp8_generations + result.fp64_generations) as f64) * 3.0
+        1.0 + (result.fp8_generations as f64
+            / (result.fp8_generations + result.fp64_generations) as f64)
+            * 3.0
     );
 
     // Verify convergence history
@@ -469,10 +479,7 @@ fn test_optimizer_with_empty_grid() {
     );
 
     // Should return error for empty grid
-    assert!(
-        result.is_err(),
-        "Should fail with empty parameter grid"
-    );
+    assert!(result.is_err(), "Should fail with empty parameter grid");
 
     if let Err(e) = result {
         println!("Expected error: {}", e);

@@ -49,7 +49,16 @@ impl Strategy for RSIStrategy {
 }
 
 /// Generate synthetic OHLCV data with oscillating price pattern
-fn generate_test_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
@@ -116,7 +125,10 @@ fn test_parameter_sweep_gpu() {
     ); // 3 thresholds: 25, 30, 35
 
     let total_combinations = grid.size();
-    assert_eq!(total_combinations, 18, "Expected 6 periods × 3 thresholds = 18");
+    assert_eq!(
+        total_combinations, 18,
+        "Expected 6 periods × 3 thresholds = 18"
+    );
 
     // Create engine with GPU enabled
     let config = BacktestConfig {
@@ -133,7 +145,10 @@ fn test_parameter_sweep_gpu() {
     };
 
     // Run parameter sweep
-    println!("Running GPU parameter sweep with {} combinations...", total_combinations);
+    println!(
+        "Running GPU parameter sweep with {} combinations...",
+        total_combinations
+    );
     let results = engine
         .run_sweep(
             &mut strategy,
@@ -165,12 +180,14 @@ fn test_parameter_sweep_gpu() {
     // Print top 5 results
     println!("\nTop 5 Parameter Combinations:");
     for (i, result) in results.iter().take(5).enumerate() {
-        println!("{}. RSI Period: {}, Buy Threshold: {:.1}",
+        println!(
+            "{}. RSI Period: {}, Buy Threshold: {:.1}",
             i + 1,
             result.parameters.get("rsi_period").unwrap(),
             result.parameters.get("buy_threshold").unwrap()
         );
-        println!("   Sharpe: {:.2}, Max DD: {:.2}%, Trades: {}, Fitness: {:.4}",
+        println!(
+            "   Sharpe: {:.2}, Max DD: {:.2}%, Trades: {}, Fitness: {:.4}",
             result.sharpe_ratio,
             result.max_drawdown,
             result.num_trades,
@@ -218,7 +235,8 @@ fn test_parameter_sweep_gpu() {
     }
 
     println!("\nGPU parameter sweep test passed!");
-    println!("Best result: Sharpe = {:.2}, Fitness = {:.4}",
+    println!(
+        "Best result: Sharpe = {:.2}, Fitness = {:.4}",
         results[0].sharpe_ratio,
         results[0].fitness()
     );
@@ -249,7 +267,10 @@ fn test_parameter_sweep_cpu() {
     ); // 2 thresholds: 30, 35
 
     let total_combinations = grid.size();
-    assert_eq!(total_combinations, 6, "Expected 3 periods × 2 thresholds = 6");
+    assert_eq!(
+        total_combinations, 6,
+        "Expected 3 periods × 2 thresholds = 6"
+    );
 
     // Create engine (will use CPU if no GPU)
     let config = BacktestConfig {
@@ -266,7 +287,10 @@ fn test_parameter_sweep_cpu() {
     };
 
     // Run parameter sweep
-    println!("Running CPU parameter sweep with {} combinations...", total_combinations);
+    println!(
+        "Running CPU parameter sweep with {} combinations...",
+        total_combinations
+    );
     let results = engine
         .run_sweep(
             &mut strategy,
@@ -296,7 +320,8 @@ fn test_parameter_sweep_cpu() {
     }
 
     println!("\nCPU parameter sweep test passed!");
-    println!("Best parameters: period={}, threshold={:.1}",
+    println!(
+        "Best parameters: period={}, threshold={:.1}",
         results[0].parameters.get("rsi_period").unwrap(),
         results[0].parameters.get("buy_threshold").unwrap()
     );
@@ -378,12 +403,12 @@ fn test_sweep_vs_individual_backtest() {
     let sweep_result = &sweep_results[0];
 
     println!("\nComparing sweep vs individual backtest:");
-    println!("Sweep:      Sharpe={:.4}, MaxDD={:.2}%, Trades={}",
-        sweep_result.sharpe_ratio,
-        sweep_result.max_drawdown,
-        sweep_result.num_trades
+    println!(
+        "Sweep:      Sharpe={:.4}, MaxDD={:.2}%, Trades={}",
+        sweep_result.sharpe_ratio, sweep_result.max_drawdown, sweep_result.num_trades
     );
-    println!("Individual: Sharpe={:.4}, MaxDD={:.2}%, Trades={}",
+    println!(
+        "Individual: Sharpe={:.4}, MaxDD={:.2}%, Trades={}",
         individual_result.sharpe_ratio,
         individual_result.max_drawdown,
         individual_result.num_trades

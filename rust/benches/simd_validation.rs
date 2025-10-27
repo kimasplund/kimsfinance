@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::backtest::metrics::calculate_sharpe_ratio;
 
 #[cfg(target_arch = "x86_64")]
@@ -96,20 +96,25 @@ fn bench_variance_calculation(c: &mut Criterion) {
         let returns: Vec<f64> = (0..size).map(|i| (i as f64 * 0.001).sin()).collect();
         let mean = returns.iter().sum::<f64>() / returns.len() as f64;
 
-        group.bench_with_input(BenchmarkId::new("iterator_map", size), &returns, |b, rets| {
-            b.iter(|| {
-                let variance = rets
-                    .iter()
-                    .map(|r| (r - mean).powi(2))
-                    .sum::<f64>()
-                    / rets.len() as f64;
-                black_box(variance)
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("iterator_map", size),
+            &returns,
+            |b, rets| {
+                b.iter(|| {
+                    let variance =
+                        rets.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / rets.len() as f64;
+                    black_box(variance)
+                })
+            },
+        );
     }
 
     group.finish();
 }
 
-criterion_group!(benches, bench_returns_calculation, bench_variance_calculation);
+criterion_group!(
+    benches,
+    bench_returns_calculation,
+    bench_variance_calculation
+);
 criterion_main!(benches);

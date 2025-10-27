@@ -74,11 +74,11 @@ pub struct WalkForwardConfig {
 impl Default for WalkForwardConfig {
     fn default() -> Self {
         Self {
-            train_window: 252,  // 1 year
-            test_window: 63,    // 1 quarter
-            step_size: 21,      // 1 month
-            anchored: false,    // Rolling window
-            min_bars: 100,      // Minimum data required
+            train_window: 252, // 1 year
+            test_window: 63,   // 1 quarter
+            step_size: 21,     // 1 month
+            anchored: false,   // Rolling window
+            min_bars: 100,     // Minimum data required
         }
     }
 }
@@ -327,11 +327,7 @@ impl WalkForwardAnalyzer {
         let mut current_pos = 0;
 
         loop {
-            let train_start = if self.config.anchored {
-                0
-            } else {
-                current_pos
-            };
+            let train_start = if self.config.anchored { 0 } else { current_pos };
             let train_end = current_pos + self.config.train_window;
             let test_start = train_end;
             let test_end = test_start + self.config.test_window;
@@ -423,9 +419,11 @@ impl WalkForwardAnalyzer {
         }
 
         // Aggregate results
-        let in_sample_sharpe =
-            windows.iter().map(|w| w.in_sample_result.sharpe_ratio).sum::<f64>()
-                / windows.len() as f64;
+        let in_sample_sharpe = windows
+            .iter()
+            .map(|w| w.in_sample_result.sharpe_ratio)
+            .sum::<f64>()
+            / windows.len() as f64;
 
         let out_of_sample_sharpe = windows
             .iter()
@@ -445,8 +443,7 @@ impl WalkForwardAnalyzer {
             let prev = if i > 0 { Some(&windows[i - 1]) } else { None };
             stability_scores.push(window.stability_score(prev));
         }
-        let avg_stability =
-            stability_scores.iter().sum::<f64>() / stability_scores.len() as f64;
+        let avg_stability = stability_scores.iter().sum::<f64>() / stability_scores.len() as f64;
 
         // Combine out-of-sample equity curves
         let mut oos_equity_curve = Vec::new();

@@ -172,7 +172,16 @@ impl Strategy for MultiIndicatorStrategy {
 }
 
 /// Generate synthetic OHLCV data with oscillating price
-fn generate_synthetic_data(n: usize) -> (Array1<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_synthetic_data(
+    n: usize,
+) -> (
+    Array1<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -270,22 +279,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut strategy2 = RSIStrategy::new(14, 30.0, 70.0);
     let grid = strategy2.parameters();
 
-    println!(
-        "\nParameter grid: {} combinations",
-        grid.size()
-    );
-    println!(
-        "  RSI Period:      {:?}",
-        grid.ranges.get("rsi_period")
-    );
-    println!(
-        "  Buy Threshold:   {:?}",
-        grid.ranges.get("buy_threshold")
-    );
-    println!(
-        "  Sell Threshold:  {:?}",
-        grid.ranges.get("sell_threshold")
-    );
+    println!("\nParameter grid: {} combinations", grid.size());
+    println!("  RSI Period:      {:?}", grid.ranges.get("rsi_period"));
+    println!("  Buy Threshold:   {:?}", grid.ranges.get("buy_threshold"));
+    println!("  Sell Threshold:  {:?}", grid.ranges.get("sell_threshold"));
 
     println!("\nRunning parameter sweep (CPU)...");
 
@@ -396,9 +393,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nPerformance:");
     println!("  Best Fitness:      {:.4}", opt_result.best_fitness);
-    println!("  Sharpe Ratio:      {:.2}", opt_result.best_result.sharpe_ratio);
-    println!("  Total Return:      {:.2}%", opt_result.best_result.total_return);
-    println!("  Max Drawdown:      {:.2}%", opt_result.best_result.max_drawdown);
+    println!(
+        "  Sharpe Ratio:      {:.2}",
+        opt_result.best_result.sharpe_ratio
+    );
+    println!(
+        "  Total Return:      {:.2}%",
+        opt_result.best_result.total_return
+    );
+    println!(
+        "  Max Drawdown:      {:.2}%",
+        opt_result.best_result.max_drawdown
+    );
     println!("  Number of Trades:  {}", opt_result.best_result.num_trades);
 
     println!("\nPrecision Breakdown:");
@@ -439,25 +445,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ====================
     print_separator("5. STRATEGY COMPARISON");
 
-    println!("\n{:<35} {:>12} {:>10} {:>10} {:>8}",
-        "Strategy", "Sharpe", "Return%", "Drawdown%", "Trades");
+    println!(
+        "\n{:<35} {:>12} {:>10} {:>10} {:>8}",
+        "Strategy", "Sharpe", "Return%", "Drawdown%", "Trades"
+    );
     println!("{}", "-".repeat(80));
 
     let strategies_results = vec![
         (strategy1.name(), &result1),
         ("Parameter Sweep (Best)".to_string(), &sweep_results[0]),
-        ("Genetic Optimizer (Best)".to_string(), &opt_result.best_result),
+        (
+            "Genetic Optimizer (Best)".to_string(),
+            &opt_result.best_result,
+        ),
         (strategy4.name(), &result4),
     ];
 
     for (name, result) in strategies_results {
         println!(
             "{:<35} {:>12.2} {:>10.2} {:>10.2} {:>8}",
-            name,
-            result.sharpe_ratio,
-            result.total_return,
-            result.max_drawdown,
-            result.num_trades
+            name, result.sharpe_ratio, result.total_return, result.max_drawdown, result.num_trades
         );
     }
 
@@ -541,7 +548,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     print_separator("DEMO COMPLETE");
     println!("\nKey Takeaways:");
     println!("  ✓ Basic backtesting works with simple and complex strategies");
-    println!("  ✓ Parameter sweep can test {} combinations efficiently", grid.size());
+    println!(
+        "  ✓ Parameter sweep can test {} combinations efficiently",
+        grid.size()
+    );
     println!("  ✓ Genetic optimizer finds optimal parameters with 3.1x speedup (FP8)");
     println!("  ✓ Multi-indicator strategies combine multiple technical signals");
     println!("  ✓ CPU fallback ensures all indicators work without GPU");

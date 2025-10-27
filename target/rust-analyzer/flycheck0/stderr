@@ -1,0 +1,420 @@
+   0.435349463s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="cpu_vs_gpu_batch"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: true }/TargetInner { kind: "bench", name: "cpu_vs_gpu_batch", tested: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/benches/cpu_vs_gpu_batch.rs", Edition2024) }
+   0.435373761s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="cpu_vs_gpu_batch"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-b83e4eed0635bb45/test-bench-cpu_vs_gpu_batch`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.490513035s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="simd_validation"}: cargo::core::compiler::fingerprint: dependency on `numpy` is newer than we are 1761551357.160286144s > 1761488598.983696576s "/home/kim-asplund/projects/kimsfinance/rust"
+   0.490561523s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="simd_validation"}: cargo::core::compiler::fingerprint: fingerprint dirty for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: true }/TargetInner { kind: "bench", name: "simd_validation", tested: false, harness: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/benches/simd_validation.rs", Edition2024) }
+   0.490569332s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="simd_validation"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { name: "numpy", dep_mtime: FileTime { seconds: 1761551357, nanos: 160286144 }, max_mtime: FileTime { seconds: 1761488598, nanos: 983696576 } })
+   0.492408952s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_atr_multi_input"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_atr_multi_input", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_atr_multi_input.rs", Edition2024) }
+   0.492416180s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_atr_multi_input"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-e944b995f121ae2c/example-test_atr_multi_input`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.492982712s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_macd_multi_output"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_macd_multi_output", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_macd_multi_output.rs", Edition2024) }
+   0.492989043s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_macd_multi_output"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-81a8808d58b4d7da/example-test_macd_multi_output`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.493409622s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_multi_indicator"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_multi_indicator", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_multi_indicator.rs", Edition2024) }
+   0.493414828s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_multi_indicator"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-a5b1dfe95329720e/example-test_multi_indicator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.493805851s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_occupancy_calculator"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_occupancy_calculator", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_occupancy_calculator.rs", Edition2024) }
+   0.493810778s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_occupancy_calculator"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-6c6ebbb56c53d309/example-test_occupancy_calculator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.494242446s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_persistent_minimal"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_persistent_minimal", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_persistent_minimal.rs", Edition2024) }
+   0.494248512s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_persistent_minimal"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-ef55fd32f870c2cf/example-test_persistent_minimal`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.494621752s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_persistent_traits"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_persistent_traits", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_persistent_traits.rs", Edition2024) }
+   0.494626547s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_persistent_traits"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-3383252b3a5a3539/example-test_persistent_traits`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.495013079s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_pinned_memory"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_pinned_memory", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_pinned_memory.rs", Edition2024) }
+   0.495017535s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_pinned_memory"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-03dc85cd368ac321/example-test_pinned_memory`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.495512311s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_sma_shared"}: cargo::core::compiler::fingerprint: fingerprint error for kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)/Check { test: false }/TargetInner { kind: "example", name: "test_sma_shared", tested: false, benched: false, ..: with_path("/home/kim-asplund/projects/kimsfinance/rust/examples/test_sma_shared.rs", Edition2024) }
+   0.495517428s  INFO prepare_target{force=false package_id=kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust) target="test_sma_shared"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/kim-asplund/projects/kimsfinance/rust/target/debug/.fingerprint/kimsfinance_core-58208c0e2dfa087a/example-test_sma_shared`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/core/src/ops/function.rs:290:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  16: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  17: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:589:40
+  20: std::panicking::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panicking.rs:552:19
+  21: std::panic::catch_unwind
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/1159e78c4747b02ef996e55082b704c09b970588/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+    Checking kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
+error: could not compile `kimsfinance_core` (example "test_sma_shared") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kimsfinance_core` (example "test_persistent_traits") due to 2 previous errors
+error: could not compile `kimsfinance_core` (example "test_multi_indicator") due to 1 previous error
+error: could not compile `kimsfinance_core` (example "test_macd_multi_output") due to 1 previous error
+error: could not compile `kimsfinance_core` (example "test_persistent_minimal") due to 1 previous error
+error: could not compile `kimsfinance_core` (example "test_pinned_memory") due to 2 previous errors
+error: could not compile `kimsfinance_core` (example "test_atr_multi_input") due to 2 previous errors
+error: could not compile `kimsfinance_core` (example "test_occupancy_calculator") due to 4 previous errors
+error: could not compile `kimsfinance_core` (bench "cpu_vs_gpu_batch") due to 2 previous errors; 1 warning emitted
+error: could not compile `kimsfinance_core` (bench "simd_validation") due to 1 previous error

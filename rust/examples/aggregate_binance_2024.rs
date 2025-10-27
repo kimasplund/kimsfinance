@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --release --example aggregate_binance_2024
 
-use kimsfinance_core::binance::{process_binance_month, Candle, Timeframe};
+use kimsfinance_core::binance::{Candle, Timeframe, process_binance_month};
 use std::fs::{self, File};
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -48,7 +48,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", separator);
 
     let data_dir = Path::new("/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades");
-    let output_path = Path::new("/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv");
+    let output_path =
+        Path::new("/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv");
 
     println!("\nData directory: {}", data_dir.display());
     println!("Output file:    {}\n", output_path.display());
@@ -80,7 +81,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Instant::now();
 
     for (i, zip_path) in zip_files.iter().enumerate() {
-        print!("[{}/{}] Processing: {} ... ",
+        print!(
+            "[{}/{}] Processing: {} ... ",
             i + 1,
             zip_files.len(),
             zip_path.file_name().unwrap().to_string_lossy()
@@ -112,22 +114,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", separator);
     println!("Total trades processed: {:>15}", total_trades);
     println!("Total 1-min candles:    {:>15}", all_candles.len());
-    println!("Processing time:        {:>15.2}s", processing_time.as_secs_f64());
-    println!("Throughput:             {:>15.0} trades/sec",
-        total_trades as f64 / processing_time.as_secs_f64());
+    println!(
+        "Processing time:        {:>15.2}s",
+        processing_time.as_secs_f64()
+    );
+    println!(
+        "Throughput:             {:>15.0} trades/sec",
+        total_trades as f64 / processing_time.as_secs_f64()
+    );
 
     if !all_candles.is_empty() {
         println!("\nDate range:");
-        println!("  First candle: {}", chrono::DateTime::from_timestamp_millis(all_candles[0].timestamp)
-            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
-            .unwrap_or_else(|| "unknown".to_string()));
-        println!("  Last candle:  {}", chrono::DateTime::from_timestamp_millis(all_candles.last().unwrap().timestamp)
-            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
-            .unwrap_or_else(|| "unknown".to_string()));
+        println!(
+            "  First candle: {}",
+            chrono::DateTime::from_timestamp_millis(all_candles[0].timestamp)
+                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        );
+        println!(
+            "  Last candle:  {}",
+            chrono::DateTime::from_timestamp_millis(all_candles.last().unwrap().timestamp)
+                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        );
 
         println!("\nPrice range:");
-        let min_low = all_candles.iter().map(|c| c.low).fold(f64::INFINITY, f64::min);
-        let max_high = all_candles.iter().map(|c| c.high).fold(f64::NEG_INFINITY, f64::max);
+        let min_low = all_candles
+            .iter()
+            .map(|c| c.low)
+            .fold(f64::INFINITY, f64::min);
+        let max_high = all_candles
+            .iter()
+            .map(|c| c.high)
+            .fold(f64::NEG_INFINITY, f64::max);
         println!("  Lowest:  ${:.2}", min_low);
         println!("  Highest: ${:.2}", max_high);
 

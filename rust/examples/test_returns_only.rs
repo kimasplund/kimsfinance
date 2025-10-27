@@ -1,7 +1,6 @@
 /// Test SIMD speedup for returns calculation only
 ///
 /// This isolates the returns calculation from Sharpe ratio to measure pure SIMD benefit.
-
 use std::time::Instant;
 
 #[cfg(target_arch = "x86_64")]
@@ -80,7 +79,13 @@ fn main() {
         }
 
         // Benchmark scalar
-        let iterations = if size < 1000 { 100000 } else if size < 10000 { 10000 } else { 1000 };
+        let iterations = if size < 1000 {
+            100000
+        } else if size < 10000 {
+            10000
+        } else {
+            1000
+        };
         let start = Instant::now();
         for _ in 0..iterations {
             std::hint::black_box(calculate_returns_scalar(std::hint::black_box(&equity)));

@@ -27,7 +27,7 @@
 //!
 //! If not set, defaults to `compute_89` (Ada) for maximum performance on RTX 3500 Ada.
 
-use cudarc::nvrtc::{compile_ptx_with_opts, CompileOptions};
+use cudarc::nvrtc::{CompileOptions, compile_ptx_with_opts};
 use std::env;
 use std::sync::OnceLock;
 
@@ -43,7 +43,7 @@ fn detect_gpu_arch() -> String {
 
     // Try querying nvidia-smi for compute capability
     let output = Command::new("nvidia-smi")
-        .args(&["--query-gpu=compute_cap", "--format=csv,noheader"])
+        .args(["--query-gpu=compute_cap", "--format=csv,noheader"])
         .output();
 
     match output {
@@ -102,7 +102,7 @@ pub fn get_compile_options() -> &'static CompileOptions {
         // Detect target architecture (auto-detect GPU or use env override)
         let arch = env::var("KIMSFINANCE_GPU_ARCH")
             .ok()
-            .unwrap_or_else(|| detect_gpu_arch());
+            .unwrap_or_else(detect_gpu_arch);
 
         // Log compilation target (visible during GPU initialization)
         eprintln!("🎯 CUDA compilation target: {}", arch);
@@ -185,7 +185,9 @@ pub fn get_compile_options() -> &'static CompileOptions {
 /// # Errors
 ///
 /// Returns compilation error if kernel has syntax errors or NVRTC fails.
-pub fn compile_ptx_optimized<S: AsRef<str>>(src: S) -> Result<cudarc::nvrtc::Ptx, cudarc::nvrtc::CompileError> {
+pub fn compile_ptx_optimized<S: AsRef<str>>(
+    src: S,
+) -> Result<cudarc::nvrtc::Ptx, cudarc::nvrtc::CompileError> {
     let opts = get_compile_options().clone();
     compile_ptx_with_opts(src, opts)
 }
@@ -233,7 +235,11 @@ mod tests {
         "#;
 
         let result = compile_ptx_optimized(SIMPLE_KERNEL);
-        assert!(result.is_ok(), "Failed to compile simple kernel: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to compile simple kernel: {:?}",
+            result.err()
+        );
     }
 
     #[test]

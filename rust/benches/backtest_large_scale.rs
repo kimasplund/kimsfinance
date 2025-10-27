@@ -72,14 +72,12 @@
 //! - Agent 3: Profile HashMap allocations (will use these benchmarks)
 //! - Agent 4: Analyze crossover thresholds (needs this data)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, SamplingMode};
+use criterion::{BenchmarkId, Criterion, SamplingMode, black_box, criterion_group, criterion_main};
 use kimsfinance_core::backtest::core::{
     IndicatorConfig, OHLCVBar, ParameterGrid, ParameterRange, Signal, Strategy,
 };
 use kimsfinance_core::backtest::engine::{BacktestConfig, BacktestEngine};
-use kimsfinance_core::backtest::metrics::{
-    calculate_max_drawdown, calculate_sharpe_ratio,
-};
+use kimsfinance_core::backtest::metrics::{calculate_max_drawdown, calculate_sharpe_ratio};
 use kimsfinance_core::backtest::optimizer::GeneticOptimizer;
 use ndarray::Array1;
 use std::collections::HashMap;
@@ -91,7 +89,16 @@ use std::f64::consts::PI;
 /// - Trend: Linear drift (0.01 per candle)
 /// - Wave: Sine wave oscillation (period ~100 candles)
 /// - Noise: Small random-like variations
-fn generate_ohlcv_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Array1::zeros(n);
     let mut high = Array1::zeros(n);
@@ -155,7 +162,9 @@ impl Strategy for SimpleRSIStrategy {
     }
 
     fn on_data(&mut self, _bar: &OHLCVBar, indicators: &HashMap<String, f64>) -> Signal {
-        let rsi = indicators.get(&format!("RSI_{}", self.rsi_period)).unwrap_or(&50.0);
+        let rsi = indicators
+            .get(&format!("RSI_{}", self.rsi_period))
+            .unwrap_or(&50.0);
 
         if *rsi < self.buy_threshold {
             Signal::Buy

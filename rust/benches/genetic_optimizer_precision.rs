@@ -54,7 +54,7 @@
 //! cargo bench --features gpu --bench genetic_optimizer_precision 2>&1 | tee optimizer_results.txt
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -109,7 +109,16 @@ impl Strategy for RSIStrategy {
 }
 
 /// Generate realistic OHLCV data for optimization
-fn generate_ohlcv_data(n: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv_data(
+    n: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut timestamps = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
@@ -209,27 +218,23 @@ fn bench_fp64_baseline(c: &mut Criterion) {
             .mutation_rate(0.15)
             .crossover_rate(0.8);
 
-        group.bench_with_input(
-            BenchmarkId::new("FP64_Only", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    optimizer
-                        .optimize(
-                            black_box(&engine),
-                            black_box(&mut strategy),
-                            black_box(&timestamps),
-                            black_box(&open),
-                            black_box(&high),
-                            black_box(&low),
-                            black_box(&close),
-                            black_box(&volume),
-                            black_box(&grid),
-                        )
-                        .expect("Optimization failed")
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("FP64_Only", size), &size, |b, _| {
+            b.iter(|| {
+                optimizer
+                    .optimize(
+                        black_box(&engine),
+                        black_box(&mut strategy),
+                        black_box(&timestamps),
+                        black_box(&open),
+                        black_box(&high),
+                        black_box(&low),
+                        black_box(&close),
+                        black_box(&volume),
+                        black_box(&grid),
+                    )
+                    .expect("Optimization failed")
+            });
+        });
     }
 
     group.finish();
@@ -293,27 +298,23 @@ fn bench_fp8_hybrid(c: &mut Criterion) {
             .mutation_rate(0.15)
             .crossover_rate(0.8);
 
-        group.bench_with_input(
-            BenchmarkId::new("FP8_Hybrid_80_20", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    optimizer
-                        .optimize(
-                            black_box(&engine),
-                            black_box(&mut strategy),
-                            black_box(&timestamps),
-                            black_box(&open),
-                            black_box(&high),
-                            black_box(&low),
-                            black_box(&close),
-                            black_box(&volume),
-                            black_box(&grid),
-                        )
-                        .expect("Optimization failed")
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("FP8_Hybrid_80_20", size), &size, |b, _| {
+            b.iter(|| {
+                optimizer
+                    .optimize(
+                        black_box(&engine),
+                        black_box(&mut strategy),
+                        black_box(&timestamps),
+                        black_box(&open),
+                        black_box(&high),
+                        black_box(&low),
+                        black_box(&close),
+                        black_box(&volume),
+                        black_box(&grid),
+                    )
+                    .expect("Optimization failed")
+            });
+        });
     }
 
     group.finish();
@@ -544,7 +545,10 @@ fn test_quality_validation() {
         "Hybrid quality should be >=95% of FP64 (got {:.2}%)",
         hybrid_quality
     );
-    println!("✓ Hybrid quality validated: {:.2}% retention", hybrid_quality);
+    println!(
+        "✓ Hybrid quality validated: {:.2}% retention",
+        hybrid_quality
+    );
 
     assert!(
         aggressive_quality >= 85.0,
