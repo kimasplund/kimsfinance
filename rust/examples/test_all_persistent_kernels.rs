@@ -356,8 +356,12 @@ fn test_bollinger(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::e
 
 fn test_stochastic(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = StochasticBatch::new();
+    // Stochastic expects concatenated [high, low, close]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data);  // close
     batch.add_task(
-        data.to_vec(),
+        combined,
         StochasticParams {
             k_period: 14,
             d_period: 3,
@@ -372,7 +376,11 @@ fn test_stochastic(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::
 
 fn test_williams_r(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = WilliamsRBatch::new();
-    batch.add_task(data.to_vec(), 14);
+    // Williams %R expects concatenated [high, low, close]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data);  // close
+    batch.add_task(combined, 14);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
@@ -382,7 +390,11 @@ fn test_williams_r(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::
 
 fn test_cci(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = CciBatch::new();
-    batch.add_task(data.to_vec(), 20);
+    // CCI expects concatenated [high, low, close]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data);  // close
+    batch.add_task(combined, 20);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
@@ -392,7 +404,10 @@ fn test_cci(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
 
 fn test_donchian(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = DonchianBatch::new();
-    batch.add_task(data.to_vec(), 20);
+    // Donchian expects concatenated [high, low]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    batch.add_task(combined, 20);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
@@ -419,7 +434,10 @@ fn test_keltner(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::err
 
 fn test_aroon(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = AroonBatch::new();
-    batch.add_task(data.to_vec(), 25);
+    // Aroon expects concatenated [high, low]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    batch.add_task(combined, 25);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
@@ -429,7 +447,11 @@ fn test_aroon(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error
 
 fn test_elder_ray(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
     let mut batch = ElderRayBatch::new();
-    batch.add_task(data.to_vec(), 13);
+    // Elder Ray expects concatenated [high, low, ema]
+    let mut combined = data.to_vec();
+    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data);  // ema (pre-calculated)
+    batch.add_task(combined, 13);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 2); // 2 outputs
