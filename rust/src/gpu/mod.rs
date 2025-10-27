@@ -189,7 +189,7 @@ pub use vwma::vwma_gpu;
 pub mod persistent;
 
 #[cfg(feature = "gpu")]
-pub use persistent::{PersistentKernelManager, TaskBatch};
+pub use persistent::{PersistentKernelManager, TaskBatch, execute_batch};
 
 #[cfg(feature = "gpu")]
 pub mod cuda_graphs;
