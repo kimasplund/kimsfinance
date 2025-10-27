@@ -111,7 +111,12 @@ pub mod pinned_memory;
 pub mod generic;
 
 // Re-export trait and kernel types
-pub use kernels::{AtrIndicator, MacdIndicator, MacdParams, RocIndicator, RsiIndicator};
+pub use kernels::{
+    AroonIndicator, AtrIndicator, BollingerIndicator, BollingerParams, CciIndicator,
+    DonchianIndicator, EmaIndicator, KeltnerIndicator, KeltnerParams, MacdIndicator, MacdParams,
+    RocIndicator, RsiIndicator, SmaIndicator, StochasticIndicator, StochasticParams,
+    WilliamsRIndicator,
+};
 pub use traits::{MultiOutputIndicator, PersistentIndicator, SingleOutputIndicator};
 
 // Re-export enhancement types
@@ -788,6 +793,49 @@ pub type MacdBatch = TaskBatch<MacdIndicator>;
 
 /// Type alias for ATR batch
 pub type AtrBatch = TaskBatch<AtrIndicator>;
+
+/// Type alias for Stochastic batch
+pub type StochasticBatch = TaskBatch<StochasticIndicator>;
+
+/// Type alias for Donchian batch
+pub type DonchianBatch = TaskBatch<DonchianIndicator>;
+
+/// Type alias for Keltner batch
+pub type KeltnerBatch = TaskBatch<KeltnerIndicator>;
+
+/// Type alias for Aroon batch
+pub type AroonBatch = TaskBatch<AroonIndicator>;
+
+/// Type alias for Williams %R batch
+pub type WilliamsRBatch = TaskBatch<WilliamsRIndicator>;
+
+/// Type alias for CCI batch
+pub type CciBatch = TaskBatch<CciIndicator>;
+
+/// Type alias for SMA batch
+pub type SmaBatch = TaskBatch<SmaIndicator>;
+
+/// Type alias for EMA batch
+pub type EmaBatch = TaskBatch<EmaIndicator>;
+
+/// Type alias for Bollinger batch
+pub type BollingerBatch = TaskBatch<BollingerIndicator>;
+
+// TODO: Uncomment when these indicators are fully implemented by other agents
+// /// Type alias for Elder Ray batch
+// pub type ElderRayBatch = TaskBatch<ElderRayIndicator>;
+//
+// /// Type alias for OBV batch
+// pub type ObvBatch = TaskBatch<ObvIndicator>;
+//
+// /// Type alias for CMF batch
+// pub type CmfBatch = TaskBatch<CmfIndicator>;
+//
+// /// Type alias for VWMA batch
+// pub type VwmaBatch = TaskBatch<VwmaIndicator>;
+//
+// /// Type alias for WMA batch
+// pub type WmaBatch = TaskBatch<WmaIndicator>;
 
 #[cfg(test)]
 mod tests {
