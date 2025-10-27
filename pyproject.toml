@@ -51,6 +51,9 @@ gpu = [
 jit = [
     "numba>=0.59",  # Python 3.13 support
 ]
+optimization = [
+    "deap>=1.4",  # Genetic algorithm optimization (NSGA-II)
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -68,7 +71,7 @@ test = [
     "svgwrite>=1.4",
 ]
 all = [
-    "kimsfinance[gpu,jit,dev,test]",
+    "kimsfinance[gpu,jit,optimization,dev,test]",
 ]
 
 [project.urls]

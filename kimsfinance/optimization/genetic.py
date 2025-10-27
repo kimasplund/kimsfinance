@@ -118,6 +118,10 @@ class GeneticOptimizer:
             tournament_size: Tournament selection size (default: 3)
             elite_size: Number of elites to preserve (default: 10)
         """
+        # Validate param_space
+        if not param_space or len(param_space) == 0:
+            raise ValueError("param_space cannot be empty")
+
         self.param_space = param_space
         self.param_names = list(param_space.keys())
         self.param_bounds = {name: (low, high) for name, (low, high, _) in param_space.items()}
@@ -415,10 +419,11 @@ class GeneticOptimizer:
             if n_jobs == -1:
                 n_jobs = mp.cpu_count()
 
+            # Note: stats_callback cannot be pickled for multiprocessing, so pass None
             with mp.Pool(processes=min(n_jobs, self.n_islands)) as pool:
                 results = pool.starmap(
                     self._evolve_island,
-                    [(i, strategy, data, backtester, stats_callback) for i in range(self.n_islands)]
+                    [(i, strategy, data, backtester, None) for i in range(self.n_islands)]
                 )
 
             # Merge Pareto fronts from all islands
