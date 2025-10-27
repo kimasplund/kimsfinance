@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kimsfinance"
 version = "0.1.0"
-description = "Blazing-fast financial charting for quantitative trading - 178x faster with GPU acceleration, WebP optimization, and production-ready quality. Built for hedge funds, algo traders, and quants."
+description = "Blazing-fast financial charting for quantitative trading - 194x average speedup (764x peak) with Rust CPU, GPU persistent kernels (41x batch), and production-ready quality. Built for hedge funds, algo traders, and quants."
 readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "AGPL-3.0-or-later"}
@@ -15,7 +15,7 @@ authors = [
 maintainers = [
     {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
-keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency"]
+keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency", "rust", "numba", "jit", "persistent-kernels", "backtesting", "rapids", "cudf"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
@@ -76,6 +76,7 @@ all = [
 [project.urls]
 Homepage = "https://asplund.kim"
 Documentation = "https://github.com/kimasplund/kimsfinance#readme"
+"Rust Documentation" = "https://github.com/kimasplund/kimsfinance/tree/master/rust#readme"
 Repository = "https://github.com/kimasplund/kimsfinance"
 Issues = "https://github.com/kimasplund/kimsfinance/issues"
 "Commercial License" = "https://github.com/kimasplund/kimsfinance/blob/master/COMMERCIAL-LICENSE.md"
