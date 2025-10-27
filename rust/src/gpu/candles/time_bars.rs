@@ -143,11 +143,6 @@ namespace cg = cooperative_groups;
 #define LONG_MAX 9223372036854775807L
 #define LONG_MIN (-LONG_MAX - 1L)
 
-// TimeBarParams struct (must match Rust layout)
-struct TimeBarParams {
-    int interval_seconds;
-};
-
 // Shared memory for bucket aggregation (per block)
 // Use 1024 buckets max per block (4KB shared memory per bucket)
 #define MAX_BUCKETS_PER_BLOCK 256
@@ -166,7 +161,7 @@ extern "C" __global__ void persistent_time_bars_kernel(
     const double** __restrict__ input_batch,    // Array of input pointers
     double** __restrict__ output_batch,          // Array of output pointers
     const int* __restrict__ sizes,               // Array of trade counts
-    const TimeBarParams* __restrict__ params,    // Array of interval params
+    const int* __restrict__ intervals,           // Array of interval_seconds (int, not struct)
     int num_tasks                                // Number of tasks to process
 ) {
     // Get grid group for cooperative synchronization
@@ -180,7 +175,7 @@ extern "C" __global__ void persistent_time_bars_kernel(
         const double* input = input_batch[task_id];
         double* output = output_batch[task_id];
         int n = sizes[task_id]; // Number of trades
-        int interval = params[task_id].interval_seconds;
+        int interval = intervals[task_id];
 
         if (n == 0 || interval <= 0) {
             // Empty task or invalid interval - skip
@@ -193,96 +188,94 @@ extern "C" __global__ void persistent_time_bars_kernel(
         const double* prices = input + n;
         const double* volumes = input + 2 * n;
 
-        // Step 1: Find number of unique buckets (single thread per task)
+        // Single thread per task does all the work (sequential)
         // Use task_id % grid_size to assign one thread per task
-        long min_bucket = LONG_MAX;
-        long max_bucket = LONG_MIN;
-        int num_buckets = 0;
-
         if (global_tid == task_id % grid_size) {
+            // DEBUG: Canary to verify kernel execution
+            output[0] = 99999.0;
+
+            // Step 1: Find number of unique buckets
+            long min_bucket = LONG_MAX;
+            long max_bucket = LONG_MIN;
+
             for (int i = 0; i < n; i++) {
                 long ts = (long)timestamps[i];
                 long bucket = ts / interval;
                 if (bucket < min_bucket) min_bucket = bucket;
                 if (bucket > max_bucket) max_bucket = bucket;
             }
-            num_buckets = (int)(max_bucket - min_bucket + 1);
-        }
 
-        grid.sync(); // Ensure bucket calculation is complete
+            int num_buckets = (int)(max_bucket - min_bucket + 1);
 
-        if (num_buckets <= 0) {
-            grid.sync();
-            continue;
-        }
+            // Only process if we have valid buckets
+            if (num_buckets > 0) {
+                // Output layout: [open(n), high(n), low(n), close(n), volume(n)]
+                // Use stride n (input size) to match buffer allocation, NOT num_buckets
+                double* out_open = output;
+                double* out_high = output + n;
+                double* out_low = output + 2 * n;
+                double* out_close = output + 3 * n;
+                double* out_volume = output + 4 * n;
 
-        // Single thread per task does all the work (sequential)
-        if (global_tid == task_id % grid_size) {
-            // Output layout: [open(m), high(m), low(m), close(m), volume(m)]
-            double* out_open = output;
-            double* out_high = output + num_buckets;
-            double* out_low = output + 2 * num_buckets;
-            double* out_close = output + 3 * num_buckets;
-            double* out_volume = output + 4 * num_buckets;
+                // Step 2: Initialize buckets with sentinel values
+                for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
+                    out_open[bucket_idx] = -1.0; // Sentinel (prices are always positive)
+                    out_high[bucket_idx] = -CUDART_INF;
+                    out_low[bucket_idx] = CUDART_INF;
+                    out_close[bucket_idx] = -1.0; // Sentinel
+                    out_volume[bucket_idx] = 0.0;
+                }
 
-            // Step 2: Initialize buckets with sentinel values
-            for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
-                out_open[bucket_idx] = -1.0; // Sentinel (prices are always positive)
-                out_high[bucket_idx] = -CUDART_INF;
-                out_low[bucket_idx] = CUDART_INF;
-                out_close[bucket_idx] = -1.0; // Sentinel
-                out_volume[bucket_idx] = 0.0;
-            }
+                // Step 3: Aggregate trades into buckets (sequential)
+                for (int i = 0; i < n; i++) {
+                    long ts = (long)timestamps[i];
+                    double price = prices[i];
+                    double vol = volumes[i];
 
-            // Step 3: Aggregate trades into buckets (sequential)
-            for (int i = 0; i < n; i++) {
-                long ts = (long)timestamps[i];
-                double price = prices[i];
-                double vol = volumes[i];
+                    long bucket = ts / interval;
+                    int bucket_idx = (int)(bucket - min_bucket);
 
-                long bucket = ts / interval;
-                int bucket_idx = (int)(bucket - min_bucket);
+                    if (bucket_idx >= 0 && bucket_idx < num_buckets) {
+                        // Open: First trade in bucket (check sentinel)
+                        if (out_open[bucket_idx] < 0.0) {
+                            out_open[bucket_idx] = price;
+                        }
 
-                if (bucket_idx >= 0 && bucket_idx < num_buckets) {
-                    // Open: First trade in bucket (check sentinel)
+                        // High: Maximum price
+                        if (price > out_high[bucket_idx]) {
+                            out_high[bucket_idx] = price;
+                        }
+
+                        // Low: Minimum price
+                        if (price < out_low[bucket_idx]) {
+                            out_low[bucket_idx] = price;
+                        }
+
+                        // Close: Last trade (always update)
+                        out_close[bucket_idx] = price;
+
+                        // Volume: Sum
+                        out_volume[bucket_idx] += vol;
+                    }
+                }
+
+                // Step 4: Clean up sentinel/infinity values to NaN for empty buckets
+                for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
                     if (out_open[bucket_idx] < 0.0) {
-                        out_open[bucket_idx] = price;
+                        out_open[bucket_idx] = CUDART_NAN;
                     }
-
-                    // High: Maximum price
-                    if (price > out_high[bucket_idx]) {
-                        out_high[bucket_idx] = price;
+                    if (out_high[bucket_idx] == -CUDART_INF) {
+                        out_high[bucket_idx] = CUDART_NAN;
                     }
-
-                    // Low: Minimum price
-                    if (price < out_low[bucket_idx]) {
-                        out_low[bucket_idx] = price;
+                    if (out_low[bucket_idx] == CUDART_INF) {
+                        out_low[bucket_idx] = CUDART_NAN;
                     }
-
-                    // Close: Last trade (always update)
-                    out_close[bucket_idx] = price;
-
-                    // Volume: Sum
-                    out_volume[bucket_idx] += vol;
+                    if (out_close[bucket_idx] < 0.0) {
+                        out_close[bucket_idx] = CUDART_NAN;
+                    }
                 }
             }
-
-            // Step 4: Clean up sentinel/infinity values to NaN for empty buckets
-            for (int bucket_idx = 0; bucket_idx < num_buckets; bucket_idx++) {
-                if (out_open[bucket_idx] < 0.0) {
-                    out_open[bucket_idx] = CUDART_NAN;
-                }
-                if (out_high[bucket_idx] == -CUDART_INF) {
-                    out_high[bucket_idx] = CUDART_NAN;
-                }
-                if (out_low[bucket_idx] == CUDART_INF) {
-                    out_low[bucket_idx] = CUDART_NAN;
-                }
-                if (out_close[bucket_idx] < 0.0) {
-                    out_close[bucket_idx] = CUDART_NAN;
-                }
-            }
-        }
+        } // End of: if (global_tid == task_id % grid_size)
 
         // Synchronize entire grid before next task
         grid.sync();
@@ -291,7 +284,7 @@ extern "C" __global__ void persistent_time_bars_kernel(
 "#;
 
 impl PersistentIndicator for TimeBarAggregator {
-    type Params = TimeBarParams;
+    type Params = i32; // interval_seconds directly (not struct)
 
     fn kernel_source() -> &'static str {
         TIME_BAR_KERNEL
@@ -375,23 +368,32 @@ mod tests {
             1.5, 2.0, 1.0,                              // volumes
         ];
 
-        batch.add_task(trades, TimeBarParams::one_minute());
+        batch.add_task(trades, 60); // 60 seconds = 1 minute
 
         let results = crate::gpu::persistent::execute_batch(&device, &batch)
             .expect("Execute failed");
 
         assert_eq!(results.len(), 1);
 
-        // Multi-output format: results[0] contains [opens, highs, lows, closes, volumes]
-        // For 1 candle: [open, high, low, close, volume] = 5 values total
-        assert_eq!(results[0].len(), 5, "Should have 1 candle (5 values)");
+        // Multi-output format: results[0] contains [opens(n), highs(n), lows(n), closes(n), volumes(n)]
+        // where n = input size (3 trades in this case)
+        // Buffer is allocated as: n * num_outputs = 3 * 5 = 15 values
+        // Kernel writes with stride = n (input size)
+        assert_eq!(results[0].len(), 15, "Buffer allocated for 3 potential buckets");
 
-        // Extract from multi-output format (each output is 1 value for 1 candle)
-        let open = results[0][0];   // First (and only) open
-        let high = results[0][1];   // First (and only) high
-        let low = results[0][2];    // First (and only) low
-        let close = results[0][3];  // First (and only) close
-        let volume = results[0][4]; // First (and only) volume
+        // DEBUG: Check for canary value
+        println!("First value (canary check): {}", results[0][0]);
+
+        // Extract bucket 0 from multi-output format
+        // All 3 trades fall into 1 bucket
+        // Kernel layout: [open(n), high(n), low(n), close(n), volume(n)]
+        // Bucket 0 is at index 0 of each field
+        let n = 3; // input size (stride)
+        let open = results[0][0];
+        let high = results[0][n];
+        let low = results[0][2 * n];
+        let close = results[0][3 * n];
+        let volume = results[0][4 * n];
 
         // Validate OHLCV
         assert!((open - 50000.0).abs() < 1e-6, "Open should be first trade: {}", open);
@@ -422,22 +424,27 @@ mod tests {
             5.0, 6.0,
         ];
 
-        batch.add_task(trades, TimeBarParams::one_minute());
+        batch.add_task(trades, 60); // 60 seconds = 1 minute
 
         let results = crate::gpu::persistent::execute_batch(&device, &batch)
             .expect("Execute failed");
 
         assert_eq!(results.len(), 1);
 
-        // Should produce 3 candles (15 values: 3 * 5)
-        assert_eq!(results[0].len(), 15, "Should have 3 candles (15 values)");
+        // Multi-output format with 6 trades: n * num_outputs = 6 * 5 = 30 values
+        // Kernel writes with stride = n (input size = 6)
+        assert_eq!(results[0].len(), 30, "Buffer allocated for 6 potential buckets");
+
+        // Kernel layout: [open(n), high(n), low(n), close(n), volume(n)]
+        // where n = 6 (input size), and we have 3 buckets at indices 0, 1, 2
+        let n = 6; // input size (stride)
 
         // Bucket 0: trades at 100, 101
         let open0 = results[0][0];
-        let high0 = results[0][3];
-        let low0 = results[0][6];
-        let close0 = results[0][9];
-        let volume0 = results[0][12];
+        let high0 = results[0][n + 0];
+        let low0 = results[0][2*n + 0];
+        let close0 = results[0][3*n + 0];
+        let volume0 = results[0][4*n + 0];
 
         assert!((open0 - 100.0).abs() < 1e-6, "Bucket 0 open: {}", open0);
         assert!((high0 - 101.0).abs() < 1e-6, "Bucket 0 high: {}", high0);
@@ -447,10 +454,10 @@ mod tests {
 
         // Bucket 1: trades at 102, 103
         let open1 = results[0][1];
-        let high1 = results[0][4];
-        let low1 = results[0][7];
-        let close1 = results[0][10];
-        let volume1 = results[0][13];
+        let high1 = results[0][n + 1];
+        let low1 = results[0][2*n + 1];
+        let close1 = results[0][3*n + 1];
+        let volume1 = results[0][4*n + 1];
 
         assert!((open1 - 102.0).abs() < 1e-6, "Bucket 1 open: {}", open1);
         assert!((high1 - 103.0).abs() < 1e-6, "Bucket 1 high: {}", high1);
@@ -460,10 +467,10 @@ mod tests {
 
         // Bucket 2: trades at 104, 105
         let open2 = results[0][2];
-        let high2 = results[0][5];
-        let low2 = results[0][8];
-        let close2 = results[0][11];
-        let volume2 = results[0][14];
+        let high2 = results[0][n + 2];
+        let low2 = results[0][2*n + 2];
+        let close2 = results[0][3*n + 2];
+        let volume2 = results[0][4*n + 2];
 
         assert!((open2 - 104.0).abs() < 1e-6, "Bucket 2 open: {}", open2);
         assert!((high2 - 105.0).abs() < 1e-6, "Bucket 2 high: {}", high2);
@@ -481,7 +488,7 @@ mod tests {
         // Empty trade data
         let trades: Vec<f64> = vec![];
 
-        batch.add_task(trades, TimeBarParams::one_minute());
+        batch.add_task(trades, 60); // 60 seconds = 1 minute
 
         let results = crate::gpu::persistent::execute_batch(&device, &batch)
             .expect("Execute failed");
@@ -504,19 +511,26 @@ mod tests {
             1.5,          // volume
         ];
 
-        batch.add_task(trades, TimeBarParams::one_minute());
+        batch.add_task(trades, 60); // 60 seconds = 1 minute
 
         let results = crate::gpu::persistent::execute_batch(&device, &batch)
             .expect("Execute failed");
 
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].len(), 5, "Should have 1 candle (5 values)");
 
+        // Multi-output format with 1 trade: n * num_outputs = 1 * 5 = 5 values
+        // Kernel writes with stride = n (input size = 1)
+        assert_eq!(results[0].len(), 5, "Buffer allocated for 1 potential bucket");
+
+        // Extract bucket 0 from multi-output format
+        // Kernel layout: [open(n), high(n), low(n), close(n), volume(n)]
+        // With n=1: positions [0, 1, 2, 3, 4]
+        let n = 1; // input size (stride)
         let open = results[0][0];
-        let high = results[0][1];
-        let low = results[0][2];
-        let close = results[0][3];
-        let volume = results[0][4];
+        let high = results[0][n];
+        let low = results[0][2*n];
+        let close = results[0][3*n];
+        let volume = results[0][4*n];
 
         // All prices should be the same
         assert!((open - 50000.0).abs() < 1e-6);

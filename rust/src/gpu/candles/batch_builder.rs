@@ -12,8 +12,8 @@
 //!
 //! // Build batch with multiple symbols
 //! let batch = CandleBatchBuilder::new()
-//!     .add_symbol("BTCUSDT", btc_trades, TimeBarParams::five_minutes())
-//!     .add_symbol("ETHUSDT", eth_trades, TimeBarParams::one_hour())
+//!     .add_symbol("BTCUSDT", btc_trades, 300)
+//!     .add_symbol("ETHUSDT", eth_trades, 3600)
 //!     .build();
 //!
 //! // Execute batch with single kernel launch
@@ -45,9 +45,9 @@ use crate::gpu::persistent::TaskBatch;
 ///
 /// // Time bar batch
 /// let time_batch = CandleBatchBuilder::<TimeBarAggregator>::new()
-///     .add_symbol("BTCUSDT", trades.clone(), TimeBarParams::one_minute())
-///     .add_symbol("BTCUSDT", trades.clone(), TimeBarParams::five_minutes())
-///     .add_symbol("BTCUSDT", trades, TimeBarParams::one_hour())
+///     .add_symbol("BTCUSDT", trades.clone(), 60)
+///     .add_symbol("BTCUSDT", trades.clone(), 300)
+///     .add_symbol("BTCUSDT", trades, 3600)
 ///     .build();
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -84,7 +84,7 @@ impl<A: CandleAggregator> CandleBatchBuilder<A> {
     /// let trades = TradeData::from_csv("trades.csv")?;
     ///
     /// let batch = CandleBatchBuilder::<TimeBarAggregator>::new()
-    ///     .add_symbol("BTCUSDT", trades, TimeBarParams::one_minute())
+    ///     .add_symbol("BTCUSDT", trades, 60)
     ///     .build();
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -105,7 +105,7 @@ impl<A: CandleAggregator> CandleBatchBuilder<A> {
     /// let trades = TradeData::from_csv("trades.csv")?;
     ///
     /// let mut builder = CandleBatchBuilder::<TimeBarAggregator>::new();
-    /// builder.add_symbol_mut("BTCUSDT", trades, TimeBarParams::one_minute());
+    /// builder.add_symbol_mut("BTCUSDT", trades, 60);
     /// let batch = builder.build();
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -190,8 +190,8 @@ pub struct SymbolCandleResult<O> {
 /// let trades = TradeData::from_csv("trades.csv")?;
 ///
 /// let builder = CandleBatchBuilder::<TimeBarAggregator>::new()
-///     .add_symbol("BTCUSDT", trades.clone(), TimeBarParams::one_minute())
-///     .add_symbol("ETHUSDT", trades, TimeBarParams::one_minute());
+///     .add_symbol("BTCUSDT", trades.clone(), 60)
+///     .add_symbol("ETHUSDT", trades, 60);
 ///
 /// let results = execute_batch_with_symbols(&device, builder)?;
 ///
@@ -246,8 +246,8 @@ impl<A: CandleAggregator> MultiFileBatchBuilder<A> {
     /// ```rust,no_run
     /// # use kimsfinance_core::gpu::candles::{MultiFileBatchBuilder, TimeBarAggregator, TimeBarParams};
     /// let batch = MultiFileBatchBuilder::<TimeBarAggregator>::new()
-    ///     .add_from_csv("btc_trades.csv", "BTCUSDT", TimeBarParams::one_minute())?
-    ///     .add_from_csv("eth_trades.csv", "ETHUSDT", TimeBarParams::one_minute())?
+    ///     .add_from_csv("btc_trades.csv", "BTCUSDT", 60)?
+    ///     .add_from_csv("eth_trades.csv", "ETHUSDT", 60)?
     ///     .build();
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -338,8 +338,8 @@ mod tests {
         let trades2 = create_test_trades();
 
         let batch = CandleBatchBuilder::<TimeBarAggregator>::new()
-            .add_symbol("BTCUSDT", trades1, TimeBarParams::one_minute())
-            .add_symbol("ETHUSDT", trades2, TimeBarParams::five_minutes())
+            .add_symbol("BTCUSDT", trades1, 60)
+            .add_symbol("ETHUSDT", trades2, 300)
             .build();
 
         assert_eq!(batch.len(), 2);
@@ -351,8 +351,8 @@ mod tests {
         let trades2 = create_test_trades();
 
         let mut builder = CandleBatchBuilder::<TimeBarAggregator>::new();
-        builder.add_symbol_mut("BTCUSDT", trades1, TimeBarParams::one_minute());
-        builder.add_symbol_mut("ETHUSDT", trades2, TimeBarParams::five_minutes());
+        builder.add_symbol_mut("BTCUSDT", trades1, 60);
+        builder.add_symbol_mut("ETHUSDT", trades2, 300);
 
         assert_eq!(builder.len(), 2);
         assert_eq!(builder.symbol_names().len(), 2);
@@ -373,9 +373,9 @@ mod tests {
         file2.flush().unwrap();
 
         let batch_builder = MultiFileBatchBuilder::<TimeBarAggregator>::new()
-            .add_from_csv(file1.path(), "BTCUSDT", TimeBarParams::one_minute())
+            .add_from_csv(file1.path(), "BTCUSDT", 60)
             .unwrap()
-            .add_from_csv(file2.path(), "ETHUSDT", TimeBarParams::one_minute())
+            .add_from_csv(file2.path(), "ETHUSDT", 60)
             .unwrap()
             .build();
 
@@ -389,9 +389,9 @@ mod tests {
         let trades = create_test_trades();
 
         let builder = CandleBatchBuilder::<TimeBarAggregator>::new()
-            .add_symbol("BTC", trades.clone(), TimeBarParams::one_minute())
-            .add_symbol("ETH", trades.clone(), TimeBarParams::five_minutes())
-            .add_symbol("SOL", trades, TimeBarParams::one_hour());
+            .add_symbol("BTC", trades.clone(), 60)
+            .add_symbol("ETH", trades.clone(), 300)
+            .add_symbol("SOL", trades, 3600);
 
         let names = builder.symbol_names();
         assert_eq!(names.len(), 3);
