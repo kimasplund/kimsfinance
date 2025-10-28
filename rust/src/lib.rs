@@ -57,6 +57,9 @@ pub mod backtest;
 
 pub mod strategies;
 
+#[cfg(feature = "gpu")]
+mod batch_backtest_py;
+
 use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch};
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};
@@ -1752,6 +1755,14 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Backtesting API
     m.add_function(wrap_pyfunction!(run_backtest, m)?)?;
+
+    // GPU Batch Backtesting (genetic algorithm optimization)
+    #[cfg(feature = "gpu")]
+    {
+        m.add_function(wrap_pyfunction!(batch_backtest_py::batch_backtest, m)?)?;
+        m.add_function(wrap_pyfunction!(batch_backtest_py::batch_backtest_info, m)?)?;
+        m.add_class::<batch_backtest_py::PyBacktestResult>()?;
+    }
 
     // Module metadata
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
