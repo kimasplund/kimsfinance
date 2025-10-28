@@ -17,8 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize GPU device
     let device = Arc::new(GpuDevice::new()?);
-    println!("GPU Device initialized successfully");
-    println!("Device: {:?}\n", device.device.name()?);
+    println!("GPU Device initialized successfully\n");
 
     // Generate synthetic market data (trending upward with volatility)
     let n = 10_000;

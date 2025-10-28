@@ -163,7 +163,7 @@ fn main() {
     let (high, low, close, volume) = generate_intraday_data(n);
 
     // === Scenario 1: Single Session VWAP (anchor at start) ===
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Scenario 1: Single Session VWAP (anchor at 0)");
     println!("{}", "=".repeat(60));
 
@@ -194,7 +194,7 @@ fn main() {
     }
 
     // === Scenario 2: Multi-Session VWAP (anchors at session starts) ===
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Scenario 2: Multi-Session VWAP");
     println!("{}", "=".repeat(60));
 
@@ -221,7 +221,7 @@ fn main() {
         );
 
         // Verify GPU vs CPU match
-        let mut max_diff = 0.0;
+        let mut max_diff: f64 = 0.0;
         for i in anchor..n {
             let diff = (vwap_gpu[i] - vwap_cpu[i]).abs();
             if diff.is_finite() {
@@ -232,7 +232,7 @@ fn main() {
     }
 
     // === Scenario 3: Intraday Pivot VWAP (anchor at mid-session) ===
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Scenario 3: Intraday Pivot VWAP");
     println!("{}", "=".repeat(60));
 
@@ -256,7 +256,7 @@ fn main() {
     );
 
     // === Visualization ===
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Visualization: Session 2 with Pivot VWAP");
     println!("{}", "=".repeat(60));
 
@@ -272,7 +272,7 @@ fn main() {
     );
 
     // === Performance Summary ===
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Performance Summary");
     println!("{}", "=".repeat(60));
 
@@ -332,7 +332,7 @@ fn main() {
         );
     }
 
-    println!("\n" + &"=".repeat(60));
+    println!("\n{}", "=".repeat(60));
     println!("Demo completed successfully!");
     println!("{}", "=".repeat(60));
 }
