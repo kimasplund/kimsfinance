@@ -511,8 +511,13 @@ where
                 ))
             }
         } else {
-            // Read from device (fallback)
-            self.device.copy_to_host(&buffer_set.d_output)
+            // Read from device (fallback) - use stream directly
+            self.device
+                .stream
+                .memcpy_dtov(&buffer_set.d_output)
+                .map_err(|e| {
+                    GpuError::MemoryCopyError(format!("Failed to copy from device: {:?}", e))
+                })
         }
     }
 }

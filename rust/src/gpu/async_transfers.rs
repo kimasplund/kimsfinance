@@ -59,6 +59,7 @@ use super::persistent::pinned_memory::PinnedBuffer;
 use cudarc::driver::sys;
 use cudarc::driver::{CudaSlice, CudaStream};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 /// CUDA event for stream synchronization
 ///
@@ -351,7 +352,7 @@ pub trait AsyncTransferExt {
         &self,
         pinned: &PinnedBuffer<T>,
         device: &mut CudaSlice<T>,
-        stream: &CudaStream,
+        stream: &Arc<CudaStream>,
     ) -> Result<CudaEvent, GpuError>
     where
         T: cudarc::driver::DeviceRepr;
@@ -381,7 +382,7 @@ pub trait AsyncTransferExt {
         &self,
         device: &CudaSlice<T>,
         pinned: &mut PinnedBuffer<T>,
-        stream: &CudaStream,
+        stream: &Arc<CudaStream>,
     ) -> Result<CudaEvent, GpuError>
     where
         T: cudarc::driver::DeviceRepr;
@@ -392,7 +393,7 @@ impl AsyncTransferExt for GpuDevice {
         &self,
         pinned: &PinnedBuffer<T>,
         device: &mut CudaSlice<T>,
-        stream: &CudaStream,
+        stream: &Arc<CudaStream>,
     ) -> Result<CudaEvent, GpuError>
     where
         T: cudarc::driver::DeviceRepr,
@@ -413,7 +414,7 @@ impl AsyncTransferExt for GpuDevice {
         &self,
         device: &CudaSlice<T>,
         pinned: &mut PinnedBuffer<T>,
-        stream: &CudaStream,
+        stream: &Arc<CudaStream>,
     ) -> Result<CudaEvent, GpuError>
     where
         T: cudarc::driver::DeviceRepr,
