@@ -235,9 +235,12 @@ use indicators::{
     Indicator,
     KeltnerChannels,
     MACD,
+    MFI,
     MultiOutputIndicator,
     // Volume
     OBV,
+    ParabolicSAR,
+    PivotPoints,
     ROC,
     // Momentum
     RSI,
@@ -1028,6 +1031,43 @@ fn calculate_cmf<'py>(
     Ok(result.into_pyarray(py))
 }
 
+/// Calculate Money Flow Index (MFI)
+///
+/// Volume-weighted momentum indicator measuring buying/selling pressure.
+/// Often called the "volume-weighted RSI".
+///
+/// # Arguments
+/// * `high` - Array of high prices
+/// * `low` - Array of low prices
+/// * `close` - Array of close prices
+/// * `volume` - Array of volume data
+/// * `period` - Number of periods for MFI calculation (default: 14)
+///
+/// # Returns
+/// NumPy array of MFI values (0-100 range, NaN for warmup period)
+#[pyfunction]
+#[pyo3(signature = (high, low, close, volume, period = 14))]
+fn calculate_mfi<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'_, f64>,
+    low: PyReadonlyArray1<'_, f64>,
+    close: PyReadonlyArray1<'_, f64>,
+    volume: PyReadonlyArray1<'_, f64>,
+    period: usize,
+) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
+    let high_view = high.as_array();
+    let low_view = low.as_array();
+    let close_view = close.as_array();
+    let volume_view = volume.as_array();
+    let mfi = MFI::new(period)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+    let result = mfi
+        .calculate_hlcv(high_view, low_view, close_view, volume_view)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    Ok(result.into_pyarray(py))
+}
+
+
 /// Calculate Volume Profile
 ///
 /// # Arguments
@@ -1060,6 +1100,83 @@ fn calculate_volume_profile<'py>(
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     Ok(result.into_pyarray(py))
 }
+
+
+// ============================================================================
+// TREND INDICATORS (1 indicator)
+// ============================================================================
+
+/// Calculate Parabolic SAR (Stop and Reverse)
+///
+/// The Parabolic SAR is a trend-following indicator that provides entry and exit
+/// points. It appears as dots above or below price bars. When dots flip from below
+/// to above price (or vice versa), it signals a potential trend reversal.
+///
+/// # Arguments
+/// * `high` - Array of high prices
+/// * `low` - Array of low prices
+/// * `af_start` - Starting acceleration factor (default: 0.02)
+/// * `af_increment` - AF increment when new extreme point reached (default: 0.02)
+/// * `af_max` - Maximum acceleration factor (default: 0.2)
+///
+/// # Returns
+/// NumPy array of SAR values (same length as input, all values initialized)
+///
+/// # Algorithm
+/// 1. Initial trend determined by first price move
+/// 2. SAR updated each period: SAR = SAR + AF * (EP - SAR)
+/// 3. EP (Extreme Point) = highest high (uptrend) or lowest low (downtrend)
+/// 4. AF starts at af_start, increases by af_increment each new EP, max af_max
+/// 5. Trend reverses when price crosses SAR
+///
+/// # Performance
+/// - 5-10x faster than pandas implementation
+/// - SIMD-optimized min/max operations for SAR adjustments
+/// - Iterative algorithm with minimal allocations
+///
+/// # Example
+/// ```python
+/// import kimsfinance_core
+/// import numpy as np
+///
+/// high = np.array([110.0, 115.0, 120.0, 118.0, 122.0])
+/// low = np.array([105.0, 110.0, 115.0, 113.0, 117.0])
+///
+/// # Calculate with default parameters (0.02, 0.02, 0.2)
+/// sar = kimsfinance_core.calculate_parabolic_sar(high, low)
+///
+/// # Calculate with custom parameters (more sensitive)
+/// sar = kimsfinance_core.calculate_parabolic_sar(
+///     high, low,
+///     af_start=0.01,
+///     af_increment=0.01,
+///     af_max=0.1
+/// )
+/// ```
+///
+/// # References
+/// - Wilder, J. Wells (1978). "New Concepts in Technical Trading Systems"
+/// - https://en.wikipedia.org/wiki/Parabolic_SAR
+#[pyfunction]
+#[pyo3(signature = (high, low, af_start = 0.02, af_increment = 0.02, af_max = 0.2))]
+fn calculate_parabolic_sar<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'_, f64>,
+    low: PyReadonlyArray1<'_, f64>,
+    af_start: f64,
+    af_increment: f64,
+    af_max: f64,
+) -> PyResult<Bound<'py, numpy::PyArray1<f64>>> {
+    let high_view = high.as_array();
+    let low_view = low.as_array();
+    let psar = ParabolicSAR::new(af_start, af_increment, af_max)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(e.to_string()))?;
+    let result = psar
+        .calculate_hl(high_view, low_view)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    Ok(result.into_pyarray(py))
+}
+
 
 // ============================================================================
 // BATCH API - FFI Overhead Reduction
@@ -1399,6 +1516,9 @@ fn parse_indicator_request(
         "vwap" => Ok(IndicatorRequest::VWAP),
         "cmf" => Ok(IndicatorRequest::CMF {
             period: get_usize_or("period", 20),
+        }),
+        "mfi" => Ok(IndicatorRequest::MFI {
+            period: get_usize_or("period", 14),
         }),
         "volumeprofile" | "volume_profile" => Ok(IndicatorRequest::VolumeProfile {
             num_bins: get_usize_or("num_bins", 20),
@@ -1744,11 +1864,15 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(calculate_donchian_channels, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_elder_ray, m)?)?;
 
-    // Volume indicators (4 indicators)
+    // Volume indicators (5 indicators)
     m.add_function(wrap_pyfunction!(calculate_obv, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_vwap, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_cmf, m)?)?;
+    m.add_function(wrap_pyfunction!(calculate_mfi, m)?)?;
     m.add_function(wrap_pyfunction!(calculate_volume_profile, m)?)?;
+
+    // Trend indicators (1 indicator)
+    m.add_function(wrap_pyfunction!(calculate_parabolic_sar, m)?)?;
 
     // Batch API (FFI overhead reduction)
     m.add_function(wrap_pyfunction!(calculate_indicators_batch, m)?)?;
