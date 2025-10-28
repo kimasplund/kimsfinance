@@ -39,7 +39,7 @@ pub struct RangeBarParams {
 
 /// CUDA kernel for persistent Range Bar calculation
 use super::traits::{CandleAggregator, TradeBasedAggregator};
-use super::types::{TradeData, OHLCVCandle};
+use super::types::{OHLCVCandle, TradeData};
 ///
 /// # Input Layout
 /// - `input[0..n]`: timestamp (unix nanoseconds)
@@ -212,12 +212,18 @@ mod tests {
     fn test_range_bar_kernel_compiles() {
         let device = GpuDevice::new().expect("GPU required");
         let result = RangeBarAggregator::compile_kernel(&device);
-        assert!(result.is_ok(), "Range Bar kernel should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Range Bar kernel should compile successfully"
+        );
     }
 
     #[test]
     fn test_range_bar_trait_properties() {
-        assert_eq!(RangeBarAggregator::kernel_name(), "persistent_range_bar_kernel");
+        assert_eq!(
+            RangeBarAggregator::kernel_name(),
+            "persistent_range_bar_kernel"
+        );
         assert_eq!(RangeBarAggregator::num_inputs(), 3);
         assert_eq!(RangeBarAggregator::num_outputs(), 5);
     }

@@ -50,7 +50,7 @@
 
 use super::super::persistent::traits::{MultiOutputIndicator, PersistentIndicator};
 use super::traits::{CandleAggregator, TradeBasedAggregator};
-use super::types::{TradeData, OHLCVCandle};
+use super::types::{OHLCVCandle, TradeData};
 
 /// Time bar aggregator for persistent kernel execution
 pub struct TimeBarAggregator;
@@ -71,27 +71,37 @@ pub struct TimeBarParams {
 impl TimeBarParams {
     /// Create 1-minute time bar parameters
     pub fn one_minute() -> Self {
-        Self { interval_seconds: 60 }
+        Self {
+            interval_seconds: 60,
+        }
     }
 
     /// Create 5-minute time bar parameters
     pub fn five_minutes() -> Self {
-        Self { interval_seconds: 300 }
+        Self {
+            interval_seconds: 300,
+        }
     }
 
     /// Create 15-minute time bar parameters
     pub fn fifteen_minutes() -> Self {
-        Self { interval_seconds: 900 }
+        Self {
+            interval_seconds: 900,
+        }
     }
 
     /// Create 1-hour time bar parameters
     pub fn one_hour() -> Self {
-        Self { interval_seconds: 3600 }
+        Self {
+            interval_seconds: 3600,
+        }
     }
 
     /// Create 1-day time bar parameters
     pub fn one_day() -> Self {
-        Self { interval_seconds: 86400 }
+        Self {
+            interval_seconds: 86400,
+        }
     }
 
     /// Create custom interval time bar parameters
@@ -363,7 +373,10 @@ mod tests {
 
     #[test]
     fn test_time_bar_trait_properties() {
-        assert_eq!(TimeBarAggregator::kernel_name(), "persistent_time_bars_kernel");
+        assert_eq!(
+            TimeBarAggregator::kernel_name(),
+            "persistent_time_bars_kernel"
+        );
         assert_eq!(TimeBarAggregator::num_inputs(), 3);
         assert_eq!(TimeBarAggregator::num_outputs(), 5);
     }
@@ -373,7 +386,11 @@ mod tests {
     fn test_time_bar_kernel_compiles() {
         let device = GpuDevice::new().expect("GPU required");
         let result = TimeBarAggregator::compile_kernel(&device);
-        assert!(result.is_ok(), "Time bar kernel should compile successfully: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Time bar kernel should compile successfully: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -384,15 +401,21 @@ mod tests {
 
         // 3 trades within same 1-minute bucket (1700000000 - 1700000020)
         let trades = vec![
-            1700000000.0, 1700000010.0, 1700000020.0, // timestamps (within 1 minute)
-            50000.0, 50010.0, 50005.0,                  // prices
-            1.5, 2.0, 1.0,                              // volumes
+            1700000000.0,
+            1700000010.0,
+            1700000020.0, // timestamps (within 1 minute)
+            50000.0,
+            50010.0,
+            50005.0, // prices
+            1.5,
+            2.0,
+            1.0, // volumes
         ];
 
         batch.add_task(trades, 60); // 60 seconds = 1 minute
 
-        let results = crate::gpu::persistent::execute_batch(&device, &batch)
-            .expect("Execute failed");
+        let results =
+            crate::gpu::persistent::execute_batch(&device, &batch).expect("Execute failed");
 
         assert_eq!(results.len(), 1);
 
@@ -400,7 +423,11 @@ mod tests {
         // where n = input size (3 trades in this case)
         // Buffer is allocated as: n * num_outputs = 3 * 5 = 15 values
         // Kernel writes with stride = n (input size)
-        assert_eq!(results[0].len(), 15, "Buffer allocated for 3 potential buckets");
+        assert_eq!(
+            results[0].len(),
+            15,
+            "Buffer allocated for 3 potential buckets"
+        );
 
         // Extract bucket 0 from multi-output format
         // All 3 trades fall into 1 bucket
@@ -414,11 +441,27 @@ mod tests {
         let volume = results[0][4 * n];
 
         // Validate OHLCV
-        assert!((open - 50000.0).abs() < 1e-6, "Open should be first trade: {}", open);
-        assert!((high - 50010.0).abs() < 1e-6, "High should be max: {}", high);
+        assert!(
+            (open - 50000.0).abs() < 1e-6,
+            "Open should be first trade: {}",
+            open
+        );
+        assert!(
+            (high - 50010.0).abs() < 1e-6,
+            "High should be max: {}",
+            high
+        );
         assert!((low - 50000.0).abs() < 1e-6, "Low should be min: {}", low);
-        assert!((close - 50005.0).abs() < 1e-6, "Close should be last: {}", close);
-        assert!((volume - 4.5).abs() < 1e-6, "Volume should be sum: {}", volume);
+        assert!(
+            (close - 50005.0).abs() < 1e-6,
+            "Close should be last: {}",
+            close
+        );
+        assert!(
+            (volume - 4.5).abs() < 1e-6,
+            "Volume should be sum: {}",
+            volume
+        );
     }
 
     #[test]
@@ -429,29 +472,42 @@ mod tests {
 
         // 6 trades across 3 different 1-minute buckets
         let trades = vec![
-            1700000000.0, 1700000010.0, // Bucket 0 (minute 0)
-            1700000060.0, 1700000070.0, // Bucket 1 (minute 1)
-            1700000120.0, 1700000130.0, // Bucket 2 (minute 2)
+            1700000000.0,
+            1700000010.0, // Bucket 0 (minute 0)
+            1700000060.0,
+            1700000070.0, // Bucket 1 (minute 1)
+            1700000120.0,
+            1700000130.0, // Bucket 2 (minute 2)
             // Prices
-            100.0, 101.0,
-            102.0, 103.0,
-            104.0, 105.0,
+            100.0,
+            101.0,
+            102.0,
+            103.0,
+            104.0,
+            105.0,
             // Volumes
-            1.0, 2.0,
-            3.0, 4.0,
-            5.0, 6.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
         ];
 
         batch.add_task(trades, 60); // 60 seconds = 1 minute
 
-        let results = crate::gpu::persistent::execute_batch(&device, &batch)
-            .expect("Execute failed");
+        let results =
+            crate::gpu::persistent::execute_batch(&device, &batch).expect("Execute failed");
 
         assert_eq!(results.len(), 1);
 
         // Multi-output format with 6 trades: n * num_outputs = 6 * 5 = 30 values
         // Kernel writes with stride = n (input size = 6)
-        assert_eq!(results[0].len(), 30, "Buffer allocated for 6 potential buckets");
+        assert_eq!(
+            results[0].len(),
+            30,
+            "Buffer allocated for 6 potential buckets"
+        );
 
         // Kernel layout: [open(n), high(n), low(n), close(n), volume(n)]
         // where n = 6 (input size), and we have 3 buckets at indices 0, 1, 2
@@ -460,9 +516,9 @@ mod tests {
         // Bucket 0: trades at 100, 101
         let open0 = results[0][0];
         let high0 = results[0][n + 0];
-        let low0 = results[0][2*n + 0];
-        let close0 = results[0][3*n + 0];
-        let volume0 = results[0][4*n + 0];
+        let low0 = results[0][2 * n + 0];
+        let close0 = results[0][3 * n + 0];
+        let volume0 = results[0][4 * n + 0];
 
         assert!((open0 - 100.0).abs() < 1e-6, "Bucket 0 open: {}", open0);
         assert!((high0 - 101.0).abs() < 1e-6, "Bucket 0 high: {}", high0);
@@ -473,9 +529,9 @@ mod tests {
         // Bucket 1: trades at 102, 103
         let open1 = results[0][1];
         let high1 = results[0][n + 1];
-        let low1 = results[0][2*n + 1];
-        let close1 = results[0][3*n + 1];
-        let volume1 = results[0][4*n + 1];
+        let low1 = results[0][2 * n + 1];
+        let close1 = results[0][3 * n + 1];
+        let volume1 = results[0][4 * n + 1];
 
         assert!((open1 - 102.0).abs() < 1e-6, "Bucket 1 open: {}", open1);
         assert!((high1 - 103.0).abs() < 1e-6, "Bucket 1 high: {}", high1);
@@ -486,15 +542,19 @@ mod tests {
         // Bucket 2: trades at 104, 105
         let open2 = results[0][2];
         let high2 = results[0][n + 2];
-        let low2 = results[0][2*n + 2];
-        let close2 = results[0][3*n + 2];
-        let volume2 = results[0][4*n + 2];
+        let low2 = results[0][2 * n + 2];
+        let close2 = results[0][3 * n + 2];
+        let volume2 = results[0][4 * n + 2];
 
         assert!((open2 - 104.0).abs() < 1e-6, "Bucket 2 open: {}", open2);
         assert!((high2 - 105.0).abs() < 1e-6, "Bucket 2 high: {}", high2);
         assert!((low2 - 104.0).abs() < 1e-6, "Bucket 2 low: {}", low2);
         assert!((close2 - 105.0).abs() < 1e-6, "Bucket 2 close: {}", close2);
-        assert!((volume2 - 11.0).abs() < 1e-6, "Bucket 2 volume: {}", volume2);
+        assert!(
+            (volume2 - 11.0).abs() < 1e-6,
+            "Bucket 2 volume: {}",
+            volume2
+        );
     }
 
     #[test]
@@ -508,12 +568,16 @@ mod tests {
 
         batch.add_task(trades, 60); // 60 seconds = 1 minute
 
-        let results = crate::gpu::persistent::execute_batch(&device, &batch)
-            .expect("Execute failed");
+        let results =
+            crate::gpu::persistent::execute_batch(&device, &batch).expect("Execute failed");
 
         assert_eq!(results.len(), 1);
         // Empty input should produce empty output
-        assert_eq!(results[0].len(), 0, "Empty input should produce empty output");
+        assert_eq!(
+            results[0].len(),
+            0,
+            "Empty input should produce empty output"
+        );
     }
 
     #[test]
@@ -531,14 +595,18 @@ mod tests {
 
         batch.add_task(trades, 60); // 60 seconds = 1 minute
 
-        let results = crate::gpu::persistent::execute_batch(&device, &batch)
-            .expect("Execute failed");
+        let results =
+            crate::gpu::persistent::execute_batch(&device, &batch).expect("Execute failed");
 
         assert_eq!(results.len(), 1);
 
         // Multi-output format with 1 trade: n * num_outputs = 1 * 5 = 5 values
         // Kernel writes with stride = n (input size = 1)
-        assert_eq!(results[0].len(), 5, "Buffer allocated for 1 potential bucket");
+        assert_eq!(
+            results[0].len(),
+            5,
+            "Buffer allocated for 1 potential bucket"
+        );
 
         // Extract bucket 0 from multi-output format
         // Kernel layout: [open(n), high(n), low(n), close(n), volume(n)]
@@ -546,9 +614,9 @@ mod tests {
         let n = 1; // input size (stride)
         let open = results[0][0];
         let high = results[0][n];
-        let low = results[0][2*n];
-        let close = results[0][3*n];
-        let volume = results[0][4*n];
+        let low = results[0][2 * n];
+        let close = results[0][3 * n];
+        let volume = results[0][4 * n];
 
         // All prices should be the same
         assert!((open - 50000.0).abs() < 1e-6);

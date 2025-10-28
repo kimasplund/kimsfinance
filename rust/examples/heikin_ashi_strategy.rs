@@ -24,9 +24,9 @@
 //! ```
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::candles::*;
-#[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::GpuDevice;
+#[cfg(feature = "gpu")]
+use kimsfinance_core::gpu::candles::*;
 
 #[cfg(feature = "gpu")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,7 +75,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ──────┼───────────┼───────────┼───────────┼──────────");
     for i in 0..5.min(ohlcv.len()) {
         let c = &ohlcv[i];
-        println!("   {:>5} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2}",
+        println!(
+            "   {:>5} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2}",
             i, c.open, c.high, c.low, c.close
         );
     }
@@ -86,7 +87,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ──────┼───────────┼───────────┼───────────┼──────────");
     for i in 0..5.min(ha.len()) {
         let c = &ha[i];
-        println!("   {:>5} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2}",
+        println!(
+            "   {:>5} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2}",
             i, c.open, c.high, c.low, c.close
         );
     }
@@ -106,19 +108,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let regular_trades = count_trades(&regular_signals);
     let ha_trades = count_trades(&ha_signals);
-    println!("   │ Total Trades               │ {:>8} │ {:>8} │", regular_trades, ha_trades);
+    println!(
+        "   │ Total Trades               │ {:>8} │ {:>8} │",
+        regular_trades, ha_trades
+    );
 
     let regular_profit = calculate_pnl(&ohlcv, &regular_signals);
     let ha_profit = calculate_pnl(&ha, &ha_signals);
-    println!("   │ Total P&L                  │ {:>7.2}% │ {:>7.2}% │", regular_profit, ha_profit);
+    println!(
+        "   │ Total P&L                  │ {:>7.2}% │ {:>7.2}% │",
+        regular_profit, ha_profit
+    );
 
     let regular_winrate = calculate_winrate(&ohlcv, &regular_signals);
     let ha_winrate = calculate_winrate(&ha, &ha_signals);
-    println!("   │ Win Rate                   │ {:>7.1}% │ {:>7.1}% │", regular_winrate, ha_winrate);
+    println!(
+        "   │ Win Rate                   │ {:>7.1}% │ {:>7.1}% │",
+        regular_winrate, ha_winrate
+    );
 
     let regular_max_dd = calculate_max_drawdown(&ohlcv, &regular_signals);
     let ha_max_dd = calculate_max_drawdown(&ha, &ha_signals);
-    println!("   │ Max Drawdown               │ {:>7.2}% │ {:>7.2}% │", regular_max_dd, ha_max_dd);
+    println!(
+        "   │ Max Drawdown               │ {:>7.2}% │ {:>7.2}% │",
+        regular_max_dd, ha_max_dd
+    );
 
     println!("   └────────────────────────────┴──────────┴──────────┘");
     println!();
@@ -134,12 +148,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match ha_signals[i] {
             Signal::Long => {
                 let price = ha[i].close;
-                let candle_type = if ha[i].close > ha[i].open { "Bullish" } else { "Bearish" };
+                let candle_type = if ha[i].close > ha[i].open {
+                    "Bullish"
+                } else {
+                    "Bearish"
+                };
                 println!("   {:>5} │  LONG   │ {:>9.2} │ {}", i, price, candle_type);
             }
             Signal::Short => {
                 let price = ha[i].close;
-                let candle_type = if ha[i].close > ha[i].open { "Bullish" } else { "Bearish" };
+                let candle_type = if ha[i].close > ha[i].open {
+                    "Bullish"
+                } else {
+                    "Bearish"
+                };
                 println!("   {:>5} │  SHORT  │ {:>9.2} │ {}", i, price, candle_type);
             }
             Signal::Exit => {
@@ -297,7 +319,10 @@ fn simple_ma(candles: &[Candle], idx: usize, period: usize) -> f64 {
 
 #[cfg(feature = "gpu")]
 fn count_trades(signals: &[Signal]) -> usize {
-    signals.iter().filter(|s| matches!(s, Signal::Long | Signal::Short)).count()
+    signals
+        .iter()
+        .filter(|s| matches!(s, Signal::Long | Signal::Short))
+        .count()
 }
 
 #[cfg(feature = "gpu")]

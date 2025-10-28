@@ -45,7 +45,7 @@
 
 use super::super::persistent::traits::{MultiOutputIndicator, PersistentIndicator};
 use super::traits::{CandleAggregator, TradeBasedAggregator};
-use super::types::{TradeData, OHLCVCandle};
+use super::types::{OHLCVCandle, TradeData};
 
 /// Volume bar aggregator for persistent kernel execution
 pub struct VolumeBarAggregator;

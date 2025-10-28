@@ -224,9 +224,9 @@ pub fn rsi_gpu(
     let mut d_losses = device.alloc_buffer(n)?;
 
     // Asynchronous H2D copy using pinned memory (20-30% faster)
-    kernel_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close).map_err(|e| {
-        GpuError::ExecutionError(format!("H2D copy failed: {:?}", e))
-    })?;
+    kernel_stream
+        .memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)
+        .map_err(|e| GpuError::ExecutionError(format!("H2D copy failed: {:?}", e)))?;
 
     let n_i32 = n as i32;
     let period_i32 = period as i32;
@@ -253,12 +253,12 @@ pub fn rsi_gpu(
     let mut pinned_losses = device.pinned_pool.lock().acquire(n)?;
 
     // Asynchronous D2H copies
-    kernel_stream.memcpy_dtoh(&d_gains, &mut pinned_gains.as_mut_slice()[..n]).map_err(|e| {
-        GpuError::ExecutionError(format!("D2H gains copy failed: {:?}", e))
-    })?;
-    kernel_stream.memcpy_dtoh(&d_losses, &mut pinned_losses.as_mut_slice()[..n]).map_err(|e| {
-        GpuError::ExecutionError(format!("D2H losses copy failed: {:?}", e))
-    })?;
+    kernel_stream
+        .memcpy_dtoh(&d_gains, &mut pinned_gains.as_mut_slice()[..n])
+        .map_err(|e| GpuError::ExecutionError(format!("D2H gains copy failed: {:?}", e)))?;
+    kernel_stream
+        .memcpy_dtoh(&d_losses, &mut pinned_losses.as_mut_slice()[..n])
+        .map_err(|e| GpuError::ExecutionError(format!("D2H losses copy failed: {:?}", e)))?;
 
     // Synchronize stream to ensure D2H copies are complete before CPU access
     kernel_stream.synchronize().map_err(|e| {
@@ -297,12 +297,12 @@ pub fn rsi_gpu(
     let mut d_rsi = device.alloc_buffer(n)?;
 
     // Asynchronous H2D copies
-    kernel_stream.memcpy_htod(&pinned_avg_gain.as_slice()[..n], &mut d_avg_gain).map_err(|e| {
-        GpuError::ExecutionError(format!("H2D avg_gain copy failed: {:?}", e))
-    })?;
-    kernel_stream.memcpy_htod(&pinned_avg_loss.as_slice()[..n], &mut d_avg_loss).map_err(|e| {
-        GpuError::ExecutionError(format!("H2D avg_loss copy failed: {:?}", e))
-    })?;
+    kernel_stream
+        .memcpy_htod(&pinned_avg_gain.as_slice()[..n], &mut d_avg_gain)
+        .map_err(|e| GpuError::ExecutionError(format!("H2D avg_gain copy failed: {:?}", e)))?;
+    kernel_stream
+        .memcpy_htod(&pinned_avg_loss.as_slice()[..n], &mut d_avg_loss)
+        .map_err(|e| GpuError::ExecutionError(format!("H2D avg_loss copy failed: {:?}", e)))?;
 
     // Release buffers back to pool
     let mut pool = device.pinned_pool.lock();
@@ -327,9 +327,9 @@ pub fn rsi_gpu(
     // === Step 6: D2H - Copy final RSI back to host ===
     // Acquire pinned buffer for async D2H transfer
     let mut pinned_rsi = device.pinned_pool.lock().acquire(n)?;
-    kernel_stream.memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..n]).map_err(|e| {
-        GpuError::ExecutionError(format!("D2H RSI copy failed: {:?}", e))
-    })?;
+    kernel_stream
+        .memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..n])
+        .map_err(|e| GpuError::ExecutionError(format!("D2H RSI copy failed: {:?}", e)))?;
 
     // Synchronize to ensure final result is ready
     kernel_stream.synchronize().map_err(|e| {

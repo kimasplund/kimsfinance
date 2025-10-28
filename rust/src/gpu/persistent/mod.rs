@@ -115,11 +115,10 @@ pub mod generic;
 
 // Re-export trait and kernel types
 pub use kernels::{
-    AroonIndicator, AtrIndicator, BollingerIndicator, BollingerParams, CciIndicator,
-    CmfIndicator, DonchianIndicator, ElderRayIndicator, EmaIndicator, KeltnerIndicator,
-    KeltnerParams, MacdIndicator, MacdParams, ObvIndicator, RocIndicator, RsiIndicator,
-    SmaIndicator, StochasticIndicator, StochasticParams, VwmaIndicator, WilliamsRIndicator,
-    WmaIndicator,
+    AroonIndicator, AtrIndicator, BollingerIndicator, BollingerParams, CciIndicator, CmfIndicator,
+    DonchianIndicator, ElderRayIndicator, EmaIndicator, KeltnerIndicator, KeltnerParams,
+    MacdIndicator, MacdParams, ObvIndicator, RocIndicator, RsiIndicator, SmaIndicator,
+    StochasticIndicator, StochasticParams, VwmaIndicator, WilliamsRIndicator, WmaIndicator,
 };
 pub use traits::{MultiOutputIndicator, PersistentIndicator, SingleOutputIndicator};
 
@@ -128,12 +127,112 @@ pub use occupancy::OccupancyCalculator;
 pub use pinned_memory::PinnedBuffer;
 
 // Re-export generic batch types (Agent 3)
-pub use generic::{execute_generic_batch, GenericBatch};
+pub use generic::{GenericBatch, execute_generic_batch};
 
 use super::compile::compile_ptx_optimized_cached;
 use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaFunction, CudaSlice, DevicePtr, LaunchConfig};
 use std::sync::Arc;
+
+/// Kernel phase classification for adaptive block size selection
+///
+/// Different phases have different characteristics:
+/// - **Indicator**: Memory-bound (high memory bandwidth, low register pressure)
+/// - **Signals**: Compute-bound (high register usage, complex logic)
+/// - **Execution**: Sequential (1 thread per strategy, no parallelism within strategy)
+/// - **Aggregation**: Reduction (warp primitives, small block sizes)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KernelPhase {
+    /// Indicator calculation phase (memory-bound)
+    /// Characteristics: High memory bandwidth, low register pressure
+    /// Optimal: Smaller blocks (128) for better memory concurrency
+    Indicator,
+
+    /// Signal generation phase (compute-bound)
+    /// Characteristics: High register usage, complex conditional logic
+    /// Optimal: Larger blocks (256) for better SM utilization
+    Signals,
+
+    /// Backtest execution phase (sequential)
+    /// Characteristics: Sequential per-strategy, no intra-strategy parallelism
+    /// Optimal: Minimal blocks (32, warp size) to match strategy count
+    Execution,
+
+    /// Metrics aggregation phase (reduction)
+    /// Characteristics: Parallel reduction, warp-level primitives
+    /// Optimal: Medium blocks (64) for reduction efficiency
+    Aggregation,
+}
+
+/// Calculate optimal block size for kernel phase
+///
+/// Adapts block size to phase characteristics for better occupancy and throughput.
+///
+/// # Arguments
+///
+/// * `phase` - Kernel phase classification
+/// * `_device` - GPU device (reserved for future device-specific tuning)
+///
+/// # Returns
+///
+/// Optimal block size (threads per block)
+///
+/// # Algorithm
+///
+/// - **Indicator** (memory-bound): 128 threads
+///   - Smaller blocks = more concurrent memory transfers
+///   - Lower register pressure = higher occupancy
+/// - **Signals** (compute-bound): 256 threads
+///   - Larger blocks = better SM utilization
+///   - More threads hide compute latency
+/// - **Execution** (sequential): 32 threads (warp size)
+///   - Minimal parallelism within strategy
+///   - Match thread count to strategy count
+/// - **Aggregation** (reduction): 64 threads
+///   - Efficient for warp-level reductions
+///   - Power of 2 for reduction tree
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let device = GpuDevice::new()?;
+///
+/// // Memory-bound indicator phase
+/// let indicator_block = optimal_block_size(KernelPhase::Indicator, &device);
+/// assert_eq!(indicator_block, 128);
+///
+/// // Compute-bound signal phase
+/// let signal_block = optimal_block_size(KernelPhase::Signals, &device);
+/// assert_eq!(signal_block, 256);
+/// ```
+pub fn optimal_block_size(phase: KernelPhase, _device: &GpuDevice) -> u32 {
+    match phase {
+        KernelPhase::Indicator => {
+            // Memory-bound: smaller blocks for more concurrent transfers
+            // Rationale: Memory operations dominate, want more blocks active
+            // to hide memory latency through concurrent transfers
+            128
+        }
+        KernelPhase::Signals => {
+            // Compute-bound: larger blocks for better SM utilization
+            // Rationale: Complex logic with high register usage, benefit
+            // from more threads per SM to hide compute latency
+            256
+        }
+        KernelPhase::Execution => {
+            // Sequential: match warp size (32 threads)
+            // Rationale: Each strategy runs sequentially, minimal benefit
+            // from larger blocks. Use warp size for efficient execution.
+            32
+        }
+        KernelPhase::Aggregation => {
+            // Reduction: 64 threads for efficient reductions
+            // Rationale: Power-of-2 for reduction tree, 2 warps per block
+            // provides good balance for parallel reductions
+            64
+        }
+    }
+}
 
 /// CUDA kernel for persistent ROC calculation (simplest test case)
 ///
@@ -461,9 +560,12 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         // For multi-input indicators, data is concatenated so divide by num_inputs first
         let n = task.data.len() / num_inputs;
         let output_size = n * num_outputs;
-        eprintln!("DEBUG: Task {} - n={}, output_size={}", task_idx, n, output_size);
+        eprintln!(
+            "DEBUG: Task {} - n={}, output_size={}",
+            task_idx, n, output_size
+        );
         let output_buf = device.allocate_device_buffer(output_size)?;
-        d_outputs.push(vec![output_buf]);  // Wrap in vec for consistency
+        d_outputs.push(vec![output_buf]); // Wrap in vec for consistency
     }
 
     // Create host-side pointer arrays
@@ -480,8 +582,10 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         let (output_ptr, _) = task_outputs[0].device_ptr(&device.stream);
         output_ptrs_host.push(output_ptr as u64);
 
-        eprintln!("DEBUG: Task {} - input_ptr={:#x}, output_ptr={:#x}",
-                  task_idx, input_ptr as u64, output_ptr as u64);
+        eprintln!(
+            "DEBUG: Task {} - input_ptr={:#x}, output_ptr={:#x}",
+            task_idx, input_ptr as u64, output_ptr as u64
+        );
     }
 
     // Allocate GPU memory for pointer arrays and copy
@@ -562,7 +666,10 @@ fn upload_batch_data<I: PersistentIndicator>(
     batch: &TaskBatch<I>,
     buffers: &mut BatchBuffers,
 ) -> Result<(), GpuError> {
-    eprintln!("DEBUG: upload_batch_data called, using_pinned={}", buffers.using_pinned);
+    eprintln!(
+        "DEBUG: upload_batch_data called, using_pinned={}",
+        buffers.using_pinned
+    );
 
     if buffers.using_pinned {
         // Fast path: Use pinned memory (20-30% faster)
@@ -572,14 +679,22 @@ fn upload_batch_data<I: PersistentIndicator>(
                 pinned.copy_from_slice(&task.data);
                 // DMA transfer from pinned to device (fast!)
                 device.htod_pinned(pinned, &mut buffers.d_inputs[i])?;
-                eprintln!("DEBUG: Task {} uploaded via pinned memory ({} elements)", i, task.data.len());
+                eprintln!(
+                    "DEBUG: Task {} uploaded via pinned memory ({} elements)",
+                    i,
+                    task.data.len()
+                );
             }
         }
     } else {
         // Fallback: Use pageable memory (traditional approach)
         for (i, task) in batch.tasks().iter().enumerate() {
-            eprintln!("DEBUG: Task {} - uploading {} elements: first few = {:?}",
-                      i, task.data.len(), &task.data[0..task.data.len().min(5)]);
+            eprintln!(
+                "DEBUG: Task {} - uploading {} elements: first few = {:?}",
+                i,
+                task.data.len(),
+                &task.data[0..task.data.len().min(5)]
+            );
             device
                 .stream
                 .memcpy_htod(&task.data, &mut buffers.d_inputs[i])
@@ -593,12 +708,16 @@ fn upload_batch_data<I: PersistentIndicator>(
     if !batch.is_empty() {
         let full_size = batch.tasks()[0].data.len();
         let display_size = full_size.min(5);
-        let mut readback = vec![0.0f64; full_size];  // Allocate full buffer
-        if let Ok(()) = device.stream.memcpy_dtoh(
-            &buffers.d_inputs[0],
-            &mut readback,
-        ) {
-            eprintln!("DEBUG: Task 0 input data readback (first few of {}): {:?}", full_size, &readback[0..display_size]);
+        let mut readback = vec![0.0f64; full_size]; // Allocate full buffer
+        if let Ok(()) = device
+            .stream
+            .memcpy_dtoh(&buffers.d_inputs[0], &mut readback)
+        {
+            eprintln!(
+                "DEBUG: Task 0 input data readback (first few of {}): {:?}",
+                full_size,
+                &readback[0..display_size]
+            );
         } else {
             eprintln!("DEBUG: Failed to read back task 0 input data");
         }
@@ -638,7 +757,10 @@ fn launch_cooperative_kernel(
     let (periods_ptr, _) = buffers.d_periods.device_ptr(&device.stream);
 
     eprintln!("DEBUG: d_input_ptrs address: {:#x}", input_ptrs_ptr as u64);
-    eprintln!("DEBUG: d_output_ptrs address: {:#x}", output_ptrs_ptr as u64);
+    eprintln!(
+        "DEBUG: d_output_ptrs address: {:#x}",
+        output_ptrs_ptr as u64
+    );
     eprintln!("DEBUG: d_sizes address: {:#x}", sizes_ptr as u64);
     eprintln!("DEBUG: d_periods address: {:#x}", periods_ptr as u64);
 
@@ -646,20 +768,26 @@ fn launch_cooperative_kernel(
     let mut sizes_readback = vec![0i32; num_tasks as usize];
     let mut periods_readback = vec![0i32; num_tasks as usize];
 
-    if let Ok(()) = device.stream.memcpy_dtoh(
-        &buffers.d_sizes,
-        &mut sizes_readback,
-    ) {
-        eprintln!("DEBUG: d_sizes readback (first few): {:?}", &sizes_readback[0..num_tasks.min(5) as usize]);
+    if let Ok(()) = device
+        .stream
+        .memcpy_dtoh(&buffers.d_sizes, &mut sizes_readback)
+    {
+        eprintln!(
+            "DEBUG: d_sizes readback (first few): {:?}",
+            &sizes_readback[0..num_tasks.min(5) as usize]
+        );
     } else {
         eprintln!("DEBUG: Failed to read back d_sizes");
     }
 
-    if let Ok(()) = device.stream.memcpy_dtoh(
-        &buffers.d_periods,
-        &mut periods_readback,
-    ) {
-        eprintln!("DEBUG: d_periods readback (first few): {:?}", &periods_readback[0..num_tasks.min(5) as usize]);
+    if let Ok(()) = device
+        .stream
+        .memcpy_dtoh(&buffers.d_periods, &mut periods_readback)
+    {
+        eprintln!(
+            "DEBUG: d_periods readback (first few): {:?}",
+            &periods_readback[0..num_tasks.min(5) as usize]
+        );
     } else {
         eprintln!("DEBUG: Failed to read back d_periods");
     }
@@ -671,9 +799,15 @@ fn launch_cooperative_kernel(
         shared_mem_bytes: 0,
     };
 
-    eprintln!("DEBUG: Launching kernel with grid_dim=({},{},{}), block_dim=({},{},{})",
-              cfg.grid_dim.0, cfg.grid_dim.1, cfg.grid_dim.2,
-              cfg.block_dim.0, cfg.block_dim.1, cfg.block_dim.2);
+    eprintln!(
+        "DEBUG: Launching kernel with grid_dim=({},{},{}), block_dim=({},{},{})",
+        cfg.grid_dim.0,
+        cfg.grid_dim.1,
+        cfg.grid_dim.2,
+        cfg.block_dim.0,
+        cfg.block_dim.1,
+        cfg.block_dim.2
+    );
 
     unsafe {
         device
@@ -720,8 +854,12 @@ fn download_batch_results(
             if let Some(pinned) = &mut buffers.h_outputs[task_idx][0] {
                 device.dtoh_pinned(&task_outputs[0], pinned)?;
                 let result = pinned.as_slice().to_vec();
-                eprintln!("DEBUG: Task {} downloaded via pinned ({} elements), first few: {:?}",
-                          task_idx, result.len(), &result[0..result.len().min(5)]);
+                eprintln!(
+                    "DEBUG: Task {} downloaded via pinned ({} elements), first few: {:?}",
+                    task_idx,
+                    result.len(),
+                    &result[0..result.len().min(5)]
+                );
                 results.push(result);
             }
         }
@@ -730,8 +868,12 @@ fn download_batch_results(
         for (task_idx, task_outputs) in buffers.d_outputs.iter().enumerate() {
             // Download single contiguous buffer (contains all outputs)
             let result = device.copy_to_host(&task_outputs[0])?;
-            eprintln!("DEBUG: Task {} downloaded via pageable ({} elements), first few: {:?}",
-                      task_idx, result.len(), &result[0..result.len().min(5)]);
+            eprintln!(
+                "DEBUG: Task {} downloaded via pageable ({} elements), first few: {:?}",
+                task_idx,
+                result.len(),
+                &result[0..result.len().min(5)]
+            );
             results.push(result);
         }
     }
@@ -893,7 +1035,6 @@ impl<I: PersistentIndicator> TaskBatch<I> {
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }
-
 }
 
 impl<I: PersistentIndicator> Default for TaskBatch<I> {

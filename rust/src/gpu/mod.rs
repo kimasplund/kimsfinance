@@ -42,6 +42,12 @@ pub mod memory_pool;
 pub mod streams;
 
 #[cfg(feature = "gpu")]
+pub mod async_transfers;
+
+#[cfg(feature = "gpu")]
+pub mod triple_buffer;
+
+#[cfg(feature = "gpu")]
 pub mod compile;
 
 #[cfg(feature = "gpu")]
@@ -88,6 +94,12 @@ pub use memory_pool::{GpuMemoryPool, IndicatorType};
 
 #[cfg(feature = "gpu")]
 pub use streams::{IndicatorSpeed, StreamManager};
+
+#[cfg(feature = "gpu")]
+pub use async_transfers::{AsyncTransferExt, CudaEvent};
+
+#[cfg(feature = "gpu")]
+pub use triple_buffer::TripleBufferedExecutor;
 
 #[cfg(feature = "gpu")]
 pub use stochastic::stochastic_gpu;
@@ -199,21 +211,57 @@ pub mod persistent;
 
 #[cfg(feature = "gpu")]
 pub use persistent::{
-    execute_batch, execute_generic_batch, AtrBatch, AtrIndicator, GenericBatch, MacdBatch,
-    MacdIndicator, MacdParams, PersistentIndicator, PersistentKernelManager, RocBatch,
-    RocIndicator, RsiBatch, RsiIndicator, Task, TaskBatch,
-    // Agent 1 indicators
-    SmaBatch, SmaIndicator, EmaBatch, EmaIndicator, BollingerBatch, BollingerIndicator,
-    BollingerParams,
-    // Agent 2 indicators
-    StochasticBatch, StochasticIndicator, StochasticParams, WilliamsRBatch, WilliamsRIndicator,
-    CciBatch, CciIndicator,
-    // Agent 3 indicators
-    DonchianBatch, DonchianIndicator, KeltnerBatch, KeltnerIndicator, KeltnerParams, AroonBatch,
+    AroonBatch,
     AroonIndicator,
+    AtrBatch,
+    AtrIndicator,
+    BollingerBatch,
+    BollingerIndicator,
+    BollingerParams,
+    CciBatch,
+    CciIndicator,
+    CmfBatch,
+    CmfIndicator,
+    // Agent 3 indicators
+    DonchianBatch,
+    DonchianIndicator,
     // Agent 4 indicators
-    ElderRayBatch, ElderRayIndicator, ObvBatch, ObvIndicator, CmfBatch, CmfIndicator, VwmaBatch,
-    VwmaIndicator, WmaBatch, WmaIndicator,
+    ElderRayBatch,
+    ElderRayIndicator,
+    EmaBatch,
+    EmaIndicator,
+    GenericBatch,
+    KeltnerBatch,
+    KeltnerIndicator,
+    KeltnerParams,
+    MacdBatch,
+    MacdIndicator,
+    MacdParams,
+    ObvBatch,
+    ObvIndicator,
+    PersistentIndicator,
+    PersistentKernelManager,
+    RocBatch,
+    RocIndicator,
+    RsiBatch,
+    RsiIndicator,
+    // Agent 1 indicators
+    SmaBatch,
+    SmaIndicator,
+    // Agent 2 indicators
+    StochasticBatch,
+    StochasticIndicator,
+    StochasticParams,
+    Task,
+    TaskBatch,
+    VwmaBatch,
+    VwmaIndicator,
+    WilliamsRBatch,
+    WilliamsRIndicator,
+    WmaBatch,
+    WmaIndicator,
+    execute_batch,
+    execute_generic_batch,
 };
 
 #[cfg(feature = "gpu")]

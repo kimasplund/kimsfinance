@@ -94,7 +94,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             // Verify correctness
             let expected: Vec<f64> = input_data.iter().map(|x| x * 2.0).collect();
-            let all_correct = result.iter().zip(&expected).all(|(a, b)| (a - b).abs() < 1e-6);
+            let all_correct = result
+                .iter()
+                .zip(&expected)
+                .all(|(a, b)| (a - b).abs() < 1e-6);
 
             if all_correct {
                 println!("✅ Result is CORRECT (all values match expected)");
@@ -129,7 +132,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             // Verify correctness
             let expected: Vec<f64> = input_data.iter().map(|x| x * 2.0).collect();
-            let all_correct = result.iter().zip(&expected).all(|(a, b)| (a - b).abs() < 1e-6);
+            let all_correct = result
+                .iter()
+                .zip(&expected)
+                .all(|(a, b)| (a - b).abs() < 1e-6);
 
             if all_correct {
                 println!("✅ Result is CORRECT (all values match expected)");
@@ -189,9 +195,7 @@ fn test_with_pinned_memory(
     println!("   ✅ Kernel executed");
 
     // Transfer results back using pinned memory
-    device
-        .device
-        .dtoh_copy_into(&d_output, &mut h_output)?;
+    device.device.dtoh_copy_into(&d_output, &mut h_output)?;
     println!("   ✅ Results downloaded (device → pinned)");
 
     Ok(h_output.to_vec())

@@ -18,7 +18,7 @@
 //! ```
 
 use kimsfinance_core::gpu::{
-    execute_generic_batch, GenericBatch, GpuDevice, MacdIndicator, MacdParams, PersistentIndicator,
+    GenericBatch, GpuDevice, MacdIndicator, MacdParams, PersistentIndicator, execute_generic_batch,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

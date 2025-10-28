@@ -29,32 +29,41 @@
 //! cargo bench --bench phase3_optimization -- --baseline before
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use ndarray::Array1;
 
 /// Generate synthetic OHLCV data for benchmarking
-fn generate_synthetic_data(n_candles: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_synthetic_data(
+    n_candles: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let timestamps: Vec<i64> = (0..n_candles).map(|i| i as i64 * 60).collect();
-    
+
     let mut close = Vec::with_capacity(n_candles);
     let mut high = Vec::with_capacity(n_candles);
     let mut low = Vec::with_capacity(n_candles);
     let mut open = Vec::with_capacity(n_candles);
     let mut volume = Vec::with_capacity(n_candles);
-    
+
     let mut price = 100.0;
     for _ in 0..n_candles {
         // Random walk
         let change = (rand::random::<f64>() - 0.5) * 2.0;
         price += change;
-        
+
         open.push(price);
         close.push(price + (rand::random::<f64>() - 0.5));
         high.push(price + rand::random::<f64>());
         low.push(price - rand::random::<f64>());
         volume.push(1000.0 + rand::random::<f64>() * 500.0);
     }
-    
+
     (
         timestamps,
         Array1::from_vec(open),
@@ -87,8 +96,5 @@ fn benchmark_phase3_candle_scaling(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    benchmark_phase3_candle_scaling
-);
+criterion_group!(benches, benchmark_phase3_candle_scaling);
 criterion_main!(benches);

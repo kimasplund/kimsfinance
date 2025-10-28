@@ -1,4 +1,4 @@
-use kimsfinance_core::gpu::{execute_batch, GpuDevice, RocBatch};
+use kimsfinance_core::gpu::{GpuDevice, RocBatch, execute_batch};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing persistent kernel with minimal example...");

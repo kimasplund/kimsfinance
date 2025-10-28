@@ -37,9 +37,9 @@
 //! - Grid synchronization between tasks
 //! - Persistent kernel reduces launch overhead
 
-use crate::gpu::persistent::PersistentIndicator;
 use super::traits::{CandleAggregator, TradeBasedAggregator};
-use super::types::{TradeData, OHLCVCandle};
+use super::types::{OHLCVCandle, TradeData};
+use crate::gpu::persistent::PersistentIndicator;
 
 /// Renko brick aggregator for persistent kernel execution
 pub struct RenkoAggregator;

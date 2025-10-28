@@ -1,5 +1,5 @@
 use kimsfinance_core::gpu::{
-    execute_batch, AtrBatch, GpuDevice, MacdBatch, MacdParams, RocBatch, RsiBatch,
+    AtrBatch, GpuDevice, MacdBatch, MacdParams, RocBatch, RsiBatch, execute_batch,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,24 +21,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✓ ROC: {} tasks completed", roc_results.len());
     println!(
         "   - ROC(7)[20] = {:.4}",
-        roc_results[0]
-            .get(20)
-            .copied()
-            .unwrap_or(f64::NAN)
+        roc_results[0].get(20).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - ROC(14)[20] = {:.4}",
-        roc_results[1]
-            .get(20)
-            .copied()
-            .unwrap_or(f64::NAN)
+        roc_results[1].get(20).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - ROC(21)[20] = {:.4}\n",
-        roc_results[2]
-            .get(20)
-            .copied()
-            .unwrap_or(f64::NAN)
+        roc_results[2].get(20).copied().unwrap_or(f64::NAN)
     );
 
     // Test 2: RSI (Relative Strength Index) - Momentum oscillator
@@ -57,24 +48,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✓ RSI: {} tasks completed", rsi_results.len());
     println!(
         "   - RSI(14)[30] = {:.4}",
-        rsi_results[0]
-            .get(30)
-            .copied()
-            .unwrap_or(f64::NAN)
+        rsi_results[0].get(30).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - RSI(9)[30] = {:.4}",
-        rsi_results[1]
-            .get(30)
-            .copied()
-            .unwrap_or(f64::NAN)
+        rsi_results[1].get(30).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - RSI(21)[30] = {:.4}\n",
-        rsi_results[2]
-            .get(30)
-            .copied()
-            .unwrap_or(f64::NAN)
+        rsi_results[2].get(30).copied().unwrap_or(f64::NAN)
     );
 
     // Test 3: MACD (Moving Average Convergence Divergence) - Trend indicator
@@ -104,24 +86,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!(
         "   - MACD[50] = {:.4}",
-        macd_results[0]
-            .get(50)
-            .copied()
-            .unwrap_or(f64::NAN)
+        macd_results[0].get(50).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - Signal[50] = {:.4}",
-        macd_results[0]
-            .get(150)
-            .copied()
-            .unwrap_or(f64::NAN)
+        macd_results[0].get(150).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - Histogram[50] = {:.4}\n",
-        macd_results[0]
-            .get(250)
-            .copied()
-            .unwrap_or(f64::NAN)
+        macd_results[0].get(250).copied().unwrap_or(f64::NAN)
     );
 
     // Test 4: ATR (Average True Range) - Volatility indicator
@@ -137,17 +110,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✓ ATR: {} tasks completed", atr_results.len());
     println!(
         "   - ATR(14)[20] = {:.4}",
-        atr_results[0]
-            .get(20)
-            .copied()
-            .unwrap_or(f64::NAN)
+        atr_results[0].get(20).copied().unwrap_or(f64::NAN)
     );
     println!(
         "   - ATR(7)[20] = {:.4}\n",
-        atr_results[1]
-            .get(20)
-            .copied()
-            .unwrap_or(f64::NAN)
+        atr_results[1].get(20).copied().unwrap_or(f64::NAN)
     );
 
     // Summary

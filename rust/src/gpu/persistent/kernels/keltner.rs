@@ -180,18 +180,12 @@ mod tests {
     fn test_keltner_kernel_compiles() {
         let device = GpuDevice::new().expect("GPU required");
         let result = KeltnerIndicator::compile_kernel(&device);
-        assert!(
-            result.is_ok(),
-            "Keltner kernel should compile successfully"
-        );
+        assert!(result.is_ok(), "Keltner kernel should compile successfully");
     }
 
     #[test]
     fn test_keltner_trait_properties() {
-        assert_eq!(
-            KeltnerIndicator::kernel_name(),
-            "persistent_keltner_kernel"
-        );
+        assert_eq!(KeltnerIndicator::kernel_name(), "persistent_keltner_kernel");
         assert_eq!(KeltnerIndicator::num_inputs(), 1);
         assert_eq!(KeltnerIndicator::num_outputs(), 3);
     }

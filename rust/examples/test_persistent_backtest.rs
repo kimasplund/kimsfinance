@@ -2,10 +2,8 @@
 //!
 //! Validates the 2-4x speedup from combining all 4 phases into a single kernel launch.
 
-use kimsfinance_core::backtest::{
-    BatchBacktestSweep, OhlcvData, StrategyType,
-};
 use kimsfinance_core::backtest::engine::BacktestConfig;
+use kimsfinance_core::backtest::{BatchBacktestSweep, OhlcvData, StrategyType};
 use kimsfinance_core::gpu::device::GpuDevice;
 use ndarray::Array1;
 use std::sync::Arc;
@@ -60,10 +58,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .execute()?;
     let time_small = start_small.elapsed().as_secs_f64() * 1000.0;
 
-    println!("✅ Processed {} strategies in {:.2}ms", params_small.len(), time_small);
+    println!(
+        "✅ Processed {} strategies in {:.2}ms",
+        params_small.len(),
+        time_small
+    );
     println!("   GPU time: {:.2}ms", results_small.gpu_time_ms);
     println!("   VRAM used: {:.2} MB", results_small.vram_used_mb);
-    println!("   Best Sharpe: {:.2}\n", results_small.results[0].sharpe_ratio);
+    println!(
+        "   Best Sharpe: {:.2}\n",
+        results_small.results[0].sharpe_ratio
+    );
 
     // Test 2: Large batch (200 strategies) - Persistent execution
     println!("Test 2: Large batch (200 strategies) - Persistent");
@@ -73,7 +78,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for rsi_period in 10..15 {
         for buy_thresh in 20..30 {
             for sell_thresh in 70..80 {
-                params_large.push(vec![rsi_period as f64, buy_thresh as f64, sell_thresh as f64]);
+                params_large.push(vec![
+                    rsi_period as f64,
+                    buy_thresh as f64,
+                    sell_thresh as f64,
+                ]);
             }
         }
     }
@@ -91,10 +100,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .execute()?;
     let time_large = start_large.elapsed().as_secs_f64() * 1000.0;
 
-    println!("✅ Processed {} strategies in {:.2}ms", params_large.len(), time_large);
+    println!(
+        "✅ Processed {} strategies in {:.2}ms",
+        params_large.len(),
+        time_large
+    );
     println!("   GPU time: {:.2}ms", results_large.gpu_time_ms);
     println!("   VRAM used: {:.2} MB", results_large.vram_used_mb);
-    println!("   Best Sharpe: {:.2}\n", results_large.results[0].sharpe_ratio);
+    println!(
+        "   Best Sharpe: {:.2}\n",
+        results_large.results[0].sharpe_ratio
+    );
 
     // Calculate speedup
     let strategies_per_ms_small = params_small.len() as f64 / time_small;
@@ -103,15 +119,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("📈 Performance Analysis");
     println!("----------------------");
-    println!("Small batch throughput: {:.1} strategies/ms", strategies_per_ms_small);
-    println!("Large batch throughput: {:.1} strategies/ms", strategies_per_ms_large);
+    println!(
+        "Small batch throughput: {:.1} strategies/ms",
+        strategies_per_ms_small
+    );
+    println!(
+        "Large batch throughput: {:.1} strategies/ms",
+        strategies_per_ms_large
+    );
     println!("Persistent kernel speedup: {:.2}x", throughput_improvement);
 
     if throughput_improvement >= 1.5 {
-        println!("\n✅ SUCCESS: Persistent kernel shows {:.2}x improvement!", throughput_improvement);
+        println!(
+            "\n✅ SUCCESS: Persistent kernel shows {:.2}x improvement!",
+            throughput_improvement
+        );
         println!("   Target was 2-4x, actual: {:.2}x", throughput_improvement);
     } else {
-        println!("\n⚠️  WARNING: Speedup lower than expected ({:.2}x vs 2-4x target)", throughput_improvement);
+        println!(
+            "\n⚠️  WARNING: Speedup lower than expected ({:.2}x vs 2-4x target)",
+            throughput_improvement
+        );
     }
 
     Ok(())

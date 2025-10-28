@@ -79,6 +79,10 @@ pub mod batch;
 #[cfg(feature = "gpu")]
 pub mod persistent;
 
+// Re-export batch tuning functions for testing
+#[cfg(feature = "gpu")]
+pub use batch::calculate_optimal_threshold;
+
 // Re-export main types for convenience
 pub use core::{
     BacktestResult, IndicatorConfig, IndicatorValues, OHLCVBar, ParameterGrid, ParameterRange,
@@ -106,7 +110,7 @@ pub use sweep::run_parameter_sweep_gpu;
 pub use sweep::run_parameter_sweep_cpu;
 
 #[cfg(feature = "gpu")]
-pub use batch::{BatchBacktestResults, BatchBacktestSweep, StrategyType};
+pub use batch::{BatchBacktestResults, BatchBacktestSweep, ExecutionMode, OhlcvData, StrategyType};
 
 #[cfg(feature = "gpu")]
 pub use persistent::execute_persistent;

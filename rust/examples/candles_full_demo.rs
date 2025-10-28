@@ -13,8 +13,8 @@ use kimsfinance_core::gpu::GpuDevice;
 
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::candles::{
-    execute_batch, HeikinAshiBatch, RenkoBatch, RenkoParams, TimeBarBatch, TimeBarParams,
-    TradeData, VolumeBarBatch, VolumeBarParams,
+    HeikinAshiBatch, RenkoBatch, RenkoParams, TimeBarBatch, TimeBarParams, TradeData,
+    VolumeBarBatch, VolumeBarParams, execute_batch,
 };
 use std::error::Error;
 
@@ -38,7 +38,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let btc_sample = generate_sample_trades(47000.0, 30);
     let sample_size = btc_sample.len() / 3;
 
-    println!("   ✅ Using {} synthetic trades for TimeBar demo", sample_size);
+    println!(
+        "   ✅ Using {} synthetic trades for TimeBar demo",
+        sample_size
+    );
     println!("   (Note: Binance CSV has OHLC data at {})", binance_path);
     println!("   (We'll use it for Heikin-Ashi transformation)\n");
 
@@ -114,7 +117,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("📊 Step 4: Creating volume bars (threshold: 5.0)...");
 
     let mut volume_batch = VolumeBarBatch::new();
-    volume_batch.add_task(btc_sample.clone(), VolumeBarParams { volume_per_bar: 5.0 }); // 5.0 volume threshold
+    volume_batch.add_task(
+        btc_sample.clone(),
+        VolumeBarParams {
+            volume_per_bar: 5.0,
+        },
+    ); // 5.0 volume threshold
 
     let volume_results = execute_batch(&device, &volume_batch)?;
     let volume_bars = &volume_results[0];
@@ -190,7 +198,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let multi_results = execute_batch(&device, &multi_batch)?;
 
-    println!("   ✅ Processed {} symbols in parallel", multi_results.len());
+    println!(
+        "   ✅ Processed {} symbols in parallel",
+        multi_results.len()
+    );
 
     for (i, (symbol, _)) in symbols.iter().enumerate() {
         let candles = &multi_results[i];
@@ -253,7 +264,9 @@ fn load_binance_ohlc(path: &str, limit: usize) -> Result<Vec<f64>, Box<dyn Error
     let mut close = Vec::new();
 
     for (i, line) in reader.lines().skip(1).enumerate() {
-        if i >= limit { break; }
+        if i >= limit {
+            break;
+        }
 
         let line = line?;
         let parts: Vec<&str> = line.split(',').collect();

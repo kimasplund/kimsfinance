@@ -203,10 +203,7 @@ impl TradeData {
     /// let btc_trades = TradeData::from_csv_filtered("trades.csv", "BTCUSDT")?;
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn from_csv_filtered<P: AsRef<Path>>(
-        path: P,
-        symbol: &str,
-    ) -> Result<Self, CsvError> {
+    pub fn from_csv_filtered<P: AsRef<Path>>(path: P, symbol: &str) -> Result<Self, CsvError> {
         let file = File::open(path.as_ref())?;
         let reader = BufReader::with_capacity(64 * 1024, file);
         let mut csv_reader = csv::ReaderBuilder::new()
@@ -251,9 +248,7 @@ impl TradeData {
 }
 
 /// Detect CSV format from headers
-fn detect_format<R: std::io::Read>(
-    reader: &mut csv::Reader<R>,
-) -> Result<CsvFormat, CsvError> {
+fn detect_format<R: std::io::Read>(reader: &mut csv::Reader<R>) -> Result<CsvFormat, CsvError> {
     let headers = reader.headers()?;
     let header_str = headers.iter().collect::<Vec<_>>().join(",").to_lowercase();
 
