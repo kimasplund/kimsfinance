@@ -4,7 +4,7 @@
 //! for benchmarking purposes. It uses blocking memory transfers.
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -59,7 +59,8 @@ pub fn rsi_gpu_sync(
     if period < 1 { return Err(GpuError::InvalidParameter("Period must be >= 1".to_string())); }
     if n < period + 1 { return Err(GpuError::InvalidParameter(format!("Not enough data: need {} points, got {}", period + 1, n))); }
 
-    let ptx = compile_ptx_optimized(RSI_KERNEL).map_err(|e| GpuError::CompilationError(format!("Failed to compile RSI kernel: {:?}", e)))?;
+    let ptx_arc = compile_ptx_optimized_cached(RSI_KERNEL).map_err(|e| GpuError::CompilationError(format!("Failed to compile RSI kernel: {:?}", e)))?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
     let module = device.context().load_module(ptx).map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
     let gains_losses_kernel = module.load_function("calculate_gains_losses_kernel").map_err(|e| GpuError::ExecutionError(format!("Failed to load gains_losses kernel: {:?}", e)))?;
     let rsi_kernel = module.load_function("calculate_rsi_kernel").map_err(|e| GpuError::ExecutionError(format!("Failed to load RSI kernel: {:?}", e)))?;
