@@ -44,6 +44,6 @@ pub use core::{Indicator, IndicatorError, MultiOutputIndicator};
 // Re-export all indicators
 pub use momentum::{Aroon, CCI, MACD, ROC, RSI, Stochastic, TSI, WilliamsR};
 pub use moving_averages::{DEMA, EMA, HMA, SMA, TEMA, VWMA, WMA};
-pub use trend::{ParabolicSAR, PivotPoints};
+pub use trend::{FibonacciRetracement, ParabolicSAR, PivotPoints};
 pub use volatility::{ATR, BollingerBands, DonchianChannels, ElderRay, KeltnerChannels};
-pub use volume::{CMF, OBV, VWAP, VolumeProfile};
+pub use volume::{CMF, MFI, OBV, VWAP, VolumeProfile};

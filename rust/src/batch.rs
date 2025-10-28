@@ -41,8 +41,8 @@ use std::collections::HashMap;
 
 use crate::indicators::{
     ATR, Aroon, BollingerBands, CCI, CMF, DEMA, DonchianChannels, EMA, ElderRay, HMA, Indicator,
-    IndicatorError, KeltnerChannels, MACD, MultiOutputIndicator, OBV, ParabolicSAR, PivotPoints,
-    ROC, RSI, SMA, Stochastic, TEMA, TSI, VWAP, VWMA, VolumeProfile, WMA, WilliamsR,
+    IndicatorError, KeltnerChannels, MACD, MFI, MultiOutputIndicator, OBV, ParabolicSAR,
+    PivotPoints, ROC, RSI, SMA, Stochastic, TEMA, TSI, VWAP, VWMA, VolumeProfile, WMA, WilliamsR,
 };
 
 /// Indicator request specification
@@ -127,6 +127,9 @@ pub enum IndicatorRequest {
     OBV,
     VWAP,
     CMF {
+        period: usize,
+    },
+    MFI {
         period: usize,
     },
     VolumeProfile {
@@ -409,6 +412,12 @@ pub fn calculate_batch(
             }
             IndicatorRequest::CMF { period } => {
                 let indicator = CMF::new(period)?;
+                let result =
+                    indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
+                IndicatorBatchOutput::single(result.to_vec())
+            }
+            IndicatorRequest::MFI { period } => {
+                let indicator = MFI::new(period)?;
                 let result =
                     indicator.calculate_hlcv(ohlcv.high, ohlcv.low, ohlcv.close, ohlcv.volume)?;
                 IndicatorBatchOutput::single(result.to_vec())

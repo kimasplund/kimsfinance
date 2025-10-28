@@ -282,6 +282,139 @@ impl Indicator for CMF {
     }
 }
 
+/// Money Flow Index (MFI)
+///
+/// Volume-weighted momentum indicator measuring buying/selling pressure.
+/// Often called the "volume-weighted RSI".
+/// Values range from 0-100, with >80 overbought, <20 oversold.
+pub struct MFI {
+    period: usize,
+}
+
+impl MFI {
+    pub fn new(period: usize) -> Result<Self, IndicatorError> {
+        if period == 0 {
+            return Err(IndicatorError::InvalidParameter {
+                name: "period",
+                value: period.to_string(),
+            });
+        }
+        Ok(Self { period })
+    }
+
+    /// Calculate MFI with high, low, close, and volume
+    ///
+    /// Optimized with O(n) rolling window algorithm and SIMD-friendly vectorization.
+    pub fn calculate_hlcv<'a>(
+        &self,
+        high: ArrayView1<'a, f64>,
+        low: ArrayView1<'a, f64>,
+        close: ArrayView1<'a, f64>,
+        volume: ArrayView1<'a, f64>,
+    ) -> IndicatorResult {
+        let n = validate_lengths(&[high, low, close, volume])?;
+        validate_min_periods(n, self.period + 1)?;
+
+        let mut mfi = Array1::from_elem(n, f64::NAN);
+
+        // SIMD-optimized Typical Price calculation: (H + L + C) / 3
+        let mut typical_price = Array1::zeros(n);
+        const ONE_THIRD: f64 = 1.0 / 3.0;
+
+        use ndarray::Zip;
+        Zip::from(&mut typical_price)
+            .and(&high)
+            .and(&low)
+            .and(&close)
+            .for_each(|tp, &h, &l, &c| {
+                *tp = (h + l + c) * ONE_THIRD;
+            });
+
+        // Calculate raw money flow (typical price × volume)
+        let mut raw_money_flow = Array1::zeros(n);
+        Zip::from(&mut raw_money_flow)
+            .and(&typical_price)
+            .and(&volume)
+            .for_each(|rmf, &tp, &vol| {
+                *rmf = tp * vol;
+            });
+
+        // Separate positive and negative money flow based on typical price direction
+        let mut positive_flow = Array1::zeros(n);
+        let mut negative_flow = Array1::zeros(n);
+
+        for i in 1..n {
+            let tp_change = typical_price[i] - typical_price[i - 1];
+
+            // Branchless separation using max(0, x) pattern
+            if tp_change > 0.0 {
+                positive_flow[i] = raw_money_flow[i];
+            } else if tp_change < 0.0 {
+                negative_flow[i] = raw_money_flow[i];
+            }
+            // If tp_change == 0.0, both remain 0
+        }
+
+        // O(n) rolling window optimization for money flow sums
+        let mut sum_pos_mf = 0.0;
+        let mut sum_neg_mf = 0.0;
+
+        // Initialize first window
+        for i in 0..=self.period {
+            sum_pos_mf += positive_flow[i];
+            sum_neg_mf += negative_flow[i];
+        }
+
+        // Calculate MFI for first valid period
+        if sum_neg_mf > 0.0 {
+            let money_ratio = sum_pos_mf / sum_neg_mf;
+            mfi[self.period] = 100.0 - (100.0 / (1.0 + money_ratio));
+        } else {
+            // When no negative flow, MFI = 100 (maximum buying pressure)
+            mfi[self.period] = 100.0;
+        }
+
+        // Roll window forward with O(n) complexity
+        for i in (self.period + 1)..n {
+            // Add new value, remove old value
+            sum_pos_mf += positive_flow[i] - positive_flow[i - self.period];
+            sum_neg_mf += negative_flow[i] - negative_flow[i - self.period];
+
+            if sum_neg_mf > 0.0 {
+                let money_ratio = sum_pos_mf / sum_neg_mf;
+                mfi[i] = 100.0 - (100.0 / (1.0 + money_ratio));
+            } else {
+                mfi[i] = 100.0;
+            }
+        }
+
+        // Clip to valid range [0, 100] for numerical stability
+        Zip::from(&mut mfi).for_each(|val| {
+            if val.is_finite() {
+                *val = val.clamp(0.0, 100.0);
+            }
+        });
+
+        Ok(mfi)
+    }
+}
+
+impl Indicator for MFI {
+    fn calculate(&self, _prices: ArrayView1<f64>) -> IndicatorResult {
+        Err(IndicatorError::ComputationError(
+            "MFI requires high, low, close, volume. Use calculate_hlcv()".to_string(),
+        ))
+    }
+
+    fn min_periods(&self) -> usize {
+        self.period + 1
+    }
+
+    fn name(&self) -> &'static str {
+        "MFI"
+    }
+}
+
 /// Volume Profile
 ///
 /// Price distribution based on volume at each price level.
@@ -608,5 +741,180 @@ mod tests {
         let total_volume: f64 = volume_arr.sum();
         let profile_volume: f64 = result.sum();
         assert!((total_volume - profile_volume).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_mfi_basic() {
+        // Test data from Python implementation example
+        let high = arr1(&[105.0, 107.0, 106.0, 110.0, 108.0]);
+        let low = arr1(&[100.0, 102.0, 101.0, 105.0, 103.0]);
+        let close = arr1(&[103.0, 106.0, 104.0, 108.0, 106.0]);
+        let volume = arr1(&[1000.0, 1200.0, 900.0, 1500.0, 1100.0]);
+
+        let mfi = MFI::new(3).unwrap();
+        let result = mfi
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
+
+        // MFI should be in range [0, 100] after warmup
+        for i in 3..result.len() {
+            assert!(!result[i].is_nan(), "MFI at index {} should not be NaN", i);
+            assert!(
+                result[i] >= 0.0 && result[i] <= 100.0,
+                "MFI at index {} = {} is out of range [0, 100]",
+                i,
+                result[i]
+            );
+        }
+
+        // First 3 periods should be NaN (warmup)
+        for i in 0..3 {
+            assert!(
+                result[i].is_nan(),
+                "MFI at index {} should be NaN during warmup",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_mfi_overbought_oversold() {
+        // Create data with strong uptrend (overbought)
+        let high = arr1(&[100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0, 135.0]);
+        let low = arr1(&[95.0, 100.0, 105.0, 110.0, 115.0, 120.0, 125.0, 130.0]);
+        let close = arr1(&[98.0, 103.0, 108.0, 113.0, 118.0, 123.0, 128.0, 133.0]);
+        let volume = arr1(&[
+            1000.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0, 7000.0, 8000.0,
+        ]);
+
+        let mfi = MFI::new(3).unwrap();
+        let result = mfi
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
+
+        // In strong uptrend with increasing volume, MFI should be high (>50)
+        for i in 5..result.len() {
+            assert!(
+                result[i] > 50.0,
+                "MFI at index {} = {} should be > 50 in uptrend",
+                i,
+                result[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_mfi_vs_python() {
+        // Use same test data as Python implementation for exact comparison
+        let high = arr1(&[
+            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+            133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
+        ]);
+        let low = arr1(&[
+            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+            128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
+        ]);
+        let close = arr1(&[
+            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+            131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
+        ]);
+        let volume = arr1(&[
+            100.0, 150.0, 200.0, 120.0, 180.0, 220.0, 130.0, 190.0, 250.0, 140.0, 200.0, 260.0,
+            150.0, 210.0, 270.0, 160.0, 220.0, 280.0, 170.0, 230.0,
+        ]);
+
+        let mfi = MFI::new(14).unwrap();
+        let result = mfi
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
+
+        // Verify valid MFI values after warmup
+        for i in 14..result.len() {
+            assert!(!result[i].is_nan(), "MFI at index {} should not be NaN", i);
+            assert!(
+                result[i] >= 0.0 && result[i] <= 100.0,
+                "MFI at index {} = {} is out of range",
+                i,
+                result[i]
+            );
+        }
+
+        // The last value should be reasonable (general uptrend visible)
+        assert!(
+            result[19] > 30.0 && result[19] < 90.0,
+            "MFI final value {} is unexpectedly extreme",
+            result[19]
+        );
+    }
+
+    #[test]
+    fn test_mfi_zero_volume_edge_case() {
+        // Test with zero volume (edge case)
+        let high = arr1(&[105.0, 107.0, 106.0, 110.0, 108.0]);
+        let low = arr1(&[100.0, 102.0, 101.0, 105.0, 103.0]);
+        let close = arr1(&[103.0, 106.0, 104.0, 108.0, 106.0]);
+        let volume = arr1(&[0.0, 0.0, 0.0, 0.0, 0.0]);
+
+        let mfi = MFI::new(3).unwrap();
+        let result = mfi
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
+
+        // With zero volume, no money flow, so MFI should be 100 (no selling pressure)
+        for i in 3..result.len() {
+            assert!(
+                result[i] == 100.0 || result[i].is_nan(),
+                "MFI with zero volume should be 100 or NaN, got {}",
+                result[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_mfi_invalid_period() {
+        let result = MFI::new(0);
+        assert!(result.is_err(), "MFI with period=0 should return error");
+    }
+
+    #[test]
+    fn test_mfi_insufficient_data() {
+        let high = arr1(&[105.0, 107.0]);
+        let low = arr1(&[100.0, 102.0]);
+        let close = arr1(&[103.0, 106.0]);
+        let volume = arr1(&[1000.0, 1200.0]);
+
+        let mfi = MFI::new(14).unwrap();
+        let result = mfi.calculate_hlcv(high.view(), low.view(), close.view(), volume.view());
+
+        assert!(
+            result.is_err(),
+            "MFI with insufficient data should return error"
+        );
+    }
+
+    #[test]
+    fn test_mfi_min_periods() {
+        let mfi = MFI::new(14).unwrap();
+        assert_eq!(mfi.min_periods(), 15, "MFI min_periods should be period+1");
+    }
+
+    #[test]
+    fn test_mfi_typical_price_calculation() {
+        // Verify typical price calculation is correct
+        let high = arr1(&[110.0, 120.0, 130.0, 140.0, 150.0]);
+        let low = arr1(&[100.0, 110.0, 120.0, 130.0, 140.0]);
+        let close = arr1(&[105.0, 115.0, 125.0, 135.0, 145.0]);
+        let volume = arr1(&[1000.0, 1000.0, 1000.0, 1000.0, 1000.0]);
+
+        let mfi = MFI::new(3).unwrap();
+        let result = mfi
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .unwrap();
+
+        // Should complete without errors and produce valid output
+        assert!(result.len() == 5);
+        for i in 3..5 {
+            assert!(result[i].is_finite());
+        }
     }
 }

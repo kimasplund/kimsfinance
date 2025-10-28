@@ -231,7 +231,7 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 
 /// CPU-optimized Wilder's Smoothing (RMA - Rolling Moving Average)
 ///
-/// Used by RSI and ATR. Similar to EMA but uses alpha = 1/period.
+/// Used by RSI, ATR, and ADX. Similar to EMA but uses alpha = 1/period.
 ///
 /// # Performance
 ///
@@ -239,12 +239,14 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 ///
 /// # Arguments
 ///
-/// * `input` - Input values (gains, losses, or true range)
+/// * `input` - Input values (gains, losses, true range, or DX values)
 /// * `period` - Smoothing period (alpha = 1/period)
 ///
 /// # Returns
 ///
-/// `Array1<f64>` with smoothed values. First `period-1` values are NaN.
+/// `Array1<f64>` with smoothed values. First `warmup` values are NaN, where:
+/// - If input has no NaN: warmup = period - 1
+/// - If input starts with NaN: warmup = (first_valid_idx - 1) + period
 ///
 /// # Example
 ///
@@ -262,6 +264,13 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 /// // Third value is average of first 3 values
 /// assert!((rma[2] - 2.0).abs() < 1e-10);
 /// ```
+///
+/// # Handling NaN Inputs
+///
+/// This function properly handles input arrays that start with NaN values
+/// (e.g., DX values from ADX calculation). It finds the first index where
+/// `period` consecutive valid values exist, calculates SMA from those values,
+/// and continues smoothing from that point.
 pub fn wilders_smoothing_cpu(input: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuError> {
     let n = input.len();
 
@@ -281,21 +290,53 @@ pub fn wilders_smoothing_cpu(input: &Array1<f64>, period: usize) -> Result<Array
 
     let mut output = Array1::zeros(n);
 
-    // Initialize warmup period with NaN
-    for i in 0..period - 1 {
+    // Find first index where we have `period` consecutive valid (non-NaN) values
+    // This handles inputs like DX from ADX which start with NaN values
+    let mut first_valid_window = None;
+    for start_idx in 0..=(n - period) {
+        let window_valid = input.slice(ndarray::s![start_idx..start_idx + period])
+            .iter()
+            .all(|x| x.is_finite());
+
+        if window_valid {
+            first_valid_window = Some(start_idx);
+            break;
+        }
+    }
+
+    // If no valid window found, entire output is NaN
+    if first_valid_window.is_none() {
+        for i in 0..n {
+            output[i] = f64::NAN;
+        }
+        return Ok(output);
+    }
+
+    let start_idx = first_valid_window.unwrap();
+
+    // Initialize all values before the SMA index with NaN
+    // The SMA will be placed at index (start_idx + period - 1)
+    let sma_idx = start_idx + period - 1;
+    for i in 0..=sma_idx {
         output[i] = f64::NAN;
     }
 
-    // First value = SMA of first `period` values
-    let sum: f64 = input.slice(ndarray::s![0..period]).sum();
-    output[period - 1] = sum / period as f64;
+    // Calculate SMA of the first valid window
+    let sum: f64 = input.slice(ndarray::s![start_idx..start_idx + period]).sum();
+    output[sma_idx] = sum / period as f64;
 
     // Wilder's smoothing (alpha = 1/period, different from EMA!)
     let alpha = 1.0 / period as f64;
     let one_minus_alpha = 1.0 - alpha;
 
-    for i in period..n {
-        output[i] = alpha * input[i] + one_minus_alpha * output[i - 1];
+    // Continue smoothing from the SMA index
+    for i in (sma_idx + 1)..n {
+        // Skip if current input is NaN
+        if !input[i].is_finite() {
+            output[i] = f64::NAN;
+        } else {
+            output[i] = alpha * input[i] + one_minus_alpha * output[i - 1];
+        }
     }
 
     Ok(output)
