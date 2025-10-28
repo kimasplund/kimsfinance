@@ -111,6 +111,9 @@ pub use keltner::keltner_channels_gpu;
 pub mod rsi;
 
 #[cfg(feature = "gpu")]
+pub mod rsi_sync;
+
+#[cfg(feature = "gpu")]
 pub use rsi::rsi_gpu;
 
 #[cfg(feature = "gpu")]
