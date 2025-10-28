@@ -296,3 +296,39 @@ pub mod parabolic_sar;
 
 #[cfg(feature = "gpu")]
 pub use parabolic_sar::parabolic_sar_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod pivot_points;
+
+#[cfg(feature = "gpu")]
+pub use pivot_points::{PivotPointsOutput, pivot_points_gpu};
+
+#[cfg(feature = "gpu")]
+pub mod adx;
+
+#[cfg(feature = "gpu")]
+pub use adx::adx_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod supertrend;
+
+#[cfg(feature = "gpu")]
+pub use supertrend::supertrend_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod vwap_anchored;
+
+#[cfg(feature = "gpu")]
+pub use vwap_anchored::vwap_anchored_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod fibonacci;
+
+#[cfg(feature = "gpu")]
+pub use fibonacci::{FibonacciOutput, fibonacci_gpu};
+
+#[cfg(feature = "gpu")]
+pub mod ichimoku;
+
+#[cfg(feature = "gpu")]
+pub use ichimoku::{IchimokuOutput, ichimoku_gpu};

@@ -576,11 +576,7 @@ mod tests {
 
         // MFI values should be in valid range [0, 100] after warmup
         for i in period..mfi.len() {
-            assert!(
-                !mfi[i].is_nan(),
-                "MFI at index {} should not be NaN",
-                i
-            );
+            assert!(!mfi[i].is_nan(), "MFI at index {} should not be NaN", i);
             assert!(
                 mfi[i] >= 0.0 && mfi[i] <= 100.0,
                 "MFI at index {} = {} is out of range [0, 100]",

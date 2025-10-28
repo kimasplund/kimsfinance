@@ -8,7 +8,7 @@
 //! cargo run --example test_parabolic_sar_gpu --features gpu
 //! ```
 
-use kimsfinance_core::gpu::{parabolic_sar_gpu, GpuDevice};
+use kimsfinance_core::gpu::{GpuDevice, parabolic_sar_gpu};
 use kimsfinance_core::indicators::trend::ParabolicSAR;
 use ndarray::Array1;
 
@@ -76,9 +76,8 @@ fn main() {
     ]);
 
     let sar_cpu2 = psar_cpu.calculate_hl(high2.view(), low2.view()).unwrap();
-    let (sar_gpu2, signal_gpu2) =
-        parabolic_sar_gpu(&device, &high2, &low2, 0.02, 0.02, 0.2, None)
-            .expect("GPU calculation failed");
+    let (sar_gpu2, signal_gpu2) = parabolic_sar_gpu(&device, &high2, &low2, 0.02, 0.02, 0.2, None)
+        .expect("GPU calculation failed");
 
     let mut max_diff2 = 0.0f64;
     for i in 0..sar_cpu2.len() {
@@ -129,9 +128,8 @@ fn main() {
     let cpu_time = start.elapsed();
 
     let start = std::time::Instant::now();
-    let (sar_gpu3, _signal_gpu3) =
-        parabolic_sar_gpu(&device, &high3, &low3, 0.02, 0.02, 0.2, None)
-            .expect("GPU calculation failed");
+    let (sar_gpu3, _signal_gpu3) = parabolic_sar_gpu(&device, &high3, &low3, 0.02, 0.02, 0.2, None)
+        .expect("GPU calculation failed");
     let gpu_time = start.elapsed();
 
     let mut max_diff3 = 0.0f64;
@@ -163,11 +161,12 @@ fn main() {
     let high4 = Array1::from_vec(vec![110.0; 20]);
     let low4 = Array1::from_vec(vec![100.0; 20]);
 
-    let (sar_gpu4, signal_gpu4) =
-        parabolic_sar_gpu(&device, &high4, &low4, 0.02, 0.02, 0.2, None)
-            .expect("GPU calculation failed");
+    let (sar_gpu4, signal_gpu4) = parabolic_sar_gpu(&device, &high4, &low4, 0.02, 0.02, 0.2, None)
+        .expect("GPU calculation failed");
 
-    let all_valid = sar_gpu4.iter().all(|&x| !x.is_nan() && x >= 100.0 && x <= 110.0);
+    let all_valid = sar_gpu4
+        .iter()
+        .all(|&x| !x.is_nan() && x >= 100.0 && x <= 110.0);
 
     println!("  Constant prices: all SAR values valid = {}", all_valid);
 

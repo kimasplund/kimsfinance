@@ -194,3 +194,9 @@ required-features = ["gpu"]
 name = "optimization_validation"
 harness = false
 required-features = ["gpu"]
+
+[[bench]]
+name = "vwap_anchored_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+

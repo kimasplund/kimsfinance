@@ -12,7 +12,7 @@ use kimsfinance_core::indicators::trend::ParabolicSAR;
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{parabolic_sar_gpu, GpuDevice};
+use kimsfinance_core::gpu::{GpuDevice, parabolic_sar_gpu};
 
 fn generate_trending_data(n: usize) -> (Vec<f64>, Vec<f64>) {
     // Generate price data with trends and reversals
@@ -93,7 +93,10 @@ fn main() {
     #[cfg(not(feature = "gpu"))]
     let device: Option<()> = None;
 
-    println!("{:<12} {:<15} {:<15} {:<15}", "Size", "CPU (ms)", "GPU (ms)", "Speedup");
+    println!(
+        "{:<12} {:<15} {:<15} {:<15}",
+        "Size", "CPU (ms)", "GPU (ms)", "Speedup"
+    );
     println!("{:-<60}", "");
 
     for &n in &dataset_sizes {
@@ -144,7 +147,13 @@ fn main() {
                 );
             }
             None => {
-                println!("{:<12} {:<15.3} {:<15} {:<15}", n, cpu_time * 1000.0, "N/A", "N/A");
+                println!(
+                    "{:<12} {:<15.3} {:<15} {:<15}",
+                    n,
+                    cpu_time * 1000.0,
+                    "N/A",
+                    "N/A"
+                );
             }
         }
     }

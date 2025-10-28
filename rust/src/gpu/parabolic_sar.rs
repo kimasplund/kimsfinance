@@ -497,9 +497,9 @@ pub fn parabolic_sar_gpu(
     }
 
     // Synchronize to ensure GPU operations complete
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("Stream sync failed: {:?}", e))
-    })?;
+    kernel_stream
+        .synchronize()
+        .map_err(|e| GpuError::SynchronizationError(format!("Stream sync failed: {:?}", e)))?;
 
     // Note: In this implementation, we use CPU results (more accurate for sequential algorithm)
     // The GPU kernels are validated but not used for final output.
@@ -721,11 +721,7 @@ mod tests {
 
         // Should maintain uptrend
         for i in 0..5 {
-            assert_eq!(
-                signal[i], 1,
-                "Expected uptrend signal at index {}",
-                i
-            );
+            assert_eq!(signal[i], 1, "Expected uptrend signal at index {}", i);
         }
 
         // SAR should increase over time in uptrend (trailing stop)

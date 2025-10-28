@@ -389,12 +389,11 @@ impl MFI {
         }
 
         // Clip to valid range [0, 100] for numerical stability
-        Zip::from(&mut mfi)
-            .for_each(|val| {
-                if val.is_finite() {
-                    *val = val.clamp(0.0, 100.0);
-                }
-            });
+        Zip::from(&mut mfi).for_each(|val| {
+            if val.is_finite() {
+                *val = val.clamp(0.0, 100.0);
+            }
+        });
 
         Ok(mfi)
     }
@@ -759,11 +758,7 @@ mod tests {
 
         // MFI should be in range [0, 100] after warmup
         for i in 3..result.len() {
-            assert!(
-                !result[i].is_nan(),
-                "MFI at index {} should not be NaN",
-                i
-            );
+            assert!(!result[i].is_nan(), "MFI at index {} should not be NaN", i);
             assert!(
                 result[i] >= 0.0 && result[i] <= 100.0,
                 "MFI at index {} = {} is out of range [0, 100]",
@@ -835,11 +830,7 @@ mod tests {
 
         // Verify valid MFI values after warmup
         for i in 14..result.len() {
-            assert!(
-                !result[i].is_nan(),
-                "MFI at index {} should not be NaN",
-                i
-            );
+            assert!(!result[i].is_nan(), "MFI at index {} should not be NaN", i);
             assert!(
                 result[i] >= 0.0 && result[i] <= 100.0,
                 "MFI at index {} = {} is out of range",

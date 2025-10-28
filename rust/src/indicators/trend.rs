@@ -263,7 +263,6 @@ impl FibonacciRetracement {
     }
 }
 
-
 /// Supertrend Indicator
 ///
 /// Trend-following indicator based on ATR that provides dynamic support/resistance levels.
@@ -313,9 +312,12 @@ impl Supertrend {
 
         // Calculate HL average (middle line) - vectorized
         let mut hl_avg = Array1::uninit(n);
-        Zip::from(&mut hl_avg).and(&high).and(&low).for_each(|avg, &h, &l| unsafe {
-            avg.write((h + l) * 0.5);
-        });
+        Zip::from(&mut hl_avg)
+            .and(&high)
+            .and(&low)
+            .for_each(|avg, &h, &l| unsafe {
+                avg.write((h + l) * 0.5);
+            });
         let hl_avg = unsafe { hl_avg.assume_init() };
 
         // Calculate basic bands - vectorized
@@ -456,8 +458,6 @@ impl Indicator for Supertrend {
     }
 }
 
-
-
 /// Ichimoku Cloud (Ichimoku Kinko Hyo)
 ///
 /// Comprehensive trend indicator consisting of five lines:
@@ -472,10 +472,10 @@ impl Indicator for Supertrend {
 /// # Performance
 /// Uses O(n) monotonic deque algorithm for rolling min/max (50x faster than naive).
 pub struct IchimokuCloud {
-    conversion_period: usize,    // Tenkan-sen period (default: 9)
-    base_period: usize,          // Kijun-sen period (default: 26)
-    span_b_period: usize,        // Senkou Span B period (default: 52)
-    displacement: usize,         // Forward/backward shift (default: 26)
+    conversion_period: usize, // Tenkan-sen period (default: 9)
+    base_period: usize,       // Kijun-sen period (default: 26)
+    span_b_period: usize,     // Senkou Span B period (default: 52)
+    displacement: usize,      // Forward/backward shift (default: 26)
 }
 
 impl IchimokuCloud {
@@ -634,8 +634,6 @@ impl Indicator for IchimokuCloud {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -733,266 +731,271 @@ mod tests {
         let expected_618 = 100.0 - 0.618 * (100.0 - 50.0);
         assert!((levels[4] - expected_618).abs() < 1e-10);
 
-    #[test]
-    fn test_supertrend_basic() {
-        let high = arr1(&[
-            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-            132.0, 135.0, 133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
-        ]);
-        let low = arr1(&[
-            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-            127.0, 130.0, 128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
-        ]);
-        let close = arr1(&[
-            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-            130.0, 133.0, 131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
-        ]);
+        #[test]
+        fn test_supertrend_basic() {
+            let high = arr1(&[
+                110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+                133.0, 136.0, 140.0, 138.0, 142.0, 145.0, 143.0, 146.0,
+            ]);
+            let low = arr1(&[
+                105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+                128.0, 131.0, 135.0, 133.0, 137.0, 140.0, 138.0, 141.0,
+            ]);
+            let close = arr1(&[
+                108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+                131.0, 134.0, 138.0, 136.0, 140.0, 143.0, 141.0, 144.0,
+            ]);
 
-        let supertrend = Supertrend::new(10, 3.0).unwrap();
-        let (supertrend_values, signal) = supertrend
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
+            let supertrend = Supertrend::new(10, 3.0).unwrap();
+            let (supertrend_values, signal) = supertrend
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
 
-        // First atr_period values should be NaN/0
-        for i in 0..10 {
-            assert!(supertrend_values[i].is_nan());
-            assert_eq!(signal[i], 0);
+            // First atr_period values should be NaN/0
+            for i in 0..10 {
+                assert!(supertrend_values[i].is_nan());
+                assert_eq!(signal[i], 0);
+            }
+
+            // After warmup period, should have valid values
+            assert!(!supertrend_values[10].is_nan());
+            assert!(signal[10] == 1 || signal[10] == -1);
+
+            // Supertrend should be positive (price is going up)
+            assert!(supertrend_values[10] > 0.0);
+
+            // Signal should be consistent (either 1 or -1, not 0 after warmup)
+            for i in 10..20 {
+                assert!(signal[i] == 1 || signal[i] == -1);
+            }
         }
 
-        // After warmup period, should have valid values
-        assert!(!supertrend_values[10].is_nan());
-        assert!(signal[10] == 1 || signal[10] == -1);
+        #[test]
+        fn test_supertrend_trend_changes() {
+            // Create data with clear trend reversal
+            let high = arr1(&[
+                110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0, 150.0,
+                155.0, // Uptrend
+                154.0, 149.0, 144.0, 139.0, 134.0, 129.0, 124.0, 119.0, 114.0,
+                109.0, // Downtrend
+            ]);
+            let low = arr1(&[
+                105.0, 110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0,
+                150.0, // Uptrend
+                149.0, 144.0, 139.0, 134.0, 129.0, 124.0, 119.0, 114.0, 109.0,
+                104.0, // Downtrend
+            ]);
+            let close = arr1(&[
+                108.0, 113.0, 118.0, 123.0, 128.0, 133.0, 138.0, 143.0, 148.0,
+                153.0, // Uptrend
+                151.0, 146.0, 141.0, 136.0, 131.0, 126.0, 121.0, 116.0, 111.0,
+                106.0, // Downtrend
+            ]);
 
-        // Supertrend should be positive (price is going up)
-        assert!(supertrend_values[10] > 0.0);
+            let supertrend = Supertrend::new(5, 2.0).unwrap();
+            let (_, signal) = supertrend
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
 
-        // Signal should be consistent (either 1 or -1, not 0 after warmup)
-        for i in 10..20 {
-            assert!(signal[i] == 1 || signal[i] == -1);
-        }
-    }
+            // Should detect uptrend in first half
+            assert_eq!(signal[9], 1); // Should be in uptrend
 
-    #[test]
-    fn test_supertrend_trend_changes() {
-        // Create data with clear trend reversal
-        let high = arr1(&[
-            110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0, 150.0, 155.0,  // Uptrend
-            154.0, 149.0, 144.0, 139.0, 134.0, 129.0, 124.0, 119.0, 114.0, 109.0,  // Downtrend
-        ]);
-        let low = arr1(&[
-            105.0, 110.0, 115.0, 120.0, 125.0, 130.0, 135.0, 140.0, 145.0, 150.0,  // Uptrend
-            149.0, 144.0, 139.0, 134.0, 129.0, 124.0, 119.0, 114.0, 109.0, 104.0,  // Downtrend
-        ]);
-        let close = arr1(&[
-            108.0, 113.0, 118.0, 123.0, 128.0, 133.0, 138.0, 143.0, 148.0, 153.0,  // Uptrend
-            151.0, 146.0, 141.0, 136.0, 131.0, 126.0, 121.0, 116.0, 111.0, 106.0,  // Downtrend
-        ]);
-
-        let supertrend = Supertrend::new(5, 2.0).unwrap();
-        let (_, signal) = supertrend
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
-
-        // Should detect uptrend in first half
-        assert_eq!(signal[9], 1);  // Should be in uptrend
-
-        // Should detect downtrend in second half
-        assert_eq!(signal[19], -1);  // Should be in downtrend
-    }
-
-    #[test]
-    fn test_supertrend_parameters() {
-        let high = arr1(&[
-            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-            132.0, 135.0, 133.0, 136.0, 140.0,
-        ]);
-        let low = arr1(&[
-            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-            127.0, 130.0, 128.0, 131.0, 135.0,
-        ]);
-        let close = arr1(&[
-            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-            130.0, 133.0, 131.0, 134.0, 138.0,
-        ]);
-
-        // Test invalid parameters
-        assert!(Supertrend::new(0, 3.0).is_err());
-        assert!(Supertrend::new(10, -1.0).is_err());
-
-        // Test valid parameters
-        assert!(Supertrend::new(10, 3.0).is_ok());
-        assert!(Supertrend::new(5, 2.0).is_ok());
-
-        // Test different multipliers produce different results
-        let st1 = Supertrend::new(10, 2.0).unwrap();
-        let st2 = Supertrend::new(10, 4.0).unwrap();
-
-        let (values1, _) = st1
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
-        let (values2, _) = st2
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
-
-        // Higher multiplier should produce different values
-        assert!((values1[14] - values2[14]).abs() > 0.1);
-    }
-
-    #[test]
-    fn test_supertrend_parity_with_python() {
-        // Test data from Python implementation
-        let high = arr1(&[
-            110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0,
-            132.0, 135.0, 133.0, 136.0, 140.0,
-        ]);
-        let low = arr1(&[
-            105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0,
-            127.0, 130.0, 128.0, 131.0, 135.0,
-        ]);
-        let close = arr1(&[
-            108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0,
-            130.0, 133.0, 131.0, 134.0, 138.0,
-        ]);
-
-        let supertrend = Supertrend::new(10, 3.0).unwrap();
-        let (supertrend_values, signal) = supertrend
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
-
-        // Verify first 10 are NaN/0 (warmup period)
-        for i in 0..10 {
-            assert!(supertrend_values[i].is_nan());
-            assert_eq!(signal[i], 0);
+            // Should detect downtrend in second half
+            assert_eq!(signal[19], -1); // Should be in downtrend
         }
 
-        // After warmup, should have valid values
-        assert!(!supertrend_values[10].is_nan());
-        assert!(signal[10] != 0);
+        #[test]
+        fn test_supertrend_parameters() {
+            let high = arr1(&[
+                110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+                133.0, 136.0, 140.0,
+            ]);
+            let low = arr1(&[
+                105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+                128.0, 131.0, 135.0,
+            ]);
+            let close = arr1(&[
+                108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+                131.0, 134.0, 138.0,
+            ]);
 
-        // Signal should only be -1, 0, or 1
-        for i in 0..15 {
-            assert!(signal[i] == -1 || signal[i] == 0 || signal[i] == 1);
+            // Test invalid parameters
+            assert!(Supertrend::new(0, 3.0).is_err());
+            assert!(Supertrend::new(10, -1.0).is_err());
+
+            // Test valid parameters
+            assert!(Supertrend::new(10, 3.0).is_ok());
+            assert!(Supertrend::new(5, 2.0).is_ok());
+
+            // Test different multipliers produce different results
+            let st1 = Supertrend::new(10, 2.0).unwrap();
+            let st2 = Supertrend::new(10, 4.0).unwrap();
+
+            let (values1, _) = st1
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
+            let (values2, _) = st2
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
+
+            // Higher multiplier should produce different values
+            assert!((values1[14] - values2[14]).abs() > 0.1);
+        }
+
+        #[test]
+        fn test_supertrend_parity_with_python() {
+            // Test data from Python implementation
+            let high = arr1(&[
+                110.0, 115.0, 120.0, 118.0, 122.0, 125.0, 123.0, 126.0, 130.0, 128.0, 132.0, 135.0,
+                133.0, 136.0, 140.0,
+            ]);
+            let low = arr1(&[
+                105.0, 110.0, 115.0, 113.0, 117.0, 120.0, 118.0, 121.0, 125.0, 123.0, 127.0, 130.0,
+                128.0, 131.0, 135.0,
+            ]);
+            let close = arr1(&[
+                108.0, 112.0, 118.0, 115.0, 120.0, 123.0, 121.0, 124.0, 128.0, 126.0, 130.0, 133.0,
+                131.0, 134.0, 138.0,
+            ]);
+
+            let supertrend = Supertrend::new(10, 3.0).unwrap();
+            let (supertrend_values, signal) = supertrend
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
+
+            // Verify first 10 are NaN/0 (warmup period)
+            for i in 0..10 {
+                assert!(supertrend_values[i].is_nan());
+                assert_eq!(signal[i], 0);
+            }
+
+            // After warmup, should have valid values
+            assert!(!supertrend_values[10].is_nan());
+            assert!(signal[10] != 0);
+
+            // Signal should only be -1, 0, or 1
+            for i in 0..15 {
+                assert!(signal[i] == -1 || signal[i] == 0 || signal[i] == 1);
+            }
+        }
+
+        #[test]
+        fn test_ichimoku_basic() {
+            // Test with 100 data points to ensure enough for 52-period calculation
+            let high: Vec<f64> = (0..100).map(|i| 100.0 + (i as f64 * 0.5)).collect();
+            let low: Vec<f64> = (0..100).map(|i| 95.0 + (i as f64 * 0.5)).collect();
+            let close: Vec<f64> = (0..100).map(|i| 98.0 + (i as f64 * 0.5)).collect();
+
+            let high_arr = Array1::from_vec(high);
+            let low_arr = Array1::from_vec(low);
+            let close_arr = Array1::from_vec(close);
+
+            let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
+            let result = ichimoku
+                .calculate_hlc(high_arr.view(), low_arr.view(), close_arr.view())
+                .unwrap();
+
+            // Should have 4 secondary outputs
+            assert_eq!(result.secondary.len(), 4);
+
+            // Check that tenkan_sen has values after warmup period (9)
+            assert!(result.primary[8].is_nan());
+            assert!(!result.primary[9].is_nan());
+
+            // Check that kijun_sen has values after warmup period (26)
+            assert!(result.secondary[0][25].is_nan());
+            assert!(!result.secondary[0][26].is_nan());
+
+            // Check that senkou_span_b has values after warmup period (52)
+            // But they're shifted forward by 26, so check at position 52+26-1
+            assert!(!result.secondary[2][77].is_nan());
+        }
+
+        #[test]
+        fn test_ichimoku_values() {
+            // Simple test with known values
+            let n = 100;
+            let high = arr1(&vec![110.0; n]);
+            let low = arr1(&vec![100.0; n]);
+            let close = arr1(&vec![105.0; n]);
+
+            let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
+            let result = ichimoku
+                .calculate_hlc(high.view(), low.view(), close.view())
+                .unwrap();
+
+            // With constant prices:
+            // Tenkan-sen = (110 + 100) / 2 = 105
+            // Kijun-sen = (110 + 100) / 2 = 105
+            // Senkou Span A base = (105 + 105) / 2 = 105
+            // Senkou Span B base = (110 + 100) / 2 = 105
+
+            // Check tenkan_sen after warmup
+            assert!((result.primary[9] - 105.0).abs() < 1e-10);
+
+            // Check kijun_sen after warmup
+            assert!((result.secondary[0][26] - 105.0).abs() < 1e-10);
+
+            // Check chikou_span (close shifted backward by 26)
+            // chikou_span[0] should equal close[26]
+            assert!((result.secondary[3][0] - 105.0).abs() < 1e-10);
+        }
+
+        #[test]
+        fn test_ichimoku_parameter_validation() {
+            // conversion_period = 0 should error
+            assert!(IchimokuCloud::new(0, 26, 52, 26).is_err());
+
+            // base_period = 0 should error
+            assert!(IchimokuCloud::new(9, 0, 52, 26).is_err());
+
+            // span_b_period = 0 should error
+            assert!(IchimokuCloud::new(9, 26, 0, 26).is_err());
+
+            // Valid parameters should succeed
+            assert!(IchimokuCloud::new(9, 26, 52, 26).is_ok());
+        }
+
+        #[test]
+        fn test_ichimoku_insufficient_data() {
+            // Test with insufficient data (< 52 periods)
+            let high = arr1(&[110.0, 115.0, 120.0]);
+            let low = arr1(&[105.0, 110.0, 115.0]);
+            let close = arr1(&[108.0, 112.0, 118.0]);
+
+            let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
+            let result = ichimoku.calculate_hlc(high.view(), low.view(), close.view());
+
+            // Should error due to insufficient data
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_ichimoku_displacement_shift() {
+            // Test that displacement shifts work correctly
+            let n = 100;
+            let high: Vec<f64> = (0..n).map(|i| 110.0 + i as f64).collect();
+            let low: Vec<f64> = (0..n).map(|i| 100.0 + i as f64).collect();
+            let close: Vec<f64> = (0..n).map(|i| 105.0 + i as f64).collect();
+
+            let high_arr = Array1::from_vec(high.clone());
+            let low_arr = Array1::from_vec(low.clone());
+            let close_arr = Array1::from_vec(close.clone());
+
+            let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
+            let result = ichimoku
+                .calculate_hlc(high_arr.view(), low_arr.view(), close_arr.view())
+                .unwrap();
+
+            // Check chikou_span shift: chikou[i - 26] = close[i]
+            // So chikou[0] should equal close[26]
+            assert!((result.secondary[3][0] - close[26]).abs() < 1e-10);
+
+            // Check that senkou spans are shifted forward
+            // senkou_span_a[i + 26] should have value from position i
+            // This means early positions should be NaN, later positions should have values
+            assert!(result.secondary[1][0].is_nan()); // First position should be NaN
+            assert!(!result.secondary[1][52].is_nan()); // After 52+26 should have value
         }
     }
-
-
-    #[test]
-    fn test_ichimoku_basic() {
-        // Test with 100 data points to ensure enough for 52-period calculation
-        let high: Vec<f64> = (0..100).map(|i| 100.0 + (i as f64 * 0.5)).collect();
-        let low: Vec<f64> = (0..100).map(|i| 95.0 + (i as f64 * 0.5)).collect();
-        let close: Vec<f64> = (0..100).map(|i| 98.0 + (i as f64 * 0.5)).collect();
-
-        let high_arr = Array1::from_vec(high);
-        let low_arr = Array1::from_vec(low);
-        let close_arr = Array1::from_vec(close);
-
-        let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
-        let result = ichimoku
-            .calculate_hlc(high_arr.view(), low_arr.view(), close_arr.view())
-            .unwrap();
-
-        // Should have 4 secondary outputs
-        assert_eq!(result.secondary.len(), 4);
-
-        // Check that tenkan_sen has values after warmup period (9)
-        assert!(result.primary[8].is_nan());
-        assert!(!result.primary[9].is_nan());
-
-        // Check that kijun_sen has values after warmup period (26)
-        assert!(result.secondary[0][25].is_nan());
-        assert!(!result.secondary[0][26].is_nan());
-
-        // Check that senkou_span_b has values after warmup period (52)
-        // But they're shifted forward by 26, so check at position 52+26-1
-        assert!(!result.secondary[2][77].is_nan());
-    }
-
-    #[test]
-    fn test_ichimoku_values() {
-        // Simple test with known values
-        let n = 100;
-        let high = arr1(&vec![110.0; n]);
-        let low = arr1(&vec![100.0; n]);
-        let close = arr1(&vec![105.0; n]);
-
-        let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
-        let result = ichimoku
-            .calculate_hlc(high.view(), low.view(), close.view())
-            .unwrap();
-
-        // With constant prices:
-        // Tenkan-sen = (110 + 100) / 2 = 105
-        // Kijun-sen = (110 + 100) / 2 = 105
-        // Senkou Span A base = (105 + 105) / 2 = 105
-        // Senkou Span B base = (110 + 100) / 2 = 105
-
-        // Check tenkan_sen after warmup
-        assert!((result.primary[9] - 105.0).abs() < 1e-10);
-
-        // Check kijun_sen after warmup
-        assert!((result.secondary[0][26] - 105.0).abs() < 1e-10);
-
-        // Check chikou_span (close shifted backward by 26)
-        // chikou_span[0] should equal close[26]
-        assert!((result.secondary[3][0] - 105.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_ichimoku_parameter_validation() {
-        // conversion_period = 0 should error
-        assert!(IchimokuCloud::new(0, 26, 52, 26).is_err());
-
-        // base_period = 0 should error
-        assert!(IchimokuCloud::new(9, 0, 52, 26).is_err());
-
-        // span_b_period = 0 should error
-        assert!(IchimokuCloud::new(9, 26, 0, 26).is_err());
-
-        // Valid parameters should succeed
-        assert!(IchimokuCloud::new(9, 26, 52, 26).is_ok());
-    }
-
-    #[test]
-    fn test_ichimoku_insufficient_data() {
-        // Test with insufficient data (< 52 periods)
-        let high = arr1(&[110.0, 115.0, 120.0]);
-        let low = arr1(&[105.0, 110.0, 115.0]);
-        let close = arr1(&[108.0, 112.0, 118.0]);
-
-        let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
-        let result = ichimoku.calculate_hlc(high.view(), low.view(), close.view());
-
-        // Should error due to insufficient data
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_ichimoku_displacement_shift() {
-        // Test that displacement shifts work correctly
-        let n = 100;
-        let high: Vec<f64> = (0..n).map(|i| 110.0 + i as f64).collect();
-        let low: Vec<f64> = (0..n).map(|i| 100.0 + i as f64).collect();
-        let close: Vec<f64> = (0..n).map(|i| 105.0 + i as f64).collect();
-
-        let high_arr = Array1::from_vec(high.clone());
-        let low_arr = Array1::from_vec(low.clone());
-        let close_arr = Array1::from_vec(close.clone());
-
-        let ichimoku = IchimokuCloud::new(9, 26, 52, 26).unwrap();
-        let result = ichimoku
-            .calculate_hlc(high_arr.view(), low_arr.view(), close_arr.view())
-            .unwrap();
-
-        // Check chikou_span shift: chikou[i - 26] = close[i]
-        // So chikou[0] should equal close[26]
-        assert!((result.secondary[3][0] - close[26]).abs() < 1e-10);
-
-        // Check that senkou spans are shifted forward
-        // senkou_span_a[i + 26] should have value from position i
-        // This means early positions should be NaN, later positions should have values
-        assert!(result.secondary[1][0].is_nan()); // First position should be NaN
-        assert!(!result.secondary[1][52].is_nan()); // After 52+26 should have value
-    }
-}
 }

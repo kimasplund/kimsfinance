@@ -122,46 +122,38 @@ fn bench_mfi_comparison(c: &mut Criterion) {
         let (high, low, close, volume) = generate_ohlcv(*size);
 
         // CPU benchmark
-        group.bench_with_input(
-            BenchmarkId::new("CPU", size),
-            size,
-            |b, _| {
-                let mfi = MFI::new(14).unwrap();
-                b.iter(|| {
-                    black_box(
-                        mfi.calculate_hlcv(
-                            black_box(high.view()),
-                            black_box(low.view()),
-                            black_box(close.view()),
-                            black_box(volume.view()),
-                        )
-                        .unwrap(),
+        group.bench_with_input(BenchmarkId::new("CPU", size), size, |b, _| {
+            let mfi = MFI::new(14).unwrap();
+            b.iter(|| {
+                black_box(
+                    mfi.calculate_hlcv(
+                        black_box(high.view()),
+                        black_box(low.view()),
+                        black_box(close.view()),
+                        black_box(volume.view()),
                     )
-                });
-            },
-        );
+                    .unwrap(),
+                )
+            });
+        });
 
         // GPU benchmark
-        group.bench_with_input(
-            BenchmarkId::new("GPU", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    black_box(
-                        mfi_gpu(
-                            &device,
-                            black_box(&high),
-                            black_box(&low),
-                            black_box(&close),
-                            black_box(&volume),
-                            14,
-                            None,
-                        )
-                        .unwrap(),
+        group.bench_with_input(BenchmarkId::new("GPU", size), size, |b, _| {
+            b.iter(|| {
+                black_box(
+                    mfi_gpu(
+                        &device,
+                        black_box(&high),
+                        black_box(&low),
+                        black_box(&close),
+                        black_box(&volume),
+                        14,
+                        None,
                     )
-                });
-            },
-        );
+                    .unwrap(),
+                )
+            });
+        });
     }
 
     group.finish();
@@ -179,26 +171,22 @@ fn bench_mfi_periods(c: &mut Criterion) {
 
     // Test different periods (affects rolling window size)
     for period in [7, 14, 21, 28, 50].iter() {
-        group.bench_with_input(
-            BenchmarkId::from_parameter(period),
-            period,
-            |b, &period| {
-                b.iter(|| {
-                    black_box(
-                        mfi_gpu(
-                            &device,
-                            black_box(&high),
-                            black_box(&low),
-                            black_box(&close),
-                            black_box(&volume),
-                            period,
-                            None,
-                        )
-                        .unwrap(),
+        group.bench_with_input(BenchmarkId::from_parameter(period), period, |b, &period| {
+            b.iter(|| {
+                black_box(
+                    mfi_gpu(
+                        &device,
+                        black_box(&high),
+                        black_box(&low),
+                        black_box(&close),
+                        black_box(&volume),
+                        period,
+                        None,
                     )
-                });
-            },
-        );
+                    .unwrap(),
+                )
+            });
+        });
     }
 
     group.finish();

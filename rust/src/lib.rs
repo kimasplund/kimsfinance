@@ -1067,7 +1067,6 @@ fn calculate_mfi<'py>(
     Ok(result.into_pyarray(py))
 }
 
-
 /// Calculate Volume Profile
 ///
 /// # Arguments
@@ -1100,7 +1099,6 @@ fn calculate_volume_profile<'py>(
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     Ok(result.into_pyarray(py))
 }
-
 
 // ============================================================================
 // TREND INDICATORS (1 indicator)
@@ -1176,7 +1174,6 @@ fn calculate_parabolic_sar<'py>(
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
     Ok(result.into_pyarray(py))
 }
-
 
 // ============================================================================
 // BATCH API - FFI Overhead Reduction

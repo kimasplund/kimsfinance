@@ -281,7 +281,7 @@ pub fn batch_backtest(
     // Validate inputs
     if parameters.is_empty() {
         return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            "parameters cannot be empty"
+            "parameters cannot be empty",
         ));
     }
 
@@ -291,9 +291,10 @@ pub fn batch_backtest(
         "ma_crossover" => StrategyType::MaCrossover,
         "bollinger" => StrategyType::BollingerMeanReversion,
         _ => {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!("Unknown strategy: '{}'. Valid options: 'rsi_crossover', 'ma_crossover', 'bollinger'", strategy)
-            ));
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Unknown strategy: '{}'. Valid options: 'rsi_crossover', 'ma_crossover', 'bollinger'",
+                strategy
+            )));
         }
     };
 
@@ -306,12 +307,10 @@ pub fn batch_backtest(
         "fused" => ExecutionMode::Fused,
         "async" => ExecutionMode::Async,
         _ => {
-            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                format!(
-                    "Unknown execution_mode: '{}'. Valid options: 'auto', 'traditional', 'fused', 'async'",
-                    execution_mode
-                )
-            ));
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Unknown execution_mode: '{}'. Valid options: 'auto', 'traditional', 'fused', 'async'",
+                execution_mode
+            )));
         }
     };
 
@@ -320,9 +319,10 @@ pub fn batch_backtest(
     let shape = ohlcv_array.shape();
 
     if shape.len() != 2 || shape[1] != 5 {
-        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            format!("ohlcv must have shape (N_candles, 5), got {:?}", shape)
-        ));
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "ohlcv must have shape (N_candles, 5), got {:?}",
+            shape
+        )));
     }
 
     let n_candles = shape[0];
@@ -338,15 +338,17 @@ pub fn batch_backtest(
     let timestamps_vec = match timestamps {
         Some(ts) => {
             let ts_slice = ts.as_slice().map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("Failed to read timestamps: {:?}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Failed to read timestamps: {:?}",
+                    e
+                ))
             })?;
             if ts_slice.len() != n_candles {
-                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                    format!("timestamps length ({}) must match ohlcv rows ({})",
-                           ts_slice.len(), n_candles)
-                ));
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "timestamps length ({}) must match ohlcv rows ({})",
+                    ts_slice.len(),
+                    n_candles
+                )));
             }
             ts_slice.to_vec()
         }
@@ -360,9 +362,10 @@ pub fn batch_backtest(
     let results = py.detach(|| {
         // Initialize GPU device
         let device = Arc::new(GpuDevice::new().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to initialize GPU: {:?}", e)
-            )
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to initialize GPU: {:?}",
+                e
+            ))
         })?);
 
         // Build batch backtest
@@ -387,9 +390,10 @@ pub fn batch_backtest(
             })
             .execute()
             .map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                    format!("Batch backtest execution failed: {:?}", e)
-                )
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "Batch backtest execution failed: {:?}",
+                    e
+                ))
             })?;
 
         Ok::<_, PyErr>(batch_results)
