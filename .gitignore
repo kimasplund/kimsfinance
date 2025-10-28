@@ -164,3 +164,10 @@ tests/visual_diffs/
 .claude/
 integrated-reasoning/
 CLAUDE.md
+
+# ==============================================================================
+# Rust Build Artifacts
+# ==============================================================================
+target/
+Cargo.lock
+*.rustc_info.json

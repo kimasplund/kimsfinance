@@ -57,7 +57,11 @@ use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, 
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{GpuDevice, atr_gpu, elder_ray_gpu, ema_gpu, rsi_gpu};
+use kimsfinance_core::gpu::{
+    atr_gpu, elder_ray_gpu, ema_gpu, rsi_gpu,
+    rsi_sync::rsi_gpu_sync, // Import the synchronous version for comparison
+    GpuDevice,
+};
 
 // Note: CPU implementations pending - will be added when sequential.rs is implemented
 // #[cfg(feature = "gpu")]
@@ -247,20 +251,19 @@ fn bench_rsi_comparison(c: &mut Criterion) {
 
         group.throughput(Throughput::Elements(size as u64));
 
-        // Benchmark 1: Old pure-GPU implementation
-        // Uses single-thread GPU for Wilder's smoothing (2x)
-        group.bench_with_input(BenchmarkId::new("Old_GPU_Pure", size), &close, |b, data| {
-            b.iter(|| rsi_gpu(&device, black_box(data), 14, None))
-        });
+        // Benchmark 1: Hybrid with synchronous transfers
+        group.bench_with_input(
+            BenchmarkId::new("Hybrid_Sync", size),
+            &close,
+            |b, data| b.iter(|| rsi_gpu_sync(&device, black_box(data), 14, None)),
+        );
 
-        // TODO: Benchmark 2: New hybrid implementation
-        // GPU parallel gains/losses + CPU smoothing + GPU parallel RSI
-        // Uncomment when rsi_hybrid is implemented
-        // group.bench_with_input(
-        //     BenchmarkId::new("New_Hybrid", size),
-        //     &close,
-        //     |b, data| b.iter(|| rsi_hybrid(&device, black_box(data), 14, None))
-        // );
+        // Benchmark 2: New hybrid implementation with async transfers
+        group.bench_with_input(
+            BenchmarkId::new("New_Hybrid_Async", size),
+            &close,
+            |b, data| b.iter(|| rsi_gpu(&device, black_box(data), 14, None)),
+        );
     }
 
     group.finish();

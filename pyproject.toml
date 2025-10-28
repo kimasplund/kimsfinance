@@ -5,24 +5,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kimsfinance"
 version = "0.1.0"
-description = "Blazing-fast financial charting for quantitative trading - 178x faster with GPU acceleration, WebP optimization, and production-ready quality. Built for hedge funds, algo traders, and quants."
+description = "Blazing-fast financial charting for quantitative trading - 194x average speedup (764x peak) with Rust CPU, GPU persistent kernels (41x batch), and production-ready quality. Built for hedge funds, algo traders, and quants."
 readme = "README.md"
 requires-python = ">=3.13"
-license = {text = "AGPL-3.0-or-later"}
+license = "AGPL-3.0-or-later"
 authors = [
     {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
 maintainers = [
     {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
-keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency"]
+keywords = ["finance", "trading", "gpu", "candlestick", "charts", "visualization", "cuda", "webp", "performance", "quantitative", "quant", "ohlc", "ohlcv", "algorithmic-trading", "technical-analysis", "polars", "numpy", "hedge-fund", "high-frequency", "rust", "numba", "jit", "persistent-kernels", "backtesting", "rapids", "cudf"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
-    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -53,6 +51,9 @@ gpu = [
 jit = [
     "numba>=0.59",  # Python 3.13 support
 ]
+optimization = [
+    "deap>=1.4",  # Genetic algorithm optimization (NSGA-II)
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -70,12 +71,13 @@ test = [
     "svgwrite>=1.4",
 ]
 all = [
-    "kimsfinance[gpu,jit,dev,test]",
+    "kimsfinance[gpu,jit,optimization,dev,test]",
 ]
 
 [project.urls]
 Homepage = "https://asplund.kim"
 Documentation = "https://github.com/kimasplund/kimsfinance#readme"
+"Rust Documentation" = "https://github.com/kimasplund/kimsfinance/tree/master/rust#readme"
 Repository = "https://github.com/kimasplund/kimsfinance"
 Issues = "https://github.com/kimasplund/kimsfinance/issues"
 "Commercial License" = "https://github.com/kimasplund/kimsfinance/blob/master/COMMERCIAL-LICENSE.md"

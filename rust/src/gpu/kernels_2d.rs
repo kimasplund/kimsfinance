@@ -13,7 +13,7 @@
 //! - GPU utilization: >75% during batch execution
 
 use super::device::{GpuDevice, GpuError};
-use super::compile::compile_ptx_optimized;
+use super::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -404,8 +404,9 @@ pub fn rsi_batch_2d_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(BATCH_2D_KERNELS)
+    let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS)
         .map_err(|e| GpuError::CompilationError(format!("Failed to compile 2D kernels: {:?}", e)))?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     let module = device.context().load_module(ptx)
         .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
@@ -514,8 +515,9 @@ pub fn sma_batch_2d_gpu(
         return Err(GpuError::InvalidParameter("close_batch length mismatch".to_string()));
     }
 
-    let ptx = compile_ptx_optimized(BATCH_2D_KERNELS)?;
+    let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS)?;
     let module = device.context().load_module(ptx)?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
     let kernel = module.load_function("sma_batch_2d_kernel")?;
 
     let d_close = device.copy_to_device(close_batch)?;
@@ -585,8 +587,9 @@ pub fn momentum_fusion_2d_gpu(
     let avg_loss = wilders_smoothing_cpu(&losses, period)?;
 
     // Step 2: GPU - Fused calculation of RSI, Stochastic, Williams
-    let ptx = compile_ptx_optimized(BATCH_2D_KERNELS)?;
+    let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS)?;
     let module = device.context().load_module(ptx)?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
     let kernel = module.load_function("momentum_fusion_2d_kernel")?;
 
     let d_high = device.copy_to_device(high.as_slice().unwrap())?;

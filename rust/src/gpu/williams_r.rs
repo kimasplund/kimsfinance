@@ -4,7 +4,7 @@
 //! Williams %R is nearly identical to Stochastic %K but inverted to range [-100, 0].
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -135,8 +135,9 @@ pub fn williams_r_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(WILLIAMS_R_KERNEL)
+    let ptx_arc = compile_ptx_optimized_cached(WILLIAMS_R_KERNEL)
         .map_err(|e| GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e)))?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module (use context, not stream)
     let module = device

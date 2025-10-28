@@ -3,8 +3,8 @@
 //! # Why CPU for Sequential Algorithms?
 //!
 //! Sequential algorithms (IIR filters) have data dependencies that prevent
-//! parallelization. Example: EMA[i] depends on EMA[i-1], which depends on
-//! EMA[i-2], etc. - a dependency chain of length N.
+//! parallelization. Example: EMA\[i\] depends on EMA\[i-1\], which depends on
+//! EMA\[i-2\], etc. - a dependency chain of length N.
 //!
 //! ## Performance Analysis
 //!
@@ -99,7 +99,7 @@ impl std::error::Error for GpuError {}
 ///
 /// # Returns
 ///
-/// Array1<f64> with SMA values. First `period-1` values are NaN.
+/// `Array1<f64>` with SMA values. First `period-1` values are NaN.
 ///
 /// # Example
 ///
@@ -155,7 +155,7 @@ pub fn sma_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 
 /// CPU-optimized Exponential Moving Average
 ///
-/// Sequential IIR filter: EMA[i] = alpha * close[i] + (1-alpha) * EMA[i-1]
+/// Sequential IIR filter: EMA\[i\] = alpha * close\[i\] + (1-alpha) * EMA\[i-1\]
 ///
 /// # Performance
 ///
@@ -172,7 +172,7 @@ pub fn sma_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 ///
 /// # Returns
 ///
-/// Array1<f64> with EMA values. First `period-1` values are NaN.
+/// `Array1<f64>` with EMA values. First `period-1` values are NaN.
 ///
 /// # Example
 ///
@@ -244,7 +244,7 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
 ///
 /// # Returns
 ///
-/// Array1<f64> with smoothed values. First `period-1` values are NaN.
+/// `Array1<f64>` with smoothed values. First `period-1` values are NaN.
 ///
 /// # Example
 ///

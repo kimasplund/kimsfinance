@@ -1216,7 +1216,7 @@ fn calculate_indicators_batch<'py>(
     let parsed_requests: Result<Vec<(String, IndicatorRequest)>, PyErr> = requests
         .iter()
         .map(|item| {
-            let tuple = item.downcast::<pyo3::types::PyTuple>()?;
+            let tuple = item.cast::<pyo3::types::PyTuple>()?;
             let len = tuple.len();
 
             match len {

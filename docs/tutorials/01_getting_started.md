@@ -41,7 +41,7 @@ Generating 132,393 charts:
 ### Production Ready
 
 - **1,394 tests passing** - extensively validated
-- **Python 3.13+** - modern Python support
+- **Python 3.13+ | 3.14+** - Python 3.14: 27% faster single-threaded, 3.1x multi-threaded with free-threading
 - **WebP encoding** - 79% smaller files with imperceptible quality loss
 - **Optional GPU acceleration** - 6.4x faster OHLCV processing
 - **Dual licensed** - AGPL-3.0 (free for individuals/open-source) + Commercial
@@ -52,7 +52,7 @@ Generating 132,393 charts:
 
 ### Prerequisites
 
-- **Python 3.13+** (Python 3.12+ may work but not officially supported)
+- **Python 3.13+** (recommended: **Python 3.14+** for 27% single-threaded speedup, 3.1x multi-threaded with free-threading)
 - **pip** package manager
 
 ### Basic Installation
@@ -73,13 +73,13 @@ This installs:
 For GPU-accelerated OHLCV processing (6.4x speedup):
 
 ```bash
-# Install RAPIDS cuDF and CuPy for NVIDIA GPUs
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+# Install RAPIDS cuDF and CuPy for NVIDIA GPUs (CUDA 13)
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x
 ```
 
 **Requirements:**
 - NVIDIA GPU (compute capability 7.0+)
-- CUDA Toolkit 12.0+
+- CUDA Toolkit 13.0+ (CUDA 12.0+ also supported)
 - Linux or WSL2 (Windows GPU support via WSL2)
 
 **Note**: GPU is **optional** - all features work on CPU-only systems.
@@ -102,8 +102,8 @@ To install from source with development dependencies:
 git clone https://github.com/kimasplund/kimsfinance
 cd kimsfinance
 
-# Create virtual environment
-python3.13 -m venv .venv
+# Create virtual environment (use Python 3.14+ for best performance)
+python3.14 -m venv .venv
 source .venv/bin/activate
 
 # Install in editable mode
@@ -938,6 +938,10 @@ df = pl.DataFrame({
 **Solution**: Install RAPIDS cuDF:
 
 ```bash
+# For CUDA 13 (recommended for RTX 40-series, Ada Lovelace)
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x
+
+# For CUDA 12 (older GPUs)
 pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
 
 # Verify GPU
@@ -946,7 +950,7 @@ python -c "import cudf; import cupy; print('GPU ready!')"
 
 **Requirements**:
 - NVIDIA GPU (compute capability 7.0+)
-- CUDA Toolkit 12.0+
+- CUDA Toolkit 13.0+ (or 12.0+ for older GPUs)
 - Linux or WSL2
 
 **Note**: GPU is optional - kimsfinance works perfectly on CPU-only systems.

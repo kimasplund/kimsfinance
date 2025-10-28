@@ -4,7 +4,7 @@
 //! OBV is a cumulative momentum indicator that relates volume to price changes.
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -127,9 +127,10 @@ pub fn obv_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(OBV_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(OBV_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile OBV kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module
     let module = device

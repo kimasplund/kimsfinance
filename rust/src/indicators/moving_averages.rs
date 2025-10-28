@@ -90,7 +90,7 @@ impl Indicator for EMA {
 /// Weighted Moving Average
 ///
 /// Gives linearly increasing weights to more recent prices.
-/// Weight[i] = i + 1, so most recent price has weight = period
+/// Weight\[i\] = i + 1, so most recent price has weight = period
 pub struct WMA {
     period: usize,
 }

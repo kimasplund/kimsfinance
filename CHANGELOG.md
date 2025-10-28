@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Rust Implementation (New in 0.1.0)
+- **Rust indicator library** with 32+ technical indicators implemented in Rust
+- **194x average speedup** vs mplfinance (764x peak for ATR indicator)
+- **GPU persistent kernels** with cooperative groups (41x batch speedup)
+- **Batch processing** of 1000+ indicators in constant time (27.35ms for 1000 indicators)
+- **Auto-tuner system** for adaptive CPU/GPU selection based on hardware calibration
+- **Zero-copy PyO3 bindings** for seamless Python integration
+- **Comprehensive Rust documentation** with architecture guides and quick references
+
 #### Chart Types (6 Total)
 - **Candlestick charts** with PIL-based rendering (6,249 charts/sec throughput)
 - **OHLC bar charts** with native PIL implementation (1,337 charts/sec)

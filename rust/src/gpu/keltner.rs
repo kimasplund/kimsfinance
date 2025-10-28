@@ -42,7 +42,7 @@
 
 use super::atr::atr_gpu;
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -206,8 +206,9 @@ pub fn keltner_channels_gpu(
     let atr = atr_gpu(device, high, low, close, atr_period, Some(exec_stream))?;
 
     // === Step 3: GPU Parallel - Calculate bands ===
-    let ptx = compile_ptx_optimized(KELTNER_KERNEL)
+    let ptx_arc = compile_ptx_optimized_cached(KELTNER_KERNEL)
         .map_err(|e| GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e)))?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     let module = device
         .context()

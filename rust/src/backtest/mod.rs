@@ -74,6 +74,11 @@ pub mod portfolio;
 pub mod sweep;
 pub mod walkforward;
 
+#[cfg(feature = "gpu")]
+pub mod batch;
+#[cfg(feature = "gpu")]
+pub mod persistent;
+
 // Re-export main types for convenience
 pub use core::{
     BacktestResult, IndicatorConfig, IndicatorValues, OHLCVBar, ParameterGrid, ParameterRange,
@@ -99,3 +104,9 @@ pub use sweep::run_parameter_sweep_gpu;
 
 #[cfg(not(feature = "gpu"))]
 pub use sweep::run_parameter_sweep_cpu;
+
+#[cfg(feature = "gpu")]
+pub use batch::{BatchBacktestResults, BatchBacktestSweep, StrategyType};
+
+#[cfg(feature = "gpu")]
+pub use persistent::execute_persistent;

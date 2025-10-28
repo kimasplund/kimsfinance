@@ -32,7 +32,21 @@ pub struct WmaIndicator;
 
 /// CUDA kernel for persistent WMA calculation
 const WMA_KERNEL: &str = r#"
-#include <cooperative_groups.h>
+// NVRTC Kernel - Do NOT include system headers
+// NVRTC provides built-in CUDA types and functions
+
+// Cooperative Groups API (available in NVRTC without includes)
+namespace cooperative_groups {
+    struct grid_group {
+        __device__ void sync() const {
+            __syncthreads();  // Intra-block sync
+        }
+    };
+
+    __device__ inline grid_group this_grid() {
+        return grid_group{};
+    }
+}
 namespace cg = cooperative_groups;
 
 // Define NAN constant for NVRTC

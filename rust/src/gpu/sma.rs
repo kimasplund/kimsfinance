@@ -14,7 +14,7 @@
 //! is needed.
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -181,9 +181,10 @@ pub fn sma_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(SMA_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(SMA_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile SMA kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module (use context, not stream)
     let module = device
@@ -293,9 +294,10 @@ pub fn sma_gpu_shared(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(SMA_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(SMA_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile SMA kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module
     let module = device

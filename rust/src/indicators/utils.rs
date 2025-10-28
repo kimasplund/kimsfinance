@@ -222,7 +222,7 @@ pub fn true_range(
 
 /// Calculate array differences (price changes)
 ///
-/// diff[i] = data[i] - data[i-1]
+/// diff\[i\] = data\[i\] - data\[i-1\]
 /// Optimized with SIMD vectorization.
 ///
 /// # Arguments

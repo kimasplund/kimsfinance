@@ -1,7 +1,7 @@
 # GPU Setup & Configuration Tutorial
 
-**Version**: 1.0.0
-**Last Updated**: 2025-10-23
+**Version**: 1.1.0
+**Last Updated**: 2025-10-27
 **Skill Level**: Intermediate
 **Time Required**: 30-60 minutes
 
@@ -105,8 +105,8 @@ kimsfinance provides **optional GPU acceleration** using NVIDIA GPUs and CUDA. G
 
 - **GPU**: NVIDIA GPU with compute capability 7.0+ (Volta or newer)
 - **VRAM**: 4 GB minimum (8 GB recommended)
-- **CUDA**: Version 11.8 or 12.x
-- **Driver**: NVIDIA Driver 525.x or newer
+- **CUDA**: Version 13.x (recommended), 12.x, or 11.8
+- **Driver**: NVIDIA Driver 535.x or newer (for CUDA 13)
 
 ### Supported Hardware
 
@@ -142,7 +142,7 @@ nvidia-smi
 
 # Expected output:
 # +-----------------------------------------------------------------------------+
-# | NVIDIA-SMI 535.xx       Driver Version: 535.xx       CUDA Version: 12.x    |
+# | NVIDIA-SMI 545.xx       Driver Version: 545.xx       CUDA Version: 13.x    |
 # |-------------------------------+----------------------+----------------------+
 # | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
 # | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
@@ -176,20 +176,24 @@ nvidia-smi | grep "CUDA Version"
 nvcc --version
 ```
 
-**Note**: You need CUDA **11.8 or 12.x**. The driver CUDA version shown in `nvidia-smi` is what matters for CuPy/cuDF.
+**Note**: You need CUDA **13.x (recommended), 12.x, or 11.8**. The driver CUDA version shown in `nvidia-smi` is what matters for CuPy/cuDF.
 
 ### Step 3: Install kimsfinance with GPU Support
 
 **Method 1: pip install (Recommended)**
 
 ```bash
-# Install kimsfinance with GPU dependencies
+# Install kimsfinance with GPU dependencies (CUDA 13)
 pip install "kimsfinance[gpu]"
 
 # This installs:
 # - kimsfinance (base package)
-# - cupy-cuda12x (NumPy-compatible GPU arrays)
-# - cudf-cu12 (GPU-accelerated DataFrames)
+# - cupy-cuda13x (NumPy-compatible GPU arrays)
+# - cudf-cu13 (GPU-accelerated DataFrames)
+
+# For CUDA 12 (older hardware):
+# pip install kimsfinance cupy-cuda12x
+# pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
 ```
 
 **Method 2: Manual Installation**
@@ -199,27 +203,38 @@ pip install "kimsfinance[gpu]"
 pip install kimsfinance
 
 # Install CuPy for your CUDA version
-# For CUDA 12.x:
+# For CUDA 13.x (recommended for RTX 40-series, Ada Lovelace):
+pip install cupy-cuda13x
+
+# For CUDA 12.x (older GPUs):
 pip install cupy-cuda12x
 
 # For CUDA 11.x:
 pip install cupy-cuda11x
 
 # Install cuDF (optional, for DataFrame operations)
+# For CUDA 13:
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13
+
+# For CUDA 12:
 pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
 ```
 
 **Method 3: Conda Installation**
 
 ```bash
-# Create conda environment with Python 3.12
-# (Python 3.13 not yet supported by RAPIDS)
-conda create -n kimsfinance python=3.12
+# Create conda environment with Python 3.13-3.14
+# (Python 3.14 recommended for 27% speedup)
+conda create -n kimsfinance python=3.14
 conda activate kimsfinance
 
-# Install RAPIDS (cuDF + CuPy)
+# Install RAPIDS (cuDF + CuPy) for CUDA 13
 conda install -c rapidsai -c conda-forge -c nvidia \
-    cudf=24.12 cupy python=3.12 cuda-version=12.0
+    cudf=25.02 cupy python=3.14 cuda-version=13.0
+
+# For CUDA 12 (older hardware):
+# conda install -c rapidsai -c conda-forge -c nvidia \
+#     cudf=24.12 cupy python=3.14 cuda-version=12.0
 
 # Install kimsfinance
 pip install kimsfinance
@@ -969,25 +984,34 @@ GPU_THRESHOLDS['vectorizable_simple'] = 200_000  # vs 100K default
 ERROR: Could not find a version that satisfies the requirement cudf-cu12
 ```
 
-**Solution 1**: Check Python version (must be 3.9-3.12, NOT 3.13):
+**Solution 1**: Check Python version (RAPIDS requires 3.9-3.14):
 ```bash
-python --version  # Must be 3.9-3.12
+python --version  # Must be 3.9-3.14
 
-# If Python 3.13, downgrade to 3.12
-conda create -n kimsfinance python=3.12
+# Recommended: Use Python 3.14 for 27% speedup
+conda create -n kimsfinance python=3.14
 conda activate kimsfinance
 pip install "kimsfinance[gpu]"
 ```
 
 **Solution 2**: Use NVIDIA PyPI index:
 ```bash
+# For CUDA 13 (recommended):
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13
+
+# For CUDA 12 (older hardware):
 pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
 ```
 
 **Solution 3**: Use conda (most reliable):
 ```bash
+# For CUDA 13:
 conda install -c rapidsai -c conda-forge -c nvidia \
-    cudf=24.12 python=3.12 cuda-version=12.0
+    cudf=25.02 python=3.14 cuda-version=13.0
+
+# For CUDA 12 (older hardware):
+# conda install -c rapidsai -c conda-forge -c nvidia \
+#     cudf=24.12 python=3.14 cuda-version=12.0
 ```
 
 **Issue: CuPy installation fails**
@@ -1002,7 +1026,10 @@ ImportError: DLL load failed while importing cupy_backends
 # Check your CUDA version
 nvidia-smi | grep "CUDA Version"
 
-# For CUDA 12.x
+# For CUDA 13.x (recommended for RTX 40-series, Ada Lovelace)
+pip install cupy-cuda13x
+
+# For CUDA 12.x (older GPUs)
 pip install cupy-cuda12x
 
 # For CUDA 11.x
@@ -1183,7 +1210,7 @@ results = calculate_indicators_batch(
 5. ✅ Run auto-tune for your specific hardware
 
 **Troubleshooting**:
-- Python must be 3.9-3.12 (NOT 3.13) for RAPIDS
+- Python 3.9-3.14 supported (3.14 recommended for 27% speedup)
 - Use conda for most reliable GPU installation
 - Check `nvidia-smi` to verify GPU availability
 - Use streaming mode to prevent OOM errors
@@ -1203,6 +1230,6 @@ For GPU-related issues:
 
 ---
 
-**Tutorial Version**: 1.0.0
-**Last Updated**: 2025-10-23
-**Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 12.6
+**Tutorial Version**: 1.1.0
+**Last Updated**: 2025-10-27
+**Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 13.x, Python 3.14

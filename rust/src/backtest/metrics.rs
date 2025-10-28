@@ -16,8 +16,8 @@
 //!
 //! # References
 //!
-//! - Sharpe Ratio: https://en.wikipedia.org/wiki/Sharpe_ratio
-//! - Maximum Drawdown: https://en.wikipedia.org/wiki/Drawdown_(economics)
+//! - Sharpe Ratio: <https://en.wikipedia.org/wiki/Sharpe_ratio>
+//! - Maximum Drawdown: <https://en.wikipedia.org/wiki/Drawdown_(economics)>
 
 use super::core::Trade;
 
