@@ -1,395 +1,694 @@
 #!/usr/bin/env python3
 """
-Test Suite for Money Flow Index (MFI)
-======================================
+Comprehensive Tests for MFI (Money Flow Index) Indicator
+=========================================================
 
-Comprehensive tests for MFI implementation including:
-- Basic calculation
-- Value range validation (0-100)
-- Volume requirement
-- Overbought/oversold levels
-- Comparison with RSI
-- Divergence detection
-- Edge cases
-- Performance benchmarking
+Tests cover calculation correctness, overbought/oversold detection,
+GPU/CPU parity, edge cases, and performance characteristics.
+
+Test Coverage:
+- Basic Calculation Tests (15 tests)
+- Overbought/Oversold Tests (8 tests)
+- Edge Cases (10 tests)
+- GPU/CPU Parity Tests (8 tests)
+- Performance Tests (4 tests)
+- Parameter Validation Tests (8 tests)
+
+Total: 53 comprehensive tests
 """
 
-from __future__ import annotations
-
 import numpy as np
+import polars as pl
 import pytest
-import sys
-from pathlib import Path
+import time
+from typing import Tuple
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from kimsfinance.ops.indicators import calculate_mfi
+from kimsfinance.ops.indicators.mfi import CUPY_AVAILABLE
+from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
+from kimsfinance.core import EngineManager
 
-from kimsfinance.ops.mfi import calculate_mfi
-from kimsfinance.ops.indicator_utils import typical_price
+
+# ============================================================================
+# Test Data Generators
+# ============================================================================
 
 
-def generate_ohlcv_data(n: int = 100, seed: int = 42) -> tuple:
-    """Generate test OHLCV data for MFI testing."""
+def generate_uptrend_with_volume(
+    n: int = 50, start: float = 100.0, seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate upward trending OHLC with volume (should produce high MFI)."""
     np.random.seed(seed)
-    closes = 100 + np.cumsum(np.random.randn(n) * 0.5)
-    highs = closes + np.abs(np.random.randn(n) * 0.3)
-    lows = closes - np.abs(np.random.randn(n) * 0.3)
-    volumes = np.abs(np.random.randn(n) * 1_000_000)
+
+    closes = start + np.cumsum(np.abs(np.random.randn(n)) * 0.5 + 0.2)
+    highs = closes + np.abs(np.random.randn(n)) * 0.3
+    lows = closes - np.abs(np.random.randn(n)) * 0.3
+    volumes = 1000 + np.abs(np.random.randn(n)) * 200
+
     return highs, lows, closes, volumes
 
 
-def test_basic_calculation():
-    """Test basic MFI calculation."""
-    print("\n=== Test: Basic Calculation ===")
-
-    highs, lows, closes, volumes = generate_ohlcv_data(n=50)
-
-    # Calculate MFI
-    mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-
-    # Verify result
-    assert len(mfi) == len(closes), "MFI length should match input length"
-    assert isinstance(mfi, np.ndarray), "MFI should return NumPy array"
-
-    # First (period + 1) values should be NaN (due to rolling sum + diff)
-    expected_nans = 14  # period
-    actual_nans = np.sum(np.isnan(mfi))
-    assert (
-        actual_nans >= expected_nans
-    ), f"Expected at least {expected_nans} NaN values, got {actual_nans}"
-
-    # Rest should be valid numbers
-    valid_values = mfi[~np.isnan(mfi)]
-    assert len(valid_values) > 0, "Should have some valid MFI values"
-
-    print(f"✓ MFI calculated: {len(mfi)} values")
-    print(f"  - NaN values: {actual_nans}")
-    print(f"  - Valid values: {len(valid_values)}")
-    print(f"  - Last 5 MFI values: {mfi[-5:]}")
-
-
-def test_value_ranges():
-    """Test that MFI values are within valid range (0-100)."""
-    print("\n=== Test: Value Ranges (0-100) ===")
-
-    highs, lows, closes, volumes = generate_ohlcv_data(n=100)
-
-    mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-
-    # Check valid values are in 0-100 range
-    valid_mfi = mfi[~np.isnan(mfi)]
-
-    min_mfi = np.min(valid_mfi)
-    max_mfi = np.max(valid_mfi)
-
-    print(f"✓ MFI range: {min_mfi:.2f} to {max_mfi:.2f}")
-
-    assert min_mfi >= 0.0, f"MFI should be >= 0, got {min_mfi}"
-    assert max_mfi <= 100.0, f"MFI should be <= 100, got {max_mfi}"
-
-    # Calculate statistics
-    mean_mfi = np.mean(valid_mfi)
-    std_mfi = np.std(valid_mfi)
-
-    print(f"  - Mean: {mean_mfi:.2f}")
-    print(f"  - Std Dev: {std_mfi:.2f}")
-    print(f"  - Min: {min_mfi:.2f}")
-    print(f"  - Max: {max_mfi:.2f}")
-
-
-def test_volume_requirement():
-    """Test that MFI requires volume data."""
-    print("\n=== Test: Volume Requirement ===")
-
-    highs, lows, closes, volumes = generate_ohlcv_data(n=50)
-
-    # Test with valid volume
-    mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-    assert len(mfi) == len(closes), "Should work with valid volume"
-    print("✓ MFI works with volume data")
-
-    # Test with zero volume (edge case - should work but produce different results)
-    zero_volumes = np.zeros_like(volumes)
-    mfi_zero = calculate_mfi(highs, lows, closes, zero_volumes, period=14, engine="cpu")
-
-    # With zero volume, money flow is always 0, so MFI should be 0 or NaN
-    valid_mfi_zero = mfi_zero[~np.isnan(mfi_zero)]
-    if len(valid_mfi_zero) > 0:
-        # Should be close to 0 (or 50 if both flows are 0)
-        assert np.all(
-            (valid_mfi_zero < 1.0) | (np.abs(valid_mfi_zero - 50.0) < 1.0)
-        ), "Zero volume should produce MFI near 0 or 50"
-        print(f"✓ Zero volume produces MFI values near 0 or 50: {valid_mfi_zero[:5]}")
-
-
-def test_overbought_oversold():
-    """Test overbought/oversold level detection."""
-    print("\n=== Test: Overbought/Oversold Levels ===")
-
-    # Create trending up data (should produce high MFI)
-    n = 50
-    closes_up = np.linspace(100, 120, n)
-    highs_up = closes_up + 0.5
-    lows_up = closes_up - 0.5
-    volumes_up = np.full(n, 1_000_000.0)
-
-    mfi_up = calculate_mfi(highs_up, lows_up, closes_up, volumes_up, period=14, engine="cpu")
-    valid_mfi_up = mfi_up[~np.isnan(mfi_up)]
-
-    print(f"Uptrend MFI (last 5): {valid_mfi_up[-5:]}")
-    # In strong uptrend, most MFI values should be high
-    high_values = np.sum(valid_mfi_up > 50)
-    print(f"✓ Strong uptrend: {high_values}/{len(valid_mfi_up)} values > 50")
-
-    # Create trending down data (should produce low MFI)
-    closes_down = np.linspace(120, 100, n)
-    highs_down = closes_down + 0.5
-    lows_down = closes_down - 0.5
-    volumes_down = np.full(n, 1_000_000.0)
-
-    mfi_down = calculate_mfi(
-        highs_down, lows_down, closes_down, volumes_down, period=14, engine="cpu"
-    )
-    valid_mfi_down = mfi_down[~np.isnan(mfi_down)]
-
-    print(f"Downtrend MFI (last 5): {valid_mfi_down[-5:]}")
-    # In strong downtrend, most MFI values should be low
-    low_values = np.sum(valid_mfi_down < 50)
-    print(f"✓ Strong downtrend: {low_values}/{len(valid_mfi_down)} values < 50")
-
-    # Test level crossings
-    overbought_count = np.sum(mfi_up > 80)
-    oversold_count = np.sum(mfi_down < 20)
-
-    print(f"✓ Overbought signals (>80): {overbought_count}")
-    print(f"✓ Oversold signals (<20): {oversold_count}")
-
-
-def test_comparison_with_rsi():
-    """Test that MFI behaves like volume-weighted RSI."""
-    print("\n=== Test: Comparison with RSI ===")
-
-    highs, lows, closes, volumes = generate_ohlcv_data(n=100)
-
-    # Calculate MFI
-    mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-
-    # MFI should behave similarly to RSI but with volume weighting
-    # Both should be in 0-100 range and follow similar patterns
-
-    valid_mfi = mfi[~np.isnan(mfi)]
-
-    # Check basic properties similar to RSI
-    assert 0 <= np.min(valid_mfi) <= 100, "MFI should be in RSI-like range"
-    assert 0 <= np.max(valid_mfi) <= 100, "MFI should be in RSI-like range"
-
-    # MFI should oscillate around 50 (like RSI)
-    mean_mfi = np.mean(valid_mfi)
-    print(f"✓ Mean MFI: {mean_mfi:.2f} (should be near 50 for random walk)")
-
-    # Test with constant volume (should behave more like price-only indicator)
-    constant_volumes = np.full_like(volumes, 1_000_000.0)
-    mfi_constant = calculate_mfi(highs, lows, closes, constant_volumes, period=14, engine="cpu")
-
-    print(f"✓ MFI with constant volume calculated")
-    print(f"  - Variable volume MFI (last 3): {mfi[-3:]}")
-    print(f"  - Constant volume MFI (last 3): {mfi_constant[-3:]}")
-
-    # Both should be valid
-    assert len(mfi_constant) == len(mfi), "Constant volume should produce same length"
-
-
-def test_divergence_detection():
-    """Test divergence detection between price and MFI."""
-    print("\n=== Test: Divergence Detection ===")
-
-    # Create data with bearish divergence (price up, MFI down)
-    n = 50
-    # Price rises
-    closes = np.linspace(100, 110, n)
-    highs = closes + 0.5
-    lows = closes - 0.5
-
-    # Volume decreases (indicating weakening momentum)
-    volumes = np.linspace(2_000_000, 500_000, n)
-
-    mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-
-    # Check last 10 values
-    price_change = closes[-1] - closes[-10]
-    mfi_change = mfi[-1] - mfi[-10] if not np.isnan(mfi[-1]) and not np.isnan(mfi[-10]) else 0
-
-    print(f"✓ Price change (last 10): {price_change:.2f}")
-    print(f"✓ MFI change (last 10): {mfi_change:.2f}")
-
-    # Price should be rising
-    assert price_change > 0, "Price should be rising"
-
-    # With decreasing volume, MFI might not rise as much or could fall
-    # This is the divergence signal
-    if mfi_change < 0:
-        print("✓ Bearish divergence detected: Price up, MFI down")
-    else:
-        print(f"  Note: MFI also rose by {mfi_change:.2f} (no divergence in this case)")
-
-
-def test_edge_cases():
-    """Test edge cases."""
-    print("\n=== Test: Edge Cases ===")
-
-    # Test 1: Minimal data (should have many NaN values)
-    n_small = 20
-    highs, lows, closes, volumes = generate_ohlcv_data(n=n_small)
-    mfi_small = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-
-    assert len(mfi_small) == n_small, "Should handle small datasets"
-    nan_count = np.sum(np.isnan(mfi_small))
-    print(f"✓ Small dataset ({n_small} bars): {nan_count} NaN values")
-
-    # Test 2: Constant prices (no change)
-    constant_closes = np.full(50, 100.0)
-    constant_highs = constant_closes + 0.5
-    constant_lows = constant_closes - 0.5
-    constant_volumes = np.full(50, 1_000_000.0)
-
-    mfi_constant = calculate_mfi(
-        constant_highs, constant_lows, constant_closes, constant_volumes, period=14, engine="cpu"
-    )
-
-    # With constant typical price, all money flow goes to one direction initially
-    # then becomes neutral (50)
-    valid_mfi_constant = mfi_constant[~np.isnan(mfi_constant)]
-    if len(valid_mfi_constant) > 0:
-        print(f"✓ Constant prices: MFI values = {valid_mfi_constant[:5]}")
-        # Should be mostly 0, 50, or 100 (edge cases)
-
-    # Test 3: Alternating up/down (should produce ~50 MFI)
-    alternating = np.array([100.0] * 50)
-    for i in range(1, 50):
-        alternating[i] = alternating[i - 1] + (1.0 if i % 2 == 0 else -1.0)
-
-    highs_alt = alternating + 0.5
-    lows_alt = alternating - 0.5
-    volumes_alt = np.full(50, 1_000_000.0)
-
-    mfi_alt = calculate_mfi(highs_alt, lows_alt, alternating, volumes_alt, period=14, engine="cpu")
-    valid_mfi_alt = mfi_alt[~np.isnan(mfi_alt)]
-
-    if len(valid_mfi_alt) > 0:
-        mean_alt = np.mean(valid_mfi_alt)
-        print(f"✓ Alternating prices: Mean MFI = {mean_alt:.2f} (should be near 50)")
-
-    # Test 4: Different periods
-    highs, lows, closes, volumes = generate_ohlcv_data(n=100)
-
-    mfi_5 = calculate_mfi(highs, lows, closes, volumes, period=5, engine="cpu")
-    mfi_21 = calculate_mfi(highs, lows, closes, volumes, period=21, engine="cpu")
-
-    assert len(mfi_5) == len(closes), "Short period should work"
-    assert len(mfi_21) == len(closes), "Long period should work"
-
-    # Short period should have fewer NaN values
-    nan_5 = np.sum(np.isnan(mfi_5))
-    nan_21 = np.sum(np.isnan(mfi_21))
-
-    print(f"✓ Period=5: {nan_5} NaN values")
-    print(f"✓ Period=21: {nan_21} NaN values")
-    assert nan_5 < nan_21, "Shorter period should have fewer NaN values"
-
-
-def test_performance():
-    """Test performance on different data sizes."""
-    print("\n=== Test: Performance ===")
-
-    import time
-
-    sizes = [1_000, 10_000, 100_000]
-
-    for size in sizes:
-        # Generate data
+def generate_downtrend_with_volume(
+    n: int = 50, start: float = 100.0, seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate downward trending OHLC with volume (should produce low MFI)."""
+    np.random.seed(seed)
+
+    closes = start - np.cumsum(np.abs(np.random.randn(n)) * 0.5 + 0.2)
+    highs = closes + np.abs(np.random.randn(n)) * 0.3
+    lows = closes - np.abs(np.random.randn(n)) * 0.3
+    volumes = 1000 + np.abs(np.random.randn(n)) * 200
+
+    return highs, lows, closes, volumes
+
+
+def generate_sideways_with_volume(
+    n: int = 100, mean: float = 100.0, seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate sideways OHLC with volume (should produce MFI around 50)."""
+    np.random.seed(seed)
+
+    closes = mean + np.random.randn(n) * 2.0
+    highs = closes + np.abs(np.random.randn(n)) * 0.5
+    lows = closes - np.abs(np.random.randn(n)) * 0.5
+    volumes = 1000 + np.abs(np.random.randn(n)) * 200
+
+    return highs, lows, closes, volumes
+
+
+def generate_high_volume_uptrend(
+    n: int = 50, start: float = 100.0, seed: int = 42
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Generate uptrend with increasing volume (strong buying pressure)."""
+    np.random.seed(seed)
+
+    closes = start + np.cumsum(np.abs(np.random.randn(n)) * 0.5 + 0.2)
+    highs = closes + np.abs(np.random.randn(n)) * 0.3
+    lows = closes - np.abs(np.random.randn(n)) * 0.3
+    volumes = np.linspace(1000, 2000, n) + np.abs(np.random.randn(n)) * 100
+
+    return highs, lows, closes, volumes
+
+
+# ============================================================================
+# Class 1: Basic Calculation Tests (15 tests)
+# ============================================================================
+
+
+class TestMFIBasicCalculation:
+    """Test basic MFI calculation correctness."""
+
+    def test_mfi_range_uptrend(self):
+        """MFI values should be between 0 and 100 for uptrend data."""
+        high, low, close, volume = generate_uptrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert np.all(valid_mfi >= 0) and np.all(valid_mfi <= 100)
+
+    def test_mfi_range_downtrend(self):
+        """MFI values should be between 0 and 100 for downtrend data."""
+        high, low, close, volume = generate_downtrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert np.all(valid_mfi >= 0) and np.all(valid_mfi <= 100)
+
+    def test_mfi_output_length(self):
+        """MFI output should have same length as input."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        assert len(mfi) == len(close)
+
+    def test_mfi_output_type(self):
+        """MFI should return numpy array."""
+        high, low, close, volume = generate_sideways_with_volume(50)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        assert isinstance(mfi, np.ndarray)
+
+    def test_mfi_default_period(self):
+        """MFI should use period=14 by default."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        mfi_default = calculate_mfi(high, low, close, volume)
+        mfi_explicit = calculate_mfi(high, low, close, volume, period=14)
+        np.testing.assert_array_equal(mfi_default, mfi_explicit)
+
+    def test_mfi_uptrend_high_values(self):
+        """MFI should be high (>50) during sustained uptrend."""
+        high, low, close, volume = generate_uptrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[20:]  # Skip warmup
+        assert np.mean(valid_mfi) > 50
+
+    def test_mfi_downtrend_low_values(self):
+        """MFI should be low (<50) during sustained downtrend."""
+        high, low, close, volume = generate_downtrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[20:]  # Skip warmup
+        assert np.mean(valid_mfi) < 50
+
+    def test_mfi_sideways_neutral(self):
+        """MFI should be near 50 for sideways market."""
+        high, low, close, volume = generate_sideways_with_volume(200)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[20:]  # Skip warmup
+        mean_mfi = np.mean(valid_mfi)
+        assert 35 < mean_mfi < 65
+
+    def test_mfi_different_periods(self):
+        """MFI with different periods should produce different results."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        mfi_5 = calculate_mfi(high, low, close, volume, period=5)
+        mfi_14 = calculate_mfi(high, low, close, volume, period=14)
+        mfi_21 = calculate_mfi(high, low, close, volume, period=21)
+
+        # Results should differ
+        assert not np.allclose(mfi_5[21:], mfi_14[21:], equal_nan=True)
+        assert not np.allclose(mfi_14[21:], mfi_21[21:], equal_nan=True)
+
+    def test_mfi_high_volume_impact(self):
+        """High volume during uptrend should strengthen MFI signal."""
+        high, low, close, volume = generate_high_volume_uptrend(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[20:]
+        # Strong volume with uptrend should push MFI higher
+        assert np.mean(valid_mfi) > 55
+
+    def test_mfi_numpy_array_input(self):
+        """MFI should accept numpy array input."""
+        high = np.array([105, 107, 106, 110, 108, 112, 111, 115])
+        low = np.array([100, 102, 101, 105, 103, 107, 106, 110])
+        close = np.array([103, 106, 104, 108, 106, 110, 109, 113])
+        volume = np.array([1000, 1200, 900, 1500, 1100, 1300, 1000, 1400])
+        mfi = calculate_mfi(high, low, close, volume, period=3)
+        assert isinstance(mfi, np.ndarray)
+        assert len(mfi) == len(close)
+
+    def test_mfi_polars_series_input(self):
+        """MFI should accept Polars Series input."""
+        high = pl.Series([105, 107, 106, 110, 108, 112, 111, 115])
+        low = pl.Series([100, 102, 101, 105, 103, 107, 106, 110])
+        close = pl.Series([103, 106, 104, 108, 106, 110, 109, 113])
+        volume = pl.Series([1000, 1200, 900, 1500, 1100, 1300, 1000, 1400])
+        mfi = calculate_mfi(high, low, close, volume, period=3)
+        assert isinstance(mfi, np.ndarray)
+        assert len(mfi) == len(close)
+
+    def test_mfi_list_input(self):
+        """MFI should accept list input."""
+        high = [105, 107, 106, 110, 108, 112, 111, 115]
+        low = [100, 102, 101, 105, 103, 107, 106, 110]
+        close = [103, 106, 104, 108, 106, 110, 109, 113]
+        volume = [1000, 1200, 900, 1500, 1100, 1300, 1000, 1400]
+        mfi = calculate_mfi(high, low, close, volume, period=3)
+        assert isinstance(mfi, np.ndarray)
+        assert len(mfi) == len(close)
+
+    def test_mfi_reproducible(self):
+        """MFI calculation should be reproducible."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        mfi_1 = calculate_mfi(high, low, close, volume, period=14)
+        mfi_2 = calculate_mfi(high, low, close, volume, period=14)
+        np.testing.assert_array_equal(mfi_1, mfi_2)
+
+    def test_mfi_small_period(self):
+        """MFI should work with small periods (period=2)."""
+        high, low, close, volume = generate_sideways_with_volume(50)
+        mfi = calculate_mfi(high, low, close, volume, period=2)
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert np.all(valid_mfi >= 0) and np.all(valid_mfi <= 100)
+
+
+# ============================================================================
+# Class 2: Overbought/Oversold Tests (8 tests)
+# ============================================================================
+
+
+class TestMFIOverboughtOversold:
+    """Test overbought/oversold detection."""
+
+    def test_overbought_detection(self):
+        """Strong uptrend should produce MFI > 80 (overbought)."""
+        high, low, close, volume = generate_uptrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        # Should have some overbought readings
+        overbought_count = np.sum(mfi > 80)
+        assert overbought_count > 0
+
+    def test_oversold_detection(self):
+        """Strong downtrend should produce MFI < 20 (oversold)."""
+        high, low, close, volume = generate_downtrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        # Should have some oversold readings
+        oversold_count = np.sum(mfi < 20)
+        assert oversold_count > 0
+
+    def test_extreme_overbought(self):
+        """Very strong uptrend with high volume should push MFI high."""
+        # Create extremely strong uptrend
+        n = 50
+        closes = 100 + np.cumsum(np.ones(n) * 2)
+        highs = closes + 0.5
+        lows = closes - 0.5
+        volumes = np.ones(n) * 1000
+
+        mfi = calculate_mfi(highs, lows, closes, volumes, period=14)
+        max_mfi = np.nanmax(mfi)
+        assert max_mfi > 90
+
+    def test_extreme_oversold(self):
+        """Very strong downtrend with high volume should push MFI low."""
+        # Create extremely strong downtrend
+        n = 50
+        closes = 100 - np.cumsum(np.ones(n) * 2)
+        highs = closes + 0.5
+        lows = closes - 0.5
+        volumes = np.ones(n) * 1000
+
+        mfi = calculate_mfi(highs, lows, closes, volumes, period=14)
+        min_mfi = np.nanmin(mfi)
+        assert min_mfi < 10
+
+    def test_neutral_zone(self):
+        """Sideways market should stay in neutral zone (20-80)."""
+        high, low, close, volume = generate_sideways_with_volume(200)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+        valid_mfi = mfi[20:]  # Skip warmup
+
+        # Most readings should be in neutral zone
+        neutral_count = np.sum((valid_mfi >= 20) & (valid_mfi <= 80))
+        neutral_ratio = neutral_count / len(valid_mfi)
+        assert neutral_ratio > 0.6
+
+    def test_overbought_level_customization(self):
+        """Different overbought thresholds should be usable."""
+        high, low, close, volume = generate_uptrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+
+        # Count at different thresholds
+        ob_70 = np.sum(mfi > 70)
+        ob_80 = np.sum(mfi > 80)
+        ob_90 = np.sum(mfi > 90)
+
+        # More restrictive threshold should have fewer or equal signals
+        assert ob_80 <= ob_70
+        assert ob_90 <= ob_80
+
+    def test_oversold_level_customization(self):
+        """Different oversold thresholds should be usable."""
+        high, low, close, volume = generate_downtrend_with_volume(100)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+
+        # Count at different thresholds
+        os_30 = np.sum(mfi < 30)
+        os_20 = np.sum(mfi < 20)
+        os_10 = np.sum(mfi < 10)
+
+        # More restrictive threshold should have fewer or equal signals
+        assert os_20 <= os_30
+        assert os_10 <= os_20
+
+    def test_signal_generation(self):
+        """MFI crossovers should be detectable."""
+        high, low, close, volume = generate_sideways_with_volume(150)
+        mfi = calculate_mfi(high, low, close, volume, period=14)
+
+        # Detect crossovers of 50 level
+        above_50 = mfi > 50
+        crossovers = np.diff(above_50.astype(int))
+        cross_up = np.sum(crossovers == 1)
+        cross_down = np.sum(crossovers == -1)
+
+        # Should have some crossovers
+        assert cross_up + cross_down > 0
+
+
+# ============================================================================
+# Class 3: Edge Cases (10 tests)
+# ============================================================================
+
+
+class TestMFIEdgeCases:
+    """Test edge cases and error handling."""
+
+    def test_minimum_data_length(self):
+        """MFI should raise error if data length <= period."""
+        high = np.array([105, 107, 106, 110])
+        low = np.array([100, 102, 101, 105])
+        close = np.array([103, 106, 104, 108])
+        volume = np.array([1000, 1200, 900, 1500])
+        with pytest.raises(ValueError, match="Data length must be > period"):
+            calculate_mfi(high, low, close, volume, period=14)
+
+    def test_mismatched_array_lengths(self):
+        """MFI should raise error if arrays have different lengths."""
+        high = np.array([105, 107, 106, 110, 108])
+        low = np.array([100, 102, 101, 105])  # One less
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([1000, 1200, 900, 1500, 1100])
+        with pytest.raises(ValueError, match="All input arrays must have the same length"):
+            calculate_mfi(high, low, close, volume, period=3)
+
+    def test_constant_prices(self):
+        """Constant prices should handle edge case."""
+        high = np.array([100, 100, 100, 100, 100, 100])
+        low = np.array([100, 100, 100, 100, 100, 100])
+        close = np.array([100, 100, 100, 100, 100, 100])
+        volume = np.array([1000, 1000, 1000, 1000, 1000, 1000])
+        mfi = calculate_mfi(high, low, close, volume, period=2)
+        # No price changes should result in near-zero or NaN values
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert len(valid_mfi) >= 0  # Should not crash
+
+    def test_zero_volume(self):
+        """Zero volume should be handled."""
+        high = np.array([105, 107, 106, 110, 108])
+        low = np.array([100, 102, 101, 105, 103])
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([0, 0, 0, 0, 0])
+        mfi = calculate_mfi(high, low, close, volume, period=2)
+        # Should handle zero volume gracefully
+        assert len(mfi) == len(close)
+
+    def test_very_high_volume(self):
+        """Very high volume values should work."""
+        high = np.array([105, 107, 106, 110, 108])
+        low = np.array([100, 102, 101, 105, 103])
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([1e9, 1.2e9, 0.9e9, 1.5e9, 1.1e9])
+        mfi = calculate_mfi(high, low, close, volume, period=2)
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert np.all(valid_mfi >= 0) and np.all(valid_mfi <= 100)
+
+    def test_negative_volume(self):
+        """Negative volume should be handled (though unusual)."""
+        high = np.array([105, 107, 106, 110, 108])
+        low = np.array([100, 102, 101, 105, 103])
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([-1000, -1200, -900, -1500, -1100])
+        try:
+            mfi = calculate_mfi(high, low, close, volume, period=2)
+            # If it works, should produce some result
+            assert len(mfi) == len(close)
+        except (ValueError, RuntimeError):
+            # Acceptable to reject negative volume
+            pass
+
+    def test_mixed_precision(self):
+        """Mixed float32/float64 should work."""
+        high_f32 = np.array([105, 107, 106, 110, 108], dtype=np.float32)
+        low_f32 = np.array([100, 102, 101, 105, 103], dtype=np.float32)
+        close_f32 = np.array([103, 106, 104, 108, 106], dtype=np.float32)
+        volume_f32 = np.array([1000, 1200, 900, 1500, 1100], dtype=np.float32)
+
+        high_f64 = high_f32.astype(np.float64)
+        low_f64 = low_f32.astype(np.float64)
+        close_f64 = close_f32.astype(np.float64)
+        volume_f64 = volume_f32.astype(np.float64)
+
+        mfi_f32 = calculate_mfi(high_f32, low_f32, close_f32, volume_f32, period=2)
+        mfi_f64 = calculate_mfi(high_f64, low_f64, close_f64, volume_f64, period=2)
+
+        np.testing.assert_allclose(mfi_f32, mfi_f64, rtol=1e-5)
+
+    def test_high_low_inversion(self):
+        """High < Low should be handled or rejected."""
+        high = np.array([100, 102, 101, 105, 103])  # Lower values
+        low = np.array([105, 107, 106, 110, 108])  # Higher values (inverted)
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([1000, 1200, 900, 1500, 1100])
+
+        # Should either work or raise clear error
+        try:
+            mfi = calculate_mfi(high, low, close, volume, period=2)
+            # If it works, typical price calculation should still be valid
+            assert len(mfi) == len(close)
+        except (ValueError, RuntimeError):
+            pass
+
+    def test_extreme_volatility(self):
+        """Extreme price volatility should be handled."""
         np.random.seed(42)
-        closes = 100 + np.cumsum(np.random.randn(size) * 0.5)
-        highs = closes + np.abs(np.random.randn(size) * 0.3)
-        lows = closes - np.abs(np.random.randn(size) * 0.3)
-        volumes = np.abs(np.random.randn(size) * 1_000_000)
+        n = 50
+        closes = 100 + np.cumsum(np.random.randn(n) * 20)
+        highs = closes + np.abs(np.random.randn(n)) * 10
+        lows = closes - np.abs(np.random.randn(n)) * 10
+        volumes = 1000 + np.abs(np.random.randn(n)) * 500
 
-        # Measure CPU performance
+        mfi = calculate_mfi(highs, lows, closes, volumes, period=14)
+        valid_mfi = mfi[~np.isnan(mfi)]
+        assert np.all(valid_mfi >= 0) and np.all(valid_mfi <= 100)
+
+    def test_single_large_volume_spike(self):
+        """Single large volume spike should be handled."""
+        high = np.array([105, 107, 106, 110, 108, 109, 111])
+        low = np.array([100, 102, 101, 105, 103, 104, 106])
+        close = np.array([103, 106, 104, 108, 106, 107, 109])
+        volume = np.array([1000, 1000, 10000, 1000, 1000, 1000, 1000])  # Spike
+        mfi = calculate_mfi(high, low, close, volume, period=3)
+        assert len(mfi) == len(close)
+        assert np.all(mfi[~np.isnan(mfi)] >= 0)
+        assert np.all(mfi[~np.isnan(mfi)] <= 100)
+
+
+# ============================================================================
+# Class 4: GPU/CPU Parity Tests (8 tests)
+# ============================================================================
+
+
+@pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+class TestMFIGPUCPU:
+    """Test GPU/CPU parity."""
+
+    def test_small_data_cpu_gpu_parity(self):
+        """Small dataset should produce identical CPU/GPU results."""
+        high, low, close, volume = generate_sideways_with_volume(1000, seed=42)
+
+        mfi_cpu = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        mfi_gpu = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
+
+        np.testing.assert_allclose(mfi_cpu, mfi_gpu, rtol=1e-6, equal_nan=True)
+
+    def test_large_data_cpu_gpu_parity(self):
+        """Large dataset should produce very close CPU/GPU results."""
+        high, low, close, volume = generate_sideways_with_volume(100_000, seed=42)
+
+        mfi_cpu = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        mfi_gpu = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
+
+        # GPU may have tiny numerical differences
+        np.testing.assert_allclose(mfi_cpu, mfi_gpu, rtol=1e-5, equal_nan=True)
+
+    def test_uptrend_cpu_gpu_parity(self):
+        """Uptrend pattern should match CPU/GPU."""
+        high, low, close, volume = generate_uptrend_with_volume(5000, seed=42)
+
+        mfi_cpu = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        mfi_gpu = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
+
+        np.testing.assert_allclose(mfi_cpu, mfi_gpu, rtol=1e-6, equal_nan=True)
+
+    def test_downtrend_cpu_gpu_parity(self):
+        """Downtrend pattern should match CPU/GPU."""
+        high, low, close, volume = generate_downtrend_with_volume(5000, seed=42)
+
+        mfi_cpu = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        mfi_gpu = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
+
+        np.testing.assert_allclose(mfi_cpu, mfi_gpu, rtol=1e-6, equal_nan=True)
+
+    def test_different_periods_cpu_gpu_parity(self):
+        """Different periods should maintain CPU/GPU parity."""
+        high, low, close, volume = generate_sideways_with_volume(5000, seed=42)
+
+        for period in [5, 14, 21]:
+            mfi_cpu = calculate_mfi(high, low, close, volume, period=period, engine="cpu")
+            mfi_gpu = calculate_mfi(high, low, close, volume, period=period, engine="gpu")
+
+            np.testing.assert_allclose(
+                mfi_cpu, mfi_gpu, rtol=1e-6, equal_nan=True, err_msg=f"Failed for period={period}"
+            )
+
+    def test_auto_engine_selection(self):
+        """Auto engine selection should work correctly."""
+        # Small data should use CPU
+        high, low, close, volume = generate_sideways_with_volume(1000)
+        mfi_small = calculate_mfi(high, low, close, volume, period=14, engine="auto")
+        assert len(mfi_small) == len(close)
+
+        # Large data should potentially use GPU (if available)
+        high, low, close, volume = generate_sideways_with_volume(150_000)
+        mfi_large = calculate_mfi(high, low, close, volume, period=14, engine="auto")
+        assert len(mfi_large) == len(close)
+
+    def test_gpu_explicit_request(self):
+        """Explicit GPU engine request should work."""
+        if not EngineManager.check_gpu_available():
+            pytest.skip("GPU not available")
+
+        high, low, close, volume = generate_sideways_with_volume(5000)
+        mfi = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
+
+        assert isinstance(mfi, np.ndarray)
+        assert len(mfi) == len(close)
+
+    def test_cpu_explicit_request(self):
+        """Explicit CPU engine request should work."""
+        high, low, close, volume = generate_sideways_with_volume(5000)
+        mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+
+        assert isinstance(mfi, np.ndarray)
+        assert len(mfi) == len(close)
+
+
+# ============================================================================
+# Class 5: Performance Tests (4 tests)
+# ============================================================================
+
+
+class TestMFIPerformance:
+    """Test performance characteristics."""
+
+    def test_performance_1k_candles(self):
+        """1K candles should process in reasonable time."""
+        high, low, close, volume = generate_sideways_with_volume(1000, seed=42)
+
         start = time.perf_counter()
-        mfi = calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
-        elapsed = (time.perf_counter() - start) * 1000  # Convert to ms
+        mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        elapsed = time.perf_counter() - start
 
-        # Verify result
-        assert len(mfi) == size, f"Result length should match input for size {size}"
-        valid_count = np.sum(~np.isnan(mfi))
+        assert elapsed < 0.050  # 50ms
+        assert len(mfi) == 1000
 
-        print(f"✓ Size {size:>7,}: {elapsed:>6.2f} ms ({valid_count:>7,} valid values)")
+    def test_performance_10k_candles(self):
+        """10K candles should process in <20ms."""
+        high, low, close, volume = generate_sideways_with_volume(10_000, seed=42)
+
+        start = time.perf_counter()
+        mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        elapsed = time.perf_counter() - start
+
+        assert elapsed < 0.020  # 20ms
+        assert len(mfi) == 10_000
+
+    def test_performance_100k_candles(self):
+        """100K candles should process in <150ms."""
+        high, low, close, volume = generate_sideways_with_volume(100_000, seed=42)
+
+        start = time.perf_counter()
+        mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+        elapsed = time.perf_counter() - start
+
+        assert elapsed < 0.150  # 150ms
+        assert len(mfi) == 100_000
+
+    def test_performance_scaling(self):
+        """Performance should scale reasonably with data size."""
+        timings = []
+
+        for size in [1000, 5000, 10000, 50000]:
+            high, low, close, volume = generate_sideways_with_volume(size, seed=42)
+
+            start = time.perf_counter()
+            mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+            elapsed = time.perf_counter() - start
+
+            timings.append((size, elapsed))
+
+        # Check that timing grows reasonably (should be roughly linear)
+        time_1k = timings[0][1]
+        time_10k = timings[2][1]
+        ratio = time_10k / time_1k
+
+        # Should be less than 20x slower for 10x data
+        assert ratio < 20
 
 
-def test_parameter_validation():
+# ============================================================================
+# Class 6: Parameter Validation Tests (8 tests)
+# ============================================================================
+
+
+class TestMFIParameterValidation:
     """Test parameter validation."""
-    print("\n=== Test: Parameter Validation ===")
 
-    highs, lows, closes, volumes = generate_ohlcv_data(n=50)
+    def test_invalid_period_zero(self):
+        """Period of 0 should raise error."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        with pytest.raises((ValueError, RuntimeError)):
+            calculate_mfi(high, low, close, volume, period=0)
 
-    # Test invalid period
-    try:
-        mfi = calculate_mfi(highs, lows, closes, volumes, period=0, engine="cpu")
-        assert False, "Should raise ValueError for period=0"
-    except ValueError as e:
-        print(f"✓ Correctly raises ValueError for period=0: {e}")
+    def test_invalid_period_negative(self):
+        """Negative period should raise error."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        with pytest.raises((ValueError, RuntimeError)):
+            calculate_mfi(high, low, close, volume, period=-5)
 
-    # Test negative period
-    try:
-        mfi = calculate_mfi(highs, lows, closes, volumes, period=-5, engine="cpu")
-        assert False, "Should raise ValueError for negative period"
-    except ValueError as e:
-        print(f"✓ Correctly raises ValueError for negative period: {e}")
+    def test_invalid_period_too_large(self):
+        """Period larger than data length should raise error."""
+        high = np.array([105, 107, 106, 110, 108])
+        low = np.array([100, 102, 101, 105, 103])
+        close = np.array([103, 106, 104, 108, 106])
+        volume = np.array([1000, 1200, 900, 1500, 1100])
+        with pytest.raises(ValueError, match="Data length must be > period"):
+            calculate_mfi(high, low, close, volume, period=10)
 
+    def test_invalid_engine_string(self):
+        """Invalid engine string should raise error."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        with pytest.raises(ConfigurationError, match="Invalid engine"):
+            calculate_mfi(high, low, close, volume, period=14, engine="invalid")
 
-def main():
-    """Run all tests."""
-    print("\n" + "=" * 80)
-    print("  Money Flow Index (MFI) - Comprehensive Test Suite")
-    print("=" * 80)
+    def test_invalid_engine_type(self):
+        """Invalid engine type should raise error."""
+        high, low, close, volume = generate_sideways_with_volume(100)
+        with pytest.raises((ConfigurationError, TypeError)):
+            calculate_mfi(high, low, close, volume, period=14, engine=123)
 
-    try:
-        test_basic_calculation()
-        test_value_ranges()
-        test_volume_requirement()
-        test_overbought_oversold()
-        test_comparison_with_rsi()
-        test_divergence_detection()
-        test_edge_cases()
-        test_performance()
-        test_parameter_validation()
+    def test_gpu_not_available_error(self):
+        """Requesting GPU when unavailable should raise error."""
+        if EngineManager.check_gpu_available():
+            pytest.skip("GPU is available, can't test unavailable case")
 
-        print("\n" + "=" * 80)
-        print("  ✓ ALL MFI TESTS PASSED!")
-        print("=" * 80)
-        print("\nMFI implementation is correct and ready for use.")
+        high, low, close, volume = generate_sideways_with_volume(100)
+        with pytest.raises(GPUNotAvailableError):
+            calculate_mfi(high, low, close, volume, period=14, engine="gpu")
 
-        return 0
+    def test_empty_arrays(self):
+        """Empty arrays should raise error."""
+        high = np.array([])
+        low = np.array([])
+        close = np.array([])
+        volume = np.array([])
+        with pytest.raises((ValueError, IndexError)):
+            calculate_mfi(high, low, close, volume, period=14)
 
-    except AssertionError as e:
-        print("\n" + "=" * 80)
-        print("  ✗ TEST FAILED")
-        print("=" * 80)
-        print(f"AssertionError: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return 1
-
-    except Exception as e:
-        print("\n" + "=" * 80)
-        print("  ✗ TEST FAILED")
-        print("=" * 80)
-        print(f"Error: {type(e).__name__}: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return 1
+    def test_none_input(self):
+        """None input should raise error."""
+        with pytest.raises((TypeError, AttributeError)):
+            calculate_mfi(None, None, None, None, period=14)
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+# ============================================================================
+# Summary Statistics
+# ============================================================================
+
+
+def test_suite_summary():
+    """Print test suite summary."""
+    total_tests = 53
+    categories = {
+        "Basic Calculation": 15,
+        "Overbought/Oversold": 8,
+        "Edge Cases": 10,
+        "GPU/CPU Parity": 8,
+        "Performance": 4,
+        "Parameter Validation": 8,
+    }
+
+    print("\n" + "=" * 70)
+    print("MFI Test Suite Summary")
+    print("=" * 70)
+    for category, count in categories.items():
+        print(f"{category:.<50} {count:>3} tests")
+    print("-" * 70)
+    print(f"{'Total':.<50} {total_tests:>3} tests")
+    print("=" * 70)

@@ -46,7 +46,8 @@ venv.bak/
 .venv-freethreaded/
 rust/.venv314t/
 .venv-py314
-
+rust/.venv314/
+rust/.venv313/
 # ==============================================================================
 # Testing / Coverage
 # ==============================================================================
@@ -171,3 +172,7 @@ CLAUDE.md
 target/
 Cargo.lock
 *.rustc_info.json
+
+# Internal documentation
+internal_docs/
+# ==============================================================================

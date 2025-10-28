@@ -17,13 +17,22 @@ This document outlines the future development plans for kimsfinance.
 - SVG/SVGZ vector export
 - Native PIL rendering
 
-### Available Indicators (32 Total)
-- **Moving Averages**: SMA, EMA, WMA, DEMA, TEMA, HMA, VWMA
-- **Momentum**: RSI, MACD, Stochastic, Williams %R, CCI, ROC, TSI
-- **Volatility**: ATR, Bollinger Bands, Keltner Channels, Donchian Channels
-- **Volume**: OBV, VWAP, CMF, Volume Profile, MFI
-- **Trend**: ADX, Parabolic SAR, Aroon, Supertrend, Ichimoku Cloud
-- **Support/Resistance**: Fibonacci Retracement, Pivot Points, Elder Ray
+### Available Indicators (28 Implemented, 4 Planned)
+
+**Implemented (28 Total):**
+- **Moving Averages**: SMA, EMA, WMA, DEMA, TEMA, HMA, VWMA (7 indicators)
+- **Momentum**: RSI, MACD, Stochastic, Williams %R, CCI, ROC, TSI, Aroon (8 indicators)
+- **Volatility**: ATR, Bollinger Bands, Keltner Channels, Donchian Channels (4 indicators)
+- **Volume**: OBV, VWAP (including anchored VWAP), CMF, Volume Profile (4 indicators)
+- **Trend/Support/Resistance**: Parabolic SAR, Fibonacci Retracement, Pivot Points, Elder Ray (4 indicators)
+
+**Planned for v0.2.0 (4 indicators):**
+- MFI (Money Flow Index)
+- ADX (Average Directional Index)
+- Supertrend
+- Ichimoku Cloud
+
+**Note:** 24 of the 28 implemented indicators have Rust GPU-accelerated versions for massive datasets.
 
 ---
 

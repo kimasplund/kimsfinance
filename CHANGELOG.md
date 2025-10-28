@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Rust Implementation (New in 0.1.0)
-- **Rust indicator library** with 32+ technical indicators implemented in Rust
+- **Rust indicator library** with 24 technical indicators implemented in Rust
 - **194x average speedup** vs mplfinance (764x peak for ATR indicator)
 - **GPU persistent kernels** with cooperative groups (41x batch speedup)
 - **Batch processing** of 1000+ indicators in constant time (27.35ms for 1000 indicators)
@@ -28,15 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Renko charts** with ATR-based brick sizing (3,800 charts/sec)
 - **Point & Figure (P&F) charts** with X/O column detection (357 charts/sec)
 
-#### Technical Indicators (32 Total)
+#### Technical Indicators (28 Total)
 - **Moving Averages**: SMA, EMA, WMA, DEMA, TEMA, HMA, VWMA (7 types)
-- **Trend Indicators**: ADX, Supertrend, Parabolic SAR, Aroon, Ichimoku Cloud (5 types)
-- **Momentum Indicators**: RSI, Stochastic, MACD, ROC, TSI, Williams %R, CCI (7 types)
+- **Momentum Indicators**: RSI, Stochastic, MACD, ROC, TSI, Williams %R, CCI, Aroon (8 types)
 - **Volatility Indicators**: ATR, Bollinger Bands, Keltner Channels, Donchian Channels (4 types)
-- **Volume Indicators**: OBV, VWAP, MFI, CMF, Volume Profile/VPVR (5 types)
-- **Support/Resistance**: Fibonacci Retracement, Pivot Points (2 types)
-- **Price Action**: Elder Ray (Bull/Bear Power) (1 type)
-- **Custom**: Pick's Momentum Ratio (PMR) (1 type)
+- **Volume Indicators**: OBV, VWAP (including anchored VWAP), CMF, Volume Profile (4 types)
+- **Trend/Support/Resistance**: Parabolic SAR, Fibonacci Retracement, Pivot Points, Elder Ray (4 types)
+
+**Note:** 24 of 28 indicators have Rust GPU-accelerated implementations.
+
+**Planned for v0.2.0:** MFI, ADX, Supertrend, Ichimoku Cloud (4 additional indicators)
 
 #### OHLC Aggregation Methods (5 Total)
 - **Tick charts** - Fixed number of trades per bar (2M ticks/sec processing)
@@ -172,7 +173,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### vs mplfinance
 - **28.8x average speedup** (validated: 7.3x - 70.1x range)
-- **32 built-in indicators** vs 0 in mplfinance
+- **28 built-in indicators** vs 0 in mplfinance (24 with Rust GPU acceleration)
 - **6 native chart types** vs 4 in mplfinance (no Hollow/Renko/P&F)
 - **GPU acceleration** not available in mplfinance
 - **79% smaller files** with WebP encoding

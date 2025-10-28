@@ -83,7 +83,7 @@ def get_threshold(operation_type: str) -> int:
 
     Examples:
         >>> get_threshold("vectorizable_simple")
-        50000
+        100000
         >>> get_threshold("iterative")
         500000
         >>> get_threshold("unknown")  # Default fallback

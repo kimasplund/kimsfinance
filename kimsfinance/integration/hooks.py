@@ -86,10 +86,23 @@ def unpatch_plotting_functions() -> None:
 
 def _plot_mav_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
     """
-    GPU-accelerated Simple Moving Average plotting.
+    Accelerated Simple Moving Average plotting using Polars.
 
     Replaces: mplfinance.plotting._plot_mav
     Speedup: 1.1-3.3x on CPU
+
+    Implementation Note:
+        This function ALWAYS uses CPU execution (exec_engine="cpu"), even when GPU
+        acceleration is enabled globally. This is an intentional design decision
+        based on benchmark validation:
+
+        - Moving averages are sequential operations with small window sizes (5-20 periods)
+        - CPU vectorized NumPy/Polars is faster than GPU for these small operations
+        - GPU memory transfer overhead exceeds computation time for typical MA calculations
+        - Validated speedup: 1.1-3.3x using CPU Polars vs pandas
+
+        For large-scale batch indicator processing (>1000 charts), consider using
+        the Rust GPU persistent kernels instead, which show 2-4x batch speedup.
     """
     # Get MA parameters
     mavgs = config.get("mav", ())
@@ -138,10 +151,23 @@ def _plot_mav_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
 
 def _plot_ema_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
     """
-    GPU-accelerated Exponential Moving Average plotting.
+    Accelerated Exponential Moving Average plotting using Polars.
 
     Replaces: mplfinance.plotting._plot_ema
     Speedup: 1.1-3.3x on CPU
+
+    Implementation Note:
+        This function ALWAYS uses CPU execution (exec_engine="cpu"), even when GPU
+        acceleration is enabled globally. This is an intentional design decision
+        based on benchmark validation:
+
+        - Exponential moving averages are inherently sequential (each value depends on previous)
+        - CPU vectorized NumPy/Polars is faster than GPU for these small operations
+        - GPU memory transfer overhead exceeds computation time for typical EMA calculations
+        - Validated speedup: 1.1-3.3x using CPU Polars vs pandas
+
+        For large-scale batch indicator processing (>1000 charts), consider using
+        the Rust GPU persistent kernels instead, which show 2-4x batch speedup.
     """
     # Get EMA parameters
     mavgs = config.get("ema", ())

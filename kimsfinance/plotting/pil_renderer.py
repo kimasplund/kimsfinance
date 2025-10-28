@@ -208,6 +208,9 @@ def save_chart(
         - JPEG: High quality (95%) with progressive encoding and optimization. Progressive
                 JPEGs load incrementally in browsers. Use for photographs or when
                 compatibility is critical.
+        - SVG: NOT supported by this function (operates on raster PIL Images). For SVG
+               export (vector graphics), use plot() with format='svg' or render_candlestick_svg()
+               directly. SVG provides resolution-independent graphics ideal for publications.
 
     Args:
         img: The PIL Image to save
@@ -334,8 +337,11 @@ def save_chart(
         # SVG export is handled separately - this path should not be reached
         # when using the proper SVG rendering pipeline
         raise ValueError(
-            "SVG export requires using render_candlestick_svg() directly. "
-            "The save_chart() function with SVG format is not yet implemented for PIL Image conversion."
+            "SVG export is not supported by save_chart() because it operates on PIL Images (raster graphics). "
+            "For SVG export (vector graphics), use one of these approaches:\n"
+            "  1. Use plot() with format='svg': plot(df, 'output.svg', format='svg')\n"
+            "  2. Use render_candlestick_svg() directly: render_candlestick_svg(ohlc, volume, 'output.svg')\n"
+            "SVG provides scalable vector graphics ideal for publications and high-resolution displays."
         )
     else:
         # Fallback for other formats (BMP, TIFF, etc.)

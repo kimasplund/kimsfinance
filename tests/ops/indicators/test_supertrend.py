@@ -18,8 +18,7 @@ Tests cover:
 import numpy as np
 import pytest
 
-from kimsfinance.ops.supertrend import calculate_supertrend
-from kimsfinance.ops.indicators import calculate_atr
+from kimsfinance.ops.indicators import calculate_supertrend, calculate_atr
 
 
 def generate_ohlcv_data(n=100, seed=42):
@@ -36,37 +35,37 @@ def test_basic_calculation():
     """Test basic Supertrend calculation."""
     highs, lows, closes, _ = generate_ohlcv_data(n=50)
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     # Check output shape
     assert len(supertrend) == len(highs), "Supertrend length should match input length"
-    assert len(direction) == len(highs), "Direction length should match input length"
+    assert len(signal) == len(highs), "Signal length should match input length"
 
     # Check types
     assert isinstance(supertrend, np.ndarray), "Supertrend should be numpy array"
-    assert isinstance(direction, np.ndarray), "Direction should be numpy array"
+    assert isinstance(signal, np.ndarray), "Signal should be numpy array"
 
-    # First 'period' values should be NaN
+    # First 'atr_period' values should be NaN/0
     assert np.all(np.isnan(supertrend[:10])), "First 10 values should be NaN (ATR warmup)"
-    assert np.all(np.isnan(direction[:10])), "First 10 direction values should be NaN"
+    assert np.all(signal[:10] == 0), "First 10 signal values should be 0"
 
     # Remaining values should not be NaN
     assert not np.all(np.isnan(supertrend[10:])), "Should have valid values after warmup"
-    assert not np.all(np.isnan(direction[10:])), "Should have valid direction after warmup"
+    assert not np.all(signal[10:] == 0), "Should have valid signal after warmup"
 
 
 def test_trend_direction():
     """Test that trend direction is 1 or -1."""
     highs, lows, closes, _ = generate_ohlcv_data(n=50)
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
-    # Check direction values (excluding NaN)
-    valid_direction = direction[~np.isnan(direction)]
-    assert np.all(np.isin(valid_direction, [1, -1])), "Direction should be 1 (up) or -1 (down)"
+    # Check signal values (excluding 0s which are warmup period)
+    valid_signal = signal[signal != 0]
+    assert np.all(np.isin(valid_signal, [1, -1])), "Signal should be 1 (up) or -1 (down)"
 
-    # Check that we have at least some valid direction values
-    assert len(valid_direction) > 0, "Should have valid direction values"
+    # Check that we have at least some valid signal values
+    assert len(valid_signal) > 0, "Should have valid signal values"
 
 
 def test_atr_bands():
@@ -75,12 +74,12 @@ def test_atr_bands():
     period = 10
     multiplier = 3.0
 
-    supertrend, direction = calculate_supertrend(
-        highs, lows, closes, period=period, multiplier=multiplier
+    supertrend, signal = calculate_supertrend(
+        highs, lows, closes, atr_period=period, multiplier=multiplier
     )
 
     # Calculate ATR independently
-    atr = calculate_atr(highs, lows, closes, period=period)
+    atr = calculate_atr(highs, lows, closes, period=period, engine="cpu")
 
     # Calculate median price
     hl_avg = (highs + lows) / 2.0
@@ -111,12 +110,12 @@ def test_state_tracking():
     highs = closes + 0.5
     lows = closes - 0.5
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     # In strong uptrend, direction should stabilize to 1
     # Check last 50 values (after initial warmup and stabilization)
-    late_direction = direction[-50:]
-    uptrend_ratio = np.sum(late_direction == 1) / len(late_direction)
+    late_signal = signal[-50:]
+    uptrend_ratio = np.sum(late_signal == 1) / len(late_signal)
 
     # Should be predominantly uptrend in strong uptrend scenario
     assert uptrend_ratio > 0.7, "Should maintain uptrend in strong upward movement"
@@ -136,18 +135,18 @@ def test_trend_reversals():
     highs = closes + 0.5
     lows = closes - 0.5
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=2.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=2.0)
 
     # Check for direction changes
-    valid_direction = direction[~np.isnan(direction)]
-    direction_changes = np.diff(valid_direction) != 0
+    valid_signal = signal[~np.isnan(signal)]
+    signal_changes = np.diff(valid_signal) != 0
 
     # Should have at least one direction change
-    assert np.sum(direction_changes) >= 1, "Should detect trend reversal"
+    assert np.sum(signal_changes) >= 1, "Should detect trend reversal"
 
     # Check that both uptrend and downtrend exist
-    has_uptrend = np.any(valid_direction == 1)
-    has_downtrend = np.any(valid_direction == -1)
+    has_uptrend = np.any(valid_signal == 1)
+    has_downtrend = np.any(valid_signal == -1)
 
     assert has_uptrend, "Should have uptrend periods"
     assert has_downtrend, "Should have downtrend periods"
@@ -162,16 +161,16 @@ def test_different_multipliers():
     results = []
 
     for mult in multipliers:
-        supertrend, direction = calculate_supertrend(
-            highs, lows, closes, period=10, multiplier=mult
+        supertrend, signal = calculate_supertrend(
+            highs, lows, closes, atr_period=10, multiplier=mult
         )
-        results.append((supertrend, direction))
+        results.append((supertrend, signal))
 
     # Higher multiplier should result in wider bands
     # Check that supertrend values differ with different multipliers
-    st_2, dir_2 = results[0]  # multiplier 2.0
-    st_3, dir_3 = results[1]  # multiplier 3.0
-    st_4, dir_4 = results[2]  # multiplier 4.0
+    st_2, sig_2 = results[0]  # multiplier 2.0
+    st_3, sig_3 = results[1]  # multiplier 3.0
+    st_4, sig_4 = results[2]  # multiplier 4.0
 
     # Supertrend values should be different
     valid_idx = ~np.isnan(st_2) & ~np.isnan(st_3) & ~np.isnan(st_4)
@@ -185,8 +184,8 @@ def test_different_multipliers():
     ), "Different multipliers should produce different Supertrend values"
 
     # Lower multiplier (more sensitive) may have more direction changes
-    changes_2 = np.sum(np.abs(np.diff(dir_2[~np.isnan(dir_2)])))
-    changes_4 = np.sum(np.abs(np.diff(dir_4[~np.isnan(dir_4)])))
+    changes_2 = np.sum(np.abs(np.diff(sig_2[~np.isnan(sig_2)])))
+    changes_4 = np.sum(np.abs(np.diff(sig_4[~np.isnan(sig_4)])))
 
     # This is probabilistic, but generally lower multiplier = more sensitivity
     # We'll just check that we got valid calculations
@@ -198,12 +197,12 @@ def test_supertrend_as_support_resistance():
     """Test that Supertrend acts as support in uptrend and resistance in downtrend."""
     highs, lows, closes, _ = generate_ohlcv_data(n=100)
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     valid_idx = ~np.isnan(supertrend)
 
-    # In uptrend (direction = 1), close should generally be above supertrend
-    uptrend_idx = valid_idx & (direction == 1)
+    # In uptrend (signal = 1), close should generally be above supertrend
+    uptrend_idx = valid_idx & (signal == 1)
     if np.any(uptrend_idx):
         uptrend_above = closes[uptrend_idx] >= supertrend[uptrend_idx]
         # Most closes should be above supertrend in uptrend
@@ -211,8 +210,8 @@ def test_supertrend_as_support_resistance():
             np.mean(uptrend_above) > 0.5
         ), "In uptrend, price should generally be above Supertrend"
 
-    # In downtrend (direction = -1), close should generally be below supertrend
-    downtrend_idx = valid_idx & (direction == -1)
+    # In downtrend (signal = -1), close should generally be below supertrend
+    downtrend_idx = valid_idx & (signal == -1)
     if np.any(downtrend_idx):
         downtrend_below = closes[downtrend_idx] <= supertrend[downtrend_idx]
         # Most closes should be below supertrend in downtrend
@@ -230,17 +229,17 @@ def test_edge_cases():
         [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111], dtype=np.float64
     )
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     assert len(supertrend) == 12, "Should handle minimal data"
-    assert len(direction) == 12, "Should handle minimal data"
+    assert len(signal) == 12, "Should handle minimal data"
 
     # Constant price
     highs = np.full(50, 101.0)
     lows = np.full(50, 99.0)
     closes = np.full(50, 100.0)
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     # Should not raise errors with constant price
     assert len(supertrend) == 50, "Should handle constant price"
@@ -257,40 +256,38 @@ def test_input_validation():
         calculate_supertrend(highs[:10], lows, closes)
 
     # Insufficient data
-    with pytest.raises(ValueError, match="must be >= period"):
-        calculate_supertrend(highs[:5], lows[:5], closes[:5], period=10)
+    with pytest.raises(ValueError, match="Insufficient data"):
+        calculate_supertrend(highs[:5], lows[:5], closes[:5], atr_period=10)
 
-    # Invalid period
-    with pytest.raises(ValueError, match="period must be >= 1"):
-        calculate_supertrend(highs, lows, closes, period=0)
+    # Invalid atr_period
+    with pytest.raises(ValueError, match="atr_period must be >= 1"):
+        calculate_supertrend(highs, lows, closes, atr_period=0)
 
     # Invalid multiplier
-    with pytest.raises(ValueError, match="multiplier must be > 0"):
-        calculate_supertrend(highs, lows, closes, period=10, multiplier=0)
-
-    with pytest.raises(ValueError, match="multiplier must be > 0"):
-        calculate_supertrend(highs, lows, closes, period=10, multiplier=-1.0)
+    with pytest.raises(ValueError, match="multiplier must be >= 0"):
+        calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=-1.0)
 
 
 def test_return_types():
     """Test that return types are correct."""
     highs, lows, closes, _ = generate_ohlcv_data(n=50)
 
-    result = calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0)
+    result = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=3.0)
 
     # Should return tuple
     assert isinstance(result, tuple), "Should return tuple"
     assert len(result) == 2, "Should return 2 values"
 
-    supertrend, direction = result
+    supertrend, signal = result
 
     # Check types
     assert isinstance(supertrend, np.ndarray), "Supertrend should be numpy array"
-    assert isinstance(direction, np.ndarray), "Direction should be numpy array"
+    assert isinstance(signal, np.ndarray), "Signal should be numpy array"
 
     # Check dtypes
     assert supertrend.dtype == np.float64, "Supertrend should be float64"
-    assert direction.dtype == np.float64, "Direction should be float64"
+    # Signal dtype should be int8 or similar integer type
+    assert np.issubdtype(signal.dtype, np.integer), "Signal should be integer type"
 
 
 def test_performance():
@@ -309,8 +306,8 @@ def test_performance():
 
         # Time CPU execution
         start = time.time()
-        supertrend, direction = calculate_supertrend(
-            highs, lows, closes, period=10, multiplier=3.0, engine="cpu"
+        supertrend, signal = calculate_supertrend(
+            highs, lows, closes, atr_period=10, multiplier=3.0, engine="cpu"
         )
         cpu_time = time.time() - start
 
@@ -347,10 +344,10 @@ def test_comparison_with_different_periods():
     results = []
 
     for period in periods:
-        supertrend, direction = calculate_supertrend(
-            highs, lows, closes, period=period, multiplier=3.0
+        supertrend, signal = calculate_supertrend(
+            highs, lows, closes, atr_period=period, multiplier=3.0
         )
-        results.append((supertrend, direction, period))
+        results.append((supertrend, signal, period))
 
     # Shorter period should have more direction changes (more sensitive)
     # Longer period should be smoother
@@ -378,17 +375,17 @@ def test_signal_generation():
     highs = closes + 0.5
     lows = closes - 0.5
 
-    supertrend, direction = calculate_supertrend(highs, lows, closes, period=10, multiplier=2.0)
+    supertrend, signal = calculate_supertrend(highs, lows, closes, atr_period=10, multiplier=2.0)
 
     # Generate signals
-    valid_idx = ~np.isnan(direction)
-    direction_changes = np.diff(direction[valid_idx])
+    valid_idx = ~np.isnan(signal)
+    signal_changes = np.diff(signal[valid_idx])
 
     # Buy signal: direction changes from -1 to 1 (change = +2)
-    buy_signals = direction_changes == 2
+    buy_signals = signal_changes == 2
 
     # Sell signal: direction changes from 1 to -1 (change = -2)
-    sell_signals = direction_changes == -2
+    sell_signals = signal_changes == -2
 
     # Should have at least one signal in this trending data
     total_signals = np.sum(buy_signals) + np.sum(sell_signals)

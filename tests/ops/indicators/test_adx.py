@@ -19,7 +19,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from kimsfinance.ops.adx import calculate_adx
+from kimsfinance.ops import calculate_adx
 
 
 def generate_ohlc_data(n=100, seed=42):

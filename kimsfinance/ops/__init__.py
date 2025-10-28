@@ -79,7 +79,7 @@ from .indicators import (
 )
 
 from .ichimoku import calculate_ichimoku
-from .adx import calculate_adx
+from .indicators.adx import calculate_adx
 from .mfi import calculate_mfi
 from .supertrend import calculate_supertrend
 from .atr import calculate_atr as calculate_atr_standalone

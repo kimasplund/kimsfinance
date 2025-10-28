@@ -529,16 +529,16 @@ kf.plot(df, enable_antialiasing=False, savefig='fast.webp')
 
 ## Technical Indicators
 
-kimsfinance provides **32 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection.
+kimsfinance provides **28 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection. Of these, 24 have Rust implementations for 3-8x speedup.
 
 ### Indicator Categories
 
 1. **Moving Averages** (7 indicators)
 2. **Momentum Oscillators** (8 indicators)
 3. **Volatility** (4 indicators)
-4. **Volume** (5 indicators)
-5. **Trend** (5 indicators)
-6. **Support/Resistance** (3 indicators)
+4. **Volume** (4 indicators)
+5. **Trend/Support/Resistance** (4 indicators)
+6. **Advanced** (1 indicator - HMA)
 
 ---
 
@@ -986,8 +986,11 @@ kimsfinance.calculate_cmf(
 
 ---
 
-#### `calculate_mfi()` - Money Flow Index
+#### `calculate_mfi()` - Money Flow Index *(Planned for v0.2.0)*
 
+**Status:** Not yet implemented. Planned for v0.2.0 release.
+
+**Planned API:**
 ```python
 kimsfinance.calculate_mfi(
     highs,
@@ -1006,8 +1009,11 @@ kimsfinance.calculate_mfi(
 
 ### Trend Indicators
 
-#### `calculate_adx()` - Average Directional Index
+#### `calculate_adx()` - Average Directional Index *(Planned for v0.2.0)*
 
+**Status:** Not yet implemented. Planned for v0.2.0 release.
+
+**Planned API:**
 ```python
 kimsfinance.calculate_adx(
     highs,
@@ -1023,8 +1029,11 @@ kimsfinance.calculate_adx(
 
 ---
 
-#### `calculate_ichimoku()` - Ichimoku Cloud
+#### `calculate_ichimoku()` - Ichimoku Cloud *(Planned for v0.2.0)*
 
+**Status:** Not yet implemented. Planned for v0.2.0 release.
+
+**Planned API:**
 ```python
 kimsfinance.calculate_ichimoku(
     highs,
@@ -1043,8 +1052,11 @@ kimsfinance.calculate_ichimoku(
 
 ---
 
-#### `calculate_supertrend()` - SuperTrend
+#### `calculate_supertrend()` - SuperTrend *(Planned for v0.2.0)*
 
+**Status:** Not yet implemented. Planned for v0.2.0 release.
+
+**Planned API:**
 ```python
 kimsfinance.calculate_supertrend(
     highs,
@@ -1315,6 +1327,296 @@ print(f"Rendered {len(results)} charts")
 **Example Performance:**
 - 1000 charts on 24-core CPU: ~21 seconds (6,000+ charts/minute)
 - Sequential: ~160 seconds for same workload
+
+---
+
+## Backtesting & Optimization
+
+### `batch_backtest()`
+
+Run GPU-accelerated batch backtesting for multiple parameter sets. Delivers 20-40x speedup vs sequential CPU execution.
+
+```python
+from kimsfinance.batch import batch_backtest, BacktestConfig
+
+results = batch_backtest(
+    strategy='rsi_crossover',
+    data=df,  # pandas DataFrame with OHLCV columns
+    parameters=[
+        {'period': 14, 'buy_threshold': 30, 'sell_threshold': 70},
+        {'period': 20, 'buy_threshold': 25, 'sell_threshold': 75},
+        # ... more parameter sets
+    ],
+    config=BacktestConfig(
+        initial_capital=10000.0,
+        trading_fee=0.001,
+        slippage=0.0001
+    )
+)
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `strategy` | str | Required | Strategy name: `'rsi_crossover'`, `'ma_crossover'`, `'bollinger'` |
+| `data` | DataFrame | Required | OHLCV DataFrame with columns: `'open'`, `'high'`, `'low'`, `'close'`, `'volume'` |
+| `parameters` | list[dict] | Required | List of parameter dicts. Format depends on strategy |
+| `config` | BacktestConfig | `None` | Backtest configuration (uses defaults if None) |
+| `timestamps_col` | str | `'timestamp'` | Column name for timestamps (auto-generated if not found) |
+
+#### Strategy Parameters
+
+**RSI Crossover** (`'rsi_crossover'`):
+```python
+{'period': 14, 'buy_threshold': 30, 'sell_threshold': 70}
+```
+
+**Moving Average Crossover** (`'ma_crossover'`):
+```python
+{'fast_period': 10, 'slow_period': 50}
+```
+
+**Bollinger Bands** (`'bollinger'`):
+```python
+{'period': 20, 'std_dev': 2.0, 'entry_std': 1.5, 'exit_std': 0.5}
+```
+
+#### Returns
+
+List of result dicts, sorted by fitness (best first). Each dict contains:
+
+- `sharpe_ratio`: Sharpe ratio (annualized)
+- `max_drawdown`: Maximum drawdown (negative percentage)
+- `win_rate`: Win rate [0, 1]
+- `total_return`: Total return (percentage)
+- `final_equity`: Final portfolio value
+- `num_trades`: Number of trades executed
+- `profit_factor`: Gross profit / gross loss
+- `params`: Original parameter dict
+
+#### Performance
+
+- **1000 strategies × 10K candles**: <250ms (RTX 3500 Ada)
+- **Speedup**: 20-40x vs sequential CPU
+- **VRAM usage**: <1GB for 1000 strategies
+
+#### Example
+
+```python
+import pandas as pd
+from kimsfinance.batch import batch_backtest
+
+# Load data
+data = pd.read_csv('BTC-USD.csv')
+
+# Define 90 parameter sets
+params = [
+    {'period': p, 'buy_threshold': b, 'sell_threshold': s}
+    for p in range(10, 20)
+    for b in [25, 30, 35]
+    for s in [65, 70, 75]
+]
+
+# Run batch backtest (all 90 at once on GPU!)
+results = batch_backtest('rsi_crossover', data, params)
+
+# Find best Sharpe
+best = max(results, key=lambda r: r['sharpe_ratio'])
+print(f"Best Sharpe: {best['sharpe_ratio']:.2f}")
+print(f"Parameters: {best['params']}")
+```
+
+---
+
+### `get_gpu_info()`
+
+Get GPU availability and performance information.
+
+```python
+from kimsfinance.batch import get_gpu_info
+
+info = get_gpu_info()
+print(f"GPU Available: {info['gpu_available']}")
+print(f"GPU Name: {info.get('gpu_name', 'N/A')}")
+print(f"Expected Speedup: {info['expected_speedup']:.0f}x")
+```
+
+#### Returns
+
+Dictionary with keys:
+- `gpu_available`: bool
+- `gpu_name`: str (if available)
+- `cuda_version`: str (if available)
+- `vram_gb`: int (if available)
+- `expected_speedup`: float (30.0 for GPU, 1.0 for CPU)
+- `error`: str (if GPU unavailable)
+
+---
+
+### `GeneticOptimizer`
+
+GPU-accelerated genetic algorithm for strategy optimization. Delivers 20-40x speedup using batch GPU backtesting.
+
+```python
+from kimsfinance.optimization.genetic import GeneticOptimizer
+
+optimizer = GeneticOptimizer(
+    param_space={
+        'period': (5, 30, int),           # (min, max, type)
+        'buy_threshold': (20, 40, float),
+        'sell_threshold': (60, 80, float),
+    },
+    population_size=100,
+    generations=50,
+    objectives=['sharpe', 'max_drawdown', 'win_rate'],
+    mutation_rate=0.2,
+    crossover_rate=0.8
+)
+
+results = optimizer.optimize(
+    strategy='rsi_crossover',
+    data=df,
+    use_gpu=True,
+    verbose=True
+)
+
+# Get best solution
+best = results[0]
+print(f"Best parameters: {best['params']}")
+print(f"Sharpe: {best['sharpe']:.2f}")
+```
+
+#### Constructor Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `param_space` | dict | Required | Parameter ranges: `{name: (min, max, type)}` |
+| `population_size` | int | `100` | Number of individuals per generation |
+| `generations` | int | `50` | Number of generations to evolve |
+| `objectives` | list[str] | `['sharpe']` | Optimization objectives: `'sharpe'`, `'max_drawdown'`, `'win_rate'`, `'total_return'` |
+| `n_islands` | int | `1` | Number of parallel evolution islands (4+ recommended for multi-objective) |
+| `mutation_rate` | float | `0.2` | Mutation probability per gene |
+| `crossover_rate` | float | `0.8` | Crossover probability per individual |
+| `elite_fraction` | float | `0.1` | Fraction of population to preserve as elites |
+
+#### `optimize()` Method
+
+```python
+results = optimizer.optimize(
+    strategy='rsi_crossover',
+    data=df,
+    use_gpu=True,
+    verbose=True
+)
+```
+
+**Parameters:**
+- `strategy` (str): Strategy name
+- `data` (DataFrame): OHLCV data
+- `use_gpu` (bool): Use GPU acceleration (default: `True`)
+- `verbose` (bool): Show progress (default: `False`)
+
+**Returns:** List of Pareto-optimal solutions, sorted by primary objective
+
+**Performance:**
+- **5000 strategies (100×50)**: ~10-20s on GPU (vs 200-500s on CPU)
+- **Speedup**: 20-40x with GPU batch backtesting
+- **Memory**: <2GB VRAM for typical workloads
+
+#### Example
+
+```python
+from kimsfinance.optimization.genetic import GeneticOptimizer
+import pandas as pd
+
+# Load data
+data = pd.read_csv('BTC-USD.csv')
+
+# Define parameter space
+param_space = {
+    'period': (5, 30, int),
+    'buy_threshold': (20, 40, float),
+    'sell_threshold': (60, 80, float),
+}
+
+# Create optimizer
+optimizer = GeneticOptimizer(
+    param_space=param_space,
+    population_size=100,
+    generations=50,
+    objectives=['sharpe', 'max_drawdown', 'win_rate']
+)
+
+# Run optimization
+results = optimizer.optimize(
+    strategy='rsi_crossover',
+    data=data,
+    use_gpu=True,
+    verbose=True
+)
+
+# Display top 5 solutions
+for i, sol in enumerate(results[:5]):
+    print(f"{i+1}. Sharpe={sol['sharpe']:.2f}, "
+          f"DD={sol['max_drawdown']:.2%}, "
+          f"WR={sol['win_rate']:.1%}")
+    print(f"   Params: {sol['params']}")
+```
+
+---
+
+### `kimsfinance.batch` Module
+
+The `kimsfinance.batch` module provides high-level Python API for GPU-accelerated batch backtesting.
+
+#### Module Contents
+
+**Functions:**
+- `batch_backtest()` - Run batch backtest on GPU
+- `get_gpu_info()` - Check GPU availability
+- `find_best_parameters()` - Exhaustive grid search
+
+**Classes:**
+- `BacktestConfig` - Backtest configuration dataclass
+
+**Constants:**
+- `GPU_AVAILABLE` - Boolean indicating if GPU feature is compiled
+
+#### Usage
+
+```python
+from kimsfinance.batch import (
+    batch_backtest,
+    get_gpu_info,
+    find_best_parameters,
+    BacktestConfig,
+    GPU_AVAILABLE
+)
+
+# Check GPU
+if GPU_AVAILABLE:
+    info = get_gpu_info()
+    print(f"GPU: {info.get('gpu_name', 'Unknown')}")
+
+# Run batch backtest
+results = batch_backtest(
+    strategy='rsi_crossover',
+    data=df,
+    parameters=[...]
+)
+
+# Or use grid search helper
+result = find_best_parameters(
+    strategy='rsi_crossover',
+    data=df,
+    parameter_ranges={
+        'period': [10, 14, 20],
+        'buy_threshold': [25, 30, 35],
+        'sell_threshold': [65, 70, 75]
+    }
+)
+```
 
 ---
 
