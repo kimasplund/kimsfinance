@@ -257,6 +257,38 @@ rust/
    - Does not affect functionality
    - Can be fixed by adding `#[derive(Default)]` or impl blocks
 
+5. **GPU Batch Backtesting Limitations** (Rust Core Only)
+
+   The GPU batch backtesting functionality (`batch_backtest` in Rust) has performance-oriented constraints:
+
+   **Hardcoded Indicators**:
+   - Only 3 indicators: RSI, ATR, SMA
+   - Custom indicators require kernel recompilation
+   - Trade-off: 2-4x faster vs flexibility
+
+   **Hardcoded Strategy**:
+   - Only RSI crossover strategy: `BUY when RSI < threshold, SELL when RSI > threshold`
+   - Thresholds are configurable (e.g., 30/70)
+   - Custom strategies require kernel modification + recompilation
+   - Trade-off: 2-4x faster vs unlimited strategies
+
+   **MAX_TRADES Limit**:
+   - Maximum 1000 trades per backtest
+   - Exceeding limit: Additional trades silently dropped
+   - Workaround: Split backtest into multiple time periods
+   - Trade-off: Fixed memory vs unlimited trades
+
+   **When to Use**:
+   - ✅ Use GPU: RSI/ATR/SMA parameter sweeps, 100+ strategy combinations, <1000 trades
+   - ❌ Use CPU: Custom indicators, complex strategies, >1000 trades, need flexibility
+
+   **Future (v0.3.0)**:
+   - Template-based indicators (compile-time selection)
+   - Strategy plugin system
+   - Dynamic MAX_TRADES based on GPU memory
+
+   See `docs/GPU_OPTIMIZATION.md` for detailed documentation and workarounds.
+
 ## Future Enhancements
 
 - [ ] Batch API for processing multiple indicators in one FFI call

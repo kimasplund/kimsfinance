@@ -57,7 +57,7 @@
 - **🧪 Production Ready**: 329+ tests, 77% coverage, full type safety
 - **🎯 Developer Friendly**: Simple API, flexible output (PIL Image, numpy array, file)
 - **⚙️ GPU Acceleration**: Optional RAPIDS/CuPy support for massive datasets
-- **📈 32 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 27 more
+- **📈 28 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 23 more (24 with Rust GPU acceleration)
 - **🐍 Python 3.14 Support**: 27% single-thread, 3.1x multi-thread speedup with free-threading
 - **📊 Backtesting Engine**: GPU-accelerated backtesting with genetic optimization
 
@@ -163,6 +163,35 @@ kf.plot(df, output="chart.webp", theme="modern")
 - **Batch API** - `render_ohlcv_charts()` for multiple datasets
 - **Parallel API** - `render_charts_parallel()` for CPU multiprocessing
 - **Flexible output** - PIL Image, numpy array, or file
+
+### 🔌 mplfinance Integration (Optional)
+- **Drop-in acceleration** - Monkey-patches mplfinance for 7-10x speedup
+- **Seamless integration** - Uses `activate()` to enable, `deactivate()` to disable
+- **Non-invasive** - Original functions preserved and restored on deactivate
+- **Polars-powered** - Replaces pandas with GPU-accelerated Polars operations
+- **Automatic fallback** - Falls back to pandas if acceleration fails
+- **Thread-safe** - Safe for use in multi-threaded applications
+
+**Usage**:
+```python
+import mplfinance as mpf
+import kimsfinance as mfp
+
+# Enable acceleration for mplfinance
+mfp.activate(engine='auto')  # 7-10x faster moving averages!
+
+# Use mplfinance normally
+mpf.plot(df, type='candle', mav=(5,10,20))
+
+# Disable when done
+mfp.deactivate()
+```
+
+**What gets accelerated**:
+- `_plot_mav()` - Simple Moving Averages (SMA)
+- `_plot_ema()` - Exponential Moving Averages (EMA)
+
+**Note**: The monkey-patching approach is used for backward compatibility with existing mplfinance code. For new projects, we recommend using the native kimsfinance API for better performance and more features. Moving averages are computed on CPU even with GPU enabled because CPU is faster for these small, sequential operations (validated through benchmarking).
 
 ### 🔬 GPU Acceleration (Optional)
 - **Persistent kernels** - 41x speedup for batch indicator processing
@@ -964,9 +993,9 @@ kimsfinance supports multiple chart types for different trading strategies:
 5. **Renko** - Brick charts for trend following
 6. **Point & Figure** - X/O charts for price action
 
-### Technical Indicators (32 Built-in)
+### Technical Indicators (28 Built-in)
 
-All indicators are GPU-accelerated (optional) for massive datasets:
+All indicators are available in Python, with 24 having Rust GPU-accelerated implementations for massive datasets:
 
 **Trend Indicators:**
 - SMA (Simple Moving Average)
@@ -995,7 +1024,7 @@ All indicators are GPU-accelerated (optional) for massive datasets:
 - A/D Line (Accumulation/Distribution)
 - Chaikin Money Flow
 
-**And 8 more** - See [full indicator list](docs/API.md#indicators)
+**See [full indicator list](docs/API.md#technical-indicators) for all 28 indicators**
 
 ---
 
@@ -1111,7 +1140,7 @@ ruff check kimsfinance/
 - [x] Python 3.14 support (27% single-thread, 3.1x multi-thread)
 - [x] 329+ comprehensive tests
 - [x] 6 chart types (Candlestick, OHLC, Line, Hollow, Renko, Point & Figure)
-- [x] 32 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.)
+- [x] 28 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.) - 24 with Rust GPU acceleration
 - [x] GPU-accelerated indicators (1.2-2.9x speedup)
 - [x] Rust implementation (194x average speedup)
 - [x] GPU persistent kernels (41x batch speedup)

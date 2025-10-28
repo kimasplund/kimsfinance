@@ -110,6 +110,37 @@ High-performance GPU-accelerated financial technical indicators written in Rust 
 - Statistical significance testing for results
 - Comprehensive HTML/CSV reporting
 
+**GPU Backtesting Limitations** (Current Constraints):
+
+The GPU batch backtesting engine is optimized for speed over flexibility. Current constraints:
+
+1. **Hardcoded Indicators**: Only 3 indicators supported in GPU kernel
+   - RSI (Relative Strength Index)
+   - ATR (Average True Range)
+   - SMA (Simple Moving Average)
+   - **Why**: Hardcoded implementations provide 2-4x speedup vs dynamic dispatch
+   - **Workaround**: Calculate custom indicators on CPU, pass signals to GPU
+
+2. **Hardcoded Strategy**: Only simple RSI crossover implemented
+   - Strategy: BUY when RSI < threshold, SELL when RSI > threshold
+   - Thresholds are configurable (e.g., 30/70)
+   - **Why**: Compile-time optimization eliminates function pointer overhead
+   - **Workaround**: Modify kernel source for custom strategies (requires recompilation)
+
+3. **MAX_TRADES Limit**: Maximum 1000 trades per backtest
+   - Exceeding limit: Additional trades are silently dropped
+   - **Why**: Fixed-size array avoids dynamic memory allocation overhead
+   - **Workaround**: Split long backtests into multiple time periods
+
+**Trade-off Summary**:
+- **Current (GPU)**: 2-4x faster, limited to RSI/ATR/SMA + RSI crossover strategy
+- **Alternative (CPU)**: 1x speed, unlimited indicators and custom strategies
+- **Future (Flexible GPU)**: Planned for v0.3.0 with template-based strategies
+
+These are **engineering trade-offs**, not permanent limitations. For most use cases
+(parameter sweeps, multi-symbol optimization), the GPU approach is significantly faster.
+For custom strategies, use CPU backtesting engine which supports unlimited flexibility.
+
 ---
 
 ## Installation

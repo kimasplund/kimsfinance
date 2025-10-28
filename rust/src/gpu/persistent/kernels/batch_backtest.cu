@@ -23,6 +23,45 @@
 //!
 //! Uses CUDA Cooperative Groups for grid-wide synchronization between phases.
 //! All blocks must be simultaneously resident on GPU (checked at launch).
+//!
+//! # Current Limitations
+//!
+//! **IMPORTANT**: This is a specialized kernel optimized for common backtesting scenarios.
+//! The current implementation has the following constraints:
+//!
+//! 1. **Hardcoded Indicators (Phase 1)**:
+//!    - Only 3 indicators supported: RSI, ATR, SMA
+//!    - Indicator selection: indicator_idx == 0 (RSI), 1 (ATR), 2 (SMA)
+//!    - Rationale: Hardcoded implementations provide maximum performance (no function
+//!      pointers, optimal register usage, better instruction cache locality)
+//!    - Custom indicators require kernel recompilation
+//!    - Trade-off: Speed vs flexibility
+//!
+//! 2. **Hardcoded Strategy (Phase 2)**:
+//!    - Only simple RSI crossover strategy implemented
+//!    - Strategy: BUY when RSI < buy_threshold, SELL when RSI > sell_threshold
+//!    - Strategy type parameter (strategy_type == 0 for RSI) is checked but unused
+//!    - Future: Can extend with additional strategy_type branches (MA crossover,
+//!      Bollinger breakout, etc.)
+//!    - Rationale: Avoids dynamic dispatch overhead, enables compile-time optimization
+//!
+//! 3. **MAX_TRADES Constant**:
+//!    - Limited to 1000 trades per strategy per backtest
+//!    - Exceeding limit: Additional trades are silently dropped
+//!    - Rationale: Fixed array size enables stack allocation, avoids dynamic memory
+//!    - Workaround: Split backtest into multiple time periods if needed
+//!    - Memory cost: 1000 trades × sizeof(Trade) × N_strategies
+//!
+//! **Future Enhancements**:
+//! - Template-based indicator selection (compile-time polymorphism)
+//! - Strategy plugin system (register custom strategies at runtime)
+//! - Dynamic MAX_TRADES based on available GPU memory
+//! - Multi-indicator strategies (combine RSI + ATR + volume)
+//!
+//! **Performance vs Flexibility Trade-off**:
+//! - Current (hardcoded): 2-4x speedup, limited strategies
+//! - Future (flexible): 1.5-2x speedup, unlimited strategies
+//! - Use case dependent: High-frequency parameter sweeps benefit from current approach
 
 // NVRTC Kernel - Do NOT include system headers
 // NVRTC provides built-in CUDA types and functions

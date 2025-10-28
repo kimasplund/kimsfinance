@@ -148,6 +148,12 @@ from .integration import (
 from .api import (
     plot,
     make_addplot,
+    plot_with_indicators,
+)
+
+# Batch Operations
+from .ops.batch import (
+    calculate_indicators_batch,
 )
 
 
@@ -345,6 +351,9 @@ __all__ = [
     # Standalone API
     "plot",
     "make_addplot",
+    "plot_with_indicators",
+    # Batch Operations
+    "calculate_indicators_batch",
 ]
 
 
@@ -419,3 +428,15 @@ if not (_deps["cupy"] and _deps["cudf"]):
         "  pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x",
         UserWarning,
     )
+
+# ============================================================================
+# Note on Rust Core Integration
+# ============================================================================
+# The kimsfinance package provides Python-native implementations of indicators
+# and plotting functions. For high-performance backtesting and Rust-accelerated
+# functionality, use the kimsfinance_core package:
+#
+#   from kimsfinance_core import run_backtest, batch_backtest
+#
+# The Rust core is optional and provides 10-50x speedups for backtesting
+# operations. See rust/README.md for installation instructions.
