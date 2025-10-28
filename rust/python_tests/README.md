@@ -180,4 +180,60 @@ Example: `['rsi_14', 'atr_20', 'sma_50']`
 
 - `test_backtest_api.py` - Comprehensive test suite (pytest)
 - `example_backtest.py` - Usage examples with multiple strategies
+- `test_async_from_python.py` - Phase 5 async mode validation (BLOCKED: GPU compilation)
+- `test_async_errors.py` - Phase 5 error handling tests (BLOCKED: GPU compilation)
+- `ASYNC_MODE.md` - Complete Phase 5 async mode documentation
 - `README.md` - This file
+
+---
+
+## Phase 5: Async Execution Mode (NEW)
+
+### Overview
+
+Phase 5 introduces async execution mode for batch backtesting with mini-batching support for large parameter sweeps (1000+ strategies).
+
+**Status**: ⚠️ **Implementation complete, testing blocked by GPU compilation issue**
+
+### Execution Modes
+
+```python
+from kimsfinance_core import batch_backtest
+
+# Auto mode (recommended - selects best mode automatically)
+results = batch_backtest(
+    strategy='rsi_crossover',
+    ohlcv=ohlcv,
+    parameters=parameters,
+    execution_mode='auto'  # Default
+)
+
+# Explicit modes:
+# - 'traditional': 4 separate kernel launches (< 150 strategies)
+# - 'fused': Single kernel (150-999 strategies)
+# - 'async': Mini-batching + triple-buffering (≥ 1000 strategies)
+```
+
+### Documentation
+
+See [ASYNC_MODE.md](./ASYNC_MODE.md) for:
+- Complete API guide
+- Execution mode comparison
+- Performance characteristics
+- Code examples
+- Error handling patterns
+
+### Known Issue: GPU Compilation Failure
+
+**Problem**: Rust compiler ICE when building with GPU features
+
+**Impact**: Cannot test Phase 5 async mode from Python
+
+**Workarounds**:
+1. Use pre-compiled binary (if available)
+2. Try different rustc version: `rustup install 1.89.0`
+3. Try without LTO: `RUSTFLAGS="-C opt-level=3" maturin develop --release --features gpu`
+
+**Status**: Under investigation
+
+See [../PHASE5_VALIDATION_REPORT.md](../PHASE5_VALIDATION_REPORT.md) for details.

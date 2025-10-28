@@ -7,10 +7,8 @@
 
 #[cfg(feature = "gpu")]
 mod fused_kernel_tests {
-    use kimsfinance_core::backtest::{
-        BatchBacktestSweep, ExecutionMode, StrategyType,
-    };
     use kimsfinance_core::backtest::engine::BacktestConfig;
+    use kimsfinance_core::backtest::{BatchBacktestSweep, ExecutionMode, StrategyType};
     use kimsfinance_core::gpu::device::GpuDevice;
     use ndarray::Array1;
     use std::sync::Arc;
@@ -19,7 +17,14 @@ mod fused_kernel_tests {
     /// Generate synthetic OHLCV data for testing
     fn generate_ohlcv_data(
         n_candles: usize,
-    ) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+    ) -> (
+        Vec<i64>,
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+        Array1<f64>,
+    ) {
         let mut close_data = vec![100.0];
         for i in 1..n_candles {
             let delta = (i as f64 * 0.1).sin() * 2.0;
@@ -47,7 +52,11 @@ mod fused_kernel_tests {
                     if count >= n_strategies {
                         break 'outer;
                     }
-                    params.push(vec![rsi_period as f64, buy_thresh as f64, sell_thresh as f64]);
+                    params.push(vec![
+                        rsi_period as f64,
+                        buy_thresh as f64,
+                        sell_thresh as f64,
+                    ]);
                     count += 1;
                 }
             }
@@ -60,7 +69,10 @@ mod fused_kernel_tests {
     #[ignore] // Requires GPU
     fn test_execution_mode_enum() {
         // Test ExecutionMode enum values
-        assert_eq!(ExecutionMode::Traditional as i32, ExecutionMode::Traditional as i32);
+        assert_eq!(
+            ExecutionMode::Traditional as i32,
+            ExecutionMode::Traditional as i32
+        );
         assert_eq!(ExecutionMode::Fused as i32, ExecutionMode::Fused as i32);
         assert_eq!(ExecutionMode::Auto as i32, ExecutionMode::Auto as i32);
 

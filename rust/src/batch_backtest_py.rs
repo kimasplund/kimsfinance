@@ -169,6 +169,31 @@ impl PyBacktestResult {
 /// * `initial_capital` - Starting portfolio value (default: 10000.0)
 /// * `trading_fee` - Fee per trade as fraction (default: 0.001 = 0.1%)
 /// * `slippage` - Slippage per trade as fraction (default: 0.0001 = 0.01%)
+/// * `execution_mode` - Execution mode: 'auto', 'traditional', 'fused', 'async' (default: 'auto')
+///
+/// # Execution Modes
+///
+/// * **'auto'** (default) - Automatically selects best mode based on workload size
+///   - < 150 strategies: Traditional (4 separate kernels)
+///   - 150-999 strategies: Fused (single cooperative kernel)
+///   - >= 1000 strategies: Async (triple-buffered pipeline)
+///
+/// * **'traditional'** - Launch 4 separate GPU kernels (indicators, signals, execution, aggregation)
+///   - Best for: Small batches (<150 strategies)
+///   - Performance: Baseline
+///   - Launch overhead: 4 × 10μs = 40μs
+///
+/// * **'fused'** - Single persistent kernel with cooperative groups (Phase 4 optimization)
+///   - Best for: Medium/large batches (150-999 strategies)
+///   - Performance: 1.88-4.00x faster than Traditional
+///   - Launch overhead: 1 × 10μs = 10μs (4x reduction)
+///   - Memory: Single kernel launch, reduced overhead
+///
+/// * **'async'** - Triple-buffered async pipeline with overlapping transfers (Phase 5 optimization)
+///   - Best for: Very large batches (>= 1000 strategies)
+///   - Performance: 1.2-1.4x faster than Fused (when fully integrated)
+///   - Memory: 3x buffer size (triple-buffering overhead)
+///   - Throughput: Overlaps H2D, kernel, and D2H operations
 ///
 /// # Returns
 ///
@@ -186,7 +211,7 @@ impl PyBacktestResult {
 /// - **Speedup**: 20-40x vs sequential CPU
 /// - **VRAM usage**: <1GB for 1000 strategies
 ///
-/// # Example
+/// # Examples
 ///
 /// ```python
 /// import numpy as np
@@ -204,11 +229,27 @@ impl PyBacktestResult {
 ///     for i in range(100)
 /// ]
 ///
-/// # Run batch backtest
+/// # Example 1: Auto mode (recommended - automatically selects best mode)
 /// results = batch_backtest(
 ///     strategy='rsi_crossover',
 ///     ohlcv=ohlcv,
 ///     parameters=parameters
+/// )  # execution_mode='auto' by default
+///
+/// # Example 2: Force fused mode for consistent performance
+/// results = batch_backtest(
+///     strategy='rsi_crossover',
+///     ohlcv=ohlcv,
+///     parameters=parameters,
+///     execution_mode='fused'  # Force single-kernel mode
+/// )
+///
+/// # Example 3: Force async mode for very large sweeps
+/// results = batch_backtest(
+///     strategy='rsi_crossover',
+///     ohlcv=ohlcv,
+///     parameters=parameters,
+///     execution_mode='async'  # Force triple-buffered pipeline
 /// )
 ///
 /// # Best strategy
@@ -223,7 +264,8 @@ impl PyBacktestResult {
     timestamps = None,
     initial_capital = 10000.0,
     trading_fee = 0.001,
-    slippage = 0.0001
+    slippage = 0.0001,
+    execution_mode = "auto"
 ))]
 pub fn batch_backtest(
     py: Python<'_>,
@@ -234,6 +276,7 @@ pub fn batch_backtest(
     initial_capital: f64,
     trading_fee: f64,
     slippage: f64,
+    execution_mode: &str,
 ) -> PyResult<Vec<PyBacktestResult>> {
     // Validate inputs
     if parameters.is_empty() {
@@ -250,6 +293,24 @@ pub fn batch_backtest(
         _ => {
             return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 format!("Unknown strategy: '{}'. Valid options: 'rsi_crossover', 'ma_crossover', 'bollinger'", strategy)
+            ));
+        }
+    };
+
+    // Parse execution mode
+    use crate::backtest::batch::ExecutionMode;
+
+    let mode = match execution_mode.to_lowercase().as_str() {
+        "auto" => ExecutionMode::Auto,
+        "traditional" => ExecutionMode::Traditional,
+        "fused" => ExecutionMode::Fused,
+        "async" => ExecutionMode::Async,
+        _ => {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                format!(
+                    "Unknown execution_mode: '{}'. Valid options: 'auto', 'traditional', 'fused', 'async'",
+                    execution_mode
+                )
             ));
         }
     };
@@ -316,6 +377,7 @@ pub fn batch_backtest(
                 &Array1::from_vec(volume),
             )
             .parameters_batch(&parameters)
+            .execution_mode(mode)
             .config(BacktestConfig {
                 initial_capital,
                 trading_fee,

@@ -101,13 +101,28 @@ pub fn execute_persistent(
 
     // ===== Allocate GPU Memory =====
 
-    // Flatten OHLCV data: [O, H, L, C, V] interleaved
+    // Flatten OHLCV data: COLUMNAR layout [O0,O1,...,On, H0,H1,...,Hn, L0,L1,...,Ln, C0,C1,...,Cn, V0,V1,...,Vn]
+    // This matches the CUDA kernel's expectation of contiguous columns for coalesced memory access
     let mut ohlcv_flat = Vec::with_capacity(n_candles * 5);
+
+    // Open column
     for i in 0..n_candles {
         ohlcv_flat.push(data.open[i]);
+    }
+    // High column
+    for i in 0..n_candles {
         ohlcv_flat.push(data.high[i]);
+    }
+    // Low column
+    for i in 0..n_candles {
         ohlcv_flat.push(data.low[i]);
+    }
+    // Close column
+    for i in 0..n_candles {
         ohlcv_flat.push(data.close[i]);
+    }
+    // Volume column
+    for i in 0..n_candles {
         ohlcv_flat.push(data.volume[i]);
     }
     let d_ohlcv = device.copy_to_device(&ohlcv_flat)?;
