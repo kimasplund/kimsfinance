@@ -209,7 +209,11 @@ impl TradeData {
             // Parse CSV line
             let parts: Vec<&str> = line.split(',').collect();
             if parts.len() < 5 {
-                eprintln!("Warning: Skipping malformed line {}: {}", line_num + 1, line);
+                eprintln!(
+                    "Warning: Skipping malformed line {}: {}",
+                    line_num + 1,
+                    line
+                );
                 continue;
             }
 
@@ -243,7 +247,10 @@ impl TradeData {
     #[must_use]
     pub fn is_valid(&self) -> bool {
         let n = self.timestamps.len();
-        n == self.symbols.len() && n == self.prices.len() && n == self.volumes.len() && n == self.sides.len()
+        n == self.symbols.len()
+            && n == self.prices.len()
+            && n == self.volumes.len()
+            && n == self.sides.len()
     }
 }
 

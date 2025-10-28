@@ -24,7 +24,8 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// CUDA persistent kernel source (embedded)
-const PERSISTENT_BACKTEST_KERNEL: &str = include_str!("../gpu/persistent/kernels/batch_backtest.cu");
+const PERSISTENT_BACKTEST_KERNEL: &str =
+    include_str!("../gpu/persistent/kernels/batch_backtest.cu");
 
 /// Compile persistent backtest kernel (with caching)
 ///
@@ -167,16 +168,12 @@ pub fn execute_persistent(
     let mut d_drawdown = device
         .stream
         .alloc_zeros::<f64>(n_strategies)
-        .map_err(|e| {
-            GpuError::AllocationError(format!("Failed to allocate drawdown: {:?}", e))
-        })?;
+        .map_err(|e| GpuError::AllocationError(format!("Failed to allocate drawdown: {:?}", e)))?;
 
     let mut d_win_rate = device
         .stream
         .alloc_zeros::<f64>(n_strategies)
-        .map_err(|e| {
-            GpuError::AllocationError(format!("Failed to allocate win_rate: {:?}", e))
-        })?;
+        .map_err(|e| GpuError::AllocationError(format!("Failed to allocate win_rate: {:?}", e)))?;
 
     // ===== Launch Persistent Kernel (Cooperative) =====
     let start_gpu = Instant::now();
@@ -235,12 +232,9 @@ pub fn execute_persistent(
     let wr_vec = device.copy_to_host(&d_win_rate)?;
     let equity_vec = device.copy_to_host(&d_equity)?;
     let num_trades_vec = {
-        let slice = device
-            .stream
-            .memcpy_dtov(&d_num_trades)
-            .map_err(|e| {
-                GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
-            })?;
+        let slice = device.stream.memcpy_dtov(&d_num_trades).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
+        })?;
         slice
     };
 
@@ -256,8 +250,7 @@ pub fn execute_persistent(
             .last()
             .copied()
             .unwrap_or(config.initial_capital);
-        let total_return =
-            (final_equity - config.initial_capital) / config.initial_capital * 100.0;
+        let total_return = (final_equity - config.initial_capital) / config.initial_capital * 100.0;
 
         let sharpe_ratio = sharpe_vec[strategy_idx];
         let max_drawdown = dd_vec[strategy_idx];

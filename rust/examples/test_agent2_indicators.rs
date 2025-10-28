@@ -16,7 +16,13 @@ fn main() {
     println!("Compilation verified: ✓");
     println!();
     println!("To test with GPU:");
-    println!("  cargo test --lib --features gpu -- --ignored persistent::kernels::stochastic::test_stochastic_kernel_compiles");
-    println!("  cargo test --lib --features gpu -- --ignored persistent::kernels::williams_r::test_williams_r_kernel_compiles");
-    println!("  cargo test --lib --features gpu -- --ignored persistent::kernels::cci::test_cci_kernel_compiles");
+    println!(
+        "  cargo test --lib --features gpu -- --ignored persistent::kernels::stochastic::test_stochastic_kernel_compiles"
+    );
+    println!(
+        "  cargo test --lib --features gpu -- --ignored persistent::kernels::williams_r::test_williams_r_kernel_compiles"
+    );
+    println!(
+        "  cargo test --lib --features gpu -- --ignored persistent::kernels::cci::test_cci_kernel_compiles"
+    );
 }

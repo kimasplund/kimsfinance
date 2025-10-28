@@ -18,9 +18,9 @@
 //! ```
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::candles::*;
-#[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::GpuDevice;
+#[cfg(feature = "gpu")]
+use kimsfinance_core::gpu::candles::*;
 
 #[cfg(feature = "gpu")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,7 +41,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let trades = TradeData::from_csv(&csv_path)?;
 
     println!("   ✅ Loaded {} trades", trades.len());
-    println!("   📊 Time range: {} to {}",
+    println!(
+        "   📊 Time range: {} to {}",
         format_timestamp(trades.first_timestamp()),
         format_timestamp(trades.last_timestamp())
     );
@@ -60,7 +61,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch_1m = TimeBarBatch::new();
     batch_1m.add_task(
         trades.clone(),
-        TimeBarParams { interval_seconds: 60 } // 1 minute
+        TimeBarParams {
+            interval_seconds: 60,
+        }, // 1 minute
     );
 
     println!("   📊 Aggregating 1-minute candles...");
@@ -75,7 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for i in 0..5.min(candles_1m[0].len()) {
         let candle = &candles_1m[0][i];
-        println!("   {} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>8.4}",
+        println!(
+            "   {} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>8.4}",
             format_timestamp(candle.timestamp),
             candle.open,
             candle.high,
@@ -92,7 +96,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch_5m = TimeBarBatch::new();
     batch_5m.add_task(
         trades.clone(),
-        TimeBarParams { interval_seconds: 300 } // 5 minutes
+        TimeBarParams {
+            interval_seconds: 300,
+        }, // 5 minutes
     );
 
     let candles_5m = execute_batch(&device, &batch_5m)?;
@@ -103,7 +109,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut batch_1h = TimeBarBatch::new();
     batch_1h.add_task(
         trades.clone(),
-        TimeBarParams { interval_seconds: 3600 } // 1 hour
+        TimeBarParams {
+            interval_seconds: 3600,
+        }, // 1 hour
     );
 
     let candles_1h = execute_batch(&device, &batch_1h)?;
@@ -119,7 +127,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   1-minute candles: {}", candles_1m[0].len());
     println!("   5-minute candles: {}", candles_5m[0].len());
     println!("   1-hour candles: {}", candles_1h[0].len());
-    println!("   Compression ratio: {:.1}x (trades → 1m candles)",
+    println!(
+        "   Compression ratio: {:.1}x (trades → 1m candles)",
         trades.len() as f64 / candles_1m[0].len() as f64
     );
     println!();
@@ -153,7 +162,7 @@ fn main() {
 
 #[cfg(feature = "gpu")]
 fn format_timestamp(ts: i64) -> String {
-    use chrono::{DateTime, Utc, TimeZone};
+    use chrono::{DateTime, TimeZone, Utc};
     let dt: DateTime<Utc> = Utc.timestamp_opt(ts, 0).unwrap();
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
@@ -167,13 +176,10 @@ fn save_candles_csv(path: &str, candles: &[Candle]) -> Result<(), Box<dyn std::e
     writeln!(file, "timestamp,open,high,low,close,volume")?;
 
     for candle in candles {
-        writeln!(file, "{},{},{},{},{},{}",
-            candle.timestamp,
-            candle.open,
-            candle.high,
-            candle.low,
-            candle.close,
-            candle.volume
+        writeln!(
+            file,
+            "{},{},{},{},{},{}",
+            candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume
         )?;
     }
 

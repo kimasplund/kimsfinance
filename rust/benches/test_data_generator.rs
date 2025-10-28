@@ -8,8 +8,8 @@
 //!
 //! Used by batch_backtest_benchmark.rs to ensure reproducible benchmarks.
 
-use rand::prelude::*;
 use rand::SeedableRng;
+use rand::prelude::*;
 use std::f64::consts::PI;
 
 /// OHLCV dataset structure
@@ -220,15 +220,21 @@ pub fn generate_simple_random_walk(n_candles: usize, seed: u64) -> OHLCVData {
     }
 
     // Generate OHLV from close prices
-    let open: Vec<f64> = close.iter().enumerate()
+    let open: Vec<f64> = close
+        .iter()
+        .enumerate()
         .map(|(i, &c)| if i == 0 { c } else { close[i - 1] })
         .collect();
 
-    let high: Vec<f64> = close.iter().zip(&open)
+    let high: Vec<f64> = close
+        .iter()
+        .zip(&open)
         .map(|(&c, &o)| c.max(o) * (1.0 + rng.gen_range(0.0..0.01)))
         .collect();
 
-    let low: Vec<f64> = close.iter().zip(&open)
+    let low: Vec<f64> = close
+        .iter()
+        .zip(&open)
         .map(|(&c, &o)| c.min(o) * (1.0 - rng.gen_range(0.0..0.01)))
         .collect();
 

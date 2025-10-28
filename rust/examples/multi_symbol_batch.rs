@@ -17,9 +17,9 @@
 //! ```
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::candles::*;
-#[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::GpuDevice;
+#[cfg(feature = "gpu")]
+use kimsfinance_core::gpu::candles::*;
 #[cfg(feature = "gpu")]
 use std::time::Instant;
 
@@ -64,15 +64,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut batch = TimeBarBatch::new();
         batch.add_task(
             trades.clone(),
-            TimeBarParams { interval_seconds: 60 } // 1 minute
+            TimeBarParams {
+                interval_seconds: 60,
+            }, // 1 minute
         );
         let result = execute_batch(&device, &batch)?;
         sequential_results.push((symbol.clone(), result));
     }
 
     let sequential_time = sequential_start.elapsed();
-    println!("      Time: {:.2}ms", sequential_time.as_secs_f64() * 1000.0);
-    println!("      Overhead: {} launches × ~10μs = ~{}μs",
+    println!(
+        "      Time: {:.2}ms",
+        sequential_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "      Overhead: {} launches × ~10μs = ~{}μs",
         symbol_data.len(),
         symbol_data.len() * 10
     );
@@ -87,7 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (_, trades) in &symbol_data {
         batch.add_task(
             trades.clone(),
-            TimeBarParams { interval_seconds: 60 }
+            TimeBarParams {
+                interval_seconds: 60,
+            },
         );
     }
 
@@ -106,7 +114,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   📊 Performance Results:");
     println!("      Speedup: {:.2}x faster", speedup);
     println!("      Overhead reduction: {:.1}%", overhead_reduction);
-    println!("      Time saved: {:.2}ms", (sequential_time - batch_time).as_secs_f64() * 1000.0);
+    println!(
+        "      Time saved: {:.2}ms",
+        (sequential_time - batch_time).as_secs_f64() * 1000.0
+    );
     println!();
 
     // Display results summary
@@ -119,7 +130,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let candles = &batch_results[i];
         let compression = trades.len() as f64 / candles.len() as f64;
 
-        println!("   {:>9} │ {:>9} │ {:>9} │ {:>10.1}x",
+        println!(
+            "   {:>9} │ {:>9} │ {:>9} │ {:>10.1}x",
             symbol,
             trades.len(),
             candles.len(),
@@ -133,11 +145,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("5️⃣  Sample Candles ({}): First 3 candles", symbol_data[0].0);
         println!();
         println!("   Time              │   Open    │   High    │    Low    │  Close    │  Volume");
-        println!("   ──────────────────┼───────────┼───────────┼───────────┼───────────┼──────────");
+        println!(
+            "   ──────────────────┼───────────┼───────────┼───────────┼───────────┼──────────"
+        );
 
         for i in 0..3.min(batch_results[0].len()) {
             let candle = &batch_results[0][i];
-            println!("   {} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>8.4}",
+            println!(
+                "   {} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>9.2} │ {:>8.4}",
                 format_timestamp(candle.timestamp),
                 candle.open,
                 candle.high,
@@ -193,7 +208,10 @@ fn load_csv_data() -> Result<Vec<(String, TradeData)>, Box<dyn std::error::Error
         eprintln!("Error: No CSV files provided");
         eprintln!();
         eprintln!("Usage:");
-        eprintln!("  {} <file1.csv> <file2.csv> ...", std::env::args().next().unwrap());
+        eprintln!(
+            "  {} <file1.csv> <file2.csv> ...",
+            std::env::args().next().unwrap()
+        );
         eprintln!("  {} --demo", std::env::args().next().unwrap());
         std::process::exit(1);
     }
@@ -245,7 +263,11 @@ fn generate_demo_data() -> Vec<(String, TradeData)> {
             volumes.push(volume);
         }
 
-        let trades = TradeData { timestamps, prices, volumes };
+        let trades = TradeData {
+            timestamps,
+            prices,
+            volumes,
+        };
         data.push((symbol.to_string(), trades));
     }
 
@@ -254,7 +276,7 @@ fn generate_demo_data() -> Vec<(String, TradeData)> {
 
 #[cfg(feature = "gpu")]
 fn format_timestamp(ts: i64) -> String {
-    use chrono::{DateTime, Utc, TimeZone};
+    use chrono::{DateTime, TimeZone, Utc};
     let dt: DateTime<Utc> = Utc.timestamp_opt(ts, 0).unwrap();
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }

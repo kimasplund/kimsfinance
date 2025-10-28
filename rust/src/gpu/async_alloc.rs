@@ -524,7 +524,9 @@ mod tests {
 
         // Allocate and free
         {
-            let _buffer = allocator.alloc::<f64>(1_000_000).expect("Allocation failed");
+            let _buffer = allocator
+                .alloc::<f64>(1_000_000)
+                .expect("Allocation failed");
         }
 
         // Trim pool (should release memory)

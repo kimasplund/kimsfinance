@@ -58,9 +58,12 @@ use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::{
-    atr_gpu, elder_ray_gpu, ema_gpu, rsi_gpu,
-    rsi_sync::rsi_gpu_sync, // Import the synchronous version for comparison
     GpuDevice,
+    atr_gpu,
+    elder_ray_gpu,
+    ema_gpu,
+    rsi_gpu,
+    rsi_sync::rsi_gpu_sync, // Import the synchronous version for comparison
 };
 
 // Note: CPU implementations pending - will be added when sequential.rs is implemented
@@ -252,11 +255,9 @@ fn bench_rsi_comparison(c: &mut Criterion) {
         group.throughput(Throughput::Elements(size as u64));
 
         // Benchmark 1: Hybrid with synchronous transfers
-        group.bench_with_input(
-            BenchmarkId::new("Hybrid_Sync", size),
-            &close,
-            |b, data| b.iter(|| rsi_gpu_sync(&device, black_box(data), 14, None)),
-        );
+        group.bench_with_input(BenchmarkId::new("Hybrid_Sync", size), &close, |b, data| {
+            b.iter(|| rsi_gpu_sync(&device, black_box(data), 14, None))
+        });
 
         // Benchmark 2: New hybrid implementation with async transfers
         group.bench_with_input(

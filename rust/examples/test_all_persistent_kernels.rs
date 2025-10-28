@@ -4,10 +4,10 @@
 //! persistent kernel suite.
 
 use kimsfinance_core::gpu::{
-    execute_batch, AroonBatch, AtrBatch, BollingerBatch, BollingerParams, CciBatch, CmfBatch,
-    DonchianBatch, ElderRayBatch, EmaBatch, GpuDevice, KeltnerBatch, KeltnerParams, MacdBatch,
-    MacdParams, ObvBatch, RocBatch, RsiBatch, SmaBatch, StochasticBatch, StochasticParams,
-    VwmaBatch, WilliamsRBatch, WmaBatch,
+    AroonBatch, AtrBatch, BollingerBatch, BollingerParams, CciBatch, CmfBatch, DonchianBatch,
+    ElderRayBatch, EmaBatch, GpuDevice, KeltnerBatch, KeltnerParams, MacdBatch, MacdParams,
+    ObvBatch, RocBatch, RsiBatch, SmaBatch, StochasticBatch, StochasticParams, VwmaBatch,
+    WilliamsRBatch, WmaBatch, execute_batch,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -263,10 +263,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Total indicators: 18");
     println!("✅ Passed: {}", passed);
     println!("❌ Failed: {}", failed);
-    println!(
-        "Success rate: {:.1}%",
-        (passed as f64 / 18.0) * 100.0
-    );
+    println!("Success rate: {:.1}%", (passed as f64 / 18.0) * 100.0);
 
     if failed == 0 {
         println!("\n🎉 All 18 indicators validated successfully!");
@@ -285,7 +282,10 @@ fn test_roc(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[20]: {:.4}", results[0].get(20).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[20]: {:.4}",
+        results[0].get(20).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -295,7 +295,10 @@ fn test_rsi(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -305,7 +308,10 @@ fn test_macd(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error:
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
-    println!("   - MACD[50]: {:.4}", results[0].get(50).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - MACD[50]: {:.4}",
+        results[0].get(50).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -314,13 +320,16 @@ fn test_atr(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     // ATR expects concatenated [high, low, close]
     // For simple test, use same data for all three
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
-    combined.extend_from_slice(data);  // close
+    combined.extend_from_slice(data); // low
+    combined.extend_from_slice(data); // close
     batch.add_task(combined, 14);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[20]: {:.4}", results[0].get(20).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[20]: {:.4}",
+        results[0].get(20).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -330,7 +339,10 @@ fn test_sma(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[20]: {:.4}", results[0].get(20).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[20]: {:.4}",
+        results[0].get(20).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -340,7 +352,10 @@ fn test_ema(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[20]: {:.4}", results[0].get(20).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[20]: {:.4}",
+        results[0].get(20).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -350,7 +365,10 @@ fn test_bollinger(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::e
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
-    println!("   - Upper[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Upper[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -358,8 +376,8 @@ fn test_stochastic(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::
     let mut batch = StochasticBatch::new();
     // Stochastic expects concatenated [high, low, close]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
-    combined.extend_from_slice(data);  // close
+    combined.extend_from_slice(data); // low
+    combined.extend_from_slice(data); // close
     batch.add_task(
         combined,
         StochasticParams {
@@ -370,7 +388,10 @@ fn test_stochastic(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 2); // 2 outputs
-    println!("   - %K[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - %K[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -378,13 +399,16 @@ fn test_williams_r(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::
     let mut batch = WilliamsRBatch::new();
     // Williams %R expects concatenated [high, low, close]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
-    combined.extend_from_slice(data);  // close
+    combined.extend_from_slice(data); // low
+    combined.extend_from_slice(data); // close
     batch.add_task(combined, 14);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -392,13 +416,16 @@ fn test_cci(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let mut batch = CciBatch::new();
     // CCI expects concatenated [high, low, close]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
-    combined.extend_from_slice(data);  // close
+    combined.extend_from_slice(data); // low
+    combined.extend_from_slice(data); // close
     batch.add_task(combined, 20);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -406,12 +433,15 @@ fn test_donchian(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::er
     let mut batch = DonchianBatch::new();
     // Donchian expects concatenated [high, low]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data); // low
     batch.add_task(combined, 20);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
-    println!("   - Upper[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Upper[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -428,7 +458,10 @@ fn test_keltner(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::err
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
-    println!("   - Middle[30]: {:.4}", results[0].get(130).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Middle[30]: {:.4}",
+        results[0].get(130).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -436,12 +469,15 @@ fn test_aroon(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error
     let mut batch = AroonBatch::new();
     // Aroon expects concatenated [high, low]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
+    combined.extend_from_slice(data); // low
     batch.add_task(combined, 25);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 3); // 3 outputs
-    println!("   - Up[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Up[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -449,13 +485,16 @@ fn test_elder_ray(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::e
     let mut batch = ElderRayBatch::new();
     // Elder Ray expects concatenated [high, low, ema]
     let mut combined = data.to_vec();
-    combined.extend_from_slice(data);  // low
-    combined.extend_from_slice(data);  // ema (pre-calculated)
+    combined.extend_from_slice(data); // low
+    combined.extend_from_slice(data); // ema (pre-calculated)
     batch.add_task(combined, 13);
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len() * 2); // 2 outputs
-    println!("   - Bull[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Bull[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -471,7 +510,10 @@ fn test_obv(
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), close.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -490,7 +532,10 @@ fn test_cmf(
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -506,7 +551,10 @@ fn test_vwma(
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), close.len());
-    println!("   - Result[30]: {:.4}", results[0].get(30).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[30]: {:.4}",
+        results[0].get(30).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }
 
@@ -516,6 +564,9 @@ fn test_wma(device: &GpuDevice, data: &[f64]) -> Result<(), Box<dyn std::error::
     let results = execute_batch(device, &batch)?;
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].len(), data.len());
-    println!("   - Result[20]: {:.4}", results[0].get(20).copied().unwrap_or(f64::NAN));
+    println!(
+        "   - Result[20]: {:.4}",
+        results[0].get(20).copied().unwrap_or(f64::NAN)
+    );
     Ok(())
 }

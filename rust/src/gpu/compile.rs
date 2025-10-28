@@ -31,8 +31,8 @@ use cudarc::nvrtc::{CompileOptions, Ptx, compile_ptx_with_opts};
 use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use std::env;
-use std::sync::{Arc, LazyLock, OnceLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, LazyLock, OnceLock};
 
 /// Cached compilation options (initialized once per process)
 static COMPILE_OPTS: OnceLock<CompileOptions> = OnceLock::new();
@@ -40,8 +40,7 @@ static COMPILE_OPTS: OnceLock<CompileOptions> = OnceLock::new();
 /// Global cache for compiled PTX kernels
 /// Key: SHA-256 hash of source code
 /// Value: Arc<Ptx> for zero-copy sharing across threads
-static KERNEL_CACHE: LazyLock<DashMap<String, Arc<Ptx>>> =
-    LazyLock::new(|| DashMap::new());
+static KERNEL_CACHE: LazyLock<DashMap<String, Arc<Ptx>>> = LazyLock::new(|| DashMap::new());
 
 /// Cache hit counter (for statistics)
 static CACHE_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -221,9 +220,7 @@ pub fn get_compile_options() -> &'static CompileOptions {
 /// # Errors
 ///
 /// Returns compilation error if kernel has syntax errors or NVRTC fails.
-pub fn compile_ptx_optimized<S: AsRef<str>>(
-    src: S,
-) -> Result<Ptx, cudarc::nvrtc::CompileError> {
+pub fn compile_ptx_optimized<S: AsRef<str>>(src: S) -> Result<Ptx, cudarc::nvrtc::CompileError> {
     let opts = get_compile_options().clone();
     compile_ptx_with_opts(src, opts)
 }
@@ -491,7 +488,10 @@ mod tests {
         let ptx2 = compile_ptx_optimized_cached(KERNEL2).unwrap();
 
         // Should NOT be same Arc (different source code)
-        assert!(!Arc::ptr_eq(&ptx1, &ptx2), "Different kernels should have different cache entries");
+        assert!(
+            !Arc::ptr_eq(&ptx1, &ptx2),
+            "Different kernels should have different cache entries"
+        );
 
         // Verify cache has 2 entries
         let stats = get_cache_stats();
@@ -514,7 +514,10 @@ mod tests {
 
         // Verify cache has entry
         let stats = get_cache_stats();
-        assert_eq!(stats.total_entries, 1, "Should have 1 cached entry before clear");
+        assert_eq!(
+            stats.total_entries, 1,
+            "Should have 1 cached entry before clear"
+        );
 
         // Clear cache
         clear_cache();
@@ -550,7 +553,10 @@ mod tests {
 
         // Verify no cache entry for failed compilation
         let stats = get_cache_stats();
-        assert_eq!(stats.total_entries, 0, "Failed compilation should not be cached");
+        assert_eq!(
+            stats.total_entries, 0,
+            "Failed compilation should not be cached"
+        );
         assert_eq!(stats.misses, 2, "Should have 2 cache misses");
         assert_eq!(stats.hits, 0, "Should have 0 cache hits");
     }

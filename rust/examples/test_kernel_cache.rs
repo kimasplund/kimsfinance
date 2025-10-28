@@ -83,10 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if first / avg_cached >= 50.0 {
-            println!(
-                "✓ Speedup >= 50x (target met: {:.1}x)",
-                first / avg_cached
-            );
+            println!("✓ Speedup >= 50x (target met: {:.1}x)", first / avg_cached);
         } else {
             println!(
                 "⚠ Speedup < 50x (expected 50-200x, got {:.1}x)",
@@ -98,10 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if stats.hit_rate() == 0.9 {
             println!("✓ Hit rate = 90% (9 hits / 10 total)");
         } else {
-            println!(
-                "✗ Hit rate != 90% (got {:.1}%)",
-                stats.hit_rate() * 100.0
-            );
+            println!("✗ Hit rate != 90% (got {:.1}%)", stats.hit_rate() * 100.0);
         }
     }
 

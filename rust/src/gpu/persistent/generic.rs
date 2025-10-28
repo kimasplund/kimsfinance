@@ -252,12 +252,9 @@ fn allocate_generic_buffers<I: PersistentIndicator>(
         }
 
         // Copy to GPU
-        let mut d_ptrs = device
-            .stream
-            .alloc_zeros::<u64>(num_tasks)
-            .map_err(|e| {
-                GpuError::AllocationError(format!("Failed to allocate input pointer array: {:?}", e))
-            })?;
+        let mut d_ptrs = device.stream.alloc_zeros::<u64>(num_tasks).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate input pointer array: {:?}", e))
+        })?;
 
         device
             .stream
@@ -279,15 +276,9 @@ fn allocate_generic_buffers<I: PersistentIndicator>(
         }
 
         // Copy to GPU
-        let mut d_ptrs = device
-            .stream
-            .alloc_zeros::<u64>(num_tasks)
-            .map_err(|e| {
-                GpuError::AllocationError(format!(
-                    "Failed to allocate output pointer array: {:?}",
-                    e
-                ))
-            })?;
+        let mut d_ptrs = device.stream.alloc_zeros::<u64>(num_tasks).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate output pointer array: {:?}", e))
+        })?;
 
         device
             .stream
@@ -422,7 +413,8 @@ pub fn execute_generic_batch<I: PersistentIndicator>(
     // Calculate optimal grid size using occupancy calculator
     let occupancy_calc = OccupancyCalculator::new(device)?;
     let optimal_block_size = 256u32;
-    let optimal_grid_size = occupancy_calc.calculate_optimal_grid_size(&func, optimal_block_size, 0)?;
+    let optimal_grid_size =
+        occupancy_calc.calculate_optimal_grid_size(&func, optimal_block_size, 0)?;
 
     eprintln!(
         "🚀 Generic batch: {} tasks, {} inputs, {} outputs, grid size: {} blocks",
@@ -470,10 +462,7 @@ mod tests {
 
         let mut batch = GenericBatch::<RocIndicator>::new();
         // ROC expects 1 input, but we're giving 3 - should panic
-        batch.add_task(
-            vec![vec![1.0, 2.0], vec![3.0, 4.0], vec![5.0, 6.0]],
-            14,
-        );
+        batch.add_task(vec![vec![1.0, 2.0], vec![3.0, 4.0], vec![5.0, 6.0]], 14);
     }
 
     #[test]
@@ -498,7 +487,10 @@ mod tests {
         let mut batch = GenericBatch::<MacdIndicator>::new();
 
         // MACD expects 1 input but produces 3 outputs
-        batch.add_single_input_task(vec![44.0, 44.5, 43.0], crate::gpu::persistent::MacdParams::standard());
+        batch.add_single_input_task(
+            vec![44.0, 44.5, 43.0],
+            crate::gpu::persistent::MacdParams::standard(),
+        );
         assert_eq!(batch.len(), 1);
         assert_eq!(MacdIndicator::num_outputs(), 3);
     }

@@ -2,17 +2,24 @@
 //!
 //! Measures the 2-4x speedup from combining all 4 phases into a single kernel launch.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use kimsfinance_core::backtest::{
-    BatchBacktestSweep, OhlcvData, StrategyType,
-};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::backtest::engine::BacktestConfig;
+use kimsfinance_core::backtest::{BatchBacktestSweep, OhlcvData, StrategyType};
 use kimsfinance_core::gpu::device::GpuDevice;
 use ndarray::Array1;
 use std::sync::Arc;
 
 /// Generate synthetic OHLCV data for testing
-fn generate_ohlcv_data(n_candles: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv_data(
+    n_candles: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let mut close_data = vec![100.0];
     for i in 1..n_candles {
         let delta = (i as f64 * 0.1).sin() * 2.0;
@@ -40,7 +47,11 @@ fn generate_parameters(n_strategies: usize) -> Vec<Vec<f64>> {
                 if count >= n_strategies {
                     break 'outer;
                 }
-                params.push(vec![rsi_period as f64, buy_thresh as f64, sell_thresh as f64]);
+                params.push(vec![
+                    rsi_period as f64,
+                    buy_thresh as f64,
+                    sell_thresh as f64,
+                ]);
                 count += 1;
             }
         }

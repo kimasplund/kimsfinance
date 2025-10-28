@@ -3,7 +3,9 @@
 //! Verifies that Range Bars and Renko kernels compile and have correct trait implementations.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{GpuDevice, RangeBarAggregator, RangeBarParams, RenkoAggregator, RenkoParams};
+use kimsfinance_core::gpu::{
+    GpuDevice, RangeBarAggregator, RangeBarParams, RenkoAggregator, RenkoParams,
+};
 
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::persistent::PersistentIndicator;
@@ -16,22 +18,37 @@ fn main() {
         // Verify Range Bars
         println!("Range Bars:");
         println!("  Kernel name: {}", RangeBarAggregator::kernel_name());
-        println!("  Inputs: {} (timestamp, price, volume)", RangeBarAggregator::num_inputs());
+        println!(
+            "  Inputs: {} (timestamp, price, volume)",
+            RangeBarAggregator::num_inputs()
+        );
         println!("  Outputs: {} (OHLCV)", RangeBarAggregator::num_outputs());
 
         let range_params = RangeBarParams { range_size: 100.0 };
         println!("  Example params: {:?}", range_params);
-        println!("  Params size: {} bytes\n", std::mem::size_of::<RangeBarParams>());
+        println!(
+            "  Params size: {} bytes\n",
+            std::mem::size_of::<RangeBarParams>()
+        );
 
         // Verify Renko
         println!("Renko Bricks:");
         println!("  Kernel name: {}", RenkoAggregator::kernel_name());
-        println!("  Inputs: {} (timestamp, price)", RenkoAggregator::num_inputs());
-        println!("  Outputs: {} (brick_price, direction, timestamp)", RenkoAggregator::num_outputs());
+        println!(
+            "  Inputs: {} (timestamp, price)",
+            RenkoAggregator::num_inputs()
+        );
+        println!(
+            "  Outputs: {} (brick_price, direction, timestamp)",
+            RenkoAggregator::num_outputs()
+        );
 
         let renko_params = RenkoParams { brick_size: 50.0 };
         println!("  Example params: {:?}", renko_params);
-        println!("  Params size: {} bytes\n", std::mem::size_of::<RenkoParams>());
+        println!(
+            "  Params size: {} bytes\n",
+            std::mem::size_of::<RenkoParams>()
+        );
 
         // Try to compile kernels (requires GPU)
         match GpuDevice::new() {

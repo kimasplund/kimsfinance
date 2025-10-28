@@ -16,7 +16,10 @@ fn main() {
     println!("  Kernel name: {}", DonchianIndicator::kernel_name());
     println!("  Num inputs: {}", DonchianIndicator::num_inputs());
     println!("  Num outputs: {}", DonchianIndicator::num_outputs());
-    assert_eq!(DonchianIndicator::kernel_name(), "persistent_donchian_kernel");
+    assert_eq!(
+        DonchianIndicator::kernel_name(),
+        "persistent_donchian_kernel"
+    );
     assert_eq!(DonchianIndicator::num_inputs(), 2); // high, low
     assert_eq!(DonchianIndicator::num_outputs(), 3); // upper, middle, lower
     println!("  ✓ All checks passed\n");

@@ -36,12 +36,12 @@
 //! - Significance threshold: p < 0.05
 //! - Effect size: Cohen's d >= 0.8 (large effect)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use criterion::measurement::WallTime;
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::sync::Arc;
 
 mod test_data_generator;
-use test_data_generator::{generate_realistic_ohlcv, DataGeneratorConfig, OHLCVData};
+use test_data_generator::{DataGeneratorConfig, OHLCVData, generate_realistic_ohlcv};
 
 // Import batch backtest API
 use kimsfinance_core::backtest::batch::{BatchBacktestSweep, StrategyType};
@@ -54,11 +54,9 @@ fn benchmark_configurations() -> Vec<(&'static str, usize, usize)> {
         // Small configs (quick validation)
         ("10x1k", 10, 1000),
         ("100x1k", 100, 1000),
-
         // Medium configs (typical use case)
         ("100x5k", 100, 5000),
         ("500x5k", 500, 5000),
-
         // Large configs (genetic optimization - key target)
         ("1000x10k", 1000, 10000),
         ("2000x10k", 2000, 10000),
@@ -67,17 +65,17 @@ fn benchmark_configurations() -> Vec<(&'static str, usize, usize)> {
 
 /// Generate random RSI strategy parameters
 fn generate_rsi_parameters(n_strategies: usize, seed: u64) -> Vec<Vec<f64>> {
-    use rand::prelude::*;
     use rand::SeedableRng;
+    use rand::prelude::*;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
     (0..n_strategies)
         .map(|_| {
             vec![
-                rng.gen_range(10.0..20.0),  // RSI period (10-20)
-                rng.gen_range(20.0..40.0),  // Buy threshold (oversold)
-                rng.gen_range(60.0..80.0),  // Sell threshold (overbought)
+                rng.gen_range(10.0..20.0), // RSI period (10-20)
+                rng.gen_range(20.0..40.0), // Buy threshold (oversold)
+                rng.gen_range(60.0..80.0), // Sell threshold (overbought)
             ]
         })
         .collect()
@@ -89,8 +87,8 @@ fn generate_test_data(n_candles: usize, seed: u64) -> OHLCVData {
         n_candles,
         regime: test_data_generator::MarketRegime::Sideways,
         base_price: 100.0,
-        trend_strength: 0.0001,  // Slight uptrend
-        volatility: 0.02,         // 2% volatility
+        trend_strength: 0.0001, // Slight uptrend
+        volatility: 0.02,       // 2% volatility
         seed,
     };
 
@@ -124,9 +122,7 @@ fn bench_traditional_baseline(c: &mut Criterion) {
             let params = generate_rsi_parameters(n_s, 42);
 
             // Convert to ndarray format
-            let timestamps: Vec<i64> = data.timestamps.iter()
-                .map(|&t| t as i64)
-                .collect();
+            let timestamps: Vec<i64> = data.timestamps.iter().map(|&t| t as i64).collect();
             let open = ndarray::Array1::from(data.open);
             let high = ndarray::Array1::from(data.high);
             let low = ndarray::Array1::from(data.low);
@@ -189,9 +185,7 @@ fn bench_persistent_kernels(c: &mut Criterion) {
             let data = generate_test_data(n_c, 42);
             let params = generate_rsi_parameters(n_s, 42);
 
-            let timestamps: Vec<i64> = data.timestamps.iter()
-                .map(|&t| t as i64)
-                .collect();
+            let timestamps: Vec<i64> = data.timestamps.iter().map(|&t| t as i64).collect();
             let open = ndarray::Array1::from(data.open);
             let high = ndarray::Array1::from(data.high);
             let low = ndarray::Array1::from(data.low);
@@ -249,9 +243,7 @@ fn bench_phase3_optimized(c: &mut Criterion) {
             let data = generate_test_data(n_c, 42);
             let params = generate_rsi_parameters(n_s, 42);
 
-            let timestamps: Vec<i64> = data.timestamps.iter()
-                .map(|&t| t as i64)
-                .collect();
+            let timestamps: Vec<i64> = data.timestamps.iter().map(|&t| t as i64).collect();
             let open = ndarray::Array1::from(data.open);
             let high = ndarray::Array1::from(data.high);
             let low = ndarray::Array1::from(data.low);
@@ -308,9 +300,7 @@ fn bench_combined_optimizations(c: &mut Criterion) {
             let data = generate_test_data(n_c, 42);
             let params = generate_rsi_parameters(n_s, 42);
 
-            let timestamps: Vec<i64> = data.timestamps.iter()
-                .map(|&t| t as i64)
-                .collect();
+            let timestamps: Vec<i64> = data.timestamps.iter().map(|&t| t as i64).collect();
             let open = ndarray::Array1::from(data.open);
             let high = ndarray::Array1::from(data.high);
             let low = ndarray::Array1::from(data.low);
@@ -332,7 +322,9 @@ fn bench_combined_optimizations(c: &mut Criterion) {
                     .parameters_batch(&params)
                     .config(config.clone());
 
-                let results = sweep.execute().expect("Combined optimization backtest failed");
+                let results = sweep
+                    .execute()
+                    .expect("Combined optimization backtest failed");
                 black_box(results);
             });
         });
@@ -366,9 +358,7 @@ fn bench_scaling_validation(c: &mut Criterion) {
             let data = generate_test_data(n_candles, 42);
             let params = generate_rsi_parameters(n_s, 42);
 
-            let timestamps: Vec<i64> = data.timestamps.iter()
-                .map(|&t| t as i64)
-                .collect();
+            let timestamps: Vec<i64> = data.timestamps.iter().map(|&t| t as i64).collect();
             let open = ndarray::Array1::from(data.open);
             let high = ndarray::Array1::from(data.high);
             let low = ndarray::Array1::from(data.low);

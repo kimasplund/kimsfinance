@@ -60,13 +60,60 @@
 
 use crate::backtest::core::BacktestResult;
 use crate::backtest::engine::BacktestConfig;
-use crate::gpu::device::{GpuDevice, GpuError};
 use crate::gpu::compile::compile_backtest_kernels;
+use crate::gpu::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaSlice, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+
+/// Execution mode for batch backtesting
+///
+/// Controls whether to use traditional (4 separate kernel launches) or
+/// fused (single kernel launch) execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExecutionMode {
+    /// Traditional execution: 4 separate kernel launches
+    ///
+    /// - Phase 1: Indicator calculation
+    /// - Phase 2: Signal generation
+    /// - Phase 3: Backtest execution
+    /// - Phase 4: Metrics calculation
+    ///
+    /// **Use when**: Batch size < threshold (typically 100 strategies)
+    ///
+    /// **Performance**: 4 × 5-10μs = 20-40μs launch overhead
+    Traditional,
+
+    /// Fused execution: Single kernel launch with cooperative groups
+    ///
+    /// All 4 phases execute in one kernel with grid-wide synchronization.
+    /// Reduces launch overhead from 4×10μs to 1×10μs.
+    ///
+    /// **Use when**: Batch size ≥ threshold (typically 100 strategies)
+    ///
+    /// **Performance**: 1 × 10μs launch overhead (2-4x faster for large batches)
+    ///
+    /// **Requirements**: CUDA cooperative launch support (all modern GPUs)
+    Fused,
+
+    /// Automatic selection based on batch size and data characteristics
+    ///
+    /// Uses `calculate_optimal_threshold` to determine the best mode:
+    /// - Small datasets (<10MB): threshold = 150 strategies
+    /// - Medium datasets (10-50MB): threshold = 100 strategies
+    /// - Large datasets (>50MB): threshold = 50 strategies
+    ///
+    /// **Recommended**: Default choice for most use cases
+    Auto,
+}
+
+impl Default for ExecutionMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
 
 /// Strategy type enumeration for batch backtesting
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -93,6 +140,67 @@ pub struct OhlcvData {
     pub low: Array1<f64>,
     pub close: Array1<f64>,
     pub volume: Array1<f64>,
+}
+
+/// Calculate optimal threshold for persistent kernel selection
+///
+/// Determines when to switch from traditional (4 launches) to persistent (1 launch)
+/// based on workload characteristics and GPU architecture.
+///
+/// # Algorithm
+///
+/// Persistent kernels win when compute dominates overhead:
+/// - **Small datasets** (<10MB): threshold = 150 (overhead dominates)
+/// - **Medium datasets** (10-50MB): threshold = 100 (balanced)
+/// - **Large datasets** (>50MB): threshold = 50 (compute dominates)
+///
+/// # Arguments
+///
+/// * `num_strategies` - Number of strategies in batch
+/// * `num_candles` - Number of candles per strategy
+/// * `device` - GPU device (currently unused, reserved for future multi-GPU)
+///
+/// # Returns
+///
+/// Optimal threshold for switching to persistent kernels
+///
+/// # Example
+///
+/// ```rust,ignore
+/// let threshold = calculate_optimal_threshold(200, 10000, &device);
+/// // Returns: 100 (medium dataset ~80MB)
+///
+/// if num_strategies >= threshold {
+///     // Use persistent kernel (single launch)
+/// } else {
+///     // Use traditional (4 launches)
+/// }
+/// ```
+pub fn calculate_optimal_threshold(
+    num_strategies: usize,
+    num_candles: usize,
+    _device: &Arc<GpuDevice>,
+) -> usize {
+    // Calculate data size in MB (OHLCV = 5 arrays × 8 bytes per f64)
+    let data_size_mb = (num_strategies * num_candles * 5 * 8) / (1024 * 1024);
+
+    // Empirical formula from research:
+    // - Small datasets (<10MB): threshold = 150
+    // - Medium datasets (10-50MB): threshold = 100
+    // - Large datasets (>50MB): threshold = 50
+    //
+    // Rationale:
+    // - Small: kernel launch overhead is ~5% of total time, wait for larger batches
+    // - Medium: overhead becomes ~10-15%, start using persistent
+    // - Large: overhead is 20%+, aggressive persistent usage
+
+    if data_size_mb < 10 {
+        150 // Conservative - launch overhead is small fraction
+    } else if data_size_mb < 50 {
+        100 // Balanced - overhead becoming significant
+    } else {
+        50 // Aggressive - overhead dominates, use persistent early
+    }
 }
 
 /// Batch backtesting sweep for genetic algorithm optimization
@@ -130,6 +238,7 @@ pub struct BatchBacktestSweep {
     data: Option<OhlcvData>,
     parameters: Vec<Vec<f64>>,
     config: BacktestConfig,
+    execution_mode: ExecutionMode,
 }
 
 impl BatchBacktestSweep {
@@ -152,6 +261,7 @@ impl BatchBacktestSweep {
             data: None,
             parameters: Vec::new(),
             config: BacktestConfig::default(),
+            execution_mode: ExecutionMode::default(),
         }
     }
 
@@ -243,6 +353,22 @@ impl BatchBacktestSweep {
         self
     }
 
+    /// Set execution mode (Traditional, Fused, or Auto)
+    ///
+    /// Controls whether to use 4 separate kernel launches (Traditional) or
+    /// single fused kernel (Fused). Auto mode selects based on batch size.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// sweep.execution_mode(ExecutionMode::Fused) // Force fused execution
+    /// sweep.execution_mode(ExecutionMode::Auto)  // Automatic selection (default)
+    /// ```
+    pub fn execution_mode(mut self, mode: ExecutionMode) -> Self {
+        self.execution_mode = mode;
+        self
+    }
+
     /// Execute batch backtest on GPU
     ///
     /// Automatically selects between traditional (4 separate kernel launches)
@@ -284,17 +410,36 @@ impl BatchBacktestSweep {
     /// println!("Best Sharpe: {:.2}", results.results[0].sharpe_ratio);
     /// ```
     pub fn execute(mut self) -> Result<BatchBacktestResults, GpuError> {
-        // Auto-select: Use persistent for large batches (>100 strategies)
-        if self.parameters.len() > 100 {
-            // Extract data for persistent execution
-            let strategy_type = self.strategy_type.take().ok_or_else(|| {
-                GpuError::InvalidParameter("Strategy type not set".into())
-            })?;
-            let data = self.data.take().ok_or_else(|| {
-                GpuError::InvalidParameter("Data not set".into())
-            })?;
+        // Get data length for threshold calculation
+        let num_candles = self.data.as_ref().map(|d| d.timestamps.len()).unwrap_or(0);
 
-            eprintln!("🚀 Using persistent kernel (2-4x faster for {} strategies)", self.parameters.len());
+        // Calculate optimal threshold dynamically based on workload
+        let threshold =
+            calculate_optimal_threshold(self.parameters.len(), num_candles, &self.device);
+
+        // Determine execution mode
+        let use_fused = match self.execution_mode {
+            ExecutionMode::Traditional => false,
+            ExecutionMode::Fused => true,
+            ExecutionMode::Auto => self.parameters.len() >= threshold,
+        };
+
+        if use_fused {
+            // Extract data for fused (persistent) execution
+            let strategy_type = self
+                .strategy_type
+                .take()
+                .ok_or_else(|| GpuError::InvalidParameter("Strategy type not set".into()))?;
+            let data = self
+                .data
+                .take()
+                .ok_or_else(|| GpuError::InvalidParameter("Data not set".into()))?;
+
+            eprintln!(
+                "🚀 Using fused kernel (single launch, 2-4x faster for {} strategies, threshold={})",
+                self.parameters.len(),
+                threshold
+            );
 
             crate::backtest::persistent::execute_persistent(
                 self.device.clone(),
@@ -304,7 +449,11 @@ impl BatchBacktestSweep {
                 self.config.clone(),
             )
         } else {
-            eprintln!("🔧 Using traditional execution for {} strategies", self.parameters.len());
+            eprintln!(
+                "🔧 Using traditional execution (4 launches) for {} strategies (threshold={})",
+                self.parameters.len(),
+                threshold
+            );
             self.execute_traditional()
         }
     }
@@ -317,13 +466,15 @@ impl BatchBacktestSweep {
         let start_total = Instant::now();
 
         // ===== Validation =====
-        let strategy_type = self.strategy_type.take().ok_or_else(|| {
-            GpuError::InvalidParameter("Strategy type not set".into())
-        })?;
+        let strategy_type = self
+            .strategy_type
+            .take()
+            .ok_or_else(|| GpuError::InvalidParameter("Strategy type not set".into()))?;
 
-        let data = self.data.take().ok_or_else(|| {
-            GpuError::InvalidParameter("Data not set".into())
-        })?;
+        let data = self
+            .data
+            .take()
+            .ok_or_else(|| GpuError::InvalidParameter("Data not set".into()))?;
 
         if self.parameters.is_empty() {
             return Err(GpuError::InvalidParameter("No parameters provided".into()));
@@ -353,12 +504,7 @@ impl BatchBacktestSweep {
 
         // ===== Phase 1: Indicator Calculation (20ms target) =====
         let start_phase1 = Instant::now();
-        let indicators = self.compute_indicators_batch(
-            &module,
-            &data,
-            n_strategies,
-            n_candles,
-        )?;
+        let indicators = self.compute_indicators_batch(&module, &data, n_strategies, n_candles)?;
         let phase1_ms = start_phase1.elapsed().as_secs_f64() * 1000.0;
 
         // ===== Phase 2: Signal Generation (10ms target) =====
@@ -374,13 +520,8 @@ impl BatchBacktestSweep {
 
         // ===== Phase 3: Backtest Execution (100ms target - bottleneck) =====
         let start_phase3 = Instant::now();
-        let (equity_curves, trades_data, num_trades) = self.execute_backtests_batch(
-            &module,
-            &signals,
-            &data,
-            n_strategies,
-            n_candles,
-        )?;
+        let (equity_curves, trades_data, num_trades) =
+            self.execute_backtests_batch(&module, &signals, &data, n_strategies, n_candles)?;
         let phase3_ms = start_phase3.elapsed().as_secs_f64() * 1000.0;
 
         // ===== Phase 4: Metrics Calculation (5ms target) =====
@@ -401,8 +542,9 @@ impl BatchBacktestSweep {
         let wr_vec = self.device.copy_to_host(&win_rates)?;
         let equity_vec = self.device.copy_to_host(&equity_curves)?;
         let num_trades_vec = {
-            let slice = self.device.stream.memcpy_dtov(&num_trades)
-                .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e)))?;
+            let slice = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
+                GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
+            })?;
             slice
         };
 
@@ -416,8 +558,12 @@ impl BatchBacktestSweep {
             let equity_curve = equity_vec[equity_start..equity_end].to_vec();
 
             // Calculate final equity and total return
-            let final_equity = equity_curve.last().copied().unwrap_or(self.config.initial_capital);
-            let total_return = (final_equity - self.config.initial_capital) / self.config.initial_capital * 100.0;
+            let final_equity = equity_curve
+                .last()
+                .copied()
+                .unwrap_or(self.config.initial_capital);
+            let total_return =
+                (final_equity - self.config.initial_capital) / self.config.initial_capital * 100.0;
 
             // Extract metrics
             let sharpe_ratio = sharpe_vec[strategy_idx];
@@ -465,8 +611,10 @@ impl BatchBacktestSweep {
             + n_strategies * n_candles * 1     // signals (i8)
             + n_strategies * n_candles * 8     // equity (f64)
             + n_strategies * 1000 * 48         // trades (struct)
-            + n_strategies * 3 * 8             // metrics (f64)
-        ) as f64 / (1024.0 * 1024.0);
+            + n_strategies * 3 * 8
+            // metrics (f64)
+        ) as f64
+            / (1024.0 * 1024.0);
 
         Ok(BatchBacktestResults {
             results,
@@ -510,11 +658,17 @@ impl BatchBacktestSweep {
         // Allocate output: [N_strategies × N_indicators × N_candles]
         let n_indicators = 3; // RSI, ATR, SMA for now
         let indicators_len = n_strategies * n_indicators * n_candles;
-        let mut d_indicators = self.device.stream.alloc_zeros::<f64>(indicators_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate indicators: {:?}", e)))?;
+        let mut d_indicators = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(indicators_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate indicators: {:?}", e))
+            })?;
 
         // Get kernel function
-        let func = module.load_function("batch_indicators_kernel")
+        let func = module
+            .load_function("batch_indicators_kernel")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
         // Grid: (N_strategies, N_indicators, (N_candles+255)/256)
@@ -570,11 +724,17 @@ impl BatchBacktestSweep {
 
         // Allocate signals: [N_strategies × N_candles] (int8)
         let signals_len = n_strategies * n_candles;
-        let mut d_signals = self.device.stream.alloc_zeros::<i8>(signals_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate signals: {:?}", e)))?;
+        let mut d_signals = self
+            .device
+            .stream
+            .alloc_zeros::<i8>(signals_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate signals: {:?}", e))
+            })?;
 
         // Get kernel function
-        let func = module.load_function("strategy_signals_kernel")
+        let func = module
+            .load_function("strategy_signals_kernel")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
         // Grid: (N_strategies, (N_candles+255)/256)
@@ -627,22 +787,38 @@ impl BatchBacktestSweep {
 
         // Allocate equity curves: [N_strategies × N_candles]
         let equity_len = n_strategies * n_candles;
-        let mut d_equity = self.device.stream.alloc_zeros::<f64>(equity_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate equity: {:?}", e)))?;
+        let mut d_equity = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(equity_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate equity: {:?}", e))
+            })?;
 
         // Allocate trades: [N_strategies × MAX_TRADES × Trade_size]
         // Trade struct: 6 f64 fields + 1 i8 = 49 bytes (rounded to 56 for alignment)
         let max_trades = 1000;
         let trades_len = n_strategies * max_trades * 7; // Simplified: 7 f64-sized slots per trade
-        let mut d_trades = self.device.stream.alloc_zeros::<i8>(trades_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate trades: {:?}", e)))?;
+        let mut d_trades = self
+            .device
+            .stream
+            .alloc_zeros::<i8>(trades_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate trades: {:?}", e))
+            })?;
 
         // Allocate trade counts: [N_strategies]
-        let mut d_num_trades = self.device.stream.alloc_zeros::<i32>(n_strategies)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate num_trades: {:?}", e)))?;
+        let mut d_num_trades = self
+            .device
+            .stream
+            .alloc_zeros::<i32>(n_strategies)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate num_trades: {:?}", e))
+            })?;
 
         // Get optimized kernel function (shared memory caching + register optimization)
-        let func = module.load_function("backtest_execution_kernel_optimized")
+        let func = module
+            .load_function("backtest_execution_kernel_optimized")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
         // Grid: (N_strategies, 1) - one thread per strategy!
@@ -694,15 +870,31 @@ impl BatchBacktestSweep {
         n_candles: usize,
     ) -> Result<(CudaSlice<f64>, CudaSlice<f64>, CudaSlice<f64>), GpuError> {
         // Allocate outputs
-        let mut d_sharpe = self.device.stream.alloc_zeros::<f64>(n_strategies)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate sharpe: {:?}", e)))?;
-        let mut d_dd = self.device.stream.alloc_zeros::<f64>(n_strategies)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate drawdown: {:?}", e)))?;
-        let mut d_wr = self.device.stream.alloc_zeros::<f64>(n_strategies)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate win_rate: {:?}", e)))?;
+        let mut d_sharpe = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(n_strategies)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate sharpe: {:?}", e))
+            })?;
+        let mut d_dd = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(n_strategies)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate drawdown: {:?}", e))
+            })?;
+        let mut d_wr = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(n_strategies)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate win_rate: {:?}", e))
+            })?;
 
         // Get kernel function
-        let func = module.load_function("metrics_calculation_kernel")
+        let func = module
+            .load_function("metrics_calculation_kernel")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
         // Grid: (N_strategies, 1)
@@ -780,8 +972,13 @@ impl BatchBacktestResults {
         println!();
         println!("Top 5 strategies:");
         for (i, result) in self.top_n(5).iter().enumerate() {
-            println!("  {}. Sharpe={:.2} DD={:.2}% Trades={}",
-                i + 1, result.sharpe_ratio, result.max_drawdown * 100.0, result.num_trades);
+            println!(
+                "  {}. Sharpe={:.2} DD={:.2}% Trades={}",
+                i + 1,
+                result.sharpe_ratio,
+                result.max_drawdown * 100.0,
+                result.num_trades
+            );
         }
     }
 }

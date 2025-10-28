@@ -115,7 +115,9 @@ pub use csv_loader::{CsvError, CsvFormat};
 
 // Re-export batch builder
 #[cfg(feature = "gpu")]
-pub use batch_builder::{CandleBatchBuilder, MultiFileBatchBuilder, SymbolCandleResult, execute_batch_with_symbols};
+pub use batch_builder::{
+    CandleBatchBuilder, MultiFileBatchBuilder, SymbolCandleResult, execute_batch_with_symbols,
+};
 
 // Re-export persistent kernel execution (reuses existing infrastructure)
 #[cfg(feature = "gpu")]

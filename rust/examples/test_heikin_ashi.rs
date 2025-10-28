@@ -24,11 +24,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test data: 5 candles with clear trend
     // Format: OHLC
     let test_data = vec![
-        (100.0, 105.0, 99.0, 104.0),   // Bar 0: Bullish
-        (104.0, 108.0, 103.0, 107.0),  // Bar 1: Bullish
-        (107.0, 110.0, 106.0, 109.0),  // Bar 2: Bullish
-        (109.0, 109.5, 107.0, 107.5),  // Bar 3: Weak bullish
-        (107.5, 108.0, 105.0, 105.5),  // Bar 4: Bearish
+        (100.0, 105.0, 99.0, 104.0),  // Bar 0: Bullish
+        (104.0, 108.0, 103.0, 107.0), // Bar 1: Bullish
+        (107.0, 110.0, 106.0, 109.0), // Bar 2: Bullish
+        (109.0, 109.5, 107.0, 107.5), // Bar 3: Weak bullish
+        (107.5, 108.0, 105.0, 105.5), // Bar 4: Bearish
     ];
 
     println!("\nOriginal OHLC candles:");

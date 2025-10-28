@@ -99,12 +99,12 @@ impl Drop for CudaEvent {
 /// Timing breakdown for GPU operations
 #[derive(Debug)]
 struct TimingBreakdown {
-    h2d_ms: f32,           // Host to device transfer
-    kernel_exec_ms: f32,   // Kernel execution
-    d2h_ms: f32,           // Device to host transfer
-    total_gpu_ms: f32,     // Total GPU time (from events)
-    total_wall_ms: f64,    // Total wall clock time
-    alloc_ms: f64,         // Memory allocation time (CPU-side)
+    h2d_ms: f32,         // Host to device transfer
+    kernel_exec_ms: f32, // Kernel execution
+    d2h_ms: f32,         // Device to host transfer
+    total_gpu_ms: f32,   // Total GPU time (from events)
+    total_wall_ms: f64,  // Total wall clock time
+    alloc_ms: f64,       // Memory allocation time (CPU-side)
 }
 
 impl TimingBreakdown {
@@ -125,37 +125,72 @@ impl TimingBreakdown {
         println!("║  GPU Transfer Overhead Profile: {}  ", test_name);
         println!("╠══════════════════════════════════════════════════════════════╣");
         println!("║  Configuration:                                              ║");
-        println!("║    Strategies: {}                                       ║", n_strategies);
-        println!("║    Candles:    {}                                       ║", n_candles);
+        println!(
+            "║    Strategies: {}                                       ║",
+            n_strategies
+        );
+        println!(
+            "║    Candles:    {}                                       ║",
+            n_candles
+        );
         println!("╠══════════════════════════════════════════════════════════════╣");
         println!("║  Timing Breakdown (GPU Events):                              ║");
         println!("║  ┌──────────────────────────────────────────────────────┐   ║");
         println!("║  │  Phase              Time (ms)    % of Total          │   ║");
         println!("║  ├──────────────────────────────────────────────────────┤   ║");
-        println!("║  │  H2D Transfer       {:8.2}       {:5.1}%          │   ║",
-                 self.h2d_ms, (self.h2d_ms / self.total_gpu_ms) * 100.0);
-        println!("║  │  Kernel Execution   {:8.2}       {:5.1}%          │   ║",
-                 self.kernel_exec_ms, self.kernel_pct());
-        println!("║  │  D2H Transfer       {:8.2}       {:5.1}%          │   ║",
-                 self.d2h_ms, (self.d2h_ms / self.total_gpu_ms) * 100.0);
+        println!(
+            "║  │  H2D Transfer       {:8.2}       {:5.1}%          │   ║",
+            self.h2d_ms,
+            (self.h2d_ms / self.total_gpu_ms) * 100.0
+        );
+        println!(
+            "║  │  Kernel Execution   {:8.2}       {:5.1}%          │   ║",
+            self.kernel_exec_ms,
+            self.kernel_pct()
+        );
+        println!(
+            "║  │  D2H Transfer       {:8.2}       {:5.1}%          │   ║",
+            self.d2h_ms,
+            (self.d2h_ms / self.total_gpu_ms) * 100.0
+        );
         println!("║  └──────────────────────────────────────────────────────┘   ║");
-        println!("║  Total GPU Time:      {:8.2} ms                          ║", self.total_gpu_ms);
+        println!(
+            "║  Total GPU Time:      {:8.2} ms                          ║",
+            self.total_gpu_ms
+        );
         println!("╠══════════════════════════════════════════════════════════════╣");
         println!("║  Overhead Analysis:                                          ║");
-        println!("║    Transfer overhead:  {:8.2} ms ({:5.1}% of GPU time)      ║",
-                 self.overhead_ms(), self.overhead_pct());
-        println!("║    Memory allocation:  {:8.2} ms (CPU-side)                ║", self.alloc_ms);
-        println!("║    Wall clock time:    {:8.2} ms                          ║", self.total_wall_ms);
-        println!("║    Unaccounted time:   {:8.2} ms                          ║",
-                 self.total_wall_ms - self.total_gpu_ms as f64 - self.alloc_ms);
+        println!(
+            "║    Transfer overhead:  {:8.2} ms ({:5.1}% of GPU time)      ║",
+            self.overhead_ms(),
+            self.overhead_pct()
+        );
+        println!(
+            "║    Memory allocation:  {:8.2} ms (CPU-side)                ║",
+            self.alloc_ms
+        );
+        println!(
+            "║    Wall clock time:    {:8.2} ms                          ║",
+            self.total_wall_ms
+        );
+        println!(
+            "║    Unaccounted time:   {:8.2} ms                          ║",
+            self.total_wall_ms - self.total_gpu_ms as f64 - self.alloc_ms
+        );
         println!("╠══════════════════════════════════════════════════════════════╣");
         println!("║  Bottleneck Identification:                                  ║");
 
         if self.overhead_pct() > 50.0 {
-            println!("║    🚨 TRANSFER BOUND: {:5.1}% is data transfer overhead     ║", self.overhead_pct());
+            println!(
+                "║    🚨 TRANSFER BOUND: {:5.1}% is data transfer overhead     ║",
+                self.overhead_pct()
+            );
             println!("║    → Solution: Use pinned memory (20-30% speedup)           ║");
         } else if self.kernel_pct() > 70.0 {
-            println!("║    ⚙️  COMPUTE BOUND: {:5.1}% is kernel execution           ║", self.kernel_pct());
+            println!(
+                "║    ⚙️  COMPUTE BOUND: {:5.1}% is kernel execution           ║",
+                self.kernel_pct()
+            );
             println!("║    → Solution: Optimize kernel (shared memory, occupancy)   ║");
         } else {
             println!("║    ⚖️  BALANCED: No clear bottleneck                         ║");
@@ -274,12 +309,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| vec![14.0, 30.0 + (i % 10) as f64, 70.0 + (i % 10) as f64])
         .collect();
 
-    let timing_small = profile_traditional_approach(
-        device.clone(),
-        &data_small,
-        &params_small,
-        &config,
-    )?;
+    let timing_small =
+        profile_traditional_approach(device.clone(), &data_small, &params_small, &config)?;
     timing_small.print_report("Small Workload", 50, 1000);
 
     // Test 2: Bottleneck case (500 strategies × 5K candles)
@@ -289,19 +320,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let data_large = generate_synthetic_data(5000);
     let params_large: Vec<Vec<f64>> = (0..500)
-        .map(|i| vec![
-            10.0 + (i % 10) as f64,
-            25.0 + (i % 15) as f64,
-            70.0 + (i % 15) as f64,
-        ])
+        .map(|i| {
+            vec![
+                10.0 + (i % 10) as f64,
+                25.0 + (i % 15) as f64,
+                70.0 + (i % 15) as f64,
+            ]
+        })
         .collect();
 
-    let timing_large = profile_traditional_approach(
-        device.clone(),
-        &data_large,
-        &params_large,
-        &config,
-    )?;
+    let timing_large =
+        profile_traditional_approach(device.clone(), &data_large, &params_large, &config)?;
     timing_large.print_report("Bottleneck Case", 500, 5000);
 
     // Test 3: Very large workload (1000 strategies × 10K candles)
@@ -311,19 +340,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let data_xlarge = generate_synthetic_data(10000);
     let params_xlarge: Vec<Vec<f64>> = (0..1000)
-        .map(|i| vec![
-            10.0 + (i % 15) as f64,
-            20.0 + (i % 20) as f64,
-            70.0 + (i % 20) as f64,
-        ])
+        .map(|i| {
+            vec![
+                10.0 + (i % 15) as f64,
+                20.0 + (i % 20) as f64,
+                70.0 + (i % 20) as f64,
+            ]
+        })
         .collect();
 
-    let timing_xlarge = profile_traditional_approach(
-        device.clone(),
-        &data_xlarge,
-        &params_xlarge,
-        &config,
-    )?;
+    let timing_xlarge =
+        profile_traditional_approach(device.clone(), &data_xlarge, &params_xlarge, &config)?;
     timing_xlarge.print_report("Large Workload", 1000, 10000);
 
     // Summary
@@ -332,16 +359,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╠════════════════════════════════════════════════════════════════╣");
     println!("║  Test Case                       Transfer Overhead             ║");
     println!("║  ────────────────────────────────────────────────────────────  ║");
-    println!("║  Small (50 × 1K)                 {:.1}%                        ║",
-             timing_small.overhead_pct());
-    println!("║  Bottleneck (500 × 5K)           {:.1}%                        ║",
-             timing_large.overhead_pct());
-    println!("║  Large (1000 × 10K)              {:.1}%                        ║",
-             timing_xlarge.overhead_pct());
+    println!(
+        "║  Small (50 × 1K)                 {:.1}%                        ║",
+        timing_small.overhead_pct()
+    );
+    println!(
+        "║  Bottleneck (500 × 5K)           {:.1}%                        ║",
+        timing_large.overhead_pct()
+    );
+    println!(
+        "║  Large (1000 × 10K)              {:.1}%                        ║",
+        timing_xlarge.overhead_pct()
+    );
     println!("╠════════════════════════════════════════════════════════════════╣");
 
-    let avg_overhead = (timing_small.overhead_pct() + timing_large.overhead_pct() +
-                        timing_xlarge.overhead_pct()) / 3.0;
+    let avg_overhead =
+        (timing_small.overhead_pct() + timing_large.overhead_pct() + timing_xlarge.overhead_pct())
+            / 3.0;
 
     if avg_overhead > 40.0 {
         println!("║  ⚠️  HIGH TRANSFER OVERHEAD DETECTED                           ║");

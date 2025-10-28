@@ -12,7 +12,9 @@
 #[cfg(not(feature = "gpu"))]
 fn main() {
     println!("⚠️  This example requires GPU feature enabled");
-    println!("   Build with: cargo build --example test_persistent_sma_ema_bollinger --features gpu");
+    println!(
+        "   Build with: cargo build --example test_persistent_sma_ema_bollinger --features gpu"
+    );
 }
 
 #[cfg(feature = "gpu")]
@@ -21,13 +23,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::persistent::*;
-#[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::GpuDevice;
+#[cfg(feature = "gpu")]
+use kimsfinance_core::gpu::persistent::*;
 
 #[cfg(feature = "gpu")]
 fn run_tests() -> Result<(), Box<dyn std::error::Error>> {
-
     println!("\n🧪 Testing Persistent Kernel Implementations: SMA, EMA, Bollinger Bands\n");
 
     // Initialize GPU device

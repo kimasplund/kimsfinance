@@ -56,14 +56,35 @@ pub fn rsi_gpu_sync(
     stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = close.len();
-    if period < 1 { return Err(GpuError::InvalidParameter("Period must be >= 1".to_string())); }
-    if n < period + 1 { return Err(GpuError::InvalidParameter(format!("Not enough data: need {} points, got {}", period + 1, n))); }
+    if period < 1 {
+        return Err(GpuError::InvalidParameter(
+            "Period must be >= 1".to_string(),
+        ));
+    }
+    if n < period + 1 {
+        return Err(GpuError::InvalidParameter(format!(
+            "Not enough data: need {} points, got {}",
+            period + 1,
+            n
+        )));
+    }
 
-    let ptx_arc = compile_ptx_optimized_cached(RSI_KERNEL).map_err(|e| GpuError::CompilationError(format!("Failed to compile RSI kernel: {:?}", e)))?;
+    let ptx_arc = compile_ptx_optimized_cached(RSI_KERNEL).map_err(|e| {
+        GpuError::CompilationError(format!("Failed to compile RSI kernel: {:?}", e))
+    })?;
     let ptx = Arc::unwrap_or_clone(ptx_arc);
-    let module = device.context().load_module(ptx).map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
-    let gains_losses_kernel = module.load_function("calculate_gains_losses_kernel").map_err(|e| GpuError::ExecutionError(format!("Failed to load gains_losses kernel: {:?}", e)))?;
-    let rsi_kernel = module.load_function("calculate_rsi_kernel").map_err(|e| GpuError::ExecutionError(format!("Failed to load RSI kernel: {:?}", e)))?;
+    let module = device
+        .context()
+        .load_module(ptx)
+        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
+    let gains_losses_kernel = module
+        .load_function("calculate_gains_losses_kernel")
+        .map_err(|e| {
+            GpuError::ExecutionError(format!("Failed to load gains_losses kernel: {:?}", e))
+        })?;
+    let rsi_kernel = module
+        .load_function("calculate_rsi_kernel")
+        .map_err(|e| GpuError::ExecutionError(format!("Failed to load RSI kernel: {:?}", e)))?;
 
     let kernel_stream = stream.unwrap_or(&device.stream);
 
@@ -80,9 +101,15 @@ pub fn rsi_gpu_sync(
     builder.arg(&mut d_losses);
     builder.arg(&n_i32);
     let config = LaunchConfig::for_num_elems((n - 1) as u32);
-    unsafe { builder.launch(config).map_err(|e| GpuError::ExecutionError(format!("Gains/losses kernel launch failed: {:?}", e)))?; }
+    unsafe {
+        builder.launch(config).map_err(|e| {
+            GpuError::ExecutionError(format!("Gains/losses kernel launch failed: {:?}", e))
+        })?;
+    }
 
-    kernel_stream.synchronize().map_err(|e| GpuError::SynchronizationError(format!("Stream sync after gains/losses failed: {:?}", e)))?;
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream sync after gains/losses failed: {:?}", e))
+    })?;
 
     let gains_vec = device.copy_to_host(&d_gains)?;
     let losses_vec = device.copy_to_host(&d_losses)?;
@@ -103,9 +130,15 @@ pub fn rsi_gpu_sync(
     builder.arg(&mut d_rsi);
     builder.arg(&n_i32);
     builder.arg(&period_i32);
-    unsafe { builder.launch(config).map_err(|e| GpuError::ExecutionError(format!("RSI kernel launch failed: {:?}", e)))?; }
+    unsafe {
+        builder
+            .launch(config)
+            .map_err(|e| GpuError::ExecutionError(format!("RSI kernel launch failed: {:?}", e)))?;
+    }
 
-    kernel_stream.synchronize().map_err(|e| GpuError::SynchronizationError(format!("Stream sync after RSI failed: {:?}", e)))?;
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream sync after RSI failed: {:?}", e))
+    })?;
 
     let rsi_vec = device.copy_to_host(&d_rsi)?;
     Ok(Array1::from_vec(rsi_vec))
