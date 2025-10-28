@@ -196,6 +196,12 @@ pub mod vwma;
 #[cfg(feature = "gpu")]
 pub use vwma::vwma_gpu;
 
+#[cfg(feature = "gpu")]
+pub mod mfi;
+
+#[cfg(feature = "gpu")]
+pub use mfi::mfi_gpu;
+
 // TODO: Fix sweep module conflicts before re-enabling
 // #[cfg(feature = "gpu")]
 // pub mod sweep;
@@ -284,3 +290,9 @@ pub use candles::{
     CandleAggregator, OHLCVCandle, RangeBarAggregator, RangeBarParams, RenkoAggregator,
     RenkoParams, TradeData,
 };
+
+#[cfg(feature = "gpu")]
+pub mod parabolic_sar;
+
+#[cfg(feature = "gpu")]
+pub use parabolic_sar::parabolic_sar_gpu;
