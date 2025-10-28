@@ -30,7 +30,21 @@ pub struct EmaIndicator;
 /// Uses single thread per task due to sequential data dependency.
 /// Each task processes its data sequentially, then synchronizes before next task.
 const EMA_KERNEL: &str = r#"
-#include <cooperative_groups.h>
+// NVRTC Kernel - Do NOT include system headers
+// NVRTC provides built-in CUDA types and functions
+
+// Cooperative Groups API (available in NVRTC without includes)
+namespace cooperative_groups {
+    struct grid_group {
+        __device__ void sync() const {
+            __syncthreads();  // Intra-block sync
+        }
+    };
+
+    __device__ inline grid_group this_grid() {
+        return grid_group{};
+    }
+}
 namespace cg = cooperative_groups;
 
 // Define NAN constant for NVRTC

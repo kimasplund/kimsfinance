@@ -25,6 +25,7 @@ dashmap = "6.1"
 arrayvec = "0.7"
 smallvec = "1.13"
 parking_lot = "0.12"
+sha2 = "0.10"  # For kernel cache hashing
 
 # Optional SIMD support
 packed_simd_2 = { version = "0.3.8", optional = true }
@@ -176,5 +177,20 @@ required-features = ["gpu"]
 
 [[bench]]
 name = "combined_optimizations_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "optimization_comparison"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pinned_vs_standard_memory"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "optimization_validation"
 harness = false
 required-features = ["gpu"]

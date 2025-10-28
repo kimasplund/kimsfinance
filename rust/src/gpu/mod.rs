@@ -33,6 +33,9 @@
 pub mod device;
 
 #[cfg(feature = "gpu")]
+pub mod async_alloc;
+
+#[cfg(feature = "gpu")]
 pub mod memory_pool;
 
 #[cfg(feature = "gpu")]
@@ -78,6 +81,9 @@ pub mod keltner;
 pub use device::{GpuDevice, GpuError};
 
 #[cfg(feature = "gpu")]
+pub use async_alloc::{AsyncAllocator, PoolStats};
+
+#[cfg(feature = "gpu")]
 pub use memory_pool::{GpuMemoryPool, IndicatorType};
 
 #[cfg(feature = "gpu")]
@@ -109,6 +115,9 @@ pub use keltner::keltner_channels_gpu;
 
 #[cfg(feature = "gpu")]
 pub mod rsi;
+
+#[cfg(feature = "gpu")]
+pub mod rsi_sync;
 
 #[cfg(feature = "gpu")]
 pub use rsi::rsi_gpu;
