@@ -1024,7 +1024,7 @@ All indicators are available in Python, with 24 having Rust GPU-accelerated impl
 - A/D Line (Accumulation/Distribution)
 - Chaikin Money Flow
 
-**See [full indicator list](docs/API.md#technical-indicators) for all 28 indicators**
+**See [full indicator list](docs/API.md#technical-indicators) for all 32 indicators**
 
 ---
 
@@ -1140,7 +1140,7 @@ ruff check kimsfinance/
 - [x] Python 3.14 support (27% single-thread, 3.1x multi-thread)
 - [x] 329+ comprehensive tests
 - [x] 6 chart types (Candlestick, OHLC, Line, Hollow, Renko, Point & Figure)
-- [x] 28 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.) - 24 with Rust GPU acceleration
+- [x] 32 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.) - 24 with Rust GPU acceleration
 - [x] GPU-accelerated indicators (1.2-2.9x speedup)
 - [x] Rust implementation (194x average speedup)
 - [x] GPU persistent kernels (41x batch speedup)

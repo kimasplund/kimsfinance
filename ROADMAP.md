@@ -32,7 +32,7 @@ This document outlines the future development plans for kimsfinance.
 - Supertrend
 - Ichimoku Cloud
 
-**Note:** 24 of the 28 implemented indicators have Rust GPU-accelerated versions for massive datasets.
+**Note:** 24 of the 32 implemented indicators have Rust GPU-accelerated versions for massive datasets.
 
 ---
 
