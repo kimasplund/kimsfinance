@@ -35,7 +35,7 @@
 //! 3. Bear Power = low - EMA_13 - **GPU parallel**
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -158,9 +158,10 @@ pub fn elder_ray_gpu(
     let ema = ema_cpu(close.view(), ema_period);
 
     // Step 2: Compile GPU kernel for parallel subtraction
-    let ptx = compile_ptx_optimized(ELDER_RAY_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(ELDER_RAY_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile Elder Ray kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     let module = device
         .context()

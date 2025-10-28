@@ -58,7 +58,7 @@
 //! - ATR: 2-3x faster with hybrid approach
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -298,9 +298,10 @@ pub fn ema_gpu(
     }
 
     // Compile PTX from CUDA source
-    let ptx = compile_ptx_optimized(EMA_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(EMA_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile EMA kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load compiled module into GPU context
     let module = device

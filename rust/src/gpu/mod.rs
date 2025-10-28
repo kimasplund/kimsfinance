@@ -33,6 +33,9 @@
 pub mod device;
 
 #[cfg(feature = "gpu")]
+pub mod async_alloc;
+
+#[cfg(feature = "gpu")]
 pub mod memory_pool;
 
 #[cfg(feature = "gpu")]
@@ -76,6 +79,9 @@ pub mod keltner;
 
 #[cfg(feature = "gpu")]
 pub use device::{GpuDevice, GpuError};
+
+#[cfg(feature = "gpu")]
+pub use async_alloc::{AsyncAllocator, PoolStats};
 
 #[cfg(feature = "gpu")]
 pub use memory_pool::{GpuMemoryPool, IndicatorType};

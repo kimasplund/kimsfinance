@@ -16,7 +16,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -150,8 +150,9 @@ pub fn vwap_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(VWAP_KERNEL)
+    let ptx_arc = compile_ptx_optimized_cached(VWAP_KERNEL)
         .map_err(|e| GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e)))?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module
     let module = device

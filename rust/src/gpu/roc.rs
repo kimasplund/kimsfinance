@@ -4,7 +4,7 @@
 //! ROC is perfectly parallelizable - each thread calculates one value independently.
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
@@ -118,9 +118,10 @@ pub fn roc_gpu(
     }
 
     // Compile PTX
-    let ptx = compile_ptx_optimized(ROC_KERNEL).map_err(|e| {
+    let ptx_arc = compile_ptx_optimized_cached(ROC_KERNEL).map_err(|e| {
         GpuError::CompilationError(format!("Failed to compile ROC kernel: {:?}", e))
     })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
 
     // Load module (use context, not stream)
     let module = device
