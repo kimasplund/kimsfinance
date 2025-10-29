@@ -4,20 +4,38 @@
 //!
 //! # Mathematical Background
 //!
-//! The Heston characteristic function φ(u) is:
+//! The Heston characteristic function φ(z) for COMPLEX argument z is:
 //!
-//! φ(u) = exp(C(τ,u) + D(τ,u)v₀ + iu·ln(S₀))
+//! φ(z) = exp(C(τ,z) + D(τ,z)v₀ + iz·ln(S₀))
 //!
 //! Where:
-//! - D(τ,u) = (b - ρσu*i - d) / σ² · (1 - e^(-dτ)) / (1 - ge^(-dτ))
-//! - C(τ,u) = r·u·i·τ + (κθ/σ²)[(b - ρσu*i - d)τ - 2ln((1 - ge^(-dτ))/(1 - g))]
-//! - d = √[(ρσu*i - b)² - σ²(2u*i·a - u²)]
-//! - g = (b - ρσu*i - d) / (b - ρσu*i + d)
+//! - D(τ,z) = (b - ρσz*i - d) / σ² · (1 - e^(-dτ)) / (1 - ge^(-dτ))
+//! - C(τ,z) = r·z·i·τ + (κθ/σ²)[(b - ρσz*i - d)τ - 2ln((1 - ge^(-dτ))/(1 - g))]
+//! - d = √[(ρσz*i - b)² - σ²(2z*i - z²)]
+//! - g = (b - ρσz*i - d) / (b - ρσz*i + d)
+//!
+//! # Carr-Madan FFT Integration
+//!
+//! For Carr-Madan FFT, we evaluate φ at COMPLEX argument:
+//! z = u - (α+1)i
+//!
+//! where:
+//! - u = real frequency variable (0, η, 2η, ...)
+//! - α = 1.5 (damping parameter)
+//! - Thus z = u - 2.5i
+//!
+//! This is CRITICAL for getting non-zero imaginary parts!
 //!
 //! # Performance Target
 //!
 //! - Batch size 100 options, 4096 FFT points: <3ms
 //! - 100-500x speedup vs CPU for calibration workloads
+//!
+//! # Debug Mode
+//!
+//! This kernel includes comprehensive printf debugging (thread 0 only).
+//! All intermediate complex values are printed with "CUDA_DEBUG:" prefix.
+//! Use this to trace where imaginary parts become zero.
 
 // CUDA built-in math functions (no header needed with NVRTC)
 
@@ -89,7 +107,11 @@ __device__ __forceinline__ Complex operator*(const Complex& c, double scalar) {
 
 /// Heston characteristic function kernel (batched for multiple options)
 ///
-/// Computes φ(u) for each (option, frequency) pair in parallel.
+/// Computes φ(u - (α+1)i) for each (option, frequency) pair in parallel.
+///
+/// CRITICAL: This evaluates the characteristic function at COMPLEX arguments
+/// as required by the Carr-Madan FFT formula. The imaginary part -(α+1) ensures
+/// the Fourier transform converges and produces meaningful option prices.
 ///
 /// # Arguments
 ///
@@ -98,12 +120,13 @@ __device__ __forceinline__ Complex operator*(const Complex& c, double scalar) {
 /// - sigma: Volatility of volatility
 /// - rho: Correlation
 /// - v0: Initial variance
+/// - alpha: Carr-Madan damping parameter (typically 1.5)
 /// - strikes: Option strikes [n_options]
 /// - expirations: Time to expiry in years [n_options]
 /// - spot_prices: Current spot prices [n_options]
 /// - risk_free_rates: Risk-free rates [n_options]
 /// - n_fft: Number of FFT points (power of 2, e.g., 4096)
-/// - phi_values: Integration points [n_fft]
+/// - phi_values: REAL frequency points [n_fft]
 /// - char_func_real: Output real part [n_options * n_fft]
 /// - char_func_imag: Output imaginary part [n_options * n_fft]
 /// - n_options: Number of options
@@ -113,6 +136,7 @@ extern "C" __global__ void heston_characteristic_function(
     const double sigma,
     const double rho,
     const double v0,
+    const double alpha,
     const double* __restrict__ strikes,
     const double* __restrict__ expirations,
     const double* __restrict__ spot_prices,
@@ -125,81 +149,173 @@ extern "C" __global__ void heston_characteristic_function(
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= n_options * n_fft) return;
-    
+
     int option_idx = idx / n_fft;
     int phi_idx = idx % n_fft;
-    
+
     double K = strikes[option_idx];
     double T = expirations[option_idx];
     double S = spot_prices[option_idx];
     double r = risk_free_rates[option_idx];
-    double u = phi_values[phi_idx];
     
-    // Heston characteristic function computation
-    // φ(u) = exp(C(T,u) + D(T,u)v₀ + iu·ln(S))
-    
-    // Define constants for Heston formula
-    const double a = 0.5; // Parameter for characteristic function form
-    
-    // Complex arithmetic: u → iu (multiply by i)
-    Complex iu = Complex(0.0, u);
-    
-    // b = kappa + λ - ρσ (for risk-neutral measure, λ = 0)
-    double b = kappa - rho * sigma * u;
-    
-    // Compute d = √[(ρσu*i - b)² - σ²(2u*i·a - u²)]
-    // First compute the terms inside the square root
-    Complex rho_sigma_u_i = Complex(0.0, rho * sigma * u);
-    Complex term1 = rho_sigma_u_i - Complex(b, 0.0);
-    Complex term1_sq = term1 * term1;
-    
-    Complex two_u_i_a = Complex(0.0, 2.0 * u * a);
-    Complex u_sq = Complex(u * u, 0.0);
-    Complex term2 = two_u_i_a - u_sq;
-    Complex term2_scaled = Complex(sigma * sigma, 0.0) * term2;
-    
-    Complex d_squared = term1_sq - term2_scaled;
-    Complex d = d_squared.sqrt();
-    
-    // Compute g = (b - ρσu*i - d) / (b - ρσu*i + d)
+    // CRITICAL FIX: Construct COMPLEX argument z = u - (α+1)i
+    // This is required by Carr-Madan FFT formula!
+    double u_real = phi_values[phi_idx];
+    double u_imag = -(alpha + 1.0);  // Typically -2.5 for α=1.5
+    Complex z = Complex(u_real, u_imag);
+
+    // Print debug for both u=0 (idx=0) and u≠0 (idx=1) to see difference
+    bool debug_print = (idx == 0 || idx == 1);
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d, phi_idx=%d]: Initial z = (%f, %f)\n", idx, phi_idx, z.real, z.imag);
+        printf("CUDA_DEBUG [idx=%d]: u_real=%f (from phi_values), u_imag=%f (=-(alpha+1))\n",
+               idx, u_real, u_imag);
+        if (idx == 0) {
+            printf("CUDA_DEBUG [idx=%d]: Parameters: kappa=%f, theta=%f, sigma=%f, rho=%f, v0=%f, alpha=%f\n",
+                   idx, kappa, theta, sigma, rho, v0, alpha);
+            printf("CUDA_DEBUG [idx=%d]: Option params: S=%f, K=%f, T=%f, r=%f\n", idx, S, K, T, r);
+        }
+    }
+
+    // Heston characteristic function computation for COMPLEX z
+    // φ(z) = exp(C(T,z) + D(T,z)v₀ + iz·ln(S))
+    // Standard Heston formula (Heston 1993, Carr-Madan 1999)
+
+    double sigma_sq = sigma * sigma;
+
+    // For risk-neutral measure: b = kappa - λ = kappa (with λ=0)
+    double b = kappa;
     Complex b_complex = Complex(b, 0.0);
-    Complex numerator_g = b_complex - rho_sigma_u_i - d;
-    Complex denominator_g = b_complex - rho_sigma_u_i + d;
+
+    // Compute i (imaginary unit)
+    Complex i_unit = Complex(0.0, 1.0);
+
+    // Compute iz (i times z)
+    Complex i_z = i_unit * z;
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: i_z = i * z = (%f, %f)\n", idx, i_z.real, i_z.imag);
+    }
+
+    // Compute ρσiz
+    Complex rho_sigma_i_z = Complex(rho * sigma, 0.0) * i_z;
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: rho_sigma_i_z = rho*sigma*i_z = (%f, %f)\n",
+               idx, rho_sigma_i_z.real, rho_sigma_i_z.imag);
+    }
+
+    // Compute z² (z squared)
+    Complex z_squared = z * z;
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: z_squared = (%f, %f)\n", idx, z_squared.real, z_squared.imag);
+    }
+
+    // Compute d² = (ρσiz - b)² + σ²(2iz - z²)
+    // Breaking down: (ρσiz - b)²
+    Complex term1_base = rho_sigma_i_z - b_complex;
+    Complex term1 = term1_base * term1_base;
+
+    // σ²(2iz - z²)
+    Complex two_i_z = i_z * 2.0;
+    Complex inner = two_i_z - z_squared;
+    Complex term2 = Complex(sigma_sq, 0.0) * inner;
+
+    Complex d_squared = term1 + term2;
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: d_squared = (%f, %f)\n", idx, d_squared.real, d_squared.imag);
+    }
+
+    Complex d = d_squared.sqrt();
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: d = sqrt(d_squared) = (%f, %f)\n", idx, d.real, d.imag);
+    }
+
+    // g = (b - ρσiz - d) / (b - ρσiz + d)
+    Complex b_minus_rho_sigma_iz = b_complex - rho_sigma_i_z;
+    Complex numerator_g = b_minus_rho_sigma_iz - d;
+    Complex denominator_g = b_minus_rho_sigma_iz + d;
     Complex g = numerator_g / denominator_g;
-    
-    // Compute e^(-d·T)
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: g = (%f, %f)\n", idx, g.real, g.imag);
+    }
+
+    // e^(-d·T)
     Complex exp_neg_d_T = (d * (-T)).exp();
-    
-    // Compute D(T,u) = (b - ρσu*i - d) / σ² · (1 - e^(-dT)) / (1 - g·e^(-dT))
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: exp_neg_d_T = exp(-d*T) = (%f, %f)\n",
+               idx, exp_neg_d_T.real, exp_neg_d_T.imag);
+    }
+
+    // D(T,z) = (b - ρσiz - d) / σ² · (1 - e^(-dT)) / (1 - g·e^(-dT))
     Complex one = Complex(1.0, 0.0);
     Complex numerator_D_frac = one - exp_neg_d_T;
     Complex denominator_D_frac = one - g * exp_neg_d_T;
     Complex D_frac = numerator_D_frac / denominator_D_frac;
-    
-    double sigma_sq = sigma * sigma;
     Complex D = numerator_g / Complex(sigma_sq, 0.0) * D_frac;
-    
-    // Compute C(T,u) = r·u·i·T + (κθ/σ²)[(b - ρσu*i - d)T - 2ln((1 - g·e^(-dT))/(1 - g))]
-    Complex r_u_i_T = Complex(0.0, r * u * T);
-    
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: D = (%f, %f)\n", idx, D.real, D.imag);
+    }
+
+    // C(T,z) = r·iz·T + (κθ/σ²)[(b - ρσiz - d)T - 2ln((1 - g·e^(-dT))/(1 - g))]
+    Complex r_iz_T = Complex(r * T, 0.0) * i_z;
+
     double kappa_theta_over_sigma_sq = kappa * theta / sigma_sq;
     Complex term_C1 = numerator_g * T;
-    
+
     Complex one_minus_g = one - g;
     Complex ln_numerator = one - g * exp_neg_d_T;
     Complex ln_term = (ln_numerator / one_minus_g).log();
     Complex term_C2 = ln_term * 2.0;
-    
-    Complex C = r_u_i_T + Complex(kappa_theta_over_sigma_sq, 0.0) * (term_C1 - term_C2);
-    
-    // Compute φ(u) = exp(C + D·v₀ + iu·ln(S))
+
+    Complex C = r_iz_T + Complex(kappa_theta_over_sigma_sq, 0.0) * (term_C1 - term_C2);
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: C = (%f, %f)\n", idx, C.real, C.imag);
+    }
+
+    // φ(z) = exp(C + D·v₀ + iz·ln(S))
     Complex D_v0 = D * v0;
-    Complex iu_ln_S = Complex(0.0, u * ::log(S));
-    
-    Complex exponent = C + D_v0 + iu_ln_S;
+    Complex iz_ln_S = i_z * ::log(S);
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: D_v0 = (%f, %f)\n", idx, D_v0.real, D_v0.imag);
+        printf("CUDA_DEBUG [idx=%d]: iz_ln_S = (%f, %f)\n", idx, iz_ln_S.real, iz_ln_S.imag);
+    }
+
+    Complex exponent = C + D_v0 + iz_ln_S;
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: exponent = C + D*v0 + iz*ln(S) = (%f, %f)\n",
+               idx, exponent.real, exponent.imag);
+    }
+
     Complex phi = exponent.exp();
+
+    if (debug_print) {
+        printf("CUDA_DEBUG [idx=%d]: phi = exp(exponent) = (%f, %f)\n", idx, phi.real, phi.imag);
+    }
     
     // Store results
     char_func_real[idx] = phi.real;
     char_func_imag[idx] = phi.imag;
+
+    // DEBUG: Verify write (only first few threads)
+    if (idx < 2) {
+        printf("CUDA_DEBUG [idx=%d]: AFTER WRITE - char_func_real[%d] = %.6f, char_func_imag[%d] = %.6f\n",
+               idx, idx, char_func_real[idx], idx, char_func_imag[idx]);
+
+        // IMMEDIATE readback without syncthreads to avoid race
+        double immediate_readback_real = char_func_real[idx];
+        double immediate_readback_imag = char_func_imag[idx];
+        printf("CUDA_DEBUG [idx=%d]: IMMEDIATE READBACK - real=%.6f, imag=%.6f\n",
+               idx, immediate_readback_real, immediate_readback_imag);
+    }
 }
