@@ -60,36 +60,37 @@ GPU aggregation module (`src/gpu/aggregation.rs`) used outdated cudarc API calls
 - **Reason**: CPU aggregation already achieves 3.13M trades/sec (fast enough)
 - **User Impact**: None (GPU aggregation is optional optimization)
 
-### Solution
-Disabled broken GPU aggregation module temporarily:
-1. Commented out in `src/gpu/mod.rs`
-2. Commented out in `src/binance/mod.rs`
-3. Added TODO comments explaining the issue
-4. Documented in final report
+### Solution (COMPLETED 2025-10-29)
+Fixed cudarc 0.17.3 API compatibility issues:
+1. ✅ Replaced `module.get_func()` with `module.load_function()`
+2. ✅ Replaced `kernel.launch()` with `stream.launch_builder()` pattern
+3. ✅ Added `PushKernelArg` trait import for builder.arg() calls
+4. ✅ Fixed i32 buffer allocation using `alloc_zeros::<i32>()`
+5. ✅ Fixed `load_module(&ptx)` to `load_module(ptx)` (ownership)
+6. ✅ Fixed lifetime issues with temporary values
+7. ✅ Fixed i32/i64 type mismatch in bucket comparison
+8. ✅ Re-enabled modules in `src/gpu/mod.rs` and `src/binance/mod.rs`
 
-### Alternative Solution (If Needed Later)
-To fix GPU aggregation (4-8 hours estimated):
-1. Update to latest cudarc documentation
-2. Replace `LaunchAsync` with correct trait
-3. Use correct `module` and `kernel.launch()` APIs
-4. Fix type mismatches in buffer allocation
-5. Re-enable modules and test
-
-### Current Workaround
-Use CPU-based aggregation, which is already very fast:
+### API Pattern (cudarc 0.17.3)
 ```rust
-// CPU aggregation works perfectly
-let candles = process_binance_directory(
-    "/path/to/data",
-    "2021-01-01",
-    "2021-12-31",
-    Timeframe::minutes(5)
-)?;  // 3.13M trades/sec throughput
+let module = device.context().load_module(ptx)?;
+let kernel = module.load_function("kernel_name")?;
+let n_trades_i32 = n_trades as i32;
+let mut builder = stream.launch_builder(&kernel);
+builder.arg(&param1);
+builder.arg(&param2);
+unsafe { builder.launch(config)?; }
+```
+
+### Compilation Status
+```bash
+cargo check --features gpu
+# Result: ✅ SUCCESS (compiles with only warnings)
 ```
 
 ### Status
-⚠️ **DEFERRED** - GPU aggregation disabled but documented
-✅ **WORKAROUND IMPLEMENTED** - CPU aggregation is production-ready
+✅ **FIXED** - GPU aggregation now compiles and is ready for use
+⚠️ **PENDING** - Benchmark validation of 5-10x speedup claim
 
 ---
 
