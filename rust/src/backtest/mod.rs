@@ -72,6 +72,10 @@ pub mod multi_objective;
 pub mod optimizer;
 pub mod portfolio;
 pub mod sweep;
+pub mod tick_strategy;
+pub mod microstructure_strategy;
+pub mod volume_profile_strategy;
+pub mod tick_engine;
 pub mod walkforward;
 
 #[cfg(feature = "gpu")]
@@ -102,6 +106,12 @@ pub use portfolio::{
 pub use walkforward::{
     WalkForwardAnalyzer, WalkForwardConfig, WalkForwardResult, WalkForwardWindow,
 };
+pub use tick_strategy::{
+    IntraCandleMomentum, OrderFlowStrategy, TickStrategy, VolumeSpikeStrategy,
+};
+pub use microstructure_strategy::MicrostructureStrategy;
+pub use volume_profile_strategy::VolumeProfileStrategy;
+pub use tick_engine::TickEngine;
 
 #[cfg(feature = "gpu")]
 pub use sweep::run_parameter_sweep_gpu;

@@ -147,7 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Configuration
     let data_path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
-    let timeframe = Timeframe::FiveMinutes;
+    let timeframe = Timeframe::minutes(5);
 
     println!("Loading data from: {}", data_path);
     println!("Timeframe: {:?}", timeframe);

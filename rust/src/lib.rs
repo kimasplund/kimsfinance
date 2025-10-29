@@ -57,6 +57,10 @@ pub mod backtest;
 
 pub mod strategies;
 
+pub mod validation;
+
+pub mod analysis;
+
 #[cfg(feature = "gpu")]
 mod batch_backtest_py;
 
