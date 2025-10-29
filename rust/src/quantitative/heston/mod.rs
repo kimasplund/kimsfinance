@@ -2,6 +2,7 @@
 //!
 //! GPU-accelerated option pricing and calibration using the Heston model.
 
+pub mod black_scholes;
 #[cfg(feature = "gpu")]
 pub mod greeks;
 pub mod model;
@@ -14,6 +15,7 @@ pub mod constraints;
 #[cfg(feature = "heston")]
 pub mod objective;
 
+pub use black_scholes::BlackScholesPricer;
 #[cfg(feature = "gpu")]
 pub use greeks::{GreeksError, HestonGreeksCalculator};
 pub use model::{Greeks, HestonParams, OptionQuote, OptionType, ValidationError};

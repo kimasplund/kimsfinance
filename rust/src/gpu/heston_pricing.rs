@@ -17,6 +17,7 @@ use crate::gpu::compile::compile_ptx_optimized_cached;
 use crate::gpu::persistent::PinnedBuffer;
 use crate::gpu::{GpuDevice, GpuError};
 use crate::quantitative::heston::{HestonParams, OptionQuote, OptionType};
+use crate::quantitative::heston::BlackScholesPricer;
 use chrono;
 use cudarc::driver::{CudaFunction, CudaSlice, DevicePtr, LaunchConfig, PushKernelArg};
 use num_complex::Complex64;
@@ -373,7 +374,30 @@ impl HestonGpuPricer {
         }
 
         // Apply FFT to get option prices
-        let prices = self.fft_to_option_prices(&char_func_real, &char_func_imag, options)?;
+        let mut prices = self.fft_to_option_prices(&char_func_real, &char_func_imag, options)?;
+
+        // Validate prices and fall back to Black-Scholes if needed
+        for (i, option) in options.iter().enumerate() {
+            let price = prices[i];
+            
+            // Check if price is invalid (NaN, Inf, negative, or unreasonably large)
+            let is_invalid = !price.is_finite() || price <= 1e-10 || price > 10.0 * option.spot_price;
+            
+            if is_invalid {
+                eprintln!(
+                    "[FALLBACK] Option {}: FFT price {:.6} invalid, using Black-Scholes",
+                    i, price
+                );
+                
+                // Use current volatility from Heston params
+                let vol = params.v0.sqrt();
+                let tau = expirations[i];
+                let bs_price = BlackScholesPricer::price(
+                    option.spot_price, option.strike, tau, option.risk_free_rate, vol, option.option_type
+                );
+                prices[i] = bs_price;
+            }
+        }
 
         Ok(prices)
     }
