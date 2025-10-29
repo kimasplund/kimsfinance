@@ -31,7 +31,7 @@
 use crate::gpu::compile::compile_ptx_optimized_cached;
 use crate::gpu::{GpuDevice, GpuError, HestonGpuPricer};
 use crate::quantitative::heston::{Greeks, HestonParams, OptionQuote};
-use cudarc::driver::{CudaFunction, CudaSlice, LaunchConfig};
+use cudarc::driver::{CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
 use parking_lot::Mutex;
 use std::sync::Arc;
 
@@ -329,13 +329,15 @@ impl GreeksGpuCalculator {
             shared_mem_bytes: 0,
         };
 
+        let n_options_i32 = n_options as i32;
+
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.delta_kernel);
             builder.arg(&d_prices_up);
             builder.arg(&d_prices_down);
             builder.arg(&d_spot_prices);
             builder.arg(&d_deltas);
-            builder.arg(&(n_options as i32));
+            builder.arg(&n_options_i32);
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Delta kernel launch failed: {:?}", e))
             })?;
@@ -373,6 +375,8 @@ impl GreeksGpuCalculator {
             shared_mem_bytes: 0,
         };
 
+        let n_options_i32 = n_options as i32;
+
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.gamma_kernel);
             builder.arg(&d_prices_up);
@@ -380,7 +384,7 @@ impl GreeksGpuCalculator {
             builder.arg(&d_prices_down);
             builder.arg(&d_spot_prices);
             builder.arg(&d_gammas);
-            builder.arg(&(n_options as i32));
+            builder.arg(&n_options_i32);
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Gamma kernel launch failed: {:?}", e))
             })?;
@@ -411,12 +415,14 @@ impl GreeksGpuCalculator {
             shared_mem_bytes: 0,
         };
 
+        let n_options_i32 = n_options as i32;
+
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.vega_kernel);
             builder.arg(&d_prices_vol_up);
             builder.arg(&d_prices_vol_down);
             builder.arg(&d_vegas);
-            builder.arg(&(n_options as i32));
+            builder.arg(&n_options_i32);
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Vega kernel launch failed: {:?}", e))
             })?;
@@ -447,12 +453,14 @@ impl GreeksGpuCalculator {
             shared_mem_bytes: 0,
         };
 
+        let n_options_i32 = n_options as i32;
+
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.theta_kernel);
             builder.arg(&d_prices_now);
             builder.arg(&d_prices_tomorrow);
             builder.arg(&d_thetas);
-            builder.arg(&(n_options as i32));
+            builder.arg(&n_options_i32);
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Theta kernel launch failed: {:?}", e))
             })?;
@@ -483,12 +491,14 @@ impl GreeksGpuCalculator {
             shared_mem_bytes: 0,
         };
 
+        let n_options_i32 = n_options as i32;
+
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.rho_kernel);
             builder.arg(&d_prices_rate_up);
             builder.arg(&d_prices_rate_down);
             builder.arg(&d_rhos);
-            builder.arg(&(n_options as i32));
+            builder.arg(&n_options_i32);
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Rho kernel launch failed: {:?}", e))
             })?;

@@ -335,11 +335,11 @@ pub struct BatchBacktestSweep {
     execution_mode: ExecutionMode,
 
     // Phase 2: Options strategy support
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     heston_pricer: Option<Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>>,
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     heston_params: Option<crate::quantitative::heston::HestonParams>,
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     options_data: Option<Vec<crate::quantitative::heston::OptionQuote>>,
 }
 
@@ -364,11 +364,11 @@ impl BatchBacktestSweep {
             parameters: Vec::new(),
             config: BacktestConfig::default(),
             execution_mode: ExecutionMode::default(),
-            #[cfg(feature = "gpu")]
+            #[cfg(feature = "heston")]
             heston_pricer: None,
-            #[cfg(feature = "gpu")]
+            #[cfg(feature = "heston")]
             heston_params: None,
-            #[cfg(feature = "gpu")]
+            #[cfg(feature = "heston")]
             options_data: None,
         }
     }
@@ -497,7 +497,7 @@ impl BatchBacktestSweep {
     ///
     /// sweep.heston_pricer(pricer_arc)
     /// ```
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     pub fn heston_pricer(
         mut self,
         pricer: Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>,
@@ -520,7 +520,7 @@ impl BatchBacktestSweep {
     /// let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04)?;
     /// sweep.heston_params(params)
     /// ```
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     pub fn heston_params(mut self, params: crate::quantitative::heston::HestonParams) -> Self {
         self.heston_params = Some(params);
         self
@@ -548,7 +548,7 @@ impl BatchBacktestSweep {
     /// ];
     /// sweep.options_data(options)
     /// ```
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     pub fn options_data(mut self, options: Vec<crate::quantitative::heston::OptionQuote>) -> Self {
         self.options_data = Some(options);
         self
@@ -816,15 +816,15 @@ impl BatchBacktestSweep {
     /// Check if this is an options strategy (Phase 2 detection)
     ///
     /// Returns true if Heston pricer and options data are configured
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     fn is_options_strategy(&self) -> bool {
         self.heston_pricer.is_some()
             && self.heston_params.is_some()
             && self.options_data.is_some()
     }
 
-    /// Check if this is an options strategy (Phase 2 detection) - fallback for non-GPU builds
-    #[cfg(not(feature = "gpu"))]
+    /// Check if this is an options strategy (Phase 2 detection) - fallback for non-Heston builds
+    #[cfg(not(feature = "heston"))]
     fn is_options_strategy(&self) -> bool {
         false
     }
@@ -844,7 +844,7 @@ impl BatchBacktestSweep {
     ///
     /// - Missing Heston pricer, params, or options data
     /// - GPU pricing failure
-    #[cfg(feature = "gpu")]
+    #[cfg(feature = "heston")]
     fn price_options_heston(&self) -> Result<Vec<f64>, GpuError> {
         let pricer = self
             .heston_pricer
@@ -910,6 +910,7 @@ impl BatchBacktestSweep {
         }
 
         // ===== Phase 0: Heston Option Pricing (if options strategy) =====
+        #[cfg(feature = "heston")]
         let phase0_ms = if self.is_options_strategy() {
             let start_phase0 = Instant::now();
             let _option_prices = self.price_options_heston()?;
@@ -925,6 +926,9 @@ impl BatchBacktestSweep {
         } else {
             0.0
         };
+
+        #[cfg(not(feature = "heston"))]
+        let phase0_ms = 0.0;
 
         // ===== Compile CUDA Kernels (with caching) =====
         let ptx_arc = compile_backtest_kernels()?;

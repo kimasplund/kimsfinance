@@ -8,6 +8,7 @@
 //! - **Device Management**: GPU initialization, memory pools, error handling
 //! - **CUDA Kernels**: Custom kernels compiled from CUDA C++ source
 //! - **Indicators**: GPU-accelerated implementations with CPU fallback
+//! - **Quantitative Models**: Heston option pricing, calibration
 //!
 //! # Feature Flag
 //!
@@ -31,6 +32,9 @@
 
 #[cfg(feature = "gpu")]
 pub mod device;
+
+#[cfg(feature = "heston")]
+pub mod heston_pricing;
 
 #[cfg(feature = "gpu")]
 pub mod async_alloc;
@@ -344,3 +348,6 @@ pub mod ichimoku;
 
 #[cfg(feature = "gpu")]
 pub use ichimoku::{IchimokuOutput, ichimoku_gpu};
+
+#[cfg(feature = "heston")]
+pub use heston_pricing::HestonGpuPricer;
