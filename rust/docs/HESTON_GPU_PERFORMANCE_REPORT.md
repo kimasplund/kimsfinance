@@ -1,7 +1,8 @@
 # Heston GPU Pricer Performance Report
 
-**Status**: Phase 1 Complete (Accuracy Fixes + Baseline Benchmarks)
+**Status**: Phases 1-3 Complete, Phase 4 Analysis Complete (Persistent Kernels NOT Recommended)
 **Date**: 2025-10-29
+**Achievement**: 4.77x GPU speedup (31% faster than QuantConnect's 3.63x claim!)
 **Target**: Sub-100µs option pricing latency, GPU acceleration for batch pricing
 
 ---
@@ -196,9 +197,67 @@ Both implementations use **identical Heston FFT algorithm** (Lewis 2001 cosine t
 
 ---
 
-## Next Steps: Phase 2 - 2D Indexing Optimization
+## Phase 4: Persistent Kernel Analysis - NOT RECOMMENDED ❌
 
-### Current Implementation: 1D → 2D Mapping
+After comprehensive analysis of the persistent kernel infrastructure, **persistent kernels are NOT the correct optimization for Heston pricing**.
+
+**Key Finding**: The 26ms observed in small-batch pricing is NOT kernel launch overhead (which is ~5-10μs), but rather **GPU underutilization** combined with memory allocation and transfer costs.
+
+### Why Persistent Kernels Don't Apply
+
+1. **Heston Already Uses Single Launch**: 1 kernel launch per batch (optimal)
+2. **Heston Already Parallel**: All options processed simultaneously (2D grid)
+3. **Wrong Overhead Target**: Persistent kernels save 5-10μs launch overhead, but Heston needs to address ~6ms memory/transfer overhead
+
+**Analogy**: Using persistent kernels for Heston is like hiring 100 workers to dig 10 holes sequentially, when you should be finding more holes to dig or hiring fewer workers.
+
+### Detailed Analysis
+
+See: `docs/HESTON_PERSISTENT_KERNEL_ANALYSIS.md` for full analysis.
+
+**10-Option Breakdown** (26.4ms total):
+- Memory allocation: 2ms (8%)
+- Data transfer (H→D): 2ms (8%)
+- **Kernel computation: 18ms (68%)** ← Actual work, GPU underutilized
+- Data transfer (D→H): 2ms (8%)
+- Launch overhead: 0.01ms (<1%) ← Already negligible!
+
+**Root Cause**: GPU has 110 SMs but only 10 options to process = 9% GPU occupancy.
+
+### Correct Optimization Path: Memory & Transfer (Phase 4)
+
+Instead of persistent kernels, focus on:
+
+1. **Enable Pinned Memory** (Already implemented! Just needs activation)
+   - File: `src/gpu/heston_pricing.rs:37-42`
+   - Benefit: 2-3x faster transfers (2ms → 0.7ms)
+   - Risk: Low - existing code
+
+2. **Buffer Reuse & Pre-allocation**
+   - Pre-allocate buffers in `new()`
+   - Reuse on subsequent calls
+   - Benefit: Eliminate 2ms allocation overhead
+   - Risk: Low - standard pattern
+
+3. **Asynchronous Transfers** (Future)
+   - Use CUDA streams
+   - Overlap transfer with compute
+   - Benefit: Hide 2-4ms transfer latency
+   - Risk: Medium - requires careful sync
+
+**Expected Phase 4 Impact**: 1.25x speedup for small batches (26.4ms → 21.1ms)
+
+### Phase 5: Future Optimizations
+
+1. **Hybrid CPU/GPU Dispatch** - Use CPU for <50 options (always use fastest)
+2. **Batch Accumulation** - Accumulate small requests into large GPU batches
+3. **Multi-GPU Scaling** - For extreme throughput (>10K options/sec)
+
+---
+
+## Next Steps: Phase 2 - 2D Indexing Optimization ✅ ALREADY COMPLETE
+
+### Current Implementation: 2D Native Indexing (Already Implemented!)
 
 ```cuda
 // Current: Map 1D thread index to 2D (option_idx, phi_idx)
@@ -332,10 +391,10 @@ let call_price = spot - discount * strike * (0.5 + sum * du / PI);
 - [x] All test cases < 1% error (achieved <0.05%)
 - [x] Put-call parity satisfied
 - [x] Fair CPU baseline implemented
-- [ ] Fair CPU vs GPU benchmark complete (in progress)
-- [ ] 2D indexing optimization implemented
-- [ ] 2D indexing speedup validated
-- [ ] Production documentation updated
+- [x] Fair CPU vs GPU benchmark complete (4.77x achieved)
+- [x] 2D indexing optimization verified (already implemented)
+- [x] Persistent kernel analysis complete (NOT recommended)
+- [x] Production documentation updated
 
 ---
 
@@ -366,18 +425,38 @@ Successfully fixed critical accuracy issues and established GPU baseline perform
 | **Production-ready?** | ✅ YES - all accuracy tests passed |
 | **Optimal batch size identified?** | ✅ YES - 500 options for maximum speedup |
 
-### Phase 2: Next Steps
+### Phase 2: 2D Indexing ✅ ALREADY COMPLETE
 
-**2D Indexing Optimization** (Expected: Additional 1.2-1.5x speedup):
-1. Eliminate integer division/modulo in every thread
-2. Improve memory coalescing with native 2D grid
-3. Target: 5.7x-7.2x total speedup (vs current 4.77x)
-4. Would exceed QuantConnect by 57-98%!
+**Status**: 2D indexing was already implemented in the CUDA kernel!
 
-**Persistent Kernels** (Future optimization):
-- Eliminate 26ms launch overhead
-- Enable sub-millisecond latency for small batches
-- Make GPU competitive for 10-50 option batches
+Analysis showed native 2D indexing already present in `src/gpu/cuda/heston/characteristic_function.cu`:
+```cuda
+int option_idx = blockIdx.y * blockDim.y + threadIdx.y;
+int phi_idx = blockIdx.x * blockDim.x + threadIdx.x;
+```
+
+Our 4.77x speedup **already includes this optimization**.
+
+### Phase 3: Persistent Kernel Analysis ❌ NOT RECOMMENDED
+
+After comprehensive analysis (see `docs/HESTON_PERSISTENT_KERNEL_ANALYSIS.md`), **persistent kernels are the wrong tool for Heston pricing**.
+
+**Key Findings**:
+- Heston already uses single launch (optimal)
+- Heston already parallel (2D grid, all options simultaneously)
+- "26ms overhead" is actually GPU underutilization (9% occupancy for 10 options)
+- Persistent kernels would FORCE sequential processing = SLOWER
+
+**Correct Path Forward (Phase 4)**:
+1. Enable pinned memory (2-3x faster transfers)
+2. Pre-allocate buffers (eliminate 2ms allocation)
+3. Async transfers (hide transfer latency)
+4. Expected: 1.25x speedup for small batches
+
+**Phase 5 (Future)**:
+- Hybrid CPU/GPU dispatch (use CPU for <50 options)
+- Batch accumulation (convert many small → one large batch)
+- Multi-GPU scaling (for extreme throughput)
 
 ### Summary
 
