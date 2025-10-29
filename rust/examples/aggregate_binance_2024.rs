@@ -89,7 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        match process_binance_month(&zip_path, Timeframe::OneMinute) {
+        match process_binance_month(&zip_path, Timeframe::minutes(1)) {
             Ok(candles) => {
                 let num_candles = candles.len();
                 let num_trades: u64 = candles.iter().map(|c| c.num_trades as u64).sum();

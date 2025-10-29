@@ -619,19 +619,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut all_results = Vec::new();
 
     // Test 1min timeframe
-    match run_backtest_for_timeframe(data_path, Timeframe::OneMinute, "1min") {
+    match run_backtest_for_timeframe(data_path, Timeframe::minutes(1), "1min") {
         Ok(mut results) => all_results.append(&mut results),
         Err(e) => eprintln!("Error testing 1min timeframe: {}", e),
     }
 
     // Test 5min timeframe
-    match run_backtest_for_timeframe(data_path, Timeframe::FiveMinutes, "5min") {
+    match run_backtest_for_timeframe(data_path, Timeframe::minutes(5), "5min") {
         Ok(mut results) => all_results.append(&mut results),
         Err(e) => eprintln!("Error testing 5min timeframe: {}", e),
     }
 
     // Test 15min timeframe
-    match run_backtest_for_timeframe(data_path, Timeframe::FifteenMinutes, "15min") {
+    match run_backtest_for_timeframe(data_path, Timeframe::minutes(15), "15min") {
         Ok(mut results) => all_results.append(&mut results),
         Err(e) => eprintln!("Error testing 15min timeframe: {}", e),
     }

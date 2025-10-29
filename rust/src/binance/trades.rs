@@ -23,6 +23,19 @@ pub struct Trade {
     pub is_buyer_maker: bool,
 }
 
+impl Default for Trade {
+    fn default() -> Self {
+        Self {
+            trade_id: 0,
+            price: 0.0,
+            quantity: 0.0,
+            quote_quantity: 0.0,
+            timestamp_ms: 0,
+            is_buyer_maker: false,
+        }
+    }
+}
+
 /// OHLCV candlestick data
 ///
 /// Aggregated price and volume data for a specific timeframe.
@@ -39,40 +52,9 @@ pub struct Candle {
     pub num_trades: usize,
 }
 
-/// Timeframe for candle aggregation
-///
-/// Supports standard trading timeframes from 1 minute to 1 day.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Timeframe {
-    OneMinute,
-    FiveMinutes,
-    FifteenMinutes,
-    OneHour,
-    FourHours,
-    OneDay,
-}
-
-impl Timeframe {
-    /// Convert timeframe to milliseconds
-    ///
-    /// # Example
-    /// ```
-    /// # use kimsfinance_core::binance::Timeframe;
-    /// assert_eq!(Timeframe::OneMinute.to_ms(), 60_000);
-    /// assert_eq!(Timeframe::OneHour.to_ms(), 3_600_000);
-    /// ```
-    #[inline]
-    pub const fn to_ms(&self) -> i64 {
-        match self {
-            Timeframe::OneMinute => 60_000,
-            Timeframe::FiveMinutes => 300_000,
-            Timeframe::FifteenMinutes => 900_000,
-            Timeframe::OneHour => 3_600_000,
-            Timeframe::FourHours => 14_400_000,
-            Timeframe::OneDay => 86_400_000,
-        }
-    }
-}
+// Timeframe has been moved to timeframe.rs module
+// Re-export for backward compatibility in this file
+pub use super::timeframe::Timeframe;
 
 /// Error types for Binance data processing
 #[derive(Debug)]
@@ -310,7 +292,7 @@ impl CandleBuilder {
 ///     },
 /// ];
 ///
-/// let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+/// let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
 /// assert_eq!(candles.len(), 1);
 /// assert_eq!(candles[0].open, 100.0);
 /// assert_eq!(candles[0].close, 105.0);
@@ -376,7 +358,7 @@ pub fn aggregate_trades_to_candles(trades: &[Trade], timeframe: Timeframe) -> Ve
 /// # use kimsfinance_core::binance::{Timeframe, stream_aggregate_csv};
 /// let candles = stream_aggregate_csv(
 ///     "BTCUSDT-trades-2021-01.csv",
-///     Timeframe::FiveMinutes
+///     Timeframe::minutes(5)
 /// )?;
 /// println!("Aggregated {} candles from CSV", candles.len());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -541,18 +523,18 @@ mod tests {
 
     #[test]
     fn test_timeframe_to_ms() {
-        assert_eq!(Timeframe::OneMinute.to_ms(), 60_000);
-        assert_eq!(Timeframe::FiveMinutes.to_ms(), 300_000);
-        assert_eq!(Timeframe::FifteenMinutes.to_ms(), 900_000);
-        assert_eq!(Timeframe::OneHour.to_ms(), 3_600_000);
-        assert_eq!(Timeframe::FourHours.to_ms(), 14_400_000);
-        assert_eq!(Timeframe::OneDay.to_ms(), 86_400_000);
+        assert_eq!(Timeframe::minutes(1).to_ms(), 60_000);
+        assert_eq!(Timeframe::minutes(5).to_ms(), 300_000);
+        assert_eq!(Timeframe::minutes(15).to_ms(), 900_000);
+        assert_eq!(Timeframe::hours(1).to_ms(), 3_600_000);
+        assert_eq!(Timeframe::hours(4).to_ms(), 14_400_000);
+        assert_eq!(Timeframe::days(1).to_ms(), 86_400_000);
     }
 
     #[test]
     fn test_aggregate_empty_trades() {
         let trades: Vec<Trade> = vec![];
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert!(candles.is_empty());
     }
 
@@ -567,7 +549,7 @@ mod tests {
             is_buyer_maker: false,
         }];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert_eq!(candles.len(), 1);
 
         let candle = &candles[0];
@@ -610,7 +592,7 @@ mod tests {
             },
         ];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert_eq!(candles.len(), 1);
 
         let candle = &candles[0];
@@ -653,7 +635,7 @@ mod tests {
             },
         ];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert_eq!(candles.len(), 3);
 
         // Verify candles are sorted by timestamp
@@ -697,7 +679,7 @@ mod tests {
             },
         ];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert_eq!(candles.len(), 3);
 
         // Output candles should be sorted
@@ -735,7 +717,7 @@ mod tests {
             },
         ];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::FiveMinutes);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(5));
         assert_eq!(candles.len(), 2);
 
         // First candle: 00:00:00 - 00:04:59
@@ -779,7 +761,7 @@ mod tests {
             },
         ];
 
-        let candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+        let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
         assert_eq!(candles.len(), 2);
 
         // First candle contains first two trades

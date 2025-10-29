@@ -19,6 +19,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 zip = "6.0.0"
 rand = "0.8"
 rand_distr = "0.4"
+chrono = "0.4"
 
 # Performance dependencies for backtest optimization
 dashmap = "6.1"
@@ -200,3 +201,11 @@ name = "vwap_anchored_gpu_benchmark"
 harness = false
 required-features = ["gpu"]
 
+[[bench]]
+name = "incomplete_candle_bench"
+harness = false
+
+[[bench]]
+name = "gpu_trade_aggregation_benchmark"
+harness = false
+required-features = ["gpu"]

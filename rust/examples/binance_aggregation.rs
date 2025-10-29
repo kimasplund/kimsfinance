@@ -70,7 +70,7 @@ fn main() {
     }
 
     // Aggregate into 5-minute candles
-    let candles = aggregate_trades_to_candles(&trades, Timeframe::FiveMinutes);
+    let candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(5));
 
     println!(
         "Generated {} candles from {} trades\n",
@@ -93,23 +93,23 @@ fn main() {
     // Example 3: Demonstrate different timeframes
     println!("=== Example 3: Different Timeframes ===");
     println!("Available timeframes:");
-    println!("  1 minute   = {} ms", Timeframe::OneMinute.to_ms());
-    println!("  5 minutes  = {} ms", Timeframe::FiveMinutes.to_ms());
-    println!("  15 minutes = {} ms", Timeframe::FifteenMinutes.to_ms());
-    println!("  1 hour     = {} ms", Timeframe::OneHour.to_ms());
-    println!("  4 hours    = {} ms", Timeframe::FourHours.to_ms());
-    println!("  1 day      = {} ms", Timeframe::OneDay.to_ms());
+    println!("  1 minute   = {} ms", Timeframe::minutes(1).to_ms());
+    println!("  5 minutes  = {} ms", Timeframe::minutes(5).to_ms());
+    println!("  15 minutes = {} ms", Timeframe::minutes(15).to_ms());
+    println!("  1 hour     = {} ms", Timeframe::hours(1).to_ms());
+    println!("  4 hours    = {} ms", Timeframe::hours(4).to_ms());
+    println!("  1 day      = {} ms", Timeframe::days(1).to_ms());
     println!();
 
     // Aggregate same trades into 1-minute candles
-    let minute_candles = aggregate_trades_to_candles(&trades, Timeframe::OneMinute);
+    let minute_candles = aggregate_trades_to_candles(&trades, Timeframe::minutes(1));
     println!(
         "Same trades as 1m candles: {} candles",
         minute_candles.len()
     );
 
     // Aggregate into 1-hour candles
-    let hourly_candles = aggregate_trades_to_candles(&trades, Timeframe::OneHour);
+    let hourly_candles = aggregate_trades_to_candles(&trades, Timeframe::hours(1));
     println!(
         "Same trades as 1h candles: {} candles",
         hourly_candles.len()
