@@ -93,7 +93,7 @@
 
 use super::{GpuDevice, GpuError};
 use crate::binance::{Candle, Timeframe, Trade};
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchConfig, PushKernelArg};
 use std::collections::HashMap;
 
 /// GPU trade aggregator with CUDA kernels
@@ -121,16 +121,16 @@ impl GpuAggregator {
         let ptx = compile_aggregation_kernels()?;
         let module = device
             .context()
-            .load_module(&ptx)
+            .load_module(ptx)
             .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX module: {:?}", e)))?;
 
-        // Get kernel function handles
-        let binning_kernel = module.get_func("bin_trades_kernel").map_err(|e| {
-            GpuError::CompilationError(format!("Failed to get bin_trades_kernel: {:?}", e))
+        // Get kernel function handles (using correct cudarc 0.17.3 API)
+        let binning_kernel = module.load_function("bin_trades_kernel").map_err(|e| {
+            GpuError::CompilationError(format!("Failed to load bin_trades_kernel: {:?}", e))
         })?;
 
-        let aggregation_kernel = module.get_func("aggregate_ohlcv_kernel").map_err(|e| {
-            GpuError::CompilationError(format!("Failed to get aggregate_ohlcv_kernel: {:?}", e))
+        let aggregation_kernel = module.load_function("aggregate_ohlcv_kernel").map_err(|e| {
+            GpuError::CompilationError(format!("Failed to load aggregate_ohlcv_kernel: {:?}", e))
         })?;
 
         Ok(Self {
@@ -207,8 +207,10 @@ impl GpuAggregator {
         let d_quantities = self.device.copy_to_device(&quantities)?;
         let d_quote_quantities = self.device.copy_to_device(&quote_quantities)?;
 
-        // Step 3: Allocate output buffer for bucket IDs
-        let mut d_bucket_ids: CudaSlice<i32> = self.device.alloc_buffer(n_trades)?;
+        // Step 3: Allocate output buffer for bucket IDs (i32 type)
+        let mut d_bucket_ids = self.device.stream.alloc_zeros::<i32>(n_trades).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate {} i32 elements: {:?}", n_trades, e))
+        })?;
 
         // Step 4: Launch binning kernel
         let threads_per_block = 256;
@@ -220,17 +222,18 @@ impl GpuAggregator {
             shared_mem_bytes: 0,
         };
 
-        // Launch binning kernel
+        // Launch binning kernel (using cudarc 0.17.3 builder pattern)
+        let n_trades_i32 = n_trades as i32;
+        let mut builder = self.device.stream.launch_builder(&self.binning_kernel);
+        builder.arg(&d_timestamps);
+        builder.arg(&d_bucket_ids);
+        builder.arg(&n_trades_i32);
+        builder.arg(&timeframe_ms);
+
         unsafe {
-            self.binning_kernel.launch(
-                cfg,
-                (
-                    &d_timestamps,
-                    &d_bucket_ids,
-                    n_trades as i32,
-                    timeframe_ms,
-                ),
-            )?;
+            builder.launch(cfg).map_err(|e| {
+                GpuError::ExecutionError(format!("Binning kernel launch failed: {:?}", e))
+            })?;
         }
 
         // Step 5: Copy bucket IDs back to host for counting
@@ -252,7 +255,9 @@ impl GpuAggregator {
         };
         let mut d_volume: CudaSlice<f64> = self.device.alloc_buffer(n_candles)?;
         let mut d_quote_volume: CudaSlice<f64> = self.device.alloc_buffer(n_candles)?;
-        let mut d_num_trades: CudaSlice<i32> = self.device.alloc_buffer(n_candles)?;
+        let mut d_num_trades = self.device.stream.alloc_zeros::<i32>(n_candles).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate {} i32 elements for num_trades: {:?}", n_candles, e))
+        })?;
 
         // Create bucket mapping (map bucket_id to candle index)
         let bucket_mapping: Vec<i32> = bucket_ids_host
@@ -260,29 +265,30 @@ impl GpuAggregator {
             .map(|&bucket_id| {
                 unique_buckets
                     .iter()
-                    .position(|&b| b == bucket_id)
+                    .position(|&b| b == (bucket_id as i64))
                     .unwrap() as i32
             })
             .collect();
         let d_bucket_mapping = self.device.copy_to_device_i32(&bucket_mapping)?;
 
         // Step 8: Launch aggregation kernel (computes high, low, volume)
+        let n_trades_i32 = n_trades as i32;
+        let mut builder = self.device.stream.launch_builder(&self.aggregation_kernel);
+        builder.arg(&d_prices);
+        builder.arg(&d_quantities);
+        builder.arg(&d_quote_quantities);
+        builder.arg(&d_bucket_mapping);
+        builder.arg(&n_trades_i32);
+        builder.arg(&mut d_high);
+        builder.arg(&mut d_low);
+        builder.arg(&mut d_volume);
+        builder.arg(&mut d_quote_volume);
+        builder.arg(&mut d_num_trades);
+
         unsafe {
-            self.aggregation_kernel.launch(
-                cfg,
-                (
-                    &d_prices,
-                    &d_quantities,
-                    &d_quote_quantities,
-                    &d_bucket_mapping,
-                    n_trades as i32,
-                    &mut d_high,
-                    &mut d_low,
-                    &mut d_volume,
-                    &mut d_quote_volume,
-                    &mut d_num_trades,
-                ),
-            )?;
+            builder.launch(cfg).map_err(|e| {
+                GpuError::ExecutionError(format!("Aggregation kernel launch failed: {:?}", e))
+            })?;
         }
 
         // Step 9: Synchronize and copy results back

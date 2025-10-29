@@ -42,19 +42,40 @@ pub use trades::{
 };
 
 // GPU-accelerated aggregation (optional, feature-gated)
-// TODO: Re-enable after fixing GPU aggregation module
-// #[cfg(feature = "gpu")]
-// pub use process_binance_month_gpu;
+#[cfg(feature = "gpu")]
+pub use crate::gpu::{AggregationEngine, EngineSelector, GpuAggregator};
 
-// TODO: Re-enable after fixing GPU aggregation module
-// /// Process Binance month with GPU-accelerated aggregation
-// ///
-// /// Uses GPU for OHLCV aggregation on large datasets (>10K trades).
-// /// Automatically falls back to CPU if GPU unavailable or dataset too small.
-// #[cfg(feature = "gpu")]
-// pub fn process_binance_month_gpu<P: AsRef<std::path::Path>>(
-//     zip_path: P,
-//     timeframe: Timeframe,
-// ) -> Result<Vec<Candle>, BinanceError> {
-//     // ... GPU implementation disabled due to cudarc API compatibility issues
-// }
+/// Process Binance month with GPU-accelerated aggregation
+///
+/// Uses GPU for OHLCV aggregation on large datasets (>10K trades).
+/// Automatically falls back to CPU if GPU unavailable or dataset too small.
+#[cfg(feature = "gpu")]
+pub fn process_binance_month_gpu<P: AsRef<std::path::Path>>(
+    zip_path: P,
+    timeframe: Timeframe,
+) -> Result<Vec<Candle>, BinanceError> {
+    use crate::gpu::EngineSelector;
+
+    // Read trades from ZIP
+    let mut trades = Vec::new();
+    let file = std::fs::File::open(zip_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        if file.name().ends_with(".csv") {
+            use std::io::{BufRead, BufReader};
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                let line = line?;
+                if let Ok(trade) = parse_trade_csv(&line) {
+                    trades.push(trade);
+                }
+            }
+        }
+    }
+
+    // Use engine selector to choose GPU or CPU based on data size
+    let selector = EngineSelector::new();
+    selector.aggregate_trades(&trades, timeframe)
+}
