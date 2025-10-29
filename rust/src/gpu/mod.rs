@@ -53,18 +53,17 @@ pub mod compile;
 #[cfg(feature = "gpu")]
 pub mod l2_cache;
 
-// TODO: Fix cudarc API compatibility issues before re-enabling
-// #[cfg(feature = "gpu")]
-// pub mod aggregation;
-//
-// #[cfg(feature = "gpu")]
-// pub mod auto_select;
-//
-// #[cfg(feature = "gpu")]
-// pub use aggregation::GpuAggregator;
-//
-// #[cfg(feature = "gpu")]
-// pub use auto_select::{AggregationEngine, EngineSelector};
+#[cfg(feature = "gpu")]
+pub mod aggregation;
+
+#[cfg(feature = "gpu")]
+pub mod auto_select;
+
+#[cfg(feature = "gpu")]
+pub use aggregation::GpuAggregator;
+
+#[cfg(feature = "gpu")]
+pub use auto_select::{AggregationEngine, EngineSelector};
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
