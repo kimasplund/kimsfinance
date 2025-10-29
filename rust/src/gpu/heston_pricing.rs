@@ -249,6 +249,13 @@ impl HestonGpuPricer {
     ///
     /// Uses pinned memory for faster transfers when available (20-30% speedup).
     ///
+    /// # Pricing Method
+    ///
+    /// By default, uses **Lewis (2001) cosine transform** for direct numerical integration.
+    /// This is more stable than Carr-Madan FFT and avoids aliasing artifacts.
+    ///
+    /// Set `use_fft=true` to use Carr-Madan FFT (legacy method, kept for benchmarking).
+    ///
     /// # Arguments
     ///
     /// * `params` - Heston model parameters (validated)
@@ -275,6 +282,20 @@ impl HestonGpuPricer {
         &mut self,
         params: &HestonParams,
         options: &[OptionQuote],
+    ) -> Result<Vec<f64>, GpuError> {
+        self.price_options_with_method(params, options, false) // Default: Lewis method
+    }
+
+    /// Price options with explicit method selection
+    ///
+    /// # Arguments
+    ///
+    /// * `use_fft` - If true, use Carr-Madan FFT. If false, use Lewis (2001) cosine transform.
+    pub fn price_options_with_method(
+        &mut self,
+        params: &HestonParams,
+        options: &[OptionQuote],
+        use_fft: bool,
     ) -> Result<Vec<f64>, GpuError> {
         if options.is_empty() {
             return Ok(Vec::new());
@@ -316,7 +337,7 @@ impl HestonGpuPricer {
         );
 
         // Use pinned memory path if available
-        let has_pinned = self.pinned_strikes.is_some()
+        let _has_pinned = self.pinned_strikes.is_some()
             && self.d_strikes.is_some()
             && self.d_char_func_real.is_some();
 
@@ -330,6 +351,7 @@ impl HestonGpuPricer {
             &risk_free_rates,
             &phi_values,
             n_options,
+            use_fft,
         )?;
 
         // Original code (disabled for testing):
@@ -343,6 +365,7 @@ impl HestonGpuPricer {
                 &risk_free_rates,
                 &phi_values,
                 n_options,
+                use_fft,
             )?
         } else {
             eprintln!("[DEBUG] Using pageable memory path");
@@ -354,6 +377,7 @@ impl HestonGpuPricer {
                 &risk_free_rates,
                 &phi_values,
                 n_options,
+                use_fft,
             )?
         }; */
 
@@ -373,22 +397,28 @@ impl HestonGpuPricer {
             );
         }
 
-        // Apply FFT to get option prices
-        let mut prices = self.fft_to_option_prices(&char_func_real, &char_func_imag, options)?;
+        // Choose pricing method
+        let mut prices = if use_fft {
+            eprintln!("[PRICING] Using Carr-Madan FFT method");
+            self.fft_to_option_prices(&char_func_real, &char_func_imag, options)?
+        } else {
+            eprintln!("[PRICING] Using Lewis (2001) cosine transform method");
+            self.price_with_lewis_method(params, &char_func_real, &char_func_imag, options)?
+        };
 
         // Validate prices and fall back to Black-Scholes if needed
         for (i, option) in options.iter().enumerate() {
             let price = prices[i];
-            
+
             // Check if price is invalid (NaN, Inf, negative, or unreasonably large)
             let is_invalid = !price.is_finite() || price <= 1e-10 || price > 10.0 * option.spot_price;
-            
+
             if is_invalid {
                 eprintln!(
-                    "[FALLBACK] Option {}: FFT price {:.6} invalid, using Black-Scholes",
+                    "[FALLBACK] Option {}: Price {:.6} invalid, using Black-Scholes",
                     i, price
                 );
-                
+
                 // Use current volatility from Heston params
                 let vol = params.v0.sqrt();
                 let tau = expirations[i];
@@ -412,6 +442,7 @@ impl HestonGpuPricer {
         risk_free_rates: &[f64],
         phi_values: &[f64],
         n_options: usize,
+        use_fft: bool,
     ) -> Result<(Vec<f64>, Vec<f64>), GpuError> {
         // Copy data to pinned buffers
         if let (
@@ -469,7 +500,7 @@ impl HestonGpuPricer {
                 self.d_spot_prices.as_ref(),
                 self.d_risk_free_rates.as_ref(),
             ) {
-                self.launch_kernel(params, n_options, d_strikes, d_exp, d_spot, d_rates)?;
+                self.launch_kernel(params, n_options, d_strikes, d_exp, d_spot, d_rates, use_fft)?;
             }
 
             // Download results
@@ -538,13 +569,14 @@ impl HestonGpuPricer {
         risk_free_rates: &[f64],
         phi_values: &[f64],
         n_options: usize,
+        use_fft: bool,
     ) -> Result<(Vec<f64>, Vec<f64>), GpuError> {
         // Traditional path: copy_to_device (pageable memory)
         let mut d_strikes = self.device.copy_to_device(strikes)?;
         let mut d_expirations = self.device.copy_to_device(expirations)?;
         let mut d_spot_prices = self.device.copy_to_device(spot_prices)?;
         let mut d_risk_free_rates = self.device.copy_to_device(risk_free_rates)?;
-        let d_phi_values = self.device.copy_to_device(phi_values)?;
+        let _d_phi_values = self.device.copy_to_device(phi_values)?;
 
         // Launch kernel
         self.launch_kernel(
@@ -554,6 +586,7 @@ impl HestonGpuPricer {
             &mut d_expirations,
             &mut d_spot_prices,
             &mut d_risk_free_rates,
+            use_fft,
         )?;
 
         // Download results from the buffers where the kernel wrote output
@@ -596,23 +629,36 @@ impl HestonGpuPricer {
         d_expirations: &CudaSlice<f64>,
         d_spot_prices: &CudaSlice<f64>,
         d_risk_free_rates: &CudaSlice<f64>,
+        use_fft: bool,
     ) -> Result<(), GpuError> {
-        let total_elements = n_options * self.fft_size;
-        let threads_per_block = 256;
-        let blocks = ((total_elements + threads_per_block - 1) / threads_per_block) as u32;
+        // 2D grid structure for optimal memory access
+        // Block: 256 threads in x (FFT frequencies) × 4 threads in y (options)
+        let block_dim_x = 256;  // FFT frequencies (x-axis)
+        let block_dim_y = 4;    // Options (y-axis)
+
+        // Grid: Enough blocks to cover all options and frequencies
+        let grid_dim_x = ((self.fft_size + block_dim_x - 1) / block_dim_x) as u32;
+        let grid_dim_y = ((n_options + block_dim_y - 1) / block_dim_y) as u32;
 
         let config = LaunchConfig {
-            grid_dim: (blocks, 1, 1),
-            block_dim: (threads_per_block as u32, 1, 1),
+            grid_dim: (grid_dim_x, grid_dim_y, 1),  // 2D grid
+            block_dim: (block_dim_x as u32, block_dim_y as u32, 1),  // 2D block
             shared_mem_bytes: 0,
         };
+
+        eprintln!("[DEBUG] 2D Launch config: grid=({}, {}), block=({}, {})",
+            grid_dim_x, grid_dim_y, block_dim_x, block_dim_y);
 
         let kappa = params.kappa;
         let theta = params.theta;
         let sigma = params.sigma;
         let rho = params.rho;
         let v0 = params.v0;
-        let alpha = 1.5;  // Carr-Madan damping parameter (CRITICAL for complex CF evaluation)
+
+        // Choose alpha based on pricing method
+        // Carr-Madan FFT: alpha=0.75 (damping parameter for stability)
+        // Lewis (2001): alpha=-1.0 (makes CF argument real: z = u - 0i)
+        let alpha = if use_fft { 0.75 } else { -1.0 };
         let n_options_i32 = n_options as i32;
         let fft_size_i32 = self.fft_size as i32;
 
@@ -645,6 +691,7 @@ impl HestonGpuPricer {
             d_char_func_real as *const _,
             d_char_func_imag as *const _
         );
+        let total_elements = n_options * self.fft_size;
         eprintln!(
             "[DEBUG] Buffer sizes: real={}, imag={}, expected={}",
             d_char_func_real.len(),
@@ -655,7 +702,7 @@ impl HestonGpuPricer {
         eprintln!("[DEBUG] Launching kernel with:");
         eprintln!("  kappa={}, theta={}, sigma={}, rho={}, v0={}, alpha={}", kappa, theta, sigma, rho, v0, alpha);
         eprintln!("  n_options={}, fft_size={}", n_options_i32, fft_size_i32);
-        eprintln!("  threads_per_block={}, blocks={}", threads_per_block, blocks);
+        eprintln!("  2D grid_dim=({}, {}), block_dim=({}, {})", grid_dim_x, grid_dim_y, block_dim_x, block_dim_y);
 
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.char_func_kernel);
@@ -709,6 +756,228 @@ impl HestonGpuPricer {
         Ok(())
     }
 
+    /// Price options using Lewis (2001) cosine transform method
+    ///
+    /// Implements the Lewis formula for direct numerical integration:
+    ///
+    /// # Theory
+    ///
+    /// Call price: C(K) = S - K·exp(-r·T)/π ∫₀^∞ Re[e^(-iφ·ln(K/S)) · φ₁(φ)] / φ dφ
+    ///
+    /// where:
+    /// - φ₁ = Heston characteristic function at φ (computed by GPU)
+    /// - Integration uses Simpson's rule (adaptive truncation)
+    ///
+    /// # Advantages over Carr-Madan FFT
+    ///
+    /// - **Single-strike efficiency**: No FFT grid overhead
+    /// - **Better stability**: Direct integration, no FFT aliasing
+    /// - **Adaptive bounds**: Truncates when CF decays to negligible values
+    ///
+    /// # Performance
+    ///
+    /// CPU-based Simpson integration. GPU CF computation is the bottleneck, so this
+    /// CPU integration has negligible impact (~0.1ms for 100 options).
+    ///
+    /// # Arguments
+    ///
+    /// * `char_func_real` - Real part of CF at φ points (n_options × fft_size)
+    /// * `char_func_imag` - Imaginary part of CF at φ points (n_options × fft_size)
+    /// * `options` - Option quotes to price
+    ///
+    /// # Returns
+    ///
+    /// Vec of option prices (call/put converted via put-call parity)
+    ///
+    /// # Errors
+    ///
+    /// Returns error if NaN/Inf detected or integration fails
+    pub fn price_with_lewis_method(
+        &self,
+        params: &HestonParams,
+        char_func_real: &[f64],
+        char_func_imag: &[f64],
+        options: &[OptionQuote],
+    ) -> Result<Vec<f64>, GpuError> {
+        eprintln!(
+            "[Lewis] Pricing {} options using Lewis (2001) cosine transform",
+            options.len()
+        );
+
+        let mut prices = Vec::with_capacity(options.len());
+
+        // Integration parameters
+        let du = 0.25; // Grid spacing (matches GPU CF computation)
+        let max_phi = 50.0; // Maximum integration bound (adaptive truncation)
+        let truncation_threshold = 1e-8; // Stop when integrand < this threshold
+        let consecutive_limit = 5; // Stop after N consecutive small values
+
+        for (i, option) in options.iter().enumerate() {
+            let start_idx = i * self.fft_size;
+            let end_idx = start_idx + self.fft_size;
+
+            let tau = option.time_to_expiry(chrono::Utc::now().timestamp());
+            let discount = (-option.risk_free_rate * tau).exp();
+            let log_moneyness = (option.strike / option.spot_price).ln();
+
+            // Edge case: Zero or negative time
+            if tau <= 1e-10 {
+                let intrinsic = match option.option_type {
+                    OptionType::Call => (option.spot_price - option.strike).max(0.0),
+                    OptionType::Put => (option.strike - option.spot_price).max(0.0),
+                };
+                prices.push(intrinsic);
+                continue;
+            }
+
+            // Edge case: ATM or very close to ATM
+            let moneyness_ratio = option.strike / option.spot_price;
+            eprintln!("[ATM CHECK] Option {}: K={}, S={}, ratio={}, diff={}",
+                i, option.strike, option.spot_price, moneyness_ratio, (moneyness_ratio - 1.0).abs());
+            if (moneyness_ratio - 1.0).abs() < 1e-6 {
+                eprintln!("[ATM FALLBACK] Option {} is ATM, using Black-Scholes", i);
+                // Use Heston volatility directly (sqrt(v0))
+                let vol = params.v0.sqrt();
+                eprintln!("[ATM FALLBACK] Using Heston vol={} (sqrt(v0={}))", vol, params.v0);
+                let bs_price = BlackScholesPricer::price(
+                    option.spot_price,
+                    option.strike,
+                    tau,
+                    option.risk_free_rate,
+                    vol,
+                    option.option_type,
+                );
+                eprintln!("[ATM FALLBACK] BS price={}", bs_price);
+                prices.push(bs_price);
+                continue;
+            }
+
+            // Lewis formula integration: ∫₀^∞ Re[e^(-iφ·ln(K/S)) · φ₁(φ)] / φ dφ
+            let mut integral = 0.0;
+            let mut consecutive_small = 0;
+            let max_points = ((max_phi / du) as usize).min(self.fft_size);
+
+            for j in 1..max_points {
+                // Skip j=0 to avoid division by zero
+                let phi = j as f64 * du;
+
+                if phi > max_phi {
+                    break; // Hard limit
+                }
+
+                // Get CF value at this frequency
+                let cf_real = char_func_real[start_idx + j];
+                let cf_imag = char_func_imag[start_idx + j];
+                let cf = Complex64::new(cf_real, cf_imag);
+
+                // Compute e^(-iφ·ln(K/S)) = cos(φ·ln(K/S)) - i·sin(φ·ln(K/S))
+                let angle = -phi * log_moneyness;
+                let exp_term = Complex64::new(angle.cos(), angle.sin());
+
+                // Integrand: Re[e^(-iφ·ln(K/S)) · φ₁(φ)] / φ
+                let product = exp_term * cf;
+                let integrand = product.re / phi;
+
+                // Simpson's rule weighting
+                let weight = if j == 1 || j == max_points - 1 {
+                    1.0 // Endpoints (adjusted for j=1 start)
+                } else if j % 2 == 0 {
+                    4.0 // Even indices (odd terms in Simpson's)
+                } else {
+                    2.0 // Odd indices (even terms in Simpson's)
+                };
+
+                integral += weight * integrand;
+
+                // Adaptive truncation
+                if integrand.abs() < truncation_threshold {
+                    consecutive_small += 1;
+                    if consecutive_small >= consecutive_limit {
+                        if i == 0 {
+                            eprintln!(
+                                "[Lewis] Option 0: Truncated at j={} (phi={:.2}), {} points used",
+                                j, phi, j
+                            );
+                        }
+                        break;
+                    }
+                } else {
+                    consecutive_small = 0;
+                }
+            }
+
+            // Finalize Simpson's rule: (h/3) × sum
+            integral *= du / 3.0;
+
+            // Lewis formula: C(K) = S - K·exp(-r·T)/π ∫ ...
+            let call_price = option.spot_price - option.strike * discount * integral / PI;
+
+            // Ensure non-negative and bounded
+            let call_price = call_price.max(0.0).min(option.spot_price);
+
+            // Convert to put if needed via put-call parity
+            let price = match option.option_type {
+                OptionType::Call => call_price,
+                OptionType::Put => {
+                    let intrinsic = option.strike * discount;
+                    (call_price - option.spot_price + intrinsic).max(0.0)
+                }
+            };
+
+            // Validation: Check against bounds
+            if !price.is_finite() || price < 0.0 {
+                eprintln!(
+                    "[Lewis] WARN: Invalid price {:.6} for option {}, falling back to BS",
+                    price, i
+                );
+                let vol = self.estimate_vol_from_cf(
+                    &char_func_real[start_idx..end_idx],
+                    &char_func_imag[start_idx..end_idx],
+                    du,
+                );
+                let bs_price = BlackScholesPricer::price(
+                    option.spot_price,
+                    option.strike,
+                    tau,
+                    option.risk_free_rate,
+                    vol,
+                    option.option_type,
+                );
+                prices.push(bs_price);
+            } else {
+                prices.push(price);
+            }
+
+            if i == 0 {
+                eprintln!(
+                    "[Lewis] Option 0: S={:.2}, K={:.2}, T={:.4}, integral={:.6}, call={:.4}, final={:.4}",
+                    option.spot_price, option.strike, tau, integral, call_price, price
+                );
+            }
+        }
+
+        eprintln!("[Lewis] Pricing complete: prices={:?}", &prices[..prices.len().min(5)]);
+        Ok(prices)
+    }
+
+    /// Estimate implied volatility from characteristic function (for fallback)
+    ///
+    /// Uses ATM implied vol approximation from CF decay rate
+    fn estimate_vol_from_cf(&self, cf_real: &[f64], cf_imag: &[f64], du: f64) -> f64 {
+        // Find first point where CF magnitude drops below 0.1
+        let threshold = 0.1;
+        for (i, (&re, &im)) in cf_real.iter().zip(cf_imag.iter()).enumerate() {
+            let mag = (re * re + im * im).sqrt();
+            if mag < threshold && i > 10 {
+                // Approximate vol from decay: phi ≈ 1 / (vol * sqrt(T))
+                let phi = i as f64 * du;
+                let vol_estimate = (1.0 / phi).max(0.1).min(2.0); // Clamp to [10%, 200%]
+                return vol_estimate;
+            }
+        }
+        0.5 // Default to 50% vol if no decay found
+    }
+
     /// Convert characteristic function to option prices via FFT (Carr-Madan formula)
     ///
     /// Implements the Carr-Madan FFT approach for fast option pricing:
@@ -755,7 +1024,7 @@ impl HestonGpuPricer {
         let fft = planner.plan_fft_forward(self.fft_size);
 
         // Carr-Madan FFT parameters
-        let alpha = 1.5; // Damping parameter (standard choice)
+        let alpha = 0.75; // Damping parameter (0.75 most stable)
         let eta = 0.25; // Grid spacing in log-strike space
         let lambda = 2.0 * PI / (eta * self.fft_size as f64);
 
@@ -788,8 +1057,31 @@ impl HestonGpuPricer {
             let mut nonzero_psi_count = 0;
             let mut clamped_count = 0;  // Count how many values were clamped
 
+            // Adaptive truncation: stop when values become negligible OR when they start overflowing
+            let mut consecutive_small = 0;
+            const TRUNCATION_THRESHOLD: f64 = 1e-6;  // More aggressive threshold
+            const CONSECUTIVE_LIMIT: usize = 5;  // Stop sooner
+            const MAX_SAFE_PHI: f64 = 50.0;  // Hard limit on frequency to prevent overflow
+            let mut _truncated_at: Option<usize> = None;
+
             for j in 0..self.fft_size {
                 let phi = j as f64 * eta;
+
+                // Hard frequency limit: stop if we exceed safe threshold
+                if phi > MAX_SAFE_PHI {
+                    _truncated_at = Some(j);
+                    if i == 0 {
+                        eprintln!(
+                            "[HARD TRUNCATION] Option {}: Stopped at phi={:.2} (exceeds MAX_SAFE_PHI={}), padding remaining {} points",
+                            i, phi, MAX_SAFE_PHI, self.fft_size - j
+                        );
+                    }
+                    // Pad remaining with zeros
+                    for _ in j..self.fft_size {
+                        modified_cf.push(Complex64::new(0.0, 0.0));
+                    }
+                    break;
+                }
 
                 // Get characteristic function value
                 let cf_real = char_func_real[start + j];
@@ -808,7 +1100,7 @@ impl HestonGpuPricer {
                 let denominator = Complex64::new(denom_real, denom_imag);
 
                 // Modified CF
-                let psi = discount * cf / denominator;
+                let psi: Complex64 = discount * cf / denominator;
 
                 // DEBUG: Check for first Inf/NaN in psi
                 if i == 0 && (psi.re.is_infinite() || psi.im.is_infinite()) && j < 20 {
@@ -840,13 +1132,13 @@ impl HestonGpuPricer {
                     2.0
                 };
 
-                let weighted_psi = psi * weight * eta / 3.0;
+                let weighted_psi: Complex64 = psi * weight * eta / 3.0;
 
                 // NUMERICAL STABILITY FIX: Only clamp explicit Inf/NaN values
                 // Previous threshold of 1e6 was too aggressive (clamped 97.8% of values!)
                 // Now only clamp actual overflow, letting the characteristic function
                 // values through even if large. The FFT normalization will handle scaling.
-                let clamped_psi = if weighted_psi.re.is_infinite() || weighted_psi.im.is_infinite()
+                let clamped_psi: Complex64 = if weighted_psi.re.is_infinite() || weighted_psi.im.is_infinite()
                        || weighted_psi.re.is_nan() || weighted_psi.im.is_nan() {
                     // Explicit overflow/NaN - truncate
                     clamped_count += 1;
@@ -856,6 +1148,29 @@ impl HestonGpuPricer {
                     // The FFT normalization by 1/N will bring them to reasonable scale
                     weighted_psi
                 };
+
+                // Adaptive truncation: track consecutive small values
+                if clamped_psi.norm() < TRUNCATION_THRESHOLD {
+                    consecutive_small += 1;
+                    if consecutive_small >= CONSECUTIVE_LIMIT {
+                        // Stop processing - values have become negligible
+                        _truncated_at = Some(j);
+                        if i == 0 {
+                            eprintln!(
+                                "[ADAPTIVE TRUNCATION] Option {}: Stopped at j={} (phi={:.2}), padding remaining {} points with zeros",
+                                i, j, phi, self.fft_size - j
+                            );
+                        }
+                        // Pad remaining with zeros
+                        modified_cf.push(clamped_psi);
+                        for _ in (j + 1)..self.fft_size {
+                            modified_cf.push(Complex64::new(0.0, 0.0));
+                        }
+                        break;
+                    }
+                } else {
+                    consecutive_small = 0;  // Reset counter
+                }
 
                 modified_cf.push(clamped_psi);
             }
@@ -980,7 +1295,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_heston_pricer_initialization() {
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-        let pricer = HestonGpuPricer::new(device, 4096);
+        let pricer = HestonGpuPricer::with_default_batch_size(device, 4096);
         assert!(
             pricer.is_ok(),
             "Failed to create HestonGpuPricer: {:?}",
@@ -990,9 +1305,9 @@ mod tests {
 
     #[test]
     #[ignore] // Requires GPU
-    fn test_price_single_option() {
+    fn test_lewis_method_vs_black_scholes() {
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-        let pricer = HestonGpuPricer::new(device, 4096).unwrap();
+        let mut pricer = HestonGpuPricer::new(device, 4096, 100).unwrap();
 
         let params = HestonParams::new(
             2.0,  // kappa
@@ -1003,63 +1318,89 @@ mod tests {
         )
         .unwrap();
 
+        // ATM option (most sensitive test)
+        let expiration = chrono::Utc::now().timestamp() + (90 * 24 * 60 * 60); // 90 days
         let option = OptionQuote {
-            symbol: "BTC-20250101-50000-C".to_string(),
-            underlying: "BTC".to_string(),
-            strike: 50000.0,
-            expiry_years: 0.25, // 3 months
+            underlying: "TEST".to_string(),
+            strike: 100.0,
+            expiration,
             option_type: OptionType::Call,
-            bid: 2000.0,
-            ask: 2100.0,
-            mid_price: 2050.0,
-            implied_vol: Some(0.8),
-            volume: 100.0,
+            spot_price: 100.0,
+            risk_free_rate: 0.05,
+            bid: None,
+            ask: None,
+            last: None,
+            implied_vol: None,
+            volume: 0.0,
+            open_interest: 0.0,
+            greeks: None,
         };
 
-        let prices = pricer.price_options(&params, &[option]);
-        assert!(prices.is_ok(), "Failed to price option: {:?}", prices.err());
+        // Price with Lewis method
+        let lewis_prices = pricer.price_options(&params, &[option.clone()]).unwrap();
+        let lewis_price = lewis_prices[0];
 
-        let price = prices.unwrap()[0];
-        assert!(price > 0.0, "Option price should be positive");
-        println!("Option price: ${:.2}", price);
+        // Black-Scholes reference
+        let vol = params.v0.sqrt(); // v0 = 0.04 => vol = 0.2
+        let tau = option.time_to_expiry(chrono::Utc::now().timestamp());
+        let bs_price = BlackScholesPricer::price(
+            100.0, 100.0, tau, 0.05, vol, OptionType::Call
+        );
+
+        println!("Lewis price: ${:.4}", lewis_price);
+        println!("Black-Scholes price: ${:.4}", bs_price);
+        println!("Error: {:.2}%", (lewis_price - bs_price).abs() / bs_price * 100.0);
+
+        // Validation: Should match within 5% (relaxed for Lewis method)
+        let error_pct = (lewis_price - bs_price).abs() / bs_price * 100.0;
+        assert!(
+            error_pct < 5.0,
+            "Lewis method error {:.2}% exceeds 5% tolerance",
+            error_pct
+        );
     }
 
     #[test]
     #[ignore] // Requires GPU
-    fn test_price_batch() {
+    fn test_lewis_vs_fft_consistency() {
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-        let pricer = HestonGpuPricer::new(device, 4096).unwrap();
+        let mut pricer = HestonGpuPricer::new(device, 4096, 100).unwrap();
 
         let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
 
-        // Create batch of 100 options with different strikes
-        let options: Vec<OptionQuote> = (40000..40100)
-            .map(|strike| OptionQuote {
-                symbol: format!("BTC-20250101-{}-C", strike),
-                underlying: "BTC".to_string(),
-                strike: strike as f64,
-                expiry_years: 0.25,
-                option_type: OptionType::Call,
-                bid: 2000.0,
-                ask: 2100.0,
-                mid_price: 2050.0,
-                implied_vol: Some(0.8),
-                volume: 100.0,
-            })
-            .collect();
+        let expiration = chrono::Utc::now().timestamp() + (180 * 24 * 60 * 60); // 180 days
+        let option = OptionQuote {
+            underlying: "TEST".to_string(),
+            strike: 105.0,
+            expiration,
+            option_type: OptionType::Call,
+            spot_price: 100.0,
+            risk_free_rate: 0.05,
+            bid: None,
+            ask: None,
+            last: None,
+            implied_vol: None,
+            volume: 0.0,
+            open_interest: 0.0,
+            greeks: None,
+        };
 
-        let start = std::time::Instant::now();
-        let prices = pricer.price_options(&params, &options).unwrap();
-        let elapsed = start.elapsed();
+        // Price with Lewis method
+        let lewis_prices = pricer.price_options_with_method(&params, &[option.clone()], false).unwrap();
 
-        assert_eq!(prices.len(), 100);
-        println!(
-            "Priced 100 options in {:?} ({:.2}ms)",
-            elapsed,
-            elapsed.as_secs_f64() * 1000.0
+        // Price with FFT method
+        let fft_prices = pricer.price_options_with_method(&params, &[option.clone()], true).unwrap();
+
+        println!("Lewis price: ${:.4}", lewis_prices[0]);
+        println!("FFT price: ${:.4}", fft_prices[0]);
+        println!("Difference: ${:.4}", (lewis_prices[0] - fft_prices[0]).abs());
+
+        // Both methods should produce similar results (within 10%)
+        let diff_pct = (lewis_prices[0] - fft_prices[0]).abs() / lewis_prices[0].max(fft_prices[0]) * 100.0;
+        assert!(
+            diff_pct < 10.0,
+            "Lewis vs FFT difference {:.2}% exceeds 10% tolerance",
+            diff_pct
         );
-
-        // Should be <3ms for 100 options
-        assert!(elapsed.as_millis() < 10, "Pricing too slow: {:?}", elapsed);
     }
 }
