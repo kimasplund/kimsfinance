@@ -132,6 +132,8 @@ impl Default for ExecutionMode {
 /// Strategy type enumeration for batch backtesting
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StrategyType {
+    // ===== Equity Strategies (0-9) =====
+
     /// RSI crossover strategy
     /// Parameters: [rsi_period, buy_threshold, sell_threshold]
     RsiCrossover = 0,
@@ -143,6 +145,77 @@ pub enum StrategyType {
     /// Bollinger Bands mean reversion
     /// Parameters: [bb_period, bb_std, entry_std, exit_std]
     BollingerMeanReversion = 2,
+
+    // ===== Options Strategies (10-19) =====
+
+    /// Long straddle (buy ATM call + ATM put)
+    /// Parameters: [vol_threshold, breakeven_pct]
+    /// Enter when IV < HV - vol_threshold (cheap options)
+    /// Exit when |underlying_move| > breakeven_pct
+    LongStraddle = 10,
+
+    /// Short straddle (sell ATM call + ATM put)
+    /// Parameters: [vol_threshold, max_loss_pct]
+    /// Enter when IV > HV + vol_threshold (expensive options)
+    /// Exit when loss exceeds max_loss_pct
+    ShortStraddle = 11,
+
+    /// Covered call (long stock + short OTM call)
+    /// Parameters: [strike_offset_pct, min_premium_pct]
+    /// Sell call strike_offset_pct above current price
+    /// Only enter if premium >= min_premium_pct
+    CoveredCall = 12,
+
+    /// Iron condor (sell OTM put + call, buy further OTM put + call)
+    /// Parameters: [short_put_offset, short_call_offset, long_offset, min_credit]
+    /// Collect premium from range-bound movement
+    /// Max loss capped by long options
+    IronCondor = 13,
+
+    /// Delta-neutral volatility trading
+    /// Parameters: [delta_threshold, rebalance_threshold, vol_threshold]
+    /// Maintain delta near zero via dynamic hedging
+    /// Profit from gamma/vega exposure
+    DeltaNeutral = 14,
+
+    /// Volatility arbitrage (IV vs HV)
+    /// Parameters: [vol_threshold, hedge_delta, min_edge]
+    /// Buy underpriced options (IV < HV - threshold)
+    /// Delta hedge to isolate vol exposure
+    VolatilityArbitrage = 15,
+}
+
+impl StrategyType {
+    /// Check if this strategy type requires options data
+    ///
+    /// # Returns
+    ///
+    /// `true` if strategy is in the options category (10-19), `false` for equity strategies (0-9)
+    pub fn is_options_strategy(&self) -> bool {
+        (*self as i32) >= 10 && (*self as i32) < 20
+    }
+
+    /// Check if this strategy type is an equity strategy
+    ///
+    /// # Returns
+    ///
+    /// `true` if strategy is in the equity category (0-9), `false` for options strategies (10-19)
+    pub fn is_equity_strategy(&self) -> bool {
+        (*self as i32) < 10
+    }
+
+    /// Get the strategy category name
+    ///
+    /// # Returns
+    ///
+    /// "Equity" for strategies 0-9, "Options" for strategies 10-19
+    pub fn category(&self) -> &'static str {
+        if self.is_options_strategy() {
+            "Options"
+        } else {
+            "Equity"
+        }
+    }
 }
 
 /// OHLCV data for backtesting
