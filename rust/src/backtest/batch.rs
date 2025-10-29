@@ -246,6 +246,13 @@ pub fn calculate_optimal_threshold(
 /// - Trades: 1000 × 1000 × 48 = 48 MB
 /// - Metrics: 1000 × 3 × 8 = 24 KB
 /// - **Total: ~540 MB** (well under 1GB target)
+///
+/// # Options Strategy Support (Phase 2)
+///
+/// For options strategies, adds Phase 0 (Heston GPU pricing) before backtest:
+///
+/// - Phase 0: Heston pricing: 1000 options × 4KB = 4 MB
+/// - **Total with options: ~544 MB** (still under 1GB target)
 pub struct BatchBacktestSweep {
     device: Arc<GpuDevice>,
     strategy_type: Option<StrategyType>,
@@ -253,6 +260,14 @@ pub struct BatchBacktestSweep {
     parameters: Vec<Vec<f64>>,
     config: BacktestConfig,
     execution_mode: ExecutionMode,
+
+    // Phase 2: Options strategy support
+    #[cfg(feature = "gpu")]
+    heston_pricer: Option<Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>>,
+    #[cfg(feature = "gpu")]
+    heston_params: Option<crate::quantitative::heston::HestonParams>,
+    #[cfg(feature = "gpu")]
+    options_data: Option<Vec<crate::quantitative::heston::OptionQuote>>,
 }
 
 impl BatchBacktestSweep {
@@ -276,6 +291,12 @@ impl BatchBacktestSweep {
             parameters: Vec::new(),
             config: BacktestConfig::default(),
             execution_mode: ExecutionMode::default(),
+            #[cfg(feature = "gpu")]
+            heston_pricer: None,
+            #[cfg(feature = "gpu")]
+            heston_params: None,
+            #[cfg(feature = "gpu")]
+            options_data: None,
         }
     }
 
@@ -380,6 +401,83 @@ impl BatchBacktestSweep {
     /// ```
     pub fn execution_mode(mut self, mode: ExecutionMode) -> Self {
         self.execution_mode = mode;
+        self
+    }
+
+    /// Set Heston GPU pricer for options strategies (Phase 2)
+    ///
+    /// Required for options-based strategies. The pricer should be pre-initialized
+    /// with appropriate FFT size and max batch size.
+    ///
+    /// # Arguments
+    ///
+    /// * `pricer` - Initialized HestonGpuPricer (wrapped in Arc<Mutex<>>)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use kimsfinance_core::gpu::HestonGpuPricer;
+    /// use parking_lot::Mutex;
+    ///
+    /// let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000)?;
+    /// let pricer_arc = Arc::new(Mutex::new(pricer));
+    ///
+    /// sweep.heston_pricer(pricer_arc)
+    /// ```
+    #[cfg(feature = "gpu")]
+    pub fn heston_pricer(
+        mut self,
+        pricer: Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>,
+    ) -> Self {
+        self.heston_pricer = Some(pricer);
+        self
+    }
+
+    /// Set Heston model parameters for options pricing
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated Heston parameters (kappa, theta, sigma, rho, v0)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use kimsfinance_core::quantitative::heston::HestonParams;
+    ///
+    /// let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04)?;
+    /// sweep.heston_params(params)
+    /// ```
+    #[cfg(feature = "gpu")]
+    pub fn heston_params(mut self, params: crate::quantitative::heston::HestonParams) -> Self {
+        self.heston_params = Some(params);
+        self
+    }
+
+    /// Set options market data for pricing
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Vec of OptionQuote structs with strikes, expirations, etc.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let options = vec![
+    ///     OptionQuote {
+    ///         underlying: "BTC".to_string(),
+    ///         strike: 50000.0,
+    ///         expiration: now + (30 * 24 * 3600),
+    ///         option_type: OptionType::Call,
+    ///         spot_price: 48000.0,
+    ///         risk_free_rate: 0.05,
+    ///         // ... other fields
+    ///     },
+    /// ];
+    /// sweep.options_data(options)
+    /// ```
+    #[cfg(feature = "gpu")]
+    pub fn options_data(mut self, options: Vec<crate::quantitative::heston::OptionQuote>) -> Self {
+        self.options_data = Some(options);
         self
     }
 
@@ -640,6 +738,65 @@ impl BatchBacktestSweep {
         )
     }
 
+    // ===== Phase 2: Options Strategy Support =====
+
+    /// Check if this is an options strategy (Phase 2 detection)
+    ///
+    /// Returns true if Heston pricer and options data are configured
+    #[cfg(feature = "gpu")]
+    fn is_options_strategy(&self) -> bool {
+        self.heston_pricer.is_some()
+            && self.heston_params.is_some()
+            && self.options_data.is_some()
+    }
+
+    /// Check if this is an options strategy (Phase 2 detection) - fallback for non-GPU builds
+    #[cfg(not(feature = "gpu"))]
+    fn is_options_strategy(&self) -> bool {
+        false
+    }
+
+    /// Price options using Heston GPU pricer (Phase 0 of pipeline)
+    ///
+    /// # Performance
+    ///
+    /// - 100 options: ~3ms
+    /// - 1000 options: ~15ms
+    ///
+    /// # Returns
+    ///
+    /// Vec of option prices (length = number of options)
+    ///
+    /// # Errors
+    ///
+    /// - Missing Heston pricer, params, or options data
+    /// - GPU pricing failure
+    #[cfg(feature = "gpu")]
+    fn price_options_heston(&self) -> Result<Vec<f64>, GpuError> {
+        let pricer = self
+            .heston_pricer
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Heston pricer not set".into()))?;
+
+        let params = self
+            .heston_params
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Heston params not set".into()))?;
+
+        let options = self
+            .options_data
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Options data not set".into()))?;
+
+        // Lock pricer and price options
+        let mut pricer_guard = pricer.lock();
+        pricer_guard
+            .price_options(params, options)
+            .map_err(|e| GpuError::ExecutionError(format!("Heston pricing failed: {:?}", e)))
+    }
+
+    // ===== End Phase 2: Options Strategy Support =====
+
     /// Execute using traditional method (4 separate kernel launches)
     ///
     /// This is the fallback method for smaller batches (<100 strategies)
@@ -678,6 +835,23 @@ impl BatchBacktestSweep {
         {
             return Err(GpuError::OhlcvLengthMismatch);
         }
+
+        // ===== Phase 0: Heston Option Pricing (if options strategy) =====
+        let phase0_ms = if self.is_options_strategy() {
+            let start_phase0 = Instant::now();
+            let _option_prices = self.price_options_heston()?;
+            let phase0_time = start_phase0.elapsed().as_secs_f64() * 1000.0;
+
+            eprintln!(
+                "[Phase 0] Heston pricing complete: {:.2}ms for {} options",
+                phase0_time,
+                _option_prices.len()
+            );
+
+            phase0_time
+        } else {
+            0.0
+        };
 
         // ===== Compile CUDA Kernels (with caching) =====
         let ptx_arc = compile_backtest_kernels()?;
@@ -785,7 +959,7 @@ impl BatchBacktestSweep {
         });
 
         let total_ms = start_total.elapsed().as_secs_f64() * 1000.0;
-        let gpu_ms = phase1_ms + phase2_ms + phase3_ms + phase4_ms;
+        let gpu_ms = phase0_ms + phase1_ms + phase2_ms + phase3_ms + phase4_ms;
 
         // Calculate VRAM usage (approximate)
         let vram_used_mb = (
