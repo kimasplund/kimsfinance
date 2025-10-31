@@ -99,7 +99,7 @@ pub use metrics::{
 };
 pub use microstructure_strategy::MicrostructureStrategy;
 pub use multi_objective::{MultiObjectiveOptimizer, MultiObjectiveResult, Objective, Solution};
-pub use optimizer::{GeneticOptimizer, OptimizerResult};
+pub use optimizer::{GeneticOptimizer, IslandGeneticOptimizer, OptimizerResult};
 pub use portfolio::{
     AllocationStrategy, AssetData, PortfolioBacktest, PortfolioConfig, PortfolioResult,
     PortfolioStrategy, RebalanceFrequency,

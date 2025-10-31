@@ -175,6 +175,11 @@ harness = false
 required-features = ["gpu"]
 
 [[bench]]
+name = "genetic_optimizer_comparison"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
 name = "multi_indicator_throughput"
 harness = false
 required-features = ["gpu"]
