@@ -1,0 +1,32 @@
+[package]
+name = "kimsfinance-cuda-ext"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90.0"
+authors = ["kimsfinance contributors"]
+description = "CUDA extensions for kimsfinance - FFI wrappers for APIs not exposed by cudarc"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+cudarc = { version = "=0.17.3", features = ["driver", "cuda-13000"] }
+thiserror = "2.0"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[lib]
+name = "kimsfinance_cuda_ext"
+path = "src/lib.rs"
+
+[[example]]
+name = "stream_malloc_benchmark"
+path = "examples/stream_malloc_benchmark.rs"
+
+[[bench]]
+name = "stream_malloc"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
