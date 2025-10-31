@@ -502,7 +502,7 @@ mod tests {
         let device = GpuDevice::new().expect("Failed to initialize GPU");
         let allocator =
             AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
-                .expect("Failed. to create allocator");
+                .expect("Failed to create allocator");
 
         // Allocate 10 buffers
         let mut buffers = Vec::new();
