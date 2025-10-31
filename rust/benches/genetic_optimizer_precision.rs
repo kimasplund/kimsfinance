@@ -73,6 +73,7 @@ mod statistics;
 use statistics::BenchmarkStats;
 
 /// RSI strategy for genetic optimization
+#[derive(Clone)]
 struct RSIStrategy {
     rsi_period: usize,
     buy_threshold: f64,

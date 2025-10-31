@@ -297,10 +297,10 @@ impl WalkForwardAnalyzer {
     /// # Returns
     ///
     /// WalkForwardResult with in-sample/out-of-sample comparison
-    pub fn analyze(
+    pub fn analyze<S>(
         &self,
         engine: &BacktestEngine,
-        strategy: &mut dyn Strategy,
+        strategy: &S,
         timestamps: &[i64],
         open: &Array1<f64>,
         high: &Array1<f64>,
@@ -308,7 +308,10 @@ impl WalkForwardAnalyzer {
         close: &Array1<f64>,
         volume: &Array1<f64>,
         param_grid: &ParameterGrid,
-    ) -> Result<WalkForwardResult, GpuError> {
+    ) -> Result<WalkForwardResult, GpuError>
+    where
+        S: Strategy + Clone,
+    {
         // Validate configuration
         self.config.validate().map_err(|e| {
             GpuError::InvalidParameter(format!("Invalid walk-forward config: {}", e))
@@ -379,8 +382,9 @@ impl WalkForwardAnalyzer {
             // Run backtest with optimized parameters
             // NOTE: This assumes strategy parameters can be updated externally
             // In production, you'd need a way to apply optimized_params to strategy
+            let mut strategy_clone = strategy.clone();
             let mut out_of_sample_result = engine.run(
-                strategy,
+                &mut strategy_clone,
                 test_timestamps,
                 &test_open,
                 &test_high,
