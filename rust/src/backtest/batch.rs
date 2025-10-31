@@ -133,7 +133,6 @@ impl Default for ExecutionMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StrategyType {
     // ===== Equity Strategies (0-9) =====
-
     /// RSI crossover strategy
     /// Parameters: [rsi_period, buy_threshold, sell_threshold]
     RsiCrossover = 0,
@@ -147,7 +146,6 @@ pub enum StrategyType {
     BollingerMeanReversion = 2,
 
     // ===== Options Strategies (10-19) =====
-
     /// Long straddle (buy ATM call + ATM put)
     /// Parameters: [vol_threshold, breakeven_pct]
     /// Enter when IV < HV - vol_threshold (cheap options)
@@ -818,9 +816,7 @@ impl BatchBacktestSweep {
     /// Returns true if Heston pricer and options data are configured
     #[cfg(feature = "heston")]
     fn is_options_strategy(&self) -> bool {
-        self.heston_pricer.is_some()
-            && self.heston_params.is_some()
-            && self.options_data.is_some()
+        self.heston_pricer.is_some() && self.heston_params.is_some() && self.options_data.is_some()
     }
 
     /// Check if this is an options strategy (Phase 2 detection) - fallback for non-Heston builds
@@ -969,11 +965,34 @@ impl BatchBacktestSweep {
         )?;
         let phase4_ms = start_phase4.elapsed().as_secs_f64() * 1000.0;
 
-        // ===== Copy Results Back to CPU =====
-        let sharpe_vec = self.device.copy_to_host(&sharpe_ratios)?;
-        let dd_vec = self.device.copy_to_host(&max_drawdowns)?;
-        let wr_vec = self.device.copy_to_host(&win_rates)?;
-        let equity_vec = self.device.copy_to_host(&equity_curves)?;
+        // ===== D2H - Asynchronously copy results back to CPU =====
+        let mut pinned_sharpe = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let mut pinned_dd = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let mut pinned_wr = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let equity_len = n_strategies * n_candles;
+        let mut pinned_equity = self.device.pinned_pool.lock().acquire(equity_len)?;
+
+        self.device.stream.memcpy_dtoh(&sharpe_ratios, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&max_drawdowns, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&win_rates, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&equity_curves, &mut pinned_equity.as_mut_slice()[..equity_len])?;
+
+        // Synchronize stream to ensure D2H copies are complete before CPU access
+        self.device.synchronize()?;
+
+        let sharpe_vec = pinned_sharpe.as_slice()[..n_strategies].to_vec();
+        let dd_vec = pinned_dd.as_slice()[..n_strategies].to_vec();
+        let wr_vec = pinned_wr.as_slice()[..n_strategies].to_vec();
+        let equity_vec = pinned_equity.as_slice()[..equity_len].to_vec();
+
+        // Release pinned buffers
+        let mut pool = self.device.pinned_pool.lock();
+        pool.release(pinned_sharpe);
+        pool.release(pinned_dd);
+        pool.release(pinned_wr);
+        pool.release(pinned_equity);
+        drop(pool);
+
         let num_trades_vec = {
             let slice = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
                 GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
@@ -1077,8 +1096,16 @@ impl BatchBacktestSweep {
             ohlcv_flat.push(data.volume[i]);
         }
 
-        // Copy OHLCV to GPU (shared across all strategies)
-        let d_ohlcv = self.device.copy_to_device(&ohlcv_flat)?;
+        // === H2D - Asynchronously copy OHLCV to GPU (shared across all strategies) ===
+        let ohlcv_len = ohlcv_flat.len();
+        let mut pinned_ohlcv = self.device.pinned_pool.lock().acquire(ohlcv_len)?;
+        pinned_ohlcv.as_mut_slice()[..ohlcv_len].copy_from_slice(&ohlcv_flat);
+
+        let mut d_ohlcv = self.device.alloc_buffer(ohlcv_len)?;
+        self.device.stream.memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_ohlcv);
 
         // Flatten parameters: [N_strategies × N_params]
         let n_params = self.parameters[0].len();
@@ -1086,7 +1113,17 @@ impl BatchBacktestSweep {
         for params in &self.parameters {
             params_flat.extend_from_slice(params);
         }
-        let d_params = self.device.copy_to_device(&params_flat)?;
+
+        // === H2D - Asynchronously copy parameters to GPU ===
+        let params_len = params_flat.len();
+        let mut pinned_params = self.device.pinned_pool.lock().acquire(params_len)?;
+        pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
+
+        let mut d_params = self.device.alloc_buffer(params_len)?;
+        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_params);
 
         // Allocate output: [N_strategies × N_indicators × N_candles]
         let n_indicators = 3; // RSI, ATR, SMA for now
@@ -1153,7 +1190,17 @@ impl BatchBacktestSweep {
         for params in &self.parameters {
             params_flat.extend_from_slice(params);
         }
-        let d_params = self.device.copy_to_device(&params_flat)?;
+
+        // === H2D - Asynchronously copy parameters to GPU ===
+        let params_len = params_flat.len();
+        let mut pinned_params = self.device.pinned_pool.lock().acquire(params_len)?;
+        pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
+
+        let mut d_params = self.device.alloc_buffer(params_len)?;
+        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_params);
 
         // Allocate signals: [N_strategies × N_candles] (int8)
         let signals_len = n_strategies * n_candles;
@@ -1215,8 +1262,17 @@ impl BatchBacktestSweep {
         n_strategies: usize,
         n_candles: usize,
     ) -> Result<(CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>), GpuError> {
-        // Copy close prices to GPU
-        let d_close = self.device.copy_to_device(data.close.as_slice().unwrap())?;
+        // === H2D - Asynchronously copy close prices to GPU ===
+        let close_slice = data.close.as_slice().unwrap();
+        let close_len = close_slice.len();
+        let mut pinned_close = self.device.pinned_pool.lock().acquire(close_len)?;
+        pinned_close.as_mut_slice()[..close_len].copy_from_slice(close_slice);
+
+        let mut d_close = self.device.alloc_buffer(close_len)?;
+        self.device.stream.memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_close);
 
         // Allocate equity curves: [N_strategies × N_candles]
         let equity_len = n_strategies * n_candles;

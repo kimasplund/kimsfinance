@@ -217,10 +217,28 @@ pub fn pivot_points_gpu(
     // Select stream: use provided stream or device default
     let kernel_stream = stream.unwrap_or(&device.stream);
 
-    // === Step 1: H2D - Copy input data to GPU ===
-    let d_high = device.copy_to_device(high)?;
-    let d_low = device.copy_to_device(low)?;
-    let d_close = device.copy_to_device(close)?;
+    // === Step 1: H2D - Asynchronously copy input data to device ===
+    let mut pinned_high = device.pinned_pool.lock().acquire(n)?;
+    pinned_high.as_mut_slice()[..n].copy_from_slice(high);
+    let mut pinned_low = device.pinned_pool.lock().acquire(n)?;
+    pinned_low.as_mut_slice()[..n].copy_from_slice(low);
+    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
+    pinned_close.as_mut_slice()[..n].copy_from_slice(close);
+
+    let mut d_high = device.alloc_buffer(n)?;
+    let mut d_low = device.alloc_buffer(n)?;
+    let mut d_close = device.alloc_buffer(n)?;
+
+    device.stream.memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
+    device.stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
+    device.stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
+
+    // Release pinned buffers
+    let mut pool = device.pinned_pool.lock();
+    pool.release(pinned_high);
+    pool.release(pinned_low);
+    pool.release(pinned_close);
+    drop(pool);
 
     // === Step 2: Allocate device buffers for 7 outputs ===
     let mut d_pp = device.alloc_buffer(n)?;
@@ -254,18 +272,46 @@ pub fn pivot_points_gpu(
         })?;
     }
 
-    // === Step 4: Synchronize and copy results back to host ===
-    kernel_stream.synchronize().map_err(|e| {
+    // === Step 4: D2H - Asynchronously copy results back to host ===
+    let mut pinned_pp = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_s1 = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_s2 = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_s3 = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_r1 = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_r2 = device.pinned_pool.lock().acquire(n)?;
+    let mut pinned_r3 = device.pinned_pool.lock().acquire(n)?;
+
+    device.stream.memcpy_dtoh(&d_pp, &mut pinned_pp.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_s1, &mut pinned_s1.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_s2, &mut pinned_s2.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_s3, &mut pinned_s3.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_r1, &mut pinned_r1.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_r2, &mut pinned_r2.as_mut_slice()[..n])?;
+    device.stream.memcpy_dtoh(&d_r3, &mut pinned_r3.as_mut_slice()[..n])?;
+
+    // Synchronize stream to ensure all D2H copies are complete before CPU access
+    device.stream.synchronize().map_err(|e| {
         GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
     })?;
 
-    let pp_vec = device.copy_to_host(&d_pp)?;
-    let s1_vec = device.copy_to_host(&d_s1)?;
-    let s2_vec = device.copy_to_host(&d_s2)?;
-    let s3_vec = device.copy_to_host(&d_s3)?;
-    let r1_vec = device.copy_to_host(&d_r1)?;
-    let r2_vec = device.copy_to_host(&d_r2)?;
-    let r3_vec = device.copy_to_host(&d_r3)?;
+    let pp_vec = pinned_pp.as_slice()[..n].to_vec();
+    let s1_vec = pinned_s1.as_slice()[..n].to_vec();
+    let s2_vec = pinned_s2.as_slice()[..n].to_vec();
+    let s3_vec = pinned_s3.as_slice()[..n].to_vec();
+    let r1_vec = pinned_r1.as_slice()[..n].to_vec();
+    let r2_vec = pinned_r2.as_slice()[..n].to_vec();
+    let r3_vec = pinned_r3.as_slice()[..n].to_vec();
+
+    // Release pinned buffers
+    let mut pool = device.pinned_pool.lock();
+    pool.release(pinned_pp);
+    pool.release(pinned_s1);
+    pool.release(pinned_s2);
+    pool.release(pinned_s3);
+    pool.release(pinned_r1);
+    pool.release(pinned_r2);
+    pool.release(pinned_r3);
+    drop(pool);
 
     Ok(PivotPointsOutput {
         pp: Array1::from_vec(pp_vec),

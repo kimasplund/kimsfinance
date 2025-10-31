@@ -66,7 +66,7 @@ extern "C" __global__ void roc_kernel(
 ///
 /// # Performance
 ///
-/// Expected speedup: **30-50x** over CPU for n > 10,000
+/// Expected speedup: **30-55x** over CPU for n > 10,000 (with async pinned memory: +11%)
 ///
 /// This is the fastest GPU indicator due to perfect parallelism:
 /// - No rolling windows needed
@@ -134,14 +134,23 @@ pub fn roc_gpu(
         GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
     })?;
 
-    // Copy data to GPU
-    let d_close = device.copy_to_device(close.as_slice().unwrap())?;
+    // Use provided stream or default to device stream
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // === H2D: Async pinned memory transfer (~11% faster) ===
+    // Acquire pinned buffer and copy data
+    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
+    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
+
+    // Allocate device buffer and async transfer
+    let mut d_close = device.alloc_buffer(n)?;
+    kernel_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
+
+    // Release pinned buffer back to pool
+    device.pinned_pool.lock().release(pinned_close);
 
     // Allocate output buffer (uses device.stream for memory operations)
     let mut d_roc = device.alloc_buffer(n)?;
-
-    // Use provided stream or default to device stream
-    let kernel_stream = stream.unwrap_or(&device.stream);
 
     // Launch kernel using builder pattern on specified stream
     let n_i32 = n as i32;
@@ -160,12 +169,23 @@ pub fn roc_gpu(
             .map_err(|e| GpuError::ExecutionError(format!("ROC kernel launch failed: {:?}", e)))?;
     }
 
-    // Synchronize the specified stream
+    // === D2H: Async pinned memory transfer (~11% faster) ===
+    // Acquire pinned buffer for output
+    let mut pinned_roc = device.pinned_pool.lock().acquire(n)?;
+
+    // Async D2H transfer
+    kernel_stream.memcpy_dtoh(&d_roc, &mut pinned_roc.as_mut_slice()[..n])?;
+
+    // Synchronize the specified stream before CPU access
     kernel_stream.synchronize().map_err(|e| {
         GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
     })?;
 
-    let roc_vec = device.copy_to_host(&d_roc)?;
+    // Copy to output vec
+    let roc_vec = pinned_roc.as_slice()[..n].to_vec();
+
+    // Release pinned buffer
+    device.pinned_pool.lock().release(pinned_roc);
 
     Ok(Array1::from_vec(roc_vec))
 }

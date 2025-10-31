@@ -24,7 +24,7 @@
 //! ```
 
 use super::aggregation::GpuAggregator;
-use crate::binance::{aggregate_trades_to_candles, Candle, Timeframe, Trade, BinanceError};
+use crate::binance::{BinanceError, Candle, Timeframe, Trade, aggregate_trades_to_candles};
 use std::sync::LazyLock;
 
 /// Default GPU threshold (trades below this use CPU)
@@ -218,7 +218,8 @@ impl EngineSelector {
             let cpu_time = cpu_start.elapsed();
 
             // Benchmark GPU
-            let gpu_aggregator = GpuAggregator::new().map_err(|e| format!("GPU init failed: {:?}", e))?;
+            let gpu_aggregator =
+                GpuAggregator::new().map_err(|e| format!("GPU init failed: {:?}", e))?;
             let gpu_start = Instant::now();
             let _candles_gpu = gpu_aggregator
                 .aggregate_trades(&trades, Timeframe::minutes(5))
@@ -257,9 +258,8 @@ impl EngineSelector {
 }
 
 /// Global GPU aggregator instance (lazily initialized)
-static GPU_AGGREGATOR: LazyLock<GpuAggregator> = LazyLock::new(|| {
-    GpuAggregator::new().expect("Failed to initialize GPU aggregator")
-});
+static GPU_AGGREGATOR: LazyLock<GpuAggregator> =
+    LazyLock::new(|| GpuAggregator::new().expect("Failed to initialize GPU aggregator"));
 
 /// Generate synthetic test trades for benchmarking
 fn generate_test_trades(n: usize) -> Vec<Trade> {
