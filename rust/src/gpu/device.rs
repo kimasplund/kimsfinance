@@ -19,6 +19,7 @@ const PINNED_BUFFER_SIZE: usize = 1_000_000; // 1M f64 elements (~8MB per buffer
 pub struct GpuDevice {
     pub(crate) context: Arc<CudaContext>,
     pub(crate) stream: Arc<CudaStream>,
+    pub device_id: usize,
     /// Pool of reusable pinned memory buffers for 20-30% faster async transfers
     pub(crate) pinned_pool: Mutex<PinnedBufferPool<f64>>,
     /// Async memory allocator for 1.2-1.5x faster allocation (CUDA 11.2+)
@@ -81,6 +82,7 @@ impl GpuDevice {
         Ok(Self {
             context,
             stream,
+            device_id,
             pinned_pool: Mutex::new(pinned_pool),
             async_allocator,
         })
