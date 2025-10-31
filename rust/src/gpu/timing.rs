@@ -224,7 +224,7 @@ impl GpuTimer {
     fn elapsed_time_ms(&self) -> Result<f32, GpuError> {
         unsafe {
             let mut ms = 0.0f32;
-            sys::cuEventElapsedTime(&mut ms, self.start_event.raw_event(), self.end_event.raw_event())
+            sys::cuEventElapsedTime_v2(&mut ms, self.start_event.raw_event(), self.end_event.raw_event())
                 .result()
                 .map_err(|e| {
                     GpuError::ExecutionError(format!("Failed to get elapsed time: {:?}", e))
@@ -405,22 +405,22 @@ impl MultiPhaseTimer {
             let mut total_ms = 0.0f32;
 
             // H2D time: start → h2d_event
-            sys::cuEventElapsedTime(&mut h2d_ms, self.start_event.raw_event(), self.h2d_event.raw_event())
+            sys::cuEventElapsedTime_v2(&mut h2d_ms, self.start_event.raw_event(), self.h2d_event.raw_event())
                 .result()
                 .map_err(|e| GpuError::ExecutionError(format!("Failed to get H2D time: {:?}", e)))?;
 
             // Kernel time: h2d_event → kernel_event
-            sys::cuEventElapsedTime(&mut kernel_ms, self.h2d_event.raw_event(), self.kernel_event.raw_event())
+            sys::cuEventElapsedTime_v2(&mut kernel_ms, self.h2d_event.raw_event(), self.kernel_event.raw_event())
                 .result()
                 .map_err(|e| GpuError::ExecutionError(format!("Failed to get kernel time: {:?}", e)))?;
 
             // D2H time: kernel_event → d2h_event
-            sys::cuEventElapsedTime(&mut d2h_ms, self.kernel_event.raw_event(), self.d2h_event.raw_event())
+            sys::cuEventElapsedTime_v2(&mut d2h_ms, self.kernel_event.raw_event(), self.d2h_event.raw_event())
                 .result()
                 .map_err(|e| GpuError::ExecutionError(format!("Failed to get D2H time: {:?}", e)))?;
 
             // Total time: start → d2h_event
-            sys::cuEventElapsedTime(&mut total_ms, self.start_event.raw_event(), self.d2h_event.raw_event())
+            sys::cuEventElapsedTime_v2(&mut total_ms, self.start_event.raw_event(), self.d2h_event.raw_event())
                 .result()
                 .map_err(|e| GpuError::ExecutionError(format!("Failed to get total time: {:?}", e)))?;
 

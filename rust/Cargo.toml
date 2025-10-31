@@ -56,8 +56,8 @@ packed_simd_2 = { version = "0.3.8", optional = true }
 
 # Optional GPU support with cudarc (v0.17.3 - pinned for stability)
 # CUDA Toolkit Compatibility:
-#   - Feature flag: cuda-12080 (CUDA 12.8.0 PTX compilation)
-#   - Runtime compatible with CUDA 13.0 driver (forward compatibility)
+#   - Feature flag: cuda-13000 (CUDA 13.0 PTX compilation) ✅
+#   - Toolkit installed: CUDA 12.4 (nvcc)
 #   - Current driver: 580.82.07 (CUDA 13.0) ✅
 #
 # CUDA 13.0 Performance Improvements (runtime-enabled, no code changes needed):
@@ -74,7 +74,7 @@ packed_simd_2 = { version = "0.3.8", optional = true }
 #   ✅ Math library speedups (automatic)
 #   ⚠️ Stream-ordered malloc (requires cudarc API addition)
 #   ⚠️ CUDA Graphs (requires cudarc API addition)
-cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-12080"] }
+cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-13000"] }
 half = { version = "2.4", optional = true }  # For f16 support
 
 # Optimization libraries for Heston calibration
