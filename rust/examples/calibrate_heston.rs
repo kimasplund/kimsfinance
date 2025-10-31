@@ -24,6 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     use kimsfinance_core::quantitative::heston::{
         CalibrationResult, HestonCalibrator, HestonParams, OptionQuote, OptionType, ParameterBounds,
     };
+    use parking_lot::Mutex;
     use std::sync::Arc;
 
     println!("=== Heston Model Calibration Example ===\n");
@@ -31,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 1: Initialize GPU device and pricer
     println!("Initializing GPU device...");
     let device = Arc::new(GpuDevice::new()?);
-    let gpu_pricer = Arc::new(HestonGpuPricer::new(device, 4096)?);
+    let gpu_pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 128)?));
     println!("✓ GPU device initialized\n");
 
     // Step 2: Create synthetic market data
@@ -117,10 +118,10 @@ fn generate_synthetic_market_data() -> Vec<kimsfinance_core::quantitative::hesto
         .into_iter()
         .map(|strike| {
             // Synthetic "market" prices based on simple heuristics
-            let moneyness = strike / spot;
-            let intrinsic = (spot - strike).max(0.0);
-            let time_value = 2000.0 * (1.0 - (moneyness - 1.0).abs());
-            let mid_price = intrinsic + time_value.max(500.0);
+            let moneyness: f64 = strike / spot;
+            let intrinsic: f64 = (spot - strike).max(0.0);
+            let time_value: f64 = 2000.0 * (1.0 - (moneyness - 1.0).abs());
+            let mid_price: f64 = intrinsic + time_value.max(500.0);
 
             OptionQuote {
                 underlying: "BTC".to_string(),

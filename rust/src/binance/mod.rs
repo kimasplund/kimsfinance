@@ -37,8 +37,8 @@ pub use incomplete_candle::IncompleteCandle;
 #[allow(deprecated)]
 pub use timeframe::{ParseError as TimeframeParseError, Timeframe, TimeframeEnum};
 pub use trades::{
-    aggregate_trades_to_candles, parse_trade_csv, process_binance_month, stream_aggregate_csv,
-    BinanceError, Candle, ParseError as CsvParseError, Trade,
+    BinanceError, Candle, ParseError as CsvParseError, Trade, aggregate_trades_to_candles,
+    parse_trade_csv, process_binance_month, stream_aggregate_csv,
 };
 
 // GPU-accelerated aggregation (optional, feature-gated)

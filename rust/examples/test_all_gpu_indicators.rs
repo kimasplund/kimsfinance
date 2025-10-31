@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use kimsfinance_core::gpu::{GpuDevice, GpuError};
 use kimsfinance_core::gpu::{
-    mfi_gpu, parabolic_sar_gpu, adx_gpu, supertrend_gpu, ichimoku_gpu,
-    vwap_anchored_gpu, fibonacci_gpu, pivot_points_gpu
+    adx_gpu, fibonacci_gpu, ichimoku_gpu, mfi_gpu, parabolic_sar_gpu, pivot_points_gpu,
+    supertrend_gpu, vwap_anchored_gpu,
 };
 use ndarray::Array1;
+use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Batch Test: All 8 GPU Indicators ===\n");
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &Array1::from_vec(close.clone()),
         &Array1::from_vec(volume.clone()),
         14,
-        None
+        None,
     ) {
         Ok(result) => {
             let valid_count = result.iter().filter(|x| x.is_finite()).count();
@@ -49,12 +49,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         0.02,
         0.02,
         0.2,
-        None
+        None,
     ) {
         Ok((sar, trend)) => {
             let valid_count = sar.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ Parabolic SAR completed: {}/{} valid values, {} trends",
-                     valid_count, n, trend.len());
+            println!(
+                "   ✓ Parabolic SAR completed: {}/{} valid values, {} trends",
+                valid_count,
+                n,
+                trend.len()
+            );
         }
         Err(e) => println!("   ✗ Parabolic SAR failed: {}", e),
     }
@@ -67,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &Array1::from_vec(low.clone()),
         &Array1::from_vec(close.clone()),
         14,
-        None
+        None,
     ) {
         Ok(result) => {
             let valid_count = result.iter().filter(|x| x.is_finite()).count();
@@ -78,37 +82,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 4: Supertrend
     println!("4. Testing Supertrend...");
-    match supertrend_gpu(
-        device.clone(),
-        &high,
-        &low,
-        &close,
-        10,
-        3.0,
-        None
-    ) {
+    match supertrend_gpu(device.clone(), &high, &low, &close, 10, 3.0, None) {
         Ok((values, trend)) => {
             let valid_count = values.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ Supertrend completed: {}/{} valid values, {} trends",
-                     valid_count, n, trend.len());
+            println!(
+                "   ✓ Supertrend completed: {}/{} valid values, {} trends",
+                valid_count,
+                n,
+                trend.len()
+            );
         }
         Err(e) => println!("   ✗ Supertrend failed: {}", e),
     }
 
     // Test 5: Ichimoku
     println!("5. Testing Ichimoku Cloud...");
-    match ichimoku_gpu(
-        device.clone(),
-        &high,
-        &low,
-        &close,
-        None
-    ) {
+    match ichimoku_gpu(device.clone(), &high, &low, &close, None) {
         Ok(result) => {
             let tenkan_valid = result.tenkan_sen.iter().filter(|x| x.is_finite()).count();
             let kijun_valid = result.kijun_sen.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ Ichimoku completed: Tenkan={}/{}, Kijun={}/{}",
-                     tenkan_valid, n, kijun_valid, n);
+            println!(
+                "   ✓ Ichimoku completed: Tenkan={}/{}, Kijun={}/{}",
+                tenkan_valid, n, kijun_valid, n
+            );
         }
         Err(e) => println!("   ✗ Ichimoku failed: {}", e),
     }
@@ -122,48 +118,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &Array1::from_vec(close.clone()),
         &Array1::from_vec(volume.clone()),
         0,
-        None
+        None,
     ) {
         Ok(result) => {
             let valid_count = result.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ VWAP Anchored completed: {}/{} valid values", valid_count, n);
+            println!(
+                "   ✓ VWAP Anchored completed: {}/{} valid values",
+                valid_count, n
+            );
         }
         Err(e) => println!("   ✗ VWAP Anchored failed: {}", e),
     }
 
     // Test 7: Fibonacci
     println!("7. Testing Fibonacci Retracement...");
-    match fibonacci_gpu(
-        device.as_ref(),
-        &high,
-        &low,
-        20,
-        None
-    ) {
+    match fibonacci_gpu(device.as_ref(), &high, &low, 20, None) {
         Ok(result) => {
             let level_236_valid = result.level_236.iter().filter(|x| x.is_finite()).count();
             let level_618_valid = result.level_618.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ Fibonacci completed: Level 23.6%={}/{}, Level 61.8%={}/{}",
-                     level_236_valid, n, level_618_valid, n);
+            println!(
+                "   ✓ Fibonacci completed: Level 23.6%={}/{}, Level 61.8%={}/{}",
+                level_236_valid, n, level_618_valid, n
+            );
         }
         Err(e) => println!("   ✗ Fibonacci failed: {}", e),
     }
 
     // Test 8: Pivot Points
     println!("8. Testing Pivot Points...");
-    match pivot_points_gpu(
-        device.clone(),
-        &high,
-        &low,
-        &close,
-        None
-    ) {
+    match pivot_points_gpu(device.clone(), &high, &low, &close, None) {
         Ok(result) => {
             let pp_valid = result.pp.iter().filter(|x| x.is_finite()).count();
             let r1_valid = result.r1.iter().filter(|x| x.is_finite()).count();
             let s1_valid = result.s1.iter().filter(|x| x.is_finite()).count();
-            println!("   ✓ Pivot Points completed: PP={}/{}, R1={}/{}, S1={}/{}",
-                     pp_valid, n, r1_valid, n, s1_valid, n);
+            println!(
+                "   ✓ Pivot Points completed: PP={}/{}, R1={}/{}, S1={}/{}",
+                pp_valid, n, r1_valid, n, s1_valid, n
+            );
         }
         Err(e) => println!("   ✗ Pivot Points failed: {}", e),
     }

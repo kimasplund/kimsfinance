@@ -22,9 +22,15 @@ fn main() {
     let mut order_flow = OrderFlowStrategy::new(5.0);
 
     println!("Strategies:");
-    println!("  1. {} - Signals on 0.5% price move from candle open", momentum.name());
+    println!(
+        "  1. {} - Signals on 0.5% price move from candle open",
+        momentum.name()
+    );
     println!("  2. {} - Signals on 3x volume spike", volume.name());
-    println!("  3. {} - Signals on 5 BTC order flow imbalance", order_flow.name());
+    println!(
+        "  3. {} - Signals on 5 BTC order flow imbalance",
+        order_flow.name()
+    );
     println!();
 
     // Simulate trades
@@ -80,11 +86,18 @@ fn main() {
             candle.update(trade);
         }
 
-        println!("Trade {}: price={:.2}, qty={:.2}, buyer_maker={}",
-                 i + 1, trade.price, trade.quantity, trade.is_buyer_maker);
+        println!(
+            "Trade {}: price={:.2}, qty={:.2}, buyer_maker={}",
+            i + 1,
+            trade.price,
+            trade.quantity,
+            trade.is_buyer_maker
+        );
 
-        println!("  Candle state: O={:.2} H={:.2} L={:.2} C={:.2} V={:.2}",
-                 candle.open, candle.high, candle.low, candle.close, candle.volume);
+        println!(
+            "  Candle state: O={:.2} H={:.2} L={:.2} C={:.2} V={:.2}",
+            candle.open, candle.high, candle.low, candle.close, candle.volume
+        );
 
         let momentum_signal = momentum.on_tick(trade, &candle);
         let volume_signal = volume.on_tick(trade, &candle);
@@ -93,18 +106,26 @@ fn main() {
         println!("  Signals:");
         println!("    {} -> {:?}", momentum.name(), momentum_signal);
         println!("    {} -> {:?}", volume.name(), volume_signal);
-        println!("    {} -> {:?} (delta={:.2})",
-                 order_flow.name(), order_flow_signal, order_flow.delta());
+        println!(
+            "    {} -> {:?} (delta={:.2})",
+            order_flow.name(),
+            order_flow_signal,
+            order_flow.delta()
+        );
         println!();
     }
 
     // Complete candle
     let complete_candle = candle.complete();
     println!("=== Candle Complete ===");
-    println!("Final OHLCV: O={:.2} H={:.2} L={:.2} C={:.2} V={:.2}",
-             complete_candle.open, complete_candle.high,
-             complete_candle.low, complete_candle.close,
-             complete_candle.volume);
+    println!(
+        "Final OHLCV: O={:.2} H={:.2} L={:.2} C={:.2} V={:.2}",
+        complete_candle.open,
+        complete_candle.high,
+        complete_candle.low,
+        complete_candle.close,
+        complete_candle.volume
+    );
     println!("Trades: {}", complete_candle.num_trades);
 
     // Reset strategies

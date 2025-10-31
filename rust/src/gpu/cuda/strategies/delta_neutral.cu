@@ -55,7 +55,7 @@ extern "C" __global__ void delta_neutral_signals_kernel(
     const double* __restrict__ implied_vols,
     const double* __restrict__ historical_vols,
     const double* __restrict__ strategy_params,
-    int8_t* __restrict__ option_signals,
+    char* __restrict__ option_signals,
     double* __restrict__ hedge_signals,
     double* __restrict__ portfolio_delta,
     int n_strategies,
@@ -106,7 +106,7 @@ extern "C" __global__ void delta_neutral_signals_kernel(
     bool exit_signal = (fabs(iv - hv) < vol_threshold * 0.5); // Exit at half threshold
 
     // Determine option signal
-    int8_t option_signal = 0;
+    char option_signal = 0;
     if (enter_signal && !exit_signal) {
         option_signal = 1; // Buy option (long vega exposure)
     } else if (exit_signal) {

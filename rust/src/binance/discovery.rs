@@ -284,10 +284,7 @@ mod tests {
             "prefix-test-suffix",
             "*test*"
         ));
-        assert!(BinanceDataFinder::matches_pattern(
-            "test-suffix",
-            "*suffix"
-        ));
+        assert!(BinanceDataFinder::matches_pattern("test-suffix", "*suffix"));
         assert!(BinanceDataFinder::matches_pattern("prefix-test", "prefix*"));
     }
 
@@ -356,14 +353,8 @@ mod tests {
 
         // Should find Jan, Feb, Mar (not Apr)
         assert_eq!(files.len(), 3);
-        assert!(files[0]
-            .to_str()
-            .unwrap()
-            .contains("2021-01"));
-        assert!(files[2]
-            .to_str()
-            .unwrap()
-            .contains("2021-03"));
+        assert!(files[0].to_str().unwrap().contains("2021-01"));
+        assert!(files[2].to_str().unwrap().contains("2021-03"));
     }
 
     #[test]
@@ -380,20 +371,12 @@ mod tests {
         File::create(temp_dir.path().join("BTCUSDT-trades-2021-02.zip")).unwrap();
 
         let range = DateRange::parse("2021-01-01", "2021-02-28").unwrap();
-        let files = finder
-            .find_by_symbol_and_range("BTCUSDT", &range)
-            .unwrap();
+        let files = finder.find_by_symbol_and_range("BTCUSDT", &range).unwrap();
 
         // Should find only BTCUSDT files
         assert_eq!(files.len(), 2);
-        assert!(files[0]
-            .to_str()
-            .unwrap()
-            .contains("BTCUSDT"));
-        assert!(files[1]
-            .to_str()
-            .unwrap()
-            .contains("BTCUSDT"));
+        assert!(files[0].to_str().unwrap().contains("BTCUSDT"));
+        assert!(files[1].to_str().unwrap().contains("BTCUSDT"));
     }
 
     #[test]

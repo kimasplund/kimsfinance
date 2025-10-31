@@ -62,9 +62,9 @@ pub struct VolArbitrageParams {
 impl Default for VolArbitrageParams {
     fn default() -> Self {
         Self {
-            vol_threshold: 5.0,  // 5 percentage points
-            hedge_delta: 1.0,    // Enable delta hedging
-            min_edge: 2.0,       // 2% minimum edge
+            vol_threshold: 5.0, // 5 percentage points
+            hedge_delta: 1.0,   // Enable delta hedging
+            min_edge: 2.0,      // 2% minimum edge
         }
     }
 }
@@ -183,9 +183,14 @@ impl VolArbitrageStrategyGpu {
         {
             return Err(GpuError::InvalidParameter(format!(
                 "Input dimensions mismatch: expected {} elements ({}×{}), got prices={}, deltas={}, vegas={}, iv={}, hv={}",
-                expected_len, n_strategies, n_candles,
-                option_prices.len(), option_deltas.len(), option_vegas.len(),
-                implied_vols.len(), historical_vols.len()
+                expected_len,
+                n_strategies,
+                n_candles,
+                option_prices.len(),
+                option_deltas.len(),
+                option_vegas.len(),
+                implied_vols.len(),
+                historical_vols.len()
             )));
         }
 
@@ -205,14 +210,17 @@ impl VolArbitrageStrategyGpu {
         let d_params = self.device.copy_to_device(&params_flat)?;
 
         // Allocate output buffers
-        let mut d_option_signals: CudaSlice<i8> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_hedge_signals: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_expected_profit: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
+        let mut d_option_signals: CudaSlice<i8> =
+            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_hedge_signals: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_expected_profit: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
         let mut d_vol_edge: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
         let block_dim_x = 256; // Candles (x-axis)
-        let block_dim_y = 4;   // Strategies (y-axis)
+        let block_dim_y = 4; // Strategies (y-axis)
 
         let grid_dim_x = ((n_candles + block_dim_x - 1) / block_dim_x) as u32;
         let grid_dim_y = ((n_strategies + block_dim_y - 1) / block_dim_y) as u32;
@@ -248,8 +256,16 @@ impl VolArbitrageStrategyGpu {
         }
 
         // Download results
-        let option_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_option_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy option signals from device: {:?}", e)))?;
+        let option_signals_raw: Vec<i8> = self
+            .device
+            .stream
+            .memcpy_dtov(&d_option_signals)
+            .map_err(|e| {
+                GpuError::MemoryCopyError(format!(
+                    "Failed to copy option signals from device: {:?}",
+                    e
+                ))
+            })?;
         let hedge_signals = self.device.copy_to_host(&d_hedge_signals)?;
         let expected_profits = self.device.copy_to_host(&d_expected_profit)?;
         let vol_edges = self.device.copy_to_host(&d_vol_edge)?;
@@ -423,7 +439,8 @@ impl VolArbitrageStrategyGpu {
 
         // Allocate output buffers
         let mut d_vol_edge: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_edge_quality: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
+        let mut d_edge_quality: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
         let block_dim_x = 256;
@@ -521,11 +538,17 @@ mod tests {
 
         // All signals should be buy (IV < HV by 10pp > 5pp threshold)
         for sig in &signals {
-            assert_eq!(sig.option_signal, 1, "Expected buy option signal (long vol)");
+            assert_eq!(
+                sig.option_signal, 1,
+                "Expected buy option signal (long vol)"
+            );
             // Vol edge should be positive (HV > IV)
             assert!(sig.vol_edge > 0.0, "Expected positive vol edge");
             // Expected profit should be positive
-            assert!(sig.expected_profit > 0.0, "Expected positive profit estimate");
+            assert!(
+                sig.expected_profit > 0.0,
+                "Expected positive profit estimate"
+            );
         }
     }
 
@@ -572,11 +595,17 @@ mod tests {
 
         // All signals should be sell (IV > HV by 15pp > 5pp threshold)
         for sig in &signals {
-            assert_eq!(sig.option_signal, -1, "Expected sell option signal (short vol)");
+            assert_eq!(
+                sig.option_signal, -1,
+                "Expected sell option signal (short vol)"
+            );
             // Vol edge should be negative (IV > HV)
             assert!(sig.vol_edge < 0.0, "Expected negative vol edge");
             // Expected profit should be positive (profit from selling expensive vol)
-            assert!(sig.expected_profit > 0.0, "Expected positive profit estimate");
+            assert!(
+                sig.expected_profit > 0.0,
+                "Expected positive profit estimate"
+            );
         }
     }
 
@@ -639,14 +668,22 @@ mod tests {
         let option_vegas: Vec<f64> = vec![100.0; expected_len];
 
         let results = strategy
-            .monitor_edge_batch(&implied_vols, &historical_vols, &option_prices, &option_vegas)
+            .monitor_edge_batch(
+                &implied_vols,
+                &historical_vols,
+                &option_prices,
+                &option_vegas,
+            )
             .expect("Edge monitoring failed");
 
         assert_eq!(results.len(), expected_len);
 
         for result in &results {
             // Vol edge should be 10pp (HV - IV)
-            assert!((result.vol_edge - 0.10).abs() < 0.001, "Expected 0.10 vol edge");
+            assert!(
+                (result.vol_edge - 0.10).abs() < 0.001,
+                "Expected 0.10 vol edge"
+            );
             // Edge quality should be |edge| × vega × 100 = 0.10 × 100 × 100 = 1000
             assert!(
                 (result.edge_quality - 1000.0).abs() < 1.0,

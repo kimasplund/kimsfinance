@@ -61,9 +61,9 @@ pub struct DeltaNeutralParams {
 impl Default for DeltaNeutralParams {
     fn default() -> Self {
         Self {
-            delta_threshold: 0.05,   // 5% delta target
+            delta_threshold: 0.05,     // 5% delta target
             rebalance_threshold: 0.10, // Rebalance at 10% delta drift
-            vol_threshold: 5.0,       // 5 percentage points IV-HV spread
+            vol_threshold: 5.0,        // 5 percentage points IV-HV spread
         }
     }
 }
@@ -164,8 +164,13 @@ impl DeltaNeutralStrategyGpu {
         {
             return Err(GpuError::InvalidParameter(format!(
                 "Input dimensions mismatch: expected {} elements ({}×{}), got prices={}, deltas={}, iv={}, hv={}",
-                expected_len, n_strategies, n_candles,
-                option_prices.len(), option_deltas.len(), implied_vols.len(), historical_vols.len()
+                expected_len,
+                n_strategies,
+                n_candles,
+                option_prices.len(),
+                option_deltas.len(),
+                implied_vols.len(),
+                historical_vols.len()
             )));
         }
 
@@ -184,13 +189,16 @@ impl DeltaNeutralStrategyGpu {
         let d_params = self.device.copy_to_device(&params_flat)?;
 
         // Allocate output buffers
-        let mut d_option_signals: CudaSlice<i8> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_hedge_signals: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_portfolio_delta: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
+        let mut d_option_signals: CudaSlice<i8> =
+            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_hedge_signals: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_portfolio_delta: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
         let block_dim_x = 256; // Candles (x-axis)
-        let block_dim_y = 4;   // Strategies (y-axis)
+        let block_dim_y = 4; // Strategies (y-axis)
 
         let grid_dim_x = ((n_candles + block_dim_x - 1) / block_dim_x) as u32;
         let grid_dim_y = ((n_strategies + block_dim_y - 1) / block_dim_y) as u32;
@@ -224,8 +232,16 @@ impl DeltaNeutralStrategyGpu {
         }
 
         // Download results
-        let option_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_option_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy option signals from device: {:?}", e)))?;
+        let option_signals_raw: Vec<i8> = self
+            .device
+            .stream
+            .memcpy_dtov(&d_option_signals)
+            .map_err(|e| {
+                GpuError::MemoryCopyError(format!(
+                    "Failed to copy option signals from device: {:?}",
+                    e
+                ))
+            })?;
         let hedge_signals = self.device.copy_to_host(&d_hedge_signals)?;
         let portfolio_deltas = self.device.copy_to_host(&d_portfolio_delta)?;
 
@@ -292,8 +308,10 @@ impl DeltaNeutralStrategyGpu {
         let d_params = self.device.copy_to_device(&params_flat)?;
 
         // Allocate output buffers
-        let mut d_rebalance_signals: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
-        let mut d_new_portfolio_delta: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
+        let mut d_rebalance_signals: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_new_portfolio_delta: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
         let block_dim_x = 256;
@@ -473,7 +491,12 @@ mod tests {
         ];
 
         let signals = strategy
-            .generate_rebalance_signals(&option_positions, &hedge_positions, &option_deltas, &params)
+            .generate_rebalance_signals(
+                &option_positions,
+                &hedge_positions,
+                &option_deltas,
+                &params,
+            )
             .expect("Rebalance signal generation failed");
 
         assert_eq!(signals.len(), n_strategies * n_candles);

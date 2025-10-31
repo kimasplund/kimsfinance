@@ -59,7 +59,7 @@ pub use strategies_vol_arbitrage::{
 // PHASE 4: Execution Engine exports
 pub use execution::{
     ExecutionConfig, ExecutionEngine, ExecutionError, ExecutionReport, ExpirationEvent,
-    ExpirationHandler, MarketData, OptionSignal, PnLTracker, PerformanceMetrics, SignalType,
+    ExpirationHandler, MarketData, OptionSignal, PerformanceMetrics, PnLTracker, SignalType,
     TimeStepResult, Trade,
 };
 

@@ -53,7 +53,7 @@ pub mod position_manager;
 
 pub use engine::{ExecutionConfig, ExecutionEngine, ExecutionReport, TimeStepResult};
 pub use expiration::{ExpirationEvent, ExpirationHandler};
-pub use pnl_tracker::{PnLTracker, PerformanceMetrics};
+pub use pnl_tracker::{PerformanceMetrics, PnLTracker};
 pub use position_manager::{OptionPosition, PositionManager, PositionUpdate};
 
 use crate::quantitative::heston::{Greeks, OptionType};

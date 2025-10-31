@@ -94,15 +94,20 @@ impl GreeksGpuCalculator {
             "vega" => include_str!("../../gpu/cuda/greeks/vega.cu"),
             "theta" => include_str!("../../gpu/cuda/greeks/theta.cu"),
             "rho" => include_str!("../../gpu/cuda/greeks/rho.cu"),
-            _ => return Err(GpuError::InvalidParameter(format!("Unknown greek: {}", greek_name))),
+            _ => {
+                return Err(GpuError::InvalidParameter(format!(
+                    "Unknown greek: {}",
+                    greek_name
+                )));
+            }
         };
 
         let ptx = compile_ptx_optimized_cached(kernel_source)?;
         let module = device.context().load_module(ptx.as_ref().clone())?;
         let kernel_fn_name = format!("calculate_{}_kernel", greek_name);
-        module
-            .load_function(&kernel_fn_name)
-            .map_err(|e| GpuError::ExecutionError(format!("Failed to load {} kernel: {:?}", greek_name, e)))
+        module.load_function(&kernel_fn_name).map_err(|e| {
+            GpuError::ExecutionError(format!("Failed to load {} kernel: {:?}", greek_name, e))
+        })
     }
 
     /// Calculate all Greeks for batch of options (GPU-accelerated)
@@ -144,8 +149,7 @@ impl GreeksGpuCalculator {
         let (prices_base, prices_spot_up, prices_spot_down) =
             self.calculate_spot_bumped_prices(params, options)?;
 
-        let (prices_vol_up, prices_vol_down) =
-            self.calculate_vol_bumped_prices(params, options)?;
+        let (prices_vol_up, prices_vol_down) = self.calculate_vol_bumped_prices(params, options)?;
 
         let prices_tomorrow = self.calculate_time_bumped_prices(params, options)?;
 
@@ -154,7 +158,8 @@ impl GreeksGpuCalculator {
 
         // Step 2: Launch Greeks kernels on GPU (parallel computation)
         let deltas = self.calculate_delta_gpu(&prices_spot_up, &prices_spot_down, options)?;
-        let gammas = self.calculate_gamma_gpu(&prices_spot_up, &prices_base, &prices_spot_down, options)?;
+        let gammas =
+            self.calculate_gamma_gpu(&prices_spot_up, &prices_base, &prices_spot_down, options)?;
         let vegas = self.calculate_vega_gpu(&prices_vol_up, &prices_vol_down)?;
         let thetas = self.calculate_theta_gpu(&prices_base, &prices_tomorrow)?;
         let rhos = self.calculate_rho_gpu(&prices_rate_up, &prices_rate_down)?;
@@ -539,7 +544,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_greeks_gpu_batch() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
         let mut calculator = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer)))
             .expect("Calculator creation failed");
 
@@ -551,7 +557,11 @@ mod tests {
             .collect();
 
         let greeks = calculator.calculate_greeks_batch(&params, &options);
-        assert!(greeks.is_ok(), "GPU Greeks calculation failed: {:?}", greeks);
+        assert!(
+            greeks.is_ok(),
+            "GPU Greeks calculation failed: {:?}",
+            greeks
+        );
 
         let greeks_vec = greeks.unwrap();
         assert_eq!(greeks_vec.len(), options.len());
@@ -566,7 +576,11 @@ mod tests {
 
             // Sanity checks
             let delta = g.delta.unwrap();
-            assert!(delta >= 0.0 && delta <= 1.0, "Delta out of range: {}", delta);
+            assert!(
+                delta >= 0.0 && delta <= 1.0,
+                "Delta out of range: {}",
+                delta
+            );
 
             let gamma = g.gamma.unwrap();
             assert!(gamma >= 0.0, "Gamma should be non-negative: {}", gamma);
@@ -580,7 +594,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_greeks_gpu_performance() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
         let mut calculator = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer)))
             .expect("Calculator creation failed");
 
@@ -592,11 +607,17 @@ mod tests {
             .collect();
 
         let start = std::time::Instant::now();
-        let greeks = calculator.calculate_greeks_batch(&params, &options).unwrap();
+        let greeks = calculator
+            .calculate_greeks_batch(&params, &options)
+            .unwrap();
         let elapsed = start.elapsed();
 
         println!("GPU Greeks for 100 options: {:?}", elapsed);
-        assert!(elapsed.as_millis() < 50, "GPU Greeks too slow: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 50,
+            "GPU Greeks too slow: {:?}",
+            elapsed
+        );
         assert_eq!(greeks.len(), 100);
     }
 }

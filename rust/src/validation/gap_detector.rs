@@ -33,7 +33,6 @@ impl std::fmt::Display for Gap {
 }
 
 impl Gap {
-
     /// Convert gap duration to minutes
     ///
     /// # Returns

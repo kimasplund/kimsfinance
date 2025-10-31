@@ -163,13 +163,11 @@ impl VolumeProfile {
     ///
     /// Returns the price level closest to the given price, or None if empty.
     pub fn get_level_at_price(&self, price: f64) -> Option<&PriceLevel> {
-        self.price_levels
-            .iter()
-            .min_by(|a, b| {
-                let dist_a = (a.price - price).abs();
-                let dist_b = (b.price - price).abs();
-                dist_a.partial_cmp(&dist_b).unwrap()
-            })
+        self.price_levels.iter().min_by(|a, b| {
+            let dist_a = (a.price - price).abs();
+            let dist_b = (b.price - price).abs();
+            dist_a.partial_cmp(&dist_b).unwrap()
+        })
     }
 
     /// Check if price is within value area
@@ -373,7 +371,11 @@ impl VolumeProfileBuilder {
     ///              profile.point_of_control, profile.total_volume);
     /// }
     /// ```
-    pub fn build_for_timeframe(&self, trades: &[Trade], timeframe: Timeframe) -> Vec<VolumeProfile> {
+    pub fn build_for_timeframe(
+        &self,
+        trades: &[Trade],
+        timeframe: Timeframe,
+    ) -> Vec<VolumeProfile> {
         if trades.is_empty() {
             return Vec::new();
         }
@@ -471,12 +473,7 @@ mod tests {
     use super::*;
 
     /// Helper to create test trade
-    fn make_trade(
-        price: f64,
-        quantity: f64,
-        timestamp_ms: i64,
-        is_buyer_maker: bool,
-    ) -> Trade {
+    fn make_trade(price: f64, quantity: f64, timestamp_ms: i64, is_buyer_maker: bool) -> Trade {
         Trade {
             trade_id: 0,
             price,

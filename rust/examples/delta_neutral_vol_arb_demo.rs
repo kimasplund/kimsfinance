@@ -100,7 +100,7 @@ fn main() {
 
     // Initialize GPU
     let device = Arc::new(GpuDevice::new().expect("GPU required for this demo"));
-    println!("✅ GPU initialized: {:?}", device.info());
+    println!("✅ GPU initialized");
     println!();
 
     // Create Heston model parameters
@@ -147,12 +147,23 @@ fn main() {
         create_market_data(spot, n_candles, 0.50, 0.60, 0.05); // IV < HV
     let (underlying_expensive, iv_expensive, hv_expensive) =
         create_market_data(spot, n_candles, 0.70, 0.55, 0.05); // IV > HV
-    let (underlying_fair, iv_fair, hv_fair) =
-        create_market_data(spot, n_candles, 0.60, 0.61, 0.02); // IV ≈ HV
+    let (underlying_fair, iv_fair, hv_fair) = create_market_data(spot, n_candles, 0.60, 0.61, 0.02); // IV ≈ HV
 
-    println!("Scenario 1 (Cheap Vol): IV={:.1}% < HV={:.1}%", iv_cheap[0] * 100.0, hv_cheap[0] * 100.0);
-    println!("Scenario 2 (Expensive Vol): IV={:.1}% > HV={:.1}%", iv_expensive[0] * 100.0, hv_expensive[0] * 100.0);
-    println!("Scenario 3 (Fair Vol): IV={:.1}% ≈ HV={:.1}%\n", iv_fair[0] * 100.0, hv_fair[0] * 100.0);
+    println!(
+        "Scenario 1 (Cheap Vol): IV={:.1}% < HV={:.1}%",
+        iv_cheap[0] * 100.0,
+        hv_cheap[0] * 100.0
+    );
+    println!(
+        "Scenario 2 (Expensive Vol): IV={:.1}% > HV={:.1}%",
+        iv_expensive[0] * 100.0,
+        hv_expensive[0] * 100.0
+    );
+    println!(
+        "Scenario 3 (Fair Vol): IV={:.1}% ≈ HV={:.1}%\n",
+        iv_fair[0] * 100.0,
+        hv_fair[0] * 100.0
+    );
 
     // ==================================================
     // PART 2: Calculate Greeks (needed for strategies)
@@ -170,17 +181,29 @@ fn main() {
     println!("Calculating Greeks for {} options...", options_cheap.len());
     let start = Instant::now();
     let greeks_batch = greeks_calculator
-        .calculate_greeks_batch(&options_cheap, &params)
+        .calculate_greeks_batch(&params, &options_cheap)
         .expect("Greeks calculation failed");
     let greeks_time = start.elapsed();
 
-    println!("✅ Greeks calculated in {:.2}ms", greeks_time.as_secs_f64() * 1000.0);
-    println!("   Throughput: {:.0} options/sec\n", options_cheap.len() as f64 / greeks_time.as_secs_f64());
+    println!(
+        "✅ Greeks calculated in {:.2}ms",
+        greeks_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "   Throughput: {:.0} options/sec\n",
+        options_cheap.len() as f64 / greeks_time.as_secs_f64()
+    );
 
     // Extract Greeks arrays for strategy inputs
-    let option_prices: Vec<f64> = greeks_batch.iter().map(|g| g.option_price).collect();
-    let option_deltas: Vec<f64> = greeks_batch.iter().map(|g| g.delta).collect();
-    let option_vegas: Vec<f64> = greeks_batch.iter().map(|g| g.vega).collect();
+    let option_prices: Vec<f64> = options_cheap
+        .iter()
+        .map(|opt| (opt.bid.unwrap_or(0.0) + opt.ask.unwrap_or(0.0)) / 2.0)
+        .collect();
+    let option_deltas: Vec<f64> = greeks_batch
+        .iter()
+        .map(|g| g.delta.unwrap_or(0.0))
+        .collect();
+    let option_vegas: Vec<f64> = greeks_batch.iter().map(|g| g.vega.unwrap_or(0.0)).collect();
 
     // Replicate data for multiple strategies (simulate batch processing)
     let option_prices_batch: Vec<f64> = (0..n_strategies)
@@ -209,8 +232,8 @@ fn main() {
     // ==================================================
     println!("=== PART 3: Delta-Neutral Strategy ===\n");
 
-    let delta_neutral_strategy =
-        DeltaNeutralStrategyGpu::new(device.clone()).expect("Delta-neutral strategy creation failed");
+    let delta_neutral_strategy = DeltaNeutralStrategyGpu::new(device.clone())
+        .expect("Delta-neutral strategy creation failed");
 
     // Create strategy parameters
     let delta_neutral_params = vec![
@@ -223,12 +246,24 @@ fn main() {
     ];
 
     println!("Strategy Parameters:");
-    println!("  Delta Threshold: {:.1}%", delta_neutral_params[0].delta_threshold * 100.0);
-    println!("  Rebalance Threshold: {:.1}%", delta_neutral_params[0].rebalance_threshold * 100.0);
-    println!("  Vol Threshold: {:.1}pp\n", delta_neutral_params[0].vol_threshold);
+    println!(
+        "  Delta Threshold: {:.1}%",
+        delta_neutral_params[0].delta_threshold * 100.0
+    );
+    println!(
+        "  Rebalance Threshold: {:.1}%",
+        delta_neutral_params[0].rebalance_threshold * 100.0
+    );
+    println!(
+        "  Vol Threshold: {:.1}pp\n",
+        delta_neutral_params[0].vol_threshold
+    );
 
     // Generate signals
-    println!("Generating delta-neutral signals for {} strategies × {} candles...", n_strategies, n_candles);
+    println!(
+        "Generating delta-neutral signals for {} strategies × {} candles...",
+        n_strategies, n_candles
+    );
     let start = Instant::now();
     let delta_neutral_signals = delta_neutral_strategy
         .generate_signals_batch(
@@ -242,7 +277,10 @@ fn main() {
         .expect("Delta-neutral signal generation failed");
     let dn_time = start.elapsed();
 
-    println!("✅ Signals generated in {:.2}ms", dn_time.as_secs_f64() * 1000.0);
+    println!(
+        "✅ Signals generated in {:.2}ms",
+        dn_time.as_secs_f64() * 1000.0
+    );
     println!(
         "   Throughput: {:.0} signals/sec",
         delta_neutral_signals.len() as f64 / dn_time.as_secs_f64()
@@ -250,14 +288,35 @@ fn main() {
     println!("   GPU Speedup estimate: ~60x vs CPU\n");
 
     // Analyze signals
-    let buy_signals = delta_neutral_signals.iter().filter(|s| s.option_signal == 1).count();
-    let sell_signals = delta_neutral_signals.iter().filter(|s| s.option_signal == -1).count();
-    let no_signals = delta_neutral_signals.iter().filter(|s| s.option_signal == 0).count();
+    let buy_signals = delta_neutral_signals
+        .iter()
+        .filter(|s| s.option_signal == 1)
+        .count();
+    let sell_signals = delta_neutral_signals
+        .iter()
+        .filter(|s| s.option_signal == -1)
+        .count();
+    let no_signals = delta_neutral_signals
+        .iter()
+        .filter(|s| s.option_signal == 0)
+        .count();
 
     println!("Signal Distribution:");
-    println!("  Buy (long vol):  {} ({:.1}%)", buy_signals, buy_signals as f64 / delta_neutral_signals.len() as f64 * 100.0);
-    println!("  Sell (exit):     {} ({:.1}%)", sell_signals, sell_signals as f64 / delta_neutral_signals.len() as f64 * 100.0);
-    println!("  No position:     {} ({:.1}%)\n", no_signals, no_signals as f64 / delta_neutral_signals.len() as f64 * 100.0);
+    println!(
+        "  Buy (long vol):  {} ({:.1}%)",
+        buy_signals,
+        buy_signals as f64 / delta_neutral_signals.len() as f64 * 100.0
+    );
+    println!(
+        "  Sell (exit):     {} ({:.1}%)",
+        sell_signals,
+        sell_signals as f64 / delta_neutral_signals.len() as f64 * 100.0
+    );
+    println!(
+        "  No position:     {} ({:.1}%)\n",
+        no_signals,
+        no_signals as f64 / delta_neutral_signals.len() as f64 * 100.0
+    );
 
     // Show sample signals
     println!("Sample Delta-Neutral Signals (first 3):");
@@ -274,8 +333,8 @@ fn main() {
     // ==================================================
     println!("=== PART 4: Volatility Arbitrage Strategy ===\n");
 
-    let vol_arb_strategy =
-        VolArbitrageStrategyGpu::new(device.clone()).expect("Vol arbitrage strategy creation failed");
+    let vol_arb_strategy = VolArbitrageStrategyGpu::new(device.clone())
+        .expect("Vol arbitrage strategy creation failed");
 
     // Create strategy parameters
     let vol_arb_params = vec![
@@ -289,11 +348,21 @@ fn main() {
 
     println!("Strategy Parameters:");
     println!("  Vol Threshold: {:.1}pp", vol_arb_params[0].vol_threshold);
-    println!("  Delta Hedging: {}", if vol_arb_params[0].hedge_delta > 0.5 { "Enabled" } else { "Disabled" });
+    println!(
+        "  Delta Hedging: {}",
+        if vol_arb_params[0].hedge_delta > 0.5 {
+            "Enabled"
+        } else {
+            "Disabled"
+        }
+    );
     println!("  Min Edge: {:.1}%\n", vol_arb_params[0].min_edge);
 
     // Generate signals
-    println!("Generating vol arbitrage signals for {} strategies × {} candles...", n_strategies, n_candles);
+    println!(
+        "Generating vol arbitrage signals for {} strategies × {} candles...",
+        n_strategies, n_candles
+    );
     let start = Instant::now();
     let vol_arb_signals = vol_arb_strategy
         .generate_signals_batch(
@@ -308,7 +377,10 @@ fn main() {
         .expect("Vol arbitrage signal generation failed");
     let va_time = start.elapsed();
 
-    println!("✅ Signals generated in {:.2}ms", va_time.as_secs_f64() * 1000.0);
+    println!(
+        "✅ Signals generated in {:.2}ms",
+        va_time.as_secs_f64() * 1000.0
+    );
     println!(
         "   Throughput: {:.0} signals/sec",
         vol_arb_signals.len() as f64 / va_time.as_secs_f64()
@@ -316,14 +388,35 @@ fn main() {
     println!("   GPU Speedup estimate: ~70x vs CPU\n");
 
     // Analyze signals
-    let long_vol = vol_arb_signals.iter().filter(|s| s.option_signal == 1).count();
-    let short_vol = vol_arb_signals.iter().filter(|s| s.option_signal == -1).count();
-    let no_edge = vol_arb_signals.iter().filter(|s| s.option_signal == 0).count();
+    let long_vol = vol_arb_signals
+        .iter()
+        .filter(|s| s.option_signal == 1)
+        .count();
+    let short_vol = vol_arb_signals
+        .iter()
+        .filter(|s| s.option_signal == -1)
+        .count();
+    let no_edge = vol_arb_signals
+        .iter()
+        .filter(|s| s.option_signal == 0)
+        .count();
 
     println!("Signal Distribution:");
-    println!("  Long Vol (IV < HV):  {} ({:.1}%)", long_vol, long_vol as f64 / vol_arb_signals.len() as f64 * 100.0);
-    println!("  Short Vol (IV > HV): {} ({:.1}%)", short_vol, short_vol as f64 / vol_arb_signals.len() as f64 * 100.0);
-    println!("  No Edge:             {} ({:.1}%)\n", no_edge, no_edge as f64 / vol_arb_signals.len() as f64 * 100.0);
+    println!(
+        "  Long Vol (IV < HV):  {} ({:.1}%)",
+        long_vol,
+        long_vol as f64 / vol_arb_signals.len() as f64 * 100.0
+    );
+    println!(
+        "  Short Vol (IV > HV): {} ({:.1}%)",
+        short_vol,
+        short_vol as f64 / vol_arb_signals.len() as f64 * 100.0
+    );
+    println!(
+        "  No Edge:             {} ({:.1}%)\n",
+        no_edge,
+        no_edge as f64 / vol_arb_signals.len() as f64 * 100.0
+    );
 
     // Show sample signals
     println!("Sample Vol Arbitrage Signals (first 3):");
@@ -344,7 +437,10 @@ fn main() {
     // ==================================================
     println!("=== PART 5: Edge Monitoring ===\n");
 
-    println!("Monitoring volatility edge across {} options...", implied_vols_batch.len());
+    println!(
+        "Monitoring volatility edge across {} options...",
+        implied_vols_batch.len()
+    );
     let start = Instant::now();
     let edge_monitors = vol_arb_strategy
         .monitor_edge_batch(
@@ -356,7 +452,10 @@ fn main() {
         .expect("Edge monitoring failed");
     let edge_time = start.elapsed();
 
-    println!("✅ Edge monitored in {:.2}ms", edge_time.as_secs_f64() * 1000.0);
+    println!(
+        "✅ Edge monitored in {:.2}ms",
+        edge_time.as_secs_f64() * 1000.0
+    );
     println!(
         "   Throughput: {:.0} edges/sec\n",
         edge_monitors.len() as f64 / edge_time.as_secs_f64()
@@ -387,22 +486,46 @@ fn main() {
 
     println!("GPU Performance Metrics:");
     println!("  Delta-Neutral Strategy:");
-    println!("    - Execution Time: {:.2}ms", dn_time.as_secs_f64() * 1000.0);
-    println!("    - Throughput: {:.0} signals/sec", total_signals / dn_time.as_secs_f64());
+    println!(
+        "    - Execution Time: {:.2}ms",
+        dn_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "    - Throughput: {:.0} signals/sec",
+        total_signals / dn_time.as_secs_f64()
+    );
     println!("    - Estimated Speedup: 60-120x vs CPU");
     println!();
     println!("  Volatility Arbitrage Strategy:");
-    println!("    - Execution Time: {:.2}ms", va_time.as_secs_f64() * 1000.0);
-    println!("    - Throughput: {:.0} signals/sec", total_signals / va_time.as_secs_f64());
+    println!(
+        "    - Execution Time: {:.2}ms",
+        va_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "    - Throughput: {:.0} signals/sec",
+        total_signals / va_time.as_secs_f64()
+    );
     println!("    - Estimated Speedup: 70-122x vs CPU");
     println!();
     println!("  Edge Monitoring:");
-    println!("    - Execution Time: {:.2}ms", edge_time.as_secs_f64() * 1000.0);
-    println!("    - Throughput: {:.0} edges/sec", total_signals / edge_time.as_secs_f64());
+    println!(
+        "    - Execution Time: {:.2}ms",
+        edge_time.as_secs_f64() * 1000.0
+    );
+    println!(
+        "    - Throughput: {:.0} edges/sec",
+        total_signals / edge_time.as_secs_f64()
+    );
     println!();
 
-    println!("Total Signals Generated: {}", (total_signals * 2.0) as usize);
-    println!("Total GPU Time: {:.2}ms", (dn_time + va_time + edge_time).as_secs_f64() * 1000.0);
+    println!(
+        "Total Signals Generated: {}",
+        (total_signals * 2.0) as usize
+    );
+    println!(
+        "Total GPU Time: {:.2}ms",
+        (dn_time + va_time + edge_time).as_secs_f64() * 1000.0
+    );
     println!();
 
     // ==================================================
@@ -416,7 +539,10 @@ fn main() {
         .filter(|s| s.option_signal != 0)
         .map(|s| s.expected_profit)
         .sum::<f64>()
-        / vol_arb_signals.iter().filter(|s| s.option_signal != 0).count() as f64;
+        / vol_arb_signals
+            .iter()
+            .filter(|s| s.option_signal != 0)
+            .count() as f64;
 
     // Calculate average vol edge
     let avg_vol_edge: f64 =
@@ -425,13 +551,33 @@ fn main() {
     println!("Volatility Arbitrage Insights:");
     println!("  Average Vol Edge: {:.2}pp", avg_vol_edge * 100.0);
     println!("  Average Expected Profit: ${:.2}", avg_expected_profit);
-    println!("  Signal Rate: {:.1}%", (long_vol + short_vol) as f64 / vol_arb_signals.len() as f64 * 100.0);
+    println!(
+        "  Signal Rate: {:.1}%",
+        (long_vol + short_vol) as f64 / vol_arb_signals.len() as f64 * 100.0
+    );
     println!();
 
     println!("Delta-Neutral Insights:");
-    println!("  Signal Rate: {:.1}%", (buy_signals + sell_signals) as f64 / delta_neutral_signals.len() as f64 * 100.0);
-    println!("  Average Hedge Ratio: {:.4}", delta_neutral_signals.iter().map(|s| s.hedge_signal.abs()).sum::<f64>() / delta_neutral_signals.len() as f64);
-    println!("  Average Portfolio Delta: {:.6}", delta_neutral_signals.iter().map(|s| s.portfolio_delta.abs()).sum::<f64>() / delta_neutral_signals.len() as f64);
+    println!(
+        "  Signal Rate: {:.1}%",
+        (buy_signals + sell_signals) as f64 / delta_neutral_signals.len() as f64 * 100.0
+    );
+    println!(
+        "  Average Hedge Ratio: {:.4}",
+        delta_neutral_signals
+            .iter()
+            .map(|s| s.hedge_signal.abs())
+            .sum::<f64>()
+            / delta_neutral_signals.len() as f64
+    );
+    println!(
+        "  Average Portfolio Delta: {:.6}",
+        delta_neutral_signals
+            .iter()
+            .map(|s| s.portfolio_delta.abs())
+            .sum::<f64>()
+            / delta_neutral_signals.len() as f64
+    );
     println!();
 
     println!("✅ Demo completed successfully!");

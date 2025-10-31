@@ -128,9 +128,7 @@ pub fn checksum_bytes(data: &[u8]) -> String {
 ///     }
 /// }
 /// ```
-pub fn verify_checksums<P: AsRef<Path> + Clone>(
-    files: &[(P, &str)],
-) -> Vec<(P, io::Result<bool>)> {
+pub fn verify_checksums<P: AsRef<Path> + Clone>(files: &[(P, &str)]) -> Vec<(P, io::Result<bool>)> {
     files
         .iter()
         .map(|(path, expected)| {

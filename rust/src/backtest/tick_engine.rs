@@ -36,10 +36,10 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use crate::backtest::TradeDirection;
+use crate::backtest::core::Trade as BacktestTrade;
 use crate::backtest::{BacktestConfig, BacktestResult, Signal, TickStrategy};
 use crate::binance::{IncompleteCandle, Timeframe, Trade};
-use crate::backtest::core::Trade as BacktestTrade;
-use crate::backtest::TradeDirection;
 use std::collections::HashMap;
 
 /// Tick-by-tick backtest engine
@@ -243,15 +243,16 @@ impl TickEngine {
         if position.position_size != 0.0 {
             let last_price = trades.last().unwrap().price;
             let last_timestamp = trades.last().unwrap().timestamp_ms;
-            self.close_position(&mut position, last_price, last_timestamp, &mut backtest_trades)?;
+            self.close_position(
+                &mut position,
+                last_price,
+                last_timestamp,
+                &mut backtest_trades,
+            )?;
         }
 
         // Calculate metrics
-        Ok(self.calculate_metrics(
-            position.equity,
-            &equity_curve,
-            &backtest_trades,
-        ))
+        Ok(self.calculate_metrics(position.equity, &equity_curve, &backtest_trades))
     }
 
     /// Process trading signal
@@ -450,11 +451,8 @@ impl TickEngine {
                 .collect();
 
             let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-            let variance = returns
-                .iter()
-                .map(|r| (r - mean).powi(2))
-                .sum::<f64>()
-                / returns.len() as f64;
+            let variance =
+                returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / returns.len() as f64;
             let std_dev = variance.sqrt();
 
             if std_dev > 0.0 {
@@ -529,11 +527,11 @@ impl TickEngine {
 #[derive(Debug, Clone)]
 struct Position {
     equity: f64,
-    position_size: f64,     // Positive = long, Negative = short, 0 = flat
-    position_value: f64,    // Entry value
-    cash: f64,              // Available cash
-    entry_price: f64,       // Entry price
-    entry_timestamp: i64,   // Entry timestamp
+    position_size: f64,   // Positive = long, Negative = short, 0 = flat
+    position_value: f64,  // Entry value
+    cash: f64,            // Available cash
+    entry_price: f64,     // Entry price
+    entry_timestamp: i64, // Entry timestamp
 }
 
 #[cfg(test)]
@@ -573,7 +571,7 @@ mod tests {
 
         assert!(result.is_ok());
         let result = result.unwrap();
-        
+
         // With a 0.5% threshold and 0.1 price increment per trade,
         // we should see some trades after 5 increments (0.5% of 100 = 0.5)
         // Note: First candle spans 60 trades (60 seconds), so we'll see momentum

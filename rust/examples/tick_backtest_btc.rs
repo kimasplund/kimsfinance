@@ -24,8 +24,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create engine
     let config = BacktestConfig {
         initial_capital: 10_000.0,
-        trading_fee: 0.001,  // 0.1%
-        slippage: 0.0005,    // 0.05%
+        trading_fee: 0.001, // 0.1%
+        slippage: 0.0005,   // 0.05%
         ..Default::default()
     };
     let engine = TickEngine::new(config.clone());

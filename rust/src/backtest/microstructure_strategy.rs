@@ -113,7 +113,7 @@ impl MicrostructureStrategy {
             analyzer: MicrostructureAnalyzer::new(window_size_ms),
             imbalance_threshold,
             recent_trades: VecDeque::with_capacity(1000), // Pre-allocate for ~1000 trades
-            max_buffer_size: 10_000, // Keep last 10K trades max
+            max_buffer_size: 10_000,                      // Keep last 10K trades max
             name: format!(
                 "MicrostructureStrategy(threshold={:.2}, window={}ms)",
                 imbalance_threshold, window_size_ms

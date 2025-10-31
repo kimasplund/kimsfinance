@@ -25,15 +25,18 @@ impl BlackScholesPricer {
         }
 
         // Compute d1 and d2
-        let (d1, d2) = Self::compute_d1_d2(spot, strike, time_to_expiry, risk_free_rate, volatility);
+        let (d1, d2) =
+            Self::compute_d1_d2(spot, strike, time_to_expiry, risk_free_rate, volatility);
 
         // Compute price based on option type
         let price = match option_type {
             OptionType::Call => {
-                spot * Self::norm_cdf(d1) - strike * (-risk_free_rate * time_to_expiry).exp() * Self::norm_cdf(d2)
+                spot * Self::norm_cdf(d1)
+                    - strike * (-risk_free_rate * time_to_expiry).exp() * Self::norm_cdf(d2)
             }
             OptionType::Put => {
-                strike * (-risk_free_rate * time_to_expiry).exp() * Self::norm_cdf(-d2) - spot * Self::norm_cdf(-d1)
+                strike * (-risk_free_rate * time_to_expiry).exp() * Self::norm_cdf(-d2)
+                    - spot * Self::norm_cdf(-d1)
             }
         };
 
@@ -53,7 +56,8 @@ impl BlackScholesPricer {
             return Greeks::default();
         }
 
-        let (d1, d2) = Self::compute_d1_d2(spot, strike, time_to_expiry, risk_free_rate, volatility);
+        let (d1, d2) =
+            Self::compute_d1_d2(spot, strike, time_to_expiry, risk_free_rate, volatility);
         let sqrt_t = time_to_expiry.sqrt();
         let exp_rt = (-risk_free_rate * time_to_expiry).exp();
         let n_d1 = Self::norm_pdf(d1);
@@ -131,7 +135,8 @@ impl BlackScholesPricer {
         volatility: f64,
     ) -> (f64, f64) {
         let sqrt_t = time_to_expiry.sqrt();
-        let d1 = ((spot / strike).ln() + (risk_free_rate + 0.5 * volatility * volatility) * time_to_expiry)
+        let d1 = ((spot / strike).ln()
+            + (risk_free_rate + 0.5 * volatility * volatility) * time_to_expiry)
             / (volatility * sqrt_t);
         let d2 = d1 - volatility * sqrt_t;
         (d1, d2)
@@ -147,7 +152,9 @@ impl BlackScholesPricer {
     fn norm_cdf(x: f64) -> f64 {
         let t = 1.0 / (1.0 + 0.2316419 * x.abs());
         let d = 0.3989423 * (-x * x / 2.0).exp();
-        let prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+        let prob = d
+            * t
+            * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
 
         if x >= 0.0 { 1.0 - prob } else { prob }
     }
@@ -160,7 +167,11 @@ impl BlackScholesPricer {
         use std::time::{SystemTime, UNIX_EPOCH};
         let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs() as i64;
         let seconds_to_expiry = expiration_timestamp - now;
-        if seconds_to_expiry <= 0 { Some(0.0) } else { Some(seconds_to_expiry as f64 / (365.25 * 24.0 * 3600.0)) }
+        if seconds_to_expiry <= 0 {
+            Some(0.0)
+        } else {
+            Some(seconds_to_expiry as f64 / (365.25 * 24.0 * 3600.0))
+        }
     }
 }
 
@@ -185,9 +196,37 @@ mod tests {
 
     #[test]
     fn test_price_validation() {
-        assert!(BlackScholesPricer::is_valid_price(10.0, 100.0, 100.0, 1.0, 0.05, OptionType::Call));
-        assert!(!BlackScholesPricer::is_valid_price(-1.0, 100.0, 100.0, 1.0, 0.05, OptionType::Call));
-        assert!(!BlackScholesPricer::is_valid_price(f64::NAN, 100.0, 100.0, 1.0, 0.05, OptionType::Call));
-        assert!(!BlackScholesPricer::is_valid_price(150.0, 100.0, 100.0, 1.0, 0.05, OptionType::Call));
+        assert!(BlackScholesPricer::is_valid_price(
+            10.0,
+            100.0,
+            100.0,
+            1.0,
+            0.05,
+            OptionType::Call
+        ));
+        assert!(!BlackScholesPricer::is_valid_price(
+            -1.0,
+            100.0,
+            100.0,
+            1.0,
+            0.05,
+            OptionType::Call
+        ));
+        assert!(!BlackScholesPricer::is_valid_price(
+            f64::NAN,
+            100.0,
+            100.0,
+            1.0,
+            0.05,
+            OptionType::Call
+        ));
+        assert!(!BlackScholesPricer::is_valid_price(
+            150.0,
+            100.0,
+            100.0,
+            1.0,
+            0.05,
+            OptionType::Call
+        ));
     }
 }

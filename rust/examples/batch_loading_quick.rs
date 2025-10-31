@@ -7,7 +7,7 @@
 //! cargo run --release --example batch_loading_quick
 //! ```
 
-use kimsfinance_core::binance::{process_binance_months, Timeframe};
+use kimsfinance_core::binance::{Timeframe, process_binance_months};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,8 +30,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(first) = candles.first() {
         println!("\n=== First Candle ===");
         println!("Timestamp: {}", first.timestamp);
-        println!("OHLC: ${:.2} / ${:.2} / ${:.2} / ${:.2}",
-            first.open, first.high, first.low, first.close);
+        println!(
+            "OHLC: ${:.2} / ${:.2} / ${:.2} / ${:.2}",
+            first.open, first.high, first.low, first.close
+        );
         println!("Volume: {:.4} BTC", first.volume);
         println!("Trades: {}", first.num_trades);
     }
@@ -39,8 +41,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(last) = candles.last() {
         println!("\n=== Last Candle ===");
         println!("Timestamp: {}", last.timestamp);
-        println!("OHLC: ${:.2} / ${:.2} / ${:.2} / ${:.2}",
-            last.open, last.high, last.low, last.close);
+        println!(
+            "OHLC: ${:.2} / ${:.2} / ${:.2} / ${:.2}",
+            last.open, last.high, last.low, last.close
+        );
         println!("Volume: {:.4} BTC", last.volume);
         println!("Trades: {}", last.num_trades);
     }

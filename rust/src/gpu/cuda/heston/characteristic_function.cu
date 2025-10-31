@@ -147,11 +147,15 @@ extern "C" __global__ void heston_characteristic_function(
     double* __restrict__ char_func_imag,
     const int n_options
 ) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= n_options * n_fft) return;
+    // 2D thread indexing (zero overhead)
+    int option_idx = blockIdx.y * blockDim.y + threadIdx.y;
+    int phi_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    int option_idx = idx / n_fft;
-    int phi_idx = idx % n_fft;
+    // Early exit with 2D bounds check
+    if (option_idx >= n_options || phi_idx >= n_fft) return;
+
+    // Compute linear index for debug prints and output
+    int idx = option_idx * n_fft + phi_idx;
 
     double K = strikes[option_idx];
     double T = expirations[option_idx];
@@ -213,23 +217,30 @@ extern "C" __global__ void heston_characteristic_function(
         printf("CUDA_DEBUG [idx=%d]: z_squared = (%f, %f)\n", idx, z_squared.real, z_squared.imag);
     }
 
-    // Compute d² = (ρσiz - b)² + σ²(2iz - z²)
-    // Breaking down: (ρσiz - b)²
+    // GATHERAL (2005) NUMERICALLY STABLE FORMULATION
+    // Critical fix for "Little Heston Trap" (Albrecher et al. 2007)
+    //
+    // Compute d² = (ρσiz - b)² - σ²(z² - 2iz)
+    // Note: Standard formula rearranged for numerical stability
     Complex term1_base = rho_sigma_i_z - b_complex;
     Complex term1 = term1_base * term1_base;
 
-    // σ²(2iz - z²)
+    // σ²(z² - 2iz) - note sign change for stability
     Complex two_i_z = i_z * 2.0;
-    Complex inner = two_i_z - z_squared;
+    Complex inner = z_squared - two_i_z;  // z² - 2iz (note order!)
     Complex term2 = Complex(sigma_sq, 0.0) * inner;
 
-    Complex d_squared = term1 + term2;
+    Complex d_squared = term1 - term2;  // Subtract for Gatheral formulation
 
     if (debug_print) {
         printf("CUDA_DEBUG [idx=%d]: d_squared = (%f, %f)\n", idx, d_squared.real, d_squared.imag);
     }
 
-    Complex d = d_squared.sqrt();
+    // Gatheral branch cut selection: Choose branch with Re(d) > 0
+    Complex d_raw = d_squared.sqrt();
+
+    // If Re(d) < 0, flip the sign (choose the other branch)
+    Complex d = (d_raw.real < 0.0) ? Complex(-d_raw.real, -d_raw.imag) : d_raw;
 
     if (debug_print) {
         printf("CUDA_DEBUG [idx=%d]: d = sqrt(d_squared) = (%f, %f)\n", idx, d.real, d.imag);

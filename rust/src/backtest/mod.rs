@@ -68,14 +68,14 @@
 pub mod core;
 pub mod engine;
 pub mod metrics;
+pub mod microstructure_strategy;
 pub mod multi_objective;
 pub mod optimizer;
 pub mod portfolio;
 pub mod sweep;
-pub mod tick_strategy;
-pub mod microstructure_strategy;
-pub mod volume_profile_strategy;
 pub mod tick_engine;
+pub mod tick_strategy;
+pub mod volume_profile_strategy;
 pub mod walkforward;
 
 #[cfg(feature = "gpu")]
@@ -97,21 +97,21 @@ pub use metrics::{
     calculate_calmar_ratio, calculate_max_drawdown, calculate_profit_factor,
     calculate_sharpe_ratio, calculate_sortino_ratio, calculate_win_rate,
 };
+pub use microstructure_strategy::MicrostructureStrategy;
 pub use multi_objective::{MultiObjectiveOptimizer, MultiObjectiveResult, Objective, Solution};
 pub use optimizer::{GeneticOptimizer, OptimizerResult};
 pub use portfolio::{
     AllocationStrategy, AssetData, PortfolioBacktest, PortfolioConfig, PortfolioResult,
     PortfolioStrategy, RebalanceFrequency,
 };
-pub use walkforward::{
-    WalkForwardAnalyzer, WalkForwardConfig, WalkForwardResult, WalkForwardWindow,
-};
+pub use tick_engine::TickEngine;
 pub use tick_strategy::{
     IntraCandleMomentum, OrderFlowStrategy, TickStrategy, VolumeSpikeStrategy,
 };
-pub use microstructure_strategy::MicrostructureStrategy;
 pub use volume_profile_strategy::VolumeProfileStrategy;
-pub use tick_engine::TickEngine;
+pub use walkforward::{
+    WalkForwardAnalyzer, WalkForwardConfig, WalkForwardResult, WalkForwardWindow,
+};
 
 #[cfg(feature = "gpu")]
 pub use sweep::run_parameter_sweep_gpu;

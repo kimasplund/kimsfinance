@@ -22,8 +22,8 @@
 //! - Trading signals based on volume profile
 
 use kimsfinance_core::analysis::volume_profile::VolumeProfileBuilder;
-use kimsfinance_core::backtest::tick_strategy::TickStrategy;
 use kimsfinance_core::backtest::VolumeProfileStrategy;
+use kimsfinance_core::backtest::tick_strategy::TickStrategy;
 use kimsfinance_core::binance::{IncompleteCandle, Trade};
 use std::time::Duration;
 
@@ -78,12 +78,18 @@ fn main() {
     println!("Building volume profile ($0.50 tick size)...");
     let builder = VolumeProfileBuilder::new(0.5);
     let profile = builder.build(&trades);
-    println!("✓ Profile built with {} price levels\n", profile.price_levels.len());
+    println!(
+        "✓ Profile built with {} price levels\n",
+        profile.price_levels.len()
+    );
 
     // Display volume profile statistics
     println!("Volume Profile Statistics");
     println!("-------------------------");
-    println!("Time Range: {} - {}", profile.timestamp_start, profile.timestamp_end);
+    println!(
+        "Time Range: {} - {}",
+        profile.timestamp_start, profile.timestamp_end
+    );
     println!("Total Volume: {:.2} BTC", profile.total_volume);
     println!("Point of Control (POC): ${:.2}", profile.point_of_control);
     println!("Value Area High (VAH): ${:.2}", profile.value_area_high);
@@ -96,7 +102,10 @@ fn main() {
     // Show top 10 price levels by volume
     println!("Top 10 Price Levels by Volume");
     println!("------------------------------");
-    println!("{:<8} {:<12} {:<8} {:<10} {:<10}", "Price", "Volume", "Trades", "Buy %", "Sell %");
+    println!(
+        "{:<8} {:<12} {:<8} {:<10} {:<10}",
+        "Price", "Volume", "Trades", "Buy %", "Sell %"
+    );
     println!("{}", "-".repeat(60));
 
     let mut sorted_levels = profile.price_levels.clone();
@@ -128,9 +137,9 @@ fn main() {
     println!("-------------------------------------");
 
     let mut strategy = VolumeProfileStrategy::new(
-        0.5,                          // $0.50 tick size
-        Duration::from_secs(600),     // 10 minute lookback
-        0.03,                         // 3% distance threshold
+        0.5,                      // $0.50 tick size
+        Duration::from_secs(600), // 10 minute lookback
+        0.03,                     // 3% distance threshold
     )
     .rebuild_interval(50); // Rebuild every 50 trades
 
@@ -156,9 +165,21 @@ fn main() {
     }
 
     println!("\nStrategy Results:");
-    println!("  Buy Signals:  {} ({:.1}%)", buy_signals, buy_signals as f64 / trades.len() as f64 * 100.0);
-    println!("  Sell Signals: {} ({:.1}%)", sell_signals, sell_signals as f64 / trades.len() as f64 * 100.0);
-    println!("  Hold Signals: {} ({:.1}%)", hold_signals, hold_signals as f64 / trades.len() as f64 * 100.0);
+    println!(
+        "  Buy Signals:  {} ({:.1}%)",
+        buy_signals,
+        buy_signals as f64 / trades.len() as f64 * 100.0
+    );
+    println!(
+        "  Sell Signals: {} ({:.1}%)",
+        sell_signals,
+        sell_signals as f64 / trades.len() as f64 * 100.0
+    );
+    println!(
+        "  Hold Signals: {} ({:.1}%)",
+        hold_signals,
+        hold_signals as f64 / trades.len() as f64 * 100.0
+    );
 
     // Show current profile from strategy
     if let Some(current_profile) = strategy.current_profile() {
@@ -173,10 +194,14 @@ fn main() {
     println!("\n\nMulti-Timeframe Volume Profile");
     println!("-------------------------------");
 
-    let profiles = builder.build_for_timeframe(&trades, kimsfinance_core::binance::Timeframe::seconds(300));
+    let profiles =
+        builder.build_for_timeframe(&trades, kimsfinance_core::binance::Timeframe::seconds(300));
     println!("Built {} profiles (5-minute intervals)\n", profiles.len());
 
-    println!("{:<5} {:<12} {:<12} {:<12} {:<12}", "Period", "POC", "VAH", "VAL", "Volume");
+    println!(
+        "{:<5} {:<12} {:<12} {:<12} {:<12}",
+        "Period", "POC", "VAH", "VAL", "Volume"
+    );
     println!("{}", "-".repeat(65));
 
     for (i, prof) in profiles.iter().enumerate() {

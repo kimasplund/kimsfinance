@@ -75,26 +75,38 @@ fn main() {
     println!("  theta: {:.4}", params.theta);
     println!("  sigma: {:.2}", params.sigma);
     println!("  rho:   {:.2}", params.rho);
-    println!("  v0:    {:.4} (current vol: {:.1}%)", params.v0, params.current_vol() * 100.0);
+    println!(
+        "  v0:    {:.4} (current vol: {:.1}%)",
+        params.v0,
+        params.current_vol() * 100.0
+    );
     println!();
 
     // Create option chain
     let spot = 48000.0;
     let n_strikes = 20;
     let options = create_option_chain(spot, n_strikes);
-    println!("Created option chain: {} strikes from ${:.0} to ${:.0}\n", n_strikes, options.first().unwrap().strike, options.last().unwrap().strike);
+    println!(
+        "Created option chain: {} strikes from ${:.0} to ${:.0}\n",
+        n_strikes,
+        options.first().unwrap().strike,
+        options.last().unwrap().strike
+    );
 
     // ==================================================
     // PART 1: GPU Greeks Calculation
     // ==================================================
     println!("=== PART 1: GPU Greeks Calculation ===\n");
 
-    let pricer_cpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-    let pricer_gpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+    let pricer_cpu =
+        HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+    let pricer_gpu =
+        HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
 
     let calculator_cpu = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer_cpu)));
-    let mut calculator_gpu = GreeksGpuCalculator::new(device.clone(), Arc::new(Mutex::new(pricer_gpu)))
-        .expect("GPU Greeks calculator creation failed");
+    let mut calculator_gpu =
+        GreeksGpuCalculator::new(device.clone(), Arc::new(Mutex::new(pricer_gpu)))
+            .expect("GPU Greeks calculator creation failed");
 
     // Benchmark CPU
     println!("Calculating Greeks on CPU...");
@@ -119,7 +131,10 @@ fn main() {
 
     // Show sample results
     println!("\nSample Greeks (first 3 options):");
-    println!("{:<10} {:<8} {:<8} {:<8} {:<8} {:<8}", "Strike", "Delta", "Gamma", "Vega", "Theta", "Rho");
+    println!(
+        "{:<10} {:<8} {:<8} {:<8} {:<8} {:<8}",
+        "Strike", "Delta", "Gamma", "Vega", "Theta", "Rho"
+    );
     println!("{:-<60}", "");
     for (i, (opt, greeks)) in options.iter().zip(greeks_gpu.iter()).take(3).enumerate() {
         println!(
@@ -139,13 +154,16 @@ fn main() {
     // ==================================================
     println!("\n=== PART 2: Long Straddle Strategy ===\n");
 
-    let straddle_strategy = StraddleStrategyGpu::new(device.clone()).expect("Straddle strategy creation failed");
+    let straddle_strategy =
+        StraddleStrategyGpu::new(device.clone()).expect("Straddle strategy creation failed");
 
     // Prepare data for strategy
     let n_candles = 10;
     let n_strategies = 3;
 
-    let underlying_prices: Vec<f64> = (0..n_candles).map(|i| spot + (i as f64 - 5.0) * 200.0).collect();
+    let underlying_prices: Vec<f64> = (0..n_candles)
+        .map(|i| spot + (i as f64 - 5.0) * 200.0)
+        .collect();
 
     // Simulate ATM option prices (simplified)
     let call_prices: Vec<f64> = vec![2000.0; n_strategies * n_candles];
@@ -181,7 +199,12 @@ fn main() {
 
     println!("Strategy Parameters:");
     for (i, p) in strategy_params.iter().enumerate() {
-        println!("  Strategy {}: vol_threshold={:.1}%, breakeven={:.1}%", i + 1, p.vol_threshold, p.breakeven_pct);
+        println!(
+            "  Strategy {}: vol_threshold={:.1}%, breakeven={:.1}%",
+            i + 1,
+            p.vol_threshold,
+            p.breakeven_pct
+        );
     }
     println!();
 
@@ -199,7 +222,11 @@ fn main() {
         .expect("Signal generation failed");
     let time_straddle = start_straddle.elapsed();
 
-    println!("✅ Generated {} signals in {:?}", signals.len(), time_straddle);
+    println!(
+        "✅ Generated {} signals in {:?}",
+        signals.len(),
+        time_straddle
+    );
     println!();
 
     // Analyze signals
@@ -207,13 +234,26 @@ fn main() {
     let no_positions: usize = signals.iter().filter(|s| s.call_signal == 0).count();
 
     println!("Signal Summary:");
-    println!("  Long straddles: {}/{} ({:.1}%)", long_positions, signals.len(), (long_positions as f64 / signals.len() as f64) * 100.0);
-    println!("  No positions:   {}/{} ({:.1}%)", no_positions, signals.len(), (no_positions as f64 / signals.len() as f64) * 100.0);
+    println!(
+        "  Long straddles: {}/{} ({:.1}%)",
+        long_positions,
+        signals.len(),
+        (long_positions as f64 / signals.len() as f64) * 100.0
+    );
+    println!(
+        "  No positions:   {}/{} ({:.1}%)",
+        no_positions,
+        signals.len(),
+        (no_positions as f64 / signals.len() as f64) * 100.0
+    );
     println!();
 
     // Show sample signals (Strategy 1)
     println!("Sample Signals (Strategy 1, first 5 candles):");
-    println!("{:<10} {:<10} {:<8} {:<8} {:<10}", "Candle", "Spot", "IV", "HV", "Signal");
+    println!(
+        "{:<10} {:<10} {:<8} {:<8} {:<10}",
+        "Candle", "Spot", "IV", "HV", "Signal"
+    );
     println!("{:-<50}", "");
     for i in 0..5.min(n_candles) {
         let signal = &signals[i]; // Strategy 0, candle i
@@ -257,8 +297,16 @@ fn main() {
 
     let short_positions: usize = short_signals.iter().filter(|s| s.call_signal == -1).count();
     println!("✅ Short Straddle Signals:");
-    println!("  Short positions: {}/{} ({:.1}%)", short_positions, short_signals.len(), (short_positions as f64 / short_signals.len() as f64) * 100.0);
-    println!("  Average premium: ${:.2}", short_signals.iter().map(|s| s.total_cost).sum::<f64>() / short_positions as f64);
+    println!(
+        "  Short positions: {}/{} ({:.1}%)",
+        short_positions,
+        short_signals.len(),
+        (short_positions as f64 / short_signals.len() as f64) * 100.0
+    );
+    println!(
+        "  Average premium: ${:.2}",
+        short_signals.iter().map(|s| s.total_cost).sum::<f64>() / short_positions as f64
+    );
     println!();
 
     // ==================================================
@@ -266,8 +314,14 @@ fn main() {
     // ==================================================
     println!("=== Demo Summary ===\n");
     println!("✅ GPU Greeks: {:.1}x faster than CPU", speedup);
-    println!("✅ Long Straddle: {} buy signals generated in {:?}", long_positions, time_straddle);
-    println!("✅ Short Straddle: {} sell signals generated", short_positions);
+    println!(
+        "✅ Long Straddle: {} buy signals generated in {:?}",
+        long_positions, time_straddle
+    );
+    println!(
+        "✅ Short Straddle: {} sell signals generated",
+        short_positions
+    );
     println!();
     println!("All features working correctly! 🎉");
 }

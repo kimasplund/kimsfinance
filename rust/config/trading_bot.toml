@@ -1,0 +1,68 @@
+# Automated Paper Trading Bot Configuration
+# Bull Put Spread Strategy (266% ROC, 67% Win Rate)
+
+[ibkr]
+# IBKR Connection Settings
+host = "127.0.0.1"              # TWS/Gateway host
+port = 7497                     # Paper trading port (7497 = TWS paper, 4002 = Gateway paper)
+client_id = 101                 # Unique client ID
+account = "DU1234567"           # Your paper trading account ID (change this!)
+
+# Connection retry settings
+max_retries = 999999            # Infinite retries (never give up)
+retry_delay_seconds = 30        # Wait 30 seconds between connection attempts
+connection_timeout_seconds = 10 # Timeout for each connection attempt
+
+[strategy]
+# Bull Put Spread Parameters (Proven Profitable)
+name = "BullPutSpread_Auto"
+symbols = ["SPY", "QQQ", "AAPL", "TSLA"]  # Symbols to scan
+
+# Entry criteria
+dte_min = 30                    # Minimum days to expiration
+dte_max = 45                    # Maximum days to expiration
+delta_min = 0.15                # Minimum short put delta (15% OTM)
+delta_max = 0.35                # Maximum short put delta (35% OTM)
+min_credit = 0.20               # Minimum $0.20 credit per spread
+
+# Exit rules
+profit_target_pct = 50.0        # Take profit at 50% of max profit
+stop_loss_pct = 200.0           # Stop loss at 200% of credit
+max_hold_days = 42              # Maximum 42 days in trade
+
+# Risk management
+position_size_pct = 5.0         # 5% of capital per trade (max risk)
+max_concurrent_positions = 10   # Maximum 10 open positions
+max_margin_utilization_pct = 50.0  # Maximum 50% margin utilization
+
+# Transaction costs
+commission_per_contract = 0.65  # $0.65 per contract (IBKR standard)
+slippage_ticks = 1.0            # 1 tick = $0.05 slippage
+
+[trading]
+# Trading schedule (market hours)
+start_hour = 9                  # Start at 9:00 AM ET
+end_hour = 16                   # Stop at 4:00 PM ET (market close)
+scan_interval_minutes = 60      # Scan every 60 minutes for new opportunities
+monitor_interval_minutes = 15   # Check positions every 15 minutes
+
+# Data paths
+data_dir = "data/yfinance/options_historical"
+spot_dir = "../data/yfinance/ohlcv"
+
+# Logging
+log_dir = "logs/trading_bot"
+log_level = "info"              # debug, info, warn, error
+log_trades_to_csv = true        # Log trades to CSV file
+csv_path = "logs/trading_bot/trades.csv"
+
+[safety]
+# Safety limits (kill switches)
+max_daily_loss = 500.0          # Stop trading if daily loss exceeds $500
+max_total_loss = 2000.0         # Stop trading if total loss exceeds $2,000
+paper_trading_only = true       # MUST be true for paper trading
+require_manual_approval = false # Set to true to require manual approval for each trade
+
+[notifications]
+# Optional: Email/SMS notifications (future feature)
+enabled = false

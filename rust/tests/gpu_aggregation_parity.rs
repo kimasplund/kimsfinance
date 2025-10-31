@@ -5,8 +5,8 @@
 
 #![cfg(feature = "gpu")]
 
-use kimsfinance_core::binance::{aggregate_trades_to_candles, Timeframe, Trade};
-use kimsfinance_core::gpu::{GpuAggregator, EngineSelector, AggregationEngine};
+use kimsfinance_core::binance::{Timeframe, Trade, aggregate_trades_to_candles};
+use kimsfinance_core::gpu::{AggregationEngine, EngineSelector, GpuAggregator};
 
 /// Generate test trades for validation
 fn generate_test_trades(n: usize, timeframe_spread: usize) -> Vec<Trade> {
@@ -39,7 +39,11 @@ fn generate_test_trades(n: usize, timeframe_spread: usize) -> Vec<Trade> {
 }
 
 /// Helper to compare two candle arrays within tolerance
-fn assert_candles_equal(cpu_candles: &[kimsfinance_core::binance::Candle], gpu_candles: &[kimsfinance_core::binance::Candle], tolerance: f64) {
+fn assert_candles_equal(
+    cpu_candles: &[kimsfinance_core::binance::Candle],
+    gpu_candles: &[kimsfinance_core::binance::Candle],
+    tolerance: f64,
+) {
     assert_eq!(
         cpu_candles.len(),
         gpu_candles.len(),

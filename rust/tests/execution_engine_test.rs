@@ -72,7 +72,9 @@ fn test_complete_trading_cycle() {
         strength: 0.9,
     };
 
-    let trades = engine.execute_signals(&[close_signal], &market_data).unwrap();
+    let trades = engine
+        .execute_signals(&[close_signal], &market_data)
+        .unwrap();
     assert_eq!(trades.len(), 1);
     assert!(trades[0].realized_pnl.is_some());
     assert_eq!(engine.position_manager().position_count(), 0);
@@ -293,7 +295,9 @@ fn test_pnl_metrics_accuracy() {
         timestamp: 1735100000,
     };
 
-    engine.execute_signals(&[close_signal], &market_data).unwrap();
+    engine
+        .execute_signals(&[close_signal], &market_data)
+        .unwrap();
 
     let report = engine.get_execution_report();
 
@@ -360,7 +364,10 @@ fn test_performance_at_scale() {
 
     let duration = start.elapsed();
     println!("1000 expirations processed in {:?}", duration);
-    assert!(duration.as_millis() < 10, "Expiration performance target not met");
+    assert!(
+        duration.as_millis() < 10,
+        "Expiration performance target not met"
+    );
 }
 
 #[test]

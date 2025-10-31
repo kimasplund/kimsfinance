@@ -33,7 +33,7 @@ fn main() {
         println!("  Throughput: {:.2} M trades/sec", throughput / 1_000_000.0);
         println!("  Trades executed: {}", result.num_trades);
         println!("  Final equity: ${:.2}", result.final_equity);
-        
+
         // Verify >1M trades/sec target
         if throughput > 1_000_000.0 {
             println!("  ✅ PASS: Exceeds 1M trades/sec target");
@@ -50,7 +50,7 @@ fn generate_trades(n: usize) -> Vec<Trade> {
 
     for i in 0..n {
         price += ((i % 100) as f64 - 50.0) * 0.1; // Simple oscillation
-        
+
         trades.push(Trade {
             trade_id: i as u64,
             price,

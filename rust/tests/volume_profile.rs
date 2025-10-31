@@ -223,7 +223,7 @@ fn test_price_bucketing_fine_tick_size() {
 #[test]
 fn test_price_bucketing_coarse_tick_size() {
     let trades = vec![
-        make_trade(98.0, 1.0, 1000, false),  // Changed to stay in 100 bucket
+        make_trade(98.0, 1.0, 1000, false), // Changed to stay in 100 bucket
         make_trade(103.0, 2.0, 2000, false),
         make_trade(102.0, 1.5, 3000, false), // Changed from 107.0 to stay in 100 bucket
     ];
@@ -329,7 +329,9 @@ fn test_value_area_70_percent_property() {
     let value_area_volume: f64 = profile
         .price_levels
         .iter()
-        .filter(|level| level.price >= profile.value_area_low && level.price <= profile.value_area_high)
+        .filter(|level| {
+            level.price >= profile.value_area_low && level.price <= profile.value_area_high
+        })
         .map(|level| level.volume)
         .sum();
 
@@ -544,7 +546,7 @@ fn test_timestamp_range() {
     let profile = builder.build(&trades);
 
     assert_eq!(profile.timestamp_start, 5000); // First trade in input order
-    assert_eq!(profile.timestamp_end, 9000);   // Last trade in input order
+    assert_eq!(profile.timestamp_end, 9000); // Last trade in input order
 }
 
 #[test]
@@ -563,7 +565,11 @@ fn test_large_dataset_performance() {
     let profile = builder.build(&trades);
     let elapsed = start.elapsed();
 
-    assert!(elapsed.as_millis() < 100, "Building profile took {}ms", elapsed.as_millis());
+    assert!(
+        elapsed.as_millis() < 100,
+        "Building profile took {}ms",
+        elapsed.as_millis()
+    );
     assert_eq!(profile.price_levels.len(), 100); // 100 unique price levels
     assert_eq!(profile.total_volume, 100_000.0);
 }
@@ -632,7 +638,7 @@ fn test_realistic_trading_session() {
 
     // Verify reasonable results
     assert!(profile.price_levels.len() > 20); // Should have multiple levels
-    assert!(profile.total_volume > 1000.0);   // Substantial volume
+    assert!(profile.total_volume > 1000.0); // Substantial volume
 
     // POC should be near mean (100.0)
     assert!(
@@ -643,7 +649,11 @@ fn test_realistic_trading_session() {
 
     // Value area should span reasonable range
     let va_width = profile.value_area_high - profile.value_area_low;
-    assert!(va_width > 1.0 && va_width < 20.0, "VA width {} unreasonable", va_width);
+    assert!(
+        va_width > 1.0 && va_width < 20.0,
+        "VA width {} unreasonable",
+        va_width
+    );
 
     // POC should be within value area
     assert!(profile.is_in_value_area(profile.point_of_control));

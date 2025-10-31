@@ -317,13 +317,13 @@ fn test_realistic_trading_scenario() {
     // - Varying prices and quantities
     // - Time-ordered trades
     let trades = vec![
-        make_trade(50_000.0, 0.1, 0, false),         // Small aggressive buy
-        make_trade(50_001.0, 0.2, 100, false),       // Medium aggressive buy
-        make_trade(50_000.5, 0.05, 200, true),       // Small aggressive sell
-        make_trade(50_002.0, 0.5, 300, false),       // Large aggressive buy
-        make_trade(50_001.5, 0.15, 400, true),       // Medium aggressive sell
-        make_trade(50_003.0, 1.0, 500, false),       // Very large aggressive buy
-        make_trade(50_002.5, 0.3, 600, true),        // Medium aggressive sell
+        make_trade(50_000.0, 0.1, 0, false),   // Small aggressive buy
+        make_trade(50_001.0, 0.2, 100, false), // Medium aggressive buy
+        make_trade(50_000.5, 0.05, 200, true), // Small aggressive sell
+        make_trade(50_002.0, 0.5, 300, false), // Large aggressive buy
+        make_trade(50_001.5, 0.15, 400, true), // Medium aggressive sell
+        make_trade(50_003.0, 1.0, 500, false), // Very large aggressive buy
+        make_trade(50_002.5, 0.3, 600, true),  // Medium aggressive sell
     ];
 
     let metrics = analyzer.analyze(&trades);

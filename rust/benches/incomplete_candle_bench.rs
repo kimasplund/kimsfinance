@@ -2,7 +2,7 @@
 //!
 //! Validates that update() operations are <10ns in the hot path
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::binance::{IncompleteCandle, Trade};
 
 fn make_trade(price: f64, quantity: f64, timestamp: i64) -> Trade {
@@ -20,9 +20,7 @@ fn bench_incomplete_candle_new(c: &mut Criterion) {
     let trade = make_trade(100.0, 1.0, 1000);
 
     c.bench_function("incomplete_candle_new", |b| {
-        b.iter(|| {
-            black_box(IncompleteCandle::new(&trade, 0))
-        })
+        b.iter(|| black_box(IncompleteCandle::new(&trade, 0)))
     });
 }
 

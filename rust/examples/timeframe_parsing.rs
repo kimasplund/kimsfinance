@@ -52,7 +52,10 @@ fn main() {
     println!("\n5. Parse equals constructor:");
     let parsed = Timeframe::parse("5m").unwrap();
     let constructed = Timeframe::minutes(5);
-    println!("   Timeframe::parse(\"5m\") == Timeframe::minutes(5): {}", parsed == constructed);
+    println!(
+        "   Timeframe::parse(\"5m\") == Timeframe::minutes(5): {}",
+        parsed == constructed
+    );
 
     println!("\n✓ Demo complete!");
 }

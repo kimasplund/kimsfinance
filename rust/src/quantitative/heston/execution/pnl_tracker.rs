@@ -2,8 +2,8 @@
 //!
 //! Tracks realized and unrealized P&L with performance metrics.
 
-use super::position_manager::OptionPosition;
 use super::Trade;
+use super::position_manager::OptionPosition;
 use std::collections::HashMap;
 
 /// P&L Tracker

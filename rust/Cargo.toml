@@ -19,15 +19,29 @@ serde = { version = "1.0.228", features = ["derive"] }
 zip = "6.0.0"
 rand = "0.8"
 rand_distr = "0.4"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2.0"
 
 # Async runtime and traits
 tokio = { version = "1.42", features = ["full"], optional = true }
 async-trait = { version = "0.1", optional = true }
 
+# HTTP client for data downloaders
+reqwest = { version = "0.12", features = ["json", "cookies"], optional = true }
+
+# Yahoo Finance with TLS impersonation (Chrome fingerprint)
+rquest = { version = "5.1", features = ["json", "cookies"], optional = true }
+scraper = { version = "0.21", optional = true }  # HTML parsing for consent forms
+regex = { version = "1.11", optional = true }     # Crumb extraction
+once_cell = { version = "1.20", optional = true } # Singleton session
+
+# Parquet file format for data storage
+arrow = { version = "54.0", optional = true }
+parquet = { version = "54.0", features = ["arrow"], optional = true }
+
 # Options data connectors (optional)
 ibapi = { version = "2.0", optional = true }
+time = { version = "0.3", optional = true }
 deribit = { version = "0.3", optional = true }
 
 # Performance dependencies for backtest optimization
@@ -64,12 +78,16 @@ cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas",
 half = { version = "2.4", optional = true }  # For f16 support
 
 # Optimization libraries for Heston calibration
-argmin = { version = "0.10", optional = true }
-argmin-math = { version = "0.5", optional = true }
+argmin = { version = "0.11", optional = true }
+argmin-math = { version = "0.5", default-features = false, features = ["ndarray_v0_16"], optional = true }
+
+# FFT library for Carr-Madan option pricing
+rustfft = { version = "6.2", optional = true }
+num-complex = { version = "0.4", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3.14"
 
 [profile.release]
@@ -89,10 +107,12 @@ explicit_simd = ["packed_simd_2"]
 gpu = ["cudarc", "half"]
 
 # Options data connectors
-data-ibkr = ["ibapi", "tokio", "async-trait"]
+data-ibkr = ["ibapi", "time", "tokio", "async-trait"]
 data-deribit = ["deribit", "tokio", "async-trait"]
-data-all = ["data-ibkr", "data-deribit"]
-heston = ["gpu", "argmin", "argmin-math"]
+data-downloaders = ["tokio", "async-trait", "reqwest", "arrow", "parquet"]
+data-yahoo-tls = ["data-downloaders", "rquest", "scraper", "regex", "once_cell"]
+data-all = ["data-ibkr", "data-deribit", "data-downloaders", "data-yahoo-tls"]
+heston = ["gpu", "argmin", "argmin-math", "rustfft", "num-complex"]
 
 [[bench]]
 name = "momentum_indicators"

@@ -100,10 +100,7 @@ impl ExpirationHandler {
     /// # Returns
     ///
     /// Appropriate expiration event
-    pub fn process_expiration(
-        position: &OptionPosition,
-        underlying_price: f64,
-    ) -> ExpirationEvent {
+    pub fn process_expiration(position: &OptionPosition, underlying_price: f64) -> ExpirationEvent {
         let intrinsic = Self::calculate_intrinsic_value(
             position.option_type,
             position.strike,
@@ -242,8 +239,7 @@ mod tests {
         assert_eq!(intrinsic, 10.0);
 
         // OTM call
-        let intrinsic =
-            ExpirationHandler::calculate_intrinsic_value(OptionType::Call, 100.0, 95.0);
+        let intrinsic = ExpirationHandler::calculate_intrinsic_value(OptionType::Call, 100.0, 95.0);
         assert_eq!(intrinsic, 0.0);
 
         // ATM call
@@ -255,18 +251,15 @@ mod tests {
     #[test]
     fn test_intrinsic_value_put() {
         // ITM put
-        let intrinsic =
-            ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 90.0);
+        let intrinsic = ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 90.0);
         assert_eq!(intrinsic, 10.0);
 
         // OTM put
-        let intrinsic =
-            ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 105.0);
+        let intrinsic = ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 105.0);
         assert_eq!(intrinsic, 0.0);
 
         // ATM put
-        let intrinsic =
-            ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 100.0);
+        let intrinsic = ExpirationHandler::calculate_intrinsic_value(OptionType::Put, 100.0, 100.0);
         assert_eq!(intrinsic, 0.0);
     }
 

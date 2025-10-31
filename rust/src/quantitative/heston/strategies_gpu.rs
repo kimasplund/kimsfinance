@@ -48,8 +48,8 @@ pub struct StraddleParams {
 impl Default for StraddleParams {
     fn default() -> Self {
         Self {
-            vol_threshold: 5.0,    // 5% volatility difference
-            breakeven_pct: 2.0,    // 2% price move
+            vol_threshold: 5.0, // 5% volatility difference
+            breakeven_pct: 2.0, // 2% price move
         }
     }
 }
@@ -137,8 +137,13 @@ impl StraddleStrategyGpu {
         {
             return Err(GpuError::InvalidParameter(format!(
                 "Input dimensions mismatch: expected {} elements ({}×{}), got call={}, put={}, iv={}, hv={}",
-                expected_len, n_strategies, n_candles,
-                call_prices.len(), put_prices.len(), implied_vols.len(), historical_vols.len()
+                expected_len,
+                n_strategies,
+                n_candles,
+                call_prices.len(),
+                put_prices.len(),
+                implied_vols.len(),
+                historical_vols.len()
             )));
         }
 
@@ -162,7 +167,7 @@ impl StraddleStrategyGpu {
 
         // Launch kernel with 2D grid
         let block_dim_x = 256; // Candles (x-axis)
-        let block_dim_y = 4;   // Strategies (y-axis)
+        let block_dim_y = 4; // Strategies (y-axis)
 
         let grid_dim_x = ((n_candles + block_dim_x - 1) / block_dim_x) as u32;
         let grid_dim_y = ((n_strategies + block_dim_y - 1) / block_dim_y) as u32;
@@ -195,8 +200,9 @@ impl StraddleStrategyGpu {
         }
 
         // Download results
-        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e)))?;
+        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e))
+        })?;
         let total_costs = self.device.copy_to_host(&d_total_cost)?;
 
         // Convert to structured signals
@@ -253,7 +259,8 @@ impl StraddleStrategyGpu {
         let d_params = self.device.copy_to_device(&params_flat)?;
 
         let mut d_signals: CudaSlice<i8> = self.device.allocate_device_buffer(expected_len * 2)?;
-        let mut d_total_premium: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
+        let mut d_total_premium: CudaSlice<f64> =
+            self.device.allocate_device_buffer(expected_len)?;
 
         // Launch short straddle kernel
         let block_dim_x = 256;
@@ -289,8 +296,9 @@ impl StraddleStrategyGpu {
             })?;
         }
 
-        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e)))?;
+        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e))
+        })?;
         let total_premiums = self.device.copy_to_host(&d_total_premium)?;
 
         let signals: Vec<StraddleSignal> = (0..expected_len)
@@ -423,8 +431,7 @@ impl CoveredCallStrategyGpu {
         // Allocate output buffers
         let mut d_stock_signals: CudaSlice<i8> =
             self.device.allocate_device_buffer(expected_len)?;
-        let mut d_call_signals: CudaSlice<i8> =
-            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_call_signals: CudaSlice<i8> = self.device.allocate_device_buffer(expected_len)?;
         let mut d_premium: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
@@ -461,10 +468,26 @@ impl CoveredCallStrategyGpu {
         }
 
         // Download results
-        let stock_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_stock_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy stock signals from device: {:?}", e)))?;
-        let call_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_call_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy call signals from device: {:?}", e)))?;
+        let stock_signals_raw: Vec<i8> =
+            self.device
+                .stream
+                .memcpy_dtov(&d_stock_signals)
+                .map_err(|e| {
+                    GpuError::MemoryCopyError(format!(
+                        "Failed to copy stock signals from device: {:?}",
+                        e
+                    ))
+                })?;
+        let call_signals_raw: Vec<i8> =
+            self.device
+                .stream
+                .memcpy_dtov(&d_call_signals)
+                .map_err(|e| {
+                    GpuError::MemoryCopyError(format!(
+                        "Failed to copy call signals from device: {:?}",
+                        e
+                    ))
+                })?;
         let premiums = self.device.copy_to_host(&d_premium)?;
 
         // Convert to structured signals
@@ -632,8 +655,7 @@ impl IronCondorStrategyGpu {
             self.device.allocate_device_buffer(expected_len_2legs)?;
         let mut d_call_signals: CudaSlice<i8> =
             self.device.allocate_device_buffer(expected_len_2legs)?;
-        let mut d_net_credit: CudaSlice<f64> =
-            self.device.allocate_device_buffer(expected_len)?;
+        let mut d_net_credit: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
         let mut d_max_loss: CudaSlice<f64> = self.device.allocate_device_buffer(expected_len)?;
 
         // Launch kernel with 2D grid
@@ -673,10 +695,26 @@ impl IronCondorStrategyGpu {
         }
 
         // Download results
-        let put_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_put_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy put signals from device: {:?}", e)))?;
-        let call_signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_call_signals)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy call signals from device: {:?}", e)))?;
+        let put_signals_raw: Vec<i8> =
+            self.device
+                .stream
+                .memcpy_dtov(&d_put_signals)
+                .map_err(|e| {
+                    GpuError::MemoryCopyError(format!(
+                        "Failed to copy put signals from device: {:?}",
+                        e
+                    ))
+                })?;
+        let call_signals_raw: Vec<i8> =
+            self.device
+                .stream
+                .memcpy_dtov(&d_call_signals)
+                .map_err(|e| {
+                    GpuError::MemoryCopyError(format!(
+                        "Failed to copy call signals from device: {:?}",
+                        e
+                    ))
+                })?;
         let net_credits = self.device.copy_to_host(&d_net_credit)?;
         let max_losses = self.device.copy_to_host(&d_max_loss)?;
 
@@ -792,7 +830,10 @@ mod tests {
         for sig in &signals {
             assert_eq!(sig.call_signal, -1, "Expected sell call signal");
             assert_eq!(sig.put_signal, -1, "Expected sell put signal");
-            assert_eq!(sig.total_cost, 5000.0, "Total premium should be 2500 + 2500");
+            assert_eq!(
+                sig.total_cost, 5000.0,
+                "Total premium should be 2500 + 2500"
+            );
         }
     }
 

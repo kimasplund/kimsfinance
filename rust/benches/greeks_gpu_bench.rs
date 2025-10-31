@@ -16,7 +16,7 @@
 //! cargo bench --bench greeks_gpu_bench --features gpu
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use kimsfinance_core::gpu::{GpuDevice, HestonGpuPricer};
 use kimsfinance_core::quantitative::heston::{
     GreeksGpuCalculator, HestonGreeksCalculator, HestonParams, OptionQuote, OptionType,
@@ -71,8 +71,8 @@ fn bench_greeks_cpu(c: &mut Criterion) {
 fn bench_greeks_gpu(c: &mut Criterion) {
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
     let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-    let mut calculator =
-        GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer))).expect("Calculator creation failed");
+    let mut calculator = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer)))
+        .expect("Calculator creation failed");
 
     let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
 
@@ -92,12 +92,14 @@ fn bench_greeks_gpu(c: &mut Criterion) {
 
 fn bench_greeks_comparison(c: &mut Criterion) {
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
-    let pricer_cpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-    let pricer_gpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+    let pricer_cpu =
+        HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+    let pricer_gpu =
+        HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
 
     let calculator_cpu = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer_cpu)));
-    let mut calculator_gpu =
-        GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu))).expect("Calculator creation failed");
+    let mut calculator_gpu = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu)))
+        .expect("Calculator creation failed");
 
     let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
 
@@ -109,14 +111,16 @@ fn bench_greeks_comparison(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("cpu", n), &options, |b, opts| {
             b.iter(|| {
-                let greeks = calculator_cpu.calculate_greeks_batch(black_box(&params), black_box(opts));
+                let greeks =
+                    calculator_cpu.calculate_greeks_batch(black_box(&params), black_box(opts));
                 black_box(greeks)
             });
         });
 
         group.bench_with_input(BenchmarkId::new("gpu", n), &options, |b, opts| {
             b.iter(|| {
-                let greeks = calculator_gpu.calculate_greeks_batch(black_box(&params), black_box(opts));
+                let greeks =
+                    calculator_gpu.calculate_greeks_batch(black_box(&params), black_box(opts));
                 black_box(greeks)
             });
         });
@@ -124,5 +128,10 @@ fn bench_greeks_comparison(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_greeks_cpu, bench_greeks_gpu, bench_greeks_comparison);
+criterion_group!(
+    benches,
+    bench_greeks_cpu,
+    bench_greeks_gpu,
+    bench_greeks_comparison
+);
 criterion_main!(benches);

@@ -34,8 +34,8 @@ mod gpu_tests {
 
         let params = vec![
             CoveredCallParams {
-                strike_offset_pct: 5.0,  // 5% OTM
-                min_premium_pct: 1.0,    // 1% min premium
+                strike_offset_pct: 5.0, // 5% OTM
+                min_premium_pct: 1.0,   // 1% min premium
             },
             CoveredCallParams {
                 strike_offset_pct: 5.0,

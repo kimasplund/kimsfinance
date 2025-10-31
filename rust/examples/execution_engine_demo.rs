@@ -16,8 +16,8 @@ fn main() {
 
     // Initialize engine with $100,000 capital
     let config = ExecutionConfig {
-        trading_fee: 1.0,     // $1 per contract
-        slippage: 0.0005,     // 0.05%
+        trading_fee: 1.0, // $1 per contract
+        slippage: 0.0005, // 0.05%
         max_position_size: 50,
         margin_requirement: 0.2,
     };

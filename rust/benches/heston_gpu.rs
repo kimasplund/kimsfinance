@@ -76,8 +76,7 @@ fn cpu_price_options(params: &HestonParams, options: &[OptionQuote]) -> Vec<f64>
             let rho_sigma_i_z = params.rho * params.sigma * i_z;
             let z_squared = z * z;
 
-            let d_squared = rho_sigma_i_z.powi(2)
-                - params.sigma.powi(2) * (2.0 * i_z - z_squared);
+            let d_squared = rho_sigma_i_z.powi(2) - params.sigma.powi(2) * (2.0 * i_z - z_squared);
             let d = d_squared.sqrt();
 
             let g_minus = params.kappa - rho_sigma_i_z - d;
@@ -88,11 +87,10 @@ fn cpu_price_options(params: &HestonParams, options: &[OptionQuote]) -> Vec<f64>
             let one_minus_g_exp = 1.0 - g * exp_neg_d_T;
             let one_minus_exp = 1.0 - exp_neg_d_T;
 
-            let D = g_minus / params.sigma.powi(2) *
-                ((one_minus_exp) / one_minus_g_exp);
+            let D = g_minus / params.sigma.powi(2) * ((one_minus_exp) / one_minus_g_exp);
 
-            let C = params.kappa * params.theta / params.sigma.powi(2) *
-                (g_minus * tau - 2.0 * (one_minus_g_exp / g).ln());
+            let C = params.kappa * params.theta / params.sigma.powi(2)
+                * (g_minus * tau - 2.0 * (one_minus_g_exp / g).ln());
 
             let iz_ln_S = i_z * opt.spot_price.ln();
             let exponent = C + D * params.v0 + iz_ln_S;
@@ -139,7 +137,8 @@ fn cpu_price_options(params: &HestonParams, options: &[OptionQuote]) -> Vec<f64>
 
 fn bench_heston_pricing(c: &mut Criterion) {
     let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-    let mut pricer = HestonGpuPricer::new(device, 4096, 1000).expect("Failed to create HestonGpuPricer");
+    let mut pricer =
+        HestonGpuPricer::new(device, 4096, 1000).expect("Failed to create HestonGpuPricer");
 
     let params = HestonParams::new(
         2.0,  // kappa

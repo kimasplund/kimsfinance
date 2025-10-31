@@ -26,9 +26,9 @@ fn test_vol_arbitrage_long_vol_signal() {
 
     let params = vec![
         VolArbitrageParams {
-            vol_threshold: 5.0,  // 5pp threshold
-            hedge_delta: 1.0,    // Enable hedging
-            min_edge: 2.0,       // 2% minimum edge
+            vol_threshold: 5.0, // 5pp threshold
+            hedge_delta: 1.0,   // Enable hedging
+            min_edge: 2.0,      // 2% minimum edge
         };
         n_strategies
     ];
@@ -66,7 +66,10 @@ fn test_vol_arbitrage_long_vol_signal() {
             // Expected profit should be positive
             assert!(sig.expected_profit > 0.0, "Expected positive profit");
             // Hedge should be applied (negative for long call)
-            assert!(sig.hedge_signal < 0.0, "Expected negative hedge for long call");
+            assert!(
+                sig.hedge_signal < 0.0,
+                "Expected negative hedge for long call"
+            );
         }
     }
 }
@@ -131,7 +134,10 @@ fn test_vol_arbitrage_short_vol_signal() {
             // Expected profit should be positive (from selling expensive vol)
             assert!(sig.expected_profit > 0.0, "Expected positive profit");
             // Hedge should be applied (positive for short call)
-            assert!(sig.hedge_signal > 0.0, "Expected positive hedge for short call");
+            assert!(
+                sig.hedge_signal > 0.0,
+                "Expected positive hedge for short call"
+            );
         }
     }
 }
@@ -181,7 +187,11 @@ fn test_vol_arbitrage_no_edge() {
         assert_eq!(sig.option_signal, 0, "Expected no option signal");
         assert_eq!(sig.expected_profit, 0.0, "Expected no profit");
         // Vol edge should be small
-        assert!(sig.vol_edge.abs() < 0.05, "Vol edge too large: {}", sig.vol_edge);
+        assert!(
+            sig.vol_edge.abs() < 0.05,
+            "Vol edge too large: {}",
+            sig.vol_edge
+        );
     }
 }
 
@@ -228,7 +238,10 @@ fn test_vol_arbitrage_without_hedging() {
     for sig in &signals {
         if sig.option_signal == 1 {
             // Buy signal should exist
-            assert_eq!(sig.hedge_signal, 0.0, "Expected no hedge signal when hedging disabled");
+            assert_eq!(
+                sig.hedge_signal, 0.0,
+                "Expected no hedge signal when hedging disabled"
+            );
         }
     }
 }
@@ -254,7 +267,12 @@ fn test_vol_arbitrage_edge_monitoring() {
 
     // Execute
     let edge_monitors = strategy
-        .monitor_edge_batch(&implied_vols, &historical_vols, &option_prices, &option_vegas)
+        .monitor_edge_batch(
+            &implied_vols,
+            &historical_vols,
+            &option_prices,
+            &option_vegas,
+        )
         .expect("Edge monitoring failed");
 
     // Verify
@@ -462,7 +480,12 @@ fn test_vol_arbitrage_edge_quality_ranking() {
 
     // Execute
     let edge_monitors = strategy
-        .monitor_edge_batch(&implied_vols, &historical_vols, &option_prices, &option_vegas)
+        .monitor_edge_batch(
+            &implied_vols,
+            &historical_vols,
+            &option_prices,
+            &option_vegas,
+        )
         .expect("Edge monitoring failed");
 
     // Verify: higher vega should result in higher edge quality

@@ -188,7 +188,10 @@ impl DataQualityReport {
         println!("  - Gaps (>10 min): {}", self.gaps.len());
         println!("  - Outliers (>5σ): {}", self.outliers.len());
         println!("  - Duplicate IDs: {}", self.duplicate_trade_ids.len());
-        println!("  - Negative quantities: {}", self.negative_quantities.len());
+        println!(
+            "  - Negative quantities: {}",
+            self.negative_quantities.len()
+        );
         println!("  - Zero prices: {}", self.zero_prices.len());
         println!();
         println!("Quality score: {:.2}/100", self.quality_score());

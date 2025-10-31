@@ -51,13 +51,15 @@ use crate::quantitative::heston::{
     HestonParams, OptionQuote, constraints::ParameterBounds, objective::HestonObjective,
 };
 #[cfg(feature = "heston")]
-use argmin::core::Executor;
+use argmin::core::{Executor, State};
 #[cfg(feature = "heston")]
 use argmin::solver::linesearch::MoreThuenteLineSearch;
 #[cfg(feature = "heston")]
 use argmin::solver::quasinewton::LBFGS;
 #[cfg(feature = "heston")]
 use ndarray::Array1;
+#[cfg(feature = "heston")]
+use parking_lot::Mutex;
 #[cfg(feature = "heston")]
 use std::sync::Arc;
 #[cfg(feature = "heston")]
@@ -150,7 +152,7 @@ impl CalibrationResult {
 /// - Memory usage: ~100MB for typical cases
 #[cfg(feature = "heston")]
 pub struct HestonCalibrator {
-    gpu_pricer: Arc<HestonGpuPricer>,
+    gpu_pricer: Arc<Mutex<HestonGpuPricer>>,
     market_options: Vec<OptionQuote>,
     initial_params: HestonParams,
     bounds: ParameterBounds,
@@ -164,7 +166,7 @@ impl HestonCalibrator {
     ///
     /// # Arguments
     ///
-    /// * `gpu_pricer` - GPU-accelerated option pricer
+    /// * `gpu_pricer` - GPU-accelerated option pricer (wrapped in Mutex)
     /// * `market_options` - Market option quotes to calibrate against
     /// * `initial_params` - Initial parameter guess
     ///
@@ -180,7 +182,7 @@ impl HestonCalibrator {
     /// - No market options provided
     /// - Initial parameters are invalid
     pub fn new(
-        gpu_pricer: Arc<HestonGpuPricer>,
+        gpu_pricer: Arc<Mutex<HestonGpuPricer>>,
         market_options: Vec<OptionQuote>,
         initial_params: HestonParams,
     ) -> Result<Self, CalibrationError> {
@@ -299,7 +301,7 @@ impl HestonCalibrator {
             iterations,
             converged,
             n_options: self.market_options.len(),
-            gradient_norm: result.state().get_norm().map(|x| *x),
+            gradient_norm: None, // get_norm() removed in argmin 0.11
         })
     }
 
@@ -362,7 +364,7 @@ mod tests {
     #[test]
     fn test_params_to_vec_roundtrip() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options(5);
         let params = HestonParams {
             kappa: 2.0,
@@ -387,7 +389,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_calibrate_synthetic_data() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer_inner = HestonGpuPricer::new(device, 4096).unwrap();
+        let pricer = Arc::new(Mutex::new(pricer_inner));
 
         // Known parameters
         let known_params = HestonParams {
@@ -402,9 +405,12 @@ mod tests {
         let mut synthetic_options = create_test_options(10);
 
         // Price with known parameters to create "market" prices
-        let market_prices = pricer
-            .price_options(&known_params, &synthetic_options)
-            .unwrap();
+        let market_prices = {
+            let mut pricer_locked = pricer.lock();
+            pricer_locked
+                .price_options(&known_params, &synthetic_options)
+                .unwrap()
+        };
 
         // Update options with synthetic market prices
         for (i, opt) in synthetic_options.iter_mut().enumerate() {
@@ -527,7 +533,7 @@ mod tests {
     #[test]
     fn test_no_market_data_error() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let params = HestonParams {
             kappa: 2.0,
             theta: 0.04,
@@ -543,7 +549,7 @@ mod tests {
     #[test]
     fn test_invalid_initial_params() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options(5);
 
         // Invalid params (violates Feller condition)
@@ -565,7 +571,7 @@ mod tests {
     #[test]
     fn test_custom_bounds() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options(5);
         let params = HestonParams {
             kappa: 2.0,
@@ -586,7 +592,7 @@ mod tests {
     #[test]
     fn test_custom_max_iterations() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options(5);
         let params = HestonParams {
             kappa: 2.0,
@@ -606,7 +612,7 @@ mod tests {
     #[test]
     fn test_custom_tolerance() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options(5);
         let params = HestonParams {
             kappa: 2.0,

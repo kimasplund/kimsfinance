@@ -43,8 +43,8 @@
 //! ```
 
 use crate::analysis::volume_profile::{VolumeProfile, VolumeProfileBuilder};
-use crate::backtest::tick_strategy::TickStrategy;
 use crate::backtest::Signal;
+use crate::backtest::tick_strategy::TickStrategy;
 use crate::binance::{Candle, IncompleteCandle, Trade};
 use std::collections::VecDeque;
 use std::time::Duration;
@@ -251,8 +251,7 @@ impl TickStrategy for VolumeProfileStrategy {
             // Price at resistance (Value Area High) → Sell signal
             // Rationale: Resistance level should hold, expect rejection
             Signal::Sell
-        } else if current_price < profile.point_of_control
-            && current_price > profile.value_area_low
+        } else if current_price < profile.point_of_control && current_price > profile.value_area_low
         {
             // Price between VAL and POC → Potential buy
             // Rationale: Below fair value, likely to move toward POC
@@ -476,9 +475,8 @@ mod tests {
 
     #[test]
     fn test_distance_threshold() {
-        let mut strategy =
-            VolumeProfileStrategy::new(1.0, Duration::from_secs(3600), 0.01) // 1% threshold
-                .rebuild_interval(5);
+        let mut strategy = VolumeProfileStrategy::new(1.0, Duration::from_secs(3600), 0.01) // 1% threshold
+            .rebuild_interval(5);
         let candle = make_incomplete_candle();
 
         // Create clear support at 100

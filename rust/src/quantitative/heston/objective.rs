@@ -12,6 +12,8 @@ use argmin::core::{CostFunction, Error, Gradient};
 #[cfg(feature = "heston")]
 use ndarray::Array1;
 #[cfg(feature = "heston")]
+use parking_lot::Mutex;
+#[cfg(feature = "heston")]
 use std::sync::Arc;
 
 /// Objective function for Heston model calibration
@@ -39,8 +41,8 @@ use std::sync::Arc;
 /// the function returns `f64::INFINITY` to guide the optimizer away.
 #[cfg(feature = "heston")]
 pub struct HestonObjective {
-    /// GPU pricer for fast batch pricing
-    pub gpu_pricer: Arc<HestonGpuPricer>,
+    /// GPU pricer for fast batch pricing (wrapped in Mutex for interior mutability)
+    pub gpu_pricer: Arc<Mutex<HestonGpuPricer>>,
 
     /// Market option quotes with observed prices
     pub market_options: Vec<OptionQuote>,
@@ -55,9 +57,9 @@ impl HestonObjective {
     ///
     /// # Arguments
     ///
-    /// * `gpu_pricer` - GPU-accelerated Heston pricer
+    /// * `gpu_pricer` - GPU-accelerated Heston pricer (wrapped in Mutex)
     /// * `market_options` - Market option quotes (must have bid/ask or last price)
-    pub fn new(gpu_pricer: Arc<HestonGpuPricer>, market_options: Vec<OptionQuote>) -> Self {
+    pub fn new(gpu_pricer: Arc<Mutex<HestonGpuPricer>>, market_options: Vec<OptionQuote>) -> Self {
         Self {
             gpu_pricer,
             market_options,
@@ -76,7 +78,7 @@ impl HestonObjective {
     ///
     /// Panics if weights.len() != market_options.len()
     pub fn with_weights(
-        gpu_pricer: Arc<HestonGpuPricer>,
+        gpu_pricer: Arc<Mutex<HestonGpuPricer>>,
         market_options: Vec<OptionQuote>,
         weights: Vec<f64>,
     ) -> Self {
@@ -153,9 +155,9 @@ impl CostFunction for HestonObjective {
             return Ok(f64::INFINITY);
         }
 
-        // Price options with GPU
-        let model_prices = self
-            .gpu_pricer
+        // Price options with GPU (lock the pricer for mutable access)
+        let mut pricer = self.gpu_pricer.lock();
+        let model_prices = pricer
             .price_options(&params, &self.market_options)
             .map_err(|e| Error::msg(format!("GPU pricing failed: {}", e)))?;
 
@@ -300,7 +302,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_valid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -317,7 +319,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_invalid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -333,7 +335,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_gradient_computation() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -382,7 +384,7 @@ mod tests {
     #[test]
     fn test_vec_to_params() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(HestonGpuPricer::new(device, 4096).unwrap());
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
         let options = create_test_options();
         let objective = HestonObjective::new(pricer, options);
 

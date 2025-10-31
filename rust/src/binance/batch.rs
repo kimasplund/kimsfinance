@@ -87,11 +87,12 @@ pub fn process_binance_directory<P: AsRef<Path>>(
     let range = DateRange::parse(start_date, end_date)
         .map_err(|e| BinanceError::ParseError(e.to_string()))?;
 
+    println!("=== Batch Processing: {} to {} ===", start_date, end_date);
     println!(
-        "=== Batch Processing: {} to {} ===",
-        start_date, end_date
+        "Date range: {} days, {} months",
+        range.num_days(),
+        range.num_months()
     );
-    println!("Date range: {} days, {} months", range.num_days(), range.num_months());
 
     // 2. Find files
     let finder = BinanceDataFinder::new(data_dir);
@@ -145,10 +146,7 @@ pub fn process_binance_directory<P: AsRef<Path>>(
         if let Some(first) = all_candles.first()
             && let Some(last) = all_candles.last()
         {
-            println!(
-                "Time range: {} to {}",
-                first.timestamp, last.timestamp
-            );
+            println!("Time range: {} to {}", first.timestamp, last.timestamp);
         }
     }
 
@@ -223,7 +221,11 @@ pub fn process_binance_months<P: AsRef<Path>>(
 
         for file in files {
             let candles = process_binance_month(file.to_str().unwrap(), timeframe)?;
-            println!("    → {} candles from {:?}", candles.len(), file.file_name().unwrap());
+            println!(
+                "    → {} candles from {:?}",
+                candles.len(),
+                file.file_name().unwrap()
+            );
             all_candles.extend(candles);
         }
     }
@@ -252,8 +254,8 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
-    use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
 
     /// Helper to create a test ZIP file with trade data
     fn create_test_zip(path: &Path, content: &str) -> std::io::Result<()> {

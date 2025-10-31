@@ -25,3 +25,18 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Data files (large, should not be in repo)
+*.parquet
+data/
+logs/
+
+# CSV files (except test data)
+*.csv
+!tests/**/*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/

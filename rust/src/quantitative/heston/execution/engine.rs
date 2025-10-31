@@ -3,9 +3,9 @@
 //! Orchestrates position management, expiration handling, and P&L tracking.
 
 use super::{
-    pnl_tracker::{PnLTracker, PerformanceMetrics},
-    position_manager::PositionManager,
     ExecutionError, MarketData, OptionSignal, SignalType, Trade,
+    pnl_tracker::{PerformanceMetrics, PnLTracker},
+    position_manager::PositionManager,
 };
 use crate::quantitative::heston::OptionType;
 use std::time::Instant;
@@ -29,8 +29,8 @@ pub struct ExecutionConfig {
 impl Default for ExecutionConfig {
     fn default() -> Self {
         Self {
-            trading_fee: 1.0,   // $1 per contract
-            slippage: 0.0005,   // 0.05%
+            trading_fee: 1.0, // $1 per contract
+            slippage: 0.0005, // 0.05%
             max_position_size: 100,
             margin_requirement: 0.2, // 20%
         }
@@ -205,7 +205,12 @@ impl ExecutionEngine {
                 .position_manager
                 .get_position(&position_id)
                 .ok_or_else(|| ExecutionError::PositionNotFound(position_id.clone()))?;
-            (position.quantity, position.option_type, position.strike, position.expiration)
+            (
+                position.quantity,
+                position.option_type,
+                position.strike,
+                position.expiration,
+            )
         };
 
         let execution_price = self.apply_slippage(base_price, quantity < 0);
@@ -306,7 +311,12 @@ impl ExecutionEngine {
         }
 
         // Update unrealized P&L
-        let positions: Vec<_> = self.position_manager.positions().values().cloned().collect();
+        let positions: Vec<_> = self
+            .position_manager
+            .positions()
+            .values()
+            .cloned()
+            .collect();
         let current_equity = self.position_manager.equity();
         self.pnl_tracker
             .update_unrealized_pnl(&positions, current_equity);
@@ -463,12 +473,16 @@ mod tests {
         // Open position
         let open_signal = create_test_signal(SignalType::OpenLong, OptionType::Call, 100.0, 1);
         let market_data = create_test_market_data(1735000000, 100.0);
-        engine.execute_signals(&[open_signal], &market_data).unwrap();
+        engine
+            .execute_signals(&[open_signal], &market_data)
+            .unwrap();
 
         // Close position
         let close_signal = create_test_signal(SignalType::Close, OptionType::Call, 100.0, 1);
         let market_data = create_test_market_data(1735100000, 105.0);
-        let trades = engine.execute_signals(&[close_signal], &market_data).unwrap();
+        let trades = engine
+            .execute_signals(&[close_signal], &market_data)
+            .unwrap();
 
         assert_eq!(trades.len(), 1);
         assert!(trades[0].is_closing());
@@ -487,7 +501,9 @@ mod tests {
         let signal1 = create_test_signal(SignalType::OpenLong, OptionType::Call, 100.0, 1);
         let signal2 = create_test_signal(SignalType::OpenLong, OptionType::Call, 110.0, 1);
 
-        engine.execute_signals(&[signal1, signal2], &market_data).unwrap();
+        engine
+            .execute_signals(&[signal1, signal2], &market_data)
+            .unwrap();
         assert_eq!(engine.position_manager().position_count(), 2);
 
         // Try to open 3rd position (should fail)
@@ -510,9 +526,7 @@ mod tests {
 
         // Process time step
         let market_data = create_test_market_data(1735100000, 105.0);
-        let result = engine
-            .process_time_step(1735100000, &market_data)
-            .unwrap();
+        let result = engine.process_time_step(1735100000, &market_data).unwrap();
 
         assert_eq!(result.position_count, 1);
         assert!(result.processing_time_us > 0);
@@ -530,9 +544,7 @@ mod tests {
 
         // Process past expiration
         let market_data = create_test_market_data(1735700000, 110.0); // Past expiration
-        let result = engine
-            .process_time_step(1735700000, &market_data)
-            .unwrap();
+        let result = engine.process_time_step(1735700000, &market_data).unwrap();
 
         assert_eq!(result.expirations, 1);
         assert_eq!(result.position_count, 0);

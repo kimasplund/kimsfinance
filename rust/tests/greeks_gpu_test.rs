@@ -57,12 +57,14 @@ mod gpu_tests {
     #[test]
     fn test_greeks_gpu_accuracy_single_option() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer_cpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-        let pricer_gpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer_cpu =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer_gpu =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
 
         let calculator_cpu = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer_cpu)));
-        let mut calculator_gpu =
-            GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu))).expect("Calculator creation failed");
+        let mut calculator_gpu = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu)))
+            .expect("Calculator creation failed");
 
         let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
         let option = create_test_option(50000.0); // OTM call
@@ -139,12 +141,14 @@ mod gpu_tests {
     #[test]
     fn test_greeks_gpu_batch_accuracy() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer_cpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-        let pricer_gpu = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer_cpu =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let pricer_gpu =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
 
         let calculator_cpu = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer_cpu)));
-        let mut calculator_gpu =
-            GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu))).expect("Calculator creation failed");
+        let mut calculator_gpu = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer_gpu)))
+            .expect("Calculator creation failed");
 
         let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
 
@@ -184,9 +188,10 @@ mod gpu_tests {
     #[test]
     fn test_greeks_gpu_stability() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
-        let mut calculator =
-            GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer))).expect("Calculator creation failed");
+        let pricer =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Pricer creation failed");
+        let mut calculator = GreeksGpuCalculator::new(device, Arc::new(Mutex::new(pricer)))
+            .expect("Calculator creation failed");
 
         let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04).unwrap();
         let option = create_test_option(48000.0); // ATM

@@ -63,8 +63,8 @@ fn main() {
     // Three strategy configurations
     let covered_call_params = vec![
         CoveredCallParams {
-            strike_offset_pct: 5.0,  // 5% OTM
-            min_premium_pct: 1.0,    // 1% minimum premium
+            strike_offset_pct: 5.0, // 5% OTM
+            min_premium_pct: 1.0,   // 1% minimum premium
         },
         CoveredCallParams {
             strike_offset_pct: 5.0,
@@ -90,7 +90,12 @@ fn main() {
     // Generate signals
     let start = Instant::now();
     let cc_signals = covered_call_strategy
-        .generate_signals_batch(&underlying_prices, &call_prices, &call_strikes, &covered_call_params)
+        .generate_signals_batch(
+            &underlying_prices,
+            &call_prices,
+            &call_strikes,
+            &covered_call_params,
+        )
         .expect("Covered call signal generation failed");
     let elapsed = start.elapsed();
 
@@ -136,11 +141,7 @@ fn main() {
         };
         println!(
             "{:<10} ${:<11.0} ${:<11.0} ${:<9.0} {}",
-            i,
-            underlying_prices[i],
-            call_strikes[i],
-            signal.premium_collected,
-            signal_str
+            i, underlying_prices[i], call_strikes[i], signal.premium_collected, signal_str
         );
     }
     println!();
@@ -151,7 +152,10 @@ fn main() {
     let strike = call_strikes[0];
     let premium = cc_signals[0].premium_collected;
 
-    println!("  Entry: Buy stock at ${:.0}, Sell call at ${:.0} strike", entry_price, strike);
+    println!(
+        "  Entry: Buy stock at ${:.0}, Sell call at ${:.0} strike",
+        entry_price, strike
+    );
     println!("  Premium collected: ${:.0}", premium);
     println!();
 
@@ -261,7 +265,11 @@ fn main() {
         .expect("Iron condor signal generation failed");
     let elapsed_ic = start_ic.elapsed();
 
-    println!("✅ Generated {} signals in {:?}", ic_signals.len(), elapsed_ic);
+    println!(
+        "✅ Generated {} signals in {:?}",
+        ic_signals.len(),
+        elapsed_ic
+    );
     println!();
 
     // Analyze signals
@@ -298,30 +306,15 @@ fn main() {
     let sig = &ic_signals[0];
     if sig.short_put_signal == -1 {
         println!("  Position entered:");
-        println!(
-            "    Long put:   Strike ${:.0}",
-            put_strikes[0]
-        );
-        println!(
-            "    Short put:  Strike ${:.0}",
-            put_strikes[1]
-        );
-        println!(
-            "    Short call: Strike ${:.0}",
-            call_strikes[0]
-        );
-        println!(
-            "    Long call:  Strike ${:.0}",
-            call_strikes[1]
-        );
+        println!("    Long put:   Strike ${:.0}", put_strikes[0]);
+        println!("    Short put:  Strike ${:.0}", put_strikes[1]);
+        println!("    Short call: Strike ${:.0}", call_strikes[0]);
+        println!("    Long call:  Strike ${:.0}", call_strikes[1]);
         println!();
         println!("  Net credit:  ${:.2}", sig.net_credit);
         println!("  Max profit:  ${:.2}", sig.net_credit);
         println!("  Max loss:    ${:.2}", sig.max_loss);
-        println!(
-            "  Risk/Reward: {:.2}x",
-            sig.max_loss / sig.net_credit
-        );
+        println!("  Risk/Reward: {:.2}x", sig.max_loss / sig.net_credit);
         println!();
 
         // Show profit zone
@@ -330,7 +323,11 @@ fn main() {
         println!("  Profit Zone:");
         println!("    Lower breakeven: ${:.0}", lower_be);
         println!("    Upper breakeven: ${:.0}", upper_be);
-        println!("    Zone width: ${:.0} ({:.1}%)", upper_be - lower_be, ((upper_be - lower_be) / spot_ic) * 100.0);
+        println!(
+            "    Zone width: ${:.0} ({:.1}%)",
+            upper_be - lower_be,
+            ((upper_be - lower_be) / spot_ic) * 100.0
+        );
     } else {
         println!("  No position entered (insufficient credit)");
     }
@@ -441,7 +438,10 @@ fn main() {
     // ==================================================
     println!("=== Demo Summary ===\n");
     println!("✅ Covered Call: {} positions generated", positions_entered);
-    println!("✅ Iron Condor: {} positions generated", ic_positions_entered);
+    println!(
+        "✅ Iron Condor: {} positions generated",
+        ic_positions_entered
+    );
     println!(
         "✅ Performance: {:.0} covered call signals/sec",
         (n_strategies_bench * n_candles_bench) as f64 / elapsed_bench.as_secs_f64()
@@ -452,5 +452,7 @@ fn main() {
     );
     println!();
     println!("All features working correctly! 🎉");
-    println!("\nPhase 3b implementation complete. Both strategies achieve <10ms for 500K combinations.");
+    println!(
+        "\nPhase 3b implementation complete. Both strategies achieve <10ms for 500K combinations."
+    );
 }

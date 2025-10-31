@@ -5,9 +5,7 @@
 //! These tests ensure that `IncompleteCandle` produces IDENTICAL results to
 //! the existing `CandleBuilder` used in `aggregate_trades_to_candles()`.
 
-use kimsfinance_core::binance::{
-    aggregate_trades_to_candles, IncompleteCandle, Timeframe, Trade,
-};
+use kimsfinance_core::binance::{IncompleteCandle, Timeframe, Trade, aggregate_trades_to_candles};
 
 /// Helper to create test trades
 fn make_trade(
@@ -28,7 +26,10 @@ fn make_trade(
 }
 
 /// Build candles using IncompleteCandle (streaming approach)
-fn build_candles_with_incomplete(trades: &[Trade], timeframe: Timeframe) -> Vec<kimsfinance_core::binance::Candle> {
+fn build_candles_with_incomplete(
+    trades: &[Trade],
+    timeframe: Timeframe,
+) -> Vec<kimsfinance_core::binance::Candle> {
     if trades.is_empty() {
         return Vec::new();
     }
@@ -72,7 +73,11 @@ fn assert_candles_equal(
     new: &kimsfinance_core::binance::Candle,
     context: &str,
 ) {
-    assert_eq!(old.timestamp, new.timestamp, "{}: timestamp mismatch", context);
+    assert_eq!(
+        old.timestamp, new.timestamp,
+        "{}: timestamp mismatch",
+        context
+    );
     assert!(
         (old.open - new.open).abs() < 1e-9,
         "{}: open mismatch: {} vs {}",
@@ -162,16 +167,20 @@ fn test_parity_multiple_trades_same_candle() {
 
     assert_eq!(candles_old.len(), 1);
     assert_eq!(candles_new.len(), 1);
-    assert_candles_equal(&candles_old[0], &candles_new[0], "multiple trades same candle");
+    assert_candles_equal(
+        &candles_old[0],
+        &candles_new[0],
+        "multiple trades same candle",
+    );
 }
 
 #[test]
 fn test_parity_multiple_candles() {
     let trades = vec![
-        make_trade(1, 100.0, 1.0, 0, false),        // Candle 1
-        make_trade(2, 101.0, 1.0, 60_000, false),   // Candle 2
-        make_trade(3, 102.0, 1.0, 120_000, false),  // Candle 3
-        make_trade(4, 103.0, 1.0, 180_000, false),  // Candle 4
+        make_trade(1, 100.0, 1.0, 0, false),       // Candle 1
+        make_trade(2, 101.0, 1.0, 60_000, false),  // Candle 2
+        make_trade(3, 102.0, 1.0, 120_000, false), // Candle 3
+        make_trade(4, 103.0, 1.0, 180_000, false), // Candle 4
     ];
     let timeframe = Timeframe::parse("1m").unwrap();
 
@@ -211,10 +220,10 @@ fn test_parity_out_of_order_trades() {
 #[test]
 fn test_parity_five_minute_timeframe() {
     let trades = vec![
-        make_trade(1, 100.0, 1.0, 0, false),         // 00:00 (5m candle 1)
-        make_trade(2, 101.0, 1.0, 60_000, false),    // 00:01 (5m candle 1)
-        make_trade(3, 102.0, 1.0, 300_000, false),   // 00:05 (5m candle 2)
-        make_trade(4, 103.0, 1.0, 600_000, false),   // 00:10 (5m candle 3)
+        make_trade(1, 100.0, 1.0, 0, false),       // 00:00 (5m candle 1)
+        make_trade(2, 101.0, 1.0, 60_000, false),  // 00:01 (5m candle 1)
+        make_trade(3, 102.0, 1.0, 300_000, false), // 00:05 (5m candle 2)
+        make_trade(4, 103.0, 1.0, 600_000, false), // 00:10 (5m candle 3)
     ];
     let timeframe = Timeframe::parse("5m").unwrap();
 
@@ -263,11 +272,11 @@ fn test_parity_complex_scenario() {
 fn test_parity_candle_boundaries() {
     // Test trades at exact candle boundaries
     let trades = vec![
-        make_trade(1, 100.0, 1.0, 0, false),        // Exactly 00:00:00.000
-        make_trade(2, 101.0, 1.0, 59_999, false),   // Last ms of minute 0
-        make_trade(3, 102.0, 1.0, 60_000, false),   // Exactly 00:01:00.000
-        make_trade(4, 103.0, 1.0, 119_999, false),  // Last ms of minute 1
-        make_trade(5, 104.0, 1.0, 120_000, false),  // Exactly 00:02:00.000
+        make_trade(1, 100.0, 1.0, 0, false),       // Exactly 00:00:00.000
+        make_trade(2, 101.0, 1.0, 59_999, false),  // Last ms of minute 0
+        make_trade(3, 102.0, 1.0, 60_000, false),  // Exactly 00:01:00.000
+        make_trade(4, 103.0, 1.0, 119_999, false), // Last ms of minute 1
+        make_trade(5, 104.0, 1.0, 120_000, false), // Exactly 00:02:00.000
     ];
     let timeframe = Timeframe::parse("1m").unwrap();
 
@@ -321,9 +330,9 @@ fn test_parity_high_low_accumulation() {
 fn test_parity_volume_accumulation() {
     // Test volume and quote_volume accumulation
     let trades = vec![
-        make_trade(1, 100.0, 1.5, 1000, false),   // volume=1.5, quote=150
-        make_trade(2, 105.0, 2.3, 2000, false),   // volume=2.3, quote=241.5
-        make_trade(3, 95.0, 0.7, 3000, false),    // volume=0.7, quote=66.5
+        make_trade(1, 100.0, 1.5, 1000, false), // volume=1.5, quote=150
+        make_trade(2, 105.0, 2.3, 2000, false), // volume=2.3, quote=241.5
+        make_trade(3, 95.0, 0.7, 3000, false),  // volume=0.7, quote=66.5
     ];
     let timeframe = Timeframe::parse("1m").unwrap();
 
@@ -429,7 +438,7 @@ fn test_parity_real_binance_data() {
 
     // Test with real Binance data (1 day = ~4.6M trades)
     let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
-    
+
     // Skip if file doesn't exist
     if !std::path::Path::new(path).exists() {
         println!("SKIPPED: Real Binance data file not found at {}", path);
@@ -441,11 +450,20 @@ fn test_parity_real_binance_data() {
     // Load all trades for streaming comparison
     println!("Loading real Binance data from {}", path);
     let candles_old = process_binance_month(path, timeframe).unwrap();
-    println!("Loaded {} candles using aggregate_trades_to_candles", candles_old.len());
+    println!(
+        "Loaded {} candles using aggregate_trades_to_candles",
+        candles_old.len()
+    );
 
     // TODO: Implement streaming version when IncompleteCandle is integrated into process_binance_month
     // For now, this test just validates that the existing function works
-    
-    assert!(!candles_old.is_empty(), "Should have produced candles from real data");
-    println!("✓ Real data test passed: {} candles produced", candles_old.len());
+
+    assert!(
+        !candles_old.is_empty(),
+        "Should have produced candles from real data"
+    );
+    println!(
+        "✓ Real data test passed: {} candles produced",
+        candles_old.len()
+    );
 }

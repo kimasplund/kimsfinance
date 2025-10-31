@@ -48,7 +48,7 @@ extern "C" __global__ void straddle_signals_kernel(
     const double* __restrict__ implied_vols,
     const double* __restrict__ historical_vols,
     const double* __restrict__ strategy_params,
-    int8_t* __restrict__ signals,
+    char* __restrict__ signals,
     double* __restrict__ total_cost,
     int n_strategies,
     int n_candles
@@ -123,7 +123,7 @@ extern "C" __global__ void short_straddle_signals_kernel(
     const double* __restrict__ implied_vols,
     const double* __restrict__ historical_vols,
     const double* __restrict__ strategy_params,
-    int8_t* __restrict__ signals,
+    char* __restrict__ signals,
     double* __restrict__ total_premium,
     int n_strategies,
     int n_candles

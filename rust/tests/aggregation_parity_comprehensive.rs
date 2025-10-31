@@ -11,7 +11,7 @@
 //! - Tests will pass once IncompleteCandle is implemented
 //! - Run with: cargo test --test aggregation_parity_comprehensive
 
-use kimsfinance_core::binance::{aggregate_trades_to_candles, Candle, Timeframe, Trade};
+use kimsfinance_core::binance::{Candle, Timeframe, Trade, aggregate_trades_to_candles};
 // use std::collections::HashMap;  // Will be used when IncompleteCandle is implemented
 
 // =============================================================================
@@ -93,7 +93,11 @@ fn assert_candle_vectors_equal(old: &[Candle], new: &[Candle], context: &str) {
     );
 
     for (i, (old_candle, new_candle)) in old.iter().zip(new.iter()).enumerate() {
-        assert_candles_equal(old_candle, new_candle, &format!("{} [candle {}]", context, i));
+        assert_candles_equal(
+            old_candle,
+            new_candle,
+            &format!("{} [candle {}]", context, i),
+        );
     }
 }
 

@@ -8,7 +8,7 @@
 //! cargo run --example batch_loading
 //! ```
 
-use kimsfinance_core::binance::{process_binance_directory, process_binance_months, Timeframe};
+use kimsfinance_core::binance::{Timeframe, process_binance_directory, process_binance_months};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Batch Loading Example ===\n");

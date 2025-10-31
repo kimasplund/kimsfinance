@@ -28,7 +28,7 @@
 //! Speedup: 6.4x faster 🚀
 //! ```
 
-use kimsfinance_core::binance::{aggregate_trades_to_candles, Timeframe, Trade};
+use kimsfinance_core::binance::{Timeframe, Trade, aggregate_trades_to_candles};
 use kimsfinance_core::gpu::{AggregationEngine, EngineSelector, GpuAggregator};
 use std::time::Instant;
 
@@ -106,17 +106,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let small_trades = &trades[..1_000];
     let engine_small = selector.select_engine(small_trades.len());
-    println!(
-        "1,000 trades → {} (below threshold)",
-        engine_small.name()
-    );
+    println!("1,000 trades → {} (below threshold)", engine_small.name());
 
     let large_trades = &trades;
     let engine_large = selector.select_engine(large_trades.len());
-    println!(
-        "100,000 trades → {} (above threshold)",
-        engine_large.name()
-    );
+    println!("100,000 trades → {} (above threshold)", engine_large.name());
 
     println!("\nThreshold: {} trades", selector.threshold());
 

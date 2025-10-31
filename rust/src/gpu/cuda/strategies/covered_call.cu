@@ -46,8 +46,8 @@ extern "C" __global__ void covered_call_signals_kernel(
     const double* __restrict__ call_prices,
     const double* __restrict__ strikes,
     const double* __restrict__ strategy_params,
-    int8_t* __restrict__ stock_signals,
-    int8_t* __restrict__ call_signals,
+    char* __restrict__ stock_signals,
+    char* __restrict__ call_signals,
     double* __restrict__ premium_collected,
     int n_strategies,
     int n_candles
@@ -131,7 +131,7 @@ extern "C" __global__ void covered_call_pnl_kernel(
     const double* __restrict__ exit_prices,
     const double* __restrict__ strikes,
     const double* __restrict__ premiums,
-    const int8_t* __restrict__ stock_signals,
+    const char* __restrict__ stock_signals,
     double* __restrict__ pnl,
     int n_strategies,
     int n_candles

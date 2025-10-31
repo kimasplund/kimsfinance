@@ -89,17 +89,15 @@ impl DateRange {
             .expect("valid first day of month");
 
         // Get first day of end month for comparison
-        let end_month =
-            NaiveDate::from_ymd_opt(self.end.year(), self.end.month(), 1)
-                .expect("valid first day of end month");
+        let end_month = NaiveDate::from_ymd_opt(self.end.year(), self.end.month(), 1)
+            .expect("valid first day of end month");
 
         while current <= end_month {
             months.push(format!("{:04}-{:02}", current.year(), current.month()));
 
             // Move to first day of next month
             current = if current.month() == 12 {
-                NaiveDate::from_ymd_opt(current.year() + 1, 1, 1)
-                    .expect("valid year increment")
+                NaiveDate::from_ymd_opt(current.year() + 1, 1, 1).expect("valid year increment")
             } else {
                 NaiveDate::from_ymd_opt(current.year(), current.month() + 1, 1)
                     .expect("valid month increment")
@@ -182,10 +180,7 @@ mod tests {
     #[test]
     fn test_parse_date_range() {
         let range = DateRange::parse("2021-01-01", "2021-03-31").unwrap();
-        assert_eq!(
-            range.start,
-            NaiveDate::from_ymd_opt(2021, 1, 1).unwrap()
-        );
+        assert_eq!(range.start, NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
         assert_eq!(range.end, NaiveDate::from_ymd_opt(2021, 3, 31).unwrap());
     }
 
@@ -260,10 +255,7 @@ mod tests {
         let range = DateRange::parse("2020-02-28", "2020-03-01").unwrap();
         let days = range.days();
 
-        assert_eq!(
-            days,
-            vec!["2020-02-28", "2020-02-29", "2020-03-01"]
-        );
+        assert_eq!(days, vec!["2020-02-28", "2020-02-29", "2020-03-01"]);
     }
 
     #[test]

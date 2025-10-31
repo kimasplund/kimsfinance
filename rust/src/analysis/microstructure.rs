@@ -109,14 +109,14 @@ pub struct MicrostructureMetrics {
     pub order_flow_imbalance: f64, // (buy - sell) / (buy + sell)
 
     // Trade aggressiveness (from is_buyer_maker)
-    pub aggressive_buy_count: usize,   // is_buyer_maker = false
-    pub aggressive_sell_count: usize,  // is_buyer_maker = true
-    pub aggressiveness_ratio: f64,     // (buys - sells) / (buys + sells)
+    pub aggressive_buy_count: usize,  // is_buyer_maker = false
+    pub aggressive_sell_count: usize, // is_buyer_maker = true
+    pub aggressiveness_ratio: f64,    // (buys - sells) / (buys + sells)
 
     // Price dynamics
-    pub price_volatility: f64,  // Std dev of trade prices
-    pub spread_estimate: f64,   // Estimated bid-ask spread
-    pub tick_direction: f64,    // +1 uptick, -1 downtick, 0 no change
+    pub price_volatility: f64, // Std dev of trade prices
+    pub spread_estimate: f64,  // Estimated bid-ask spread
+    pub tick_direction: f64,   // +1 uptick, -1 downtick, 0 no change
 
     // Volume dynamics
     pub total_volume: f64,
@@ -440,12 +440,7 @@ mod tests {
     use super::*;
 
     /// Helper to create test trade
-    fn make_trade(
-        price: f64,
-        quantity: f64,
-        timestamp_ms: i64,
-        is_buyer_maker: bool,
-    ) -> Trade {
+    fn make_trade(price: f64, quantity: f64, timestamp_ms: i64, is_buyer_maker: bool) -> Trade {
         Trade {
             trade_id: 0,
             price,
@@ -717,10 +712,10 @@ mod tests {
         let analyzer = MicrostructureAnalyzer::new(60_000); // 60-second windows
 
         let trades = vec![
-            make_trade(100.0, 1.0, 0, false),        // Window 0
-            make_trade(101.0, 1.0, 59_999, false),   // Window 0 (just before boundary)
-            make_trade(102.0, 1.0, 60_000, false),   // Window 1 (exactly at boundary)
-            make_trade(103.0, 1.0, 120_000, false),  // Window 2
+            make_trade(100.0, 1.0, 0, false),       // Window 0
+            make_trade(101.0, 1.0, 59_999, false),  // Window 0 (just before boundary)
+            make_trade(102.0, 1.0, 60_000, false),  // Window 1 (exactly at boundary)
+            make_trade(103.0, 1.0, 120_000, false), // Window 2
         ];
 
         let metrics = analyzer.analyze_rolling(&trades);

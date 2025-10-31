@@ -1,8 +1,10 @@
-//! Options Data Connectors
+//! Options Data Connectors & Downloaders
 //!
 //! Unified interface for fetching options market data from multiple sources:
 //! - IBKR (Interactive Brokers) for equity options
 //! - Deribit for crypto options (BTC/ETH)
+//! - Yahoo Finance for stocks + options
+//! - Binance Vision for crypto spot/futures
 //!
 //! # Architecture
 //!
@@ -33,6 +35,9 @@ pub mod deribit;
 
 #[cfg(feature = "data-ibkr")]
 pub mod ibkr;
+
+// Data downloaders module
+pub mod downloaders;
 
 pub use common::DataError;
 

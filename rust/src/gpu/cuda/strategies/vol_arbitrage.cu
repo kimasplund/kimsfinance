@@ -60,7 +60,7 @@ extern "C" __global__ void vol_arbitrage_signals_kernel(
     const double* __restrict__ implied_vols,
     const double* __restrict__ historical_vols,
     const double* __restrict__ strategy_params,
-    int8_t* __restrict__ option_signals,
+    char* __restrict__ option_signals,
     double* __restrict__ hedge_signals,
     double* __restrict__ expected_profit,
     double* __restrict__ vol_edge,
@@ -119,7 +119,7 @@ extern "C" __global__ void vol_arbitrage_signals_kernel(
     bool exit_signal = (fabs(vol_spread) < min_edge * 0.5); // Exit at half min_edge
 
     // Determine option signal
-    int8_t option_signal = 0;
+    char option_signal = 0;
     if (buy_vol_signal && !exit_signal) {
         option_signal = 1; // Buy options (long volatility)
     } else if (sell_vol_signal && !exit_signal) {

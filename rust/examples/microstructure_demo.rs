@@ -50,11 +50,11 @@ fn demo_basic_analysis() {
 
     // Simulate a trading scenario with strong buying pressure
     let trades = vec![
-        make_trade(50_000.0, 0.5, 0, false),      // Aggressive buy
-        make_trade(50_001.0, 1.0, 1000, false),   // Aggressive buy
-        make_trade(50_002.0, 0.8, 2000, false),   // Aggressive buy
-        make_trade(50_001.5, 0.2, 3000, true),    // Aggressive sell
-        make_trade(50_003.0, 1.5, 4000, false),   // Aggressive buy
+        make_trade(50_000.0, 0.5, 0, false),    // Aggressive buy
+        make_trade(50_001.0, 1.0, 1000, false), // Aggressive buy
+        make_trade(50_002.0, 0.8, 2000, false), // Aggressive buy
+        make_trade(50_001.5, 0.2, 3000, true),  // Aggressive sell
+        make_trade(50_003.0, 1.5, 4000, false), // Aggressive buy
     ];
 
     let metrics = analyzer.analyze(&trades);
@@ -97,15 +97,22 @@ fn demo_rolling_windows() {
     println!("Analyzed {} windows:\n", all_metrics.len());
 
     for (i, metrics) in all_metrics.iter().enumerate() {
-        println!("Window {} ({}ms - {}ms):",
+        println!(
+            "Window {} ({}ms - {}ms):",
             i + 1,
             metrics.timestamp,
             metrics.timestamp + metrics.duration_ms
         );
         println!("  Trades: {}", metrics.num_trades);
-        println!("  Order Flow Imbalance: {:.3}", metrics.order_flow_imbalance);
+        println!(
+            "  Order Flow Imbalance: {:.3}",
+            metrics.order_flow_imbalance
+        );
         println!("  Aggressiveness: {:.3}", metrics.aggressiveness_ratio);
-        println!("  Interpretation: {}", interpret_ofi(metrics.order_flow_imbalance));
+        println!(
+            "  Interpretation: {}",
+            interpret_ofi(metrics.order_flow_imbalance)
+        );
         println!();
     }
 }
@@ -140,7 +147,10 @@ fn demo_strategy_integration() {
         }
 
         println!("  Final Signal: {:?}", last_signal);
-        println!("  Order Flow Imbalance: {:.3}", strategy.current_imbalance());
+        println!(
+            "  Order Flow Imbalance: {:.3}",
+            strategy.current_imbalance()
+        );
         println!();
     }
 }
@@ -163,12 +173,10 @@ fn demo_realistic_scenario() {
         make_trade(49_950.0, 0.8, 5000, true),
         make_trade(49_900.0, 1.0, 10000, true),
         make_trade(49_920.0, 0.3, 15000, false),
-
         // Mid-day: Consolidation
         make_trade(49_930.0, 0.5, 20000, false),
         make_trade(49_925.0, 0.4, 25000, true),
         make_trade(49_935.0, 0.6, 30000, false),
-
         // Afternoon: Rally
         make_trade(49_950.0, 1.0, 35000, false),
         make_trade(49_980.0, 1.5, 40000, false),
@@ -183,7 +191,8 @@ fn demo_realistic_scenario() {
     print_metrics(&metrics);
 
     println!("\n📊 Market Interpretation:");
-    println!("  Price Action: {} → {} ({})",
+    println!(
+        "  Price Action: {} → {} ({})",
         trades.first().unwrap().price,
         trades.last().unwrap().price,
         if trades.last().unwrap().price > trades.first().unwrap().price {
@@ -192,8 +201,14 @@ fn demo_realistic_scenario() {
             "Bearish"
         }
     );
-    println!("  Order Flow: {}", interpret_ofi(metrics.order_flow_imbalance));
-    println!("  Price Trend: {}", interpret_tick_direction(metrics.tick_direction));
+    println!(
+        "  Order Flow: {}",
+        interpret_ofi(metrics.order_flow_imbalance)
+    );
+    println!(
+        "  Price Trend: {}",
+        interpret_tick_direction(metrics.tick_direction)
+    );
     println!("  Spread: ${:.2}", metrics.spread_estimate);
 }
 
@@ -222,20 +237,25 @@ fn print_metrics(metrics: &MicrostructureMetrics) {
     println!("  ├─ Order Flow:");
     println!("  │  ├─ Buy Volume: {:.4} BTC", metrics.buy_volume);
     println!("  │  ├─ Sell Volume: {:.4} BTC", metrics.sell_volume);
-    println!("  │  └─ Imbalance: {:.3} {}",
+    println!(
+        "  │  └─ Imbalance: {:.3} {}",
         metrics.order_flow_imbalance,
         format_ofi_indicator(metrics.order_flow_imbalance)
     );
     println!("  │");
     println!("  ├─ Trade Aggressiveness:");
     println!("  │  ├─ Aggressive Buys: {}", metrics.aggressive_buy_count);
-    println!("  │  ├─ Aggressive Sells: {}", metrics.aggressive_sell_count);
+    println!(
+        "  │  ├─ Aggressive Sells: {}",
+        metrics.aggressive_sell_count
+    );
     println!("  │  └─ Ratio: {:.3}", metrics.aggressiveness_ratio);
     println!("  │");
     println!("  └─ Price Dynamics:");
     println!("     ├─ Volatility (σ): ${:.2}", metrics.price_volatility);
     println!("     ├─ Spread Estimate: ${:.2}", metrics.spread_estimate);
-    println!("     └─ Tick Direction: {:.3} {}",
+    println!(
+        "     └─ Tick Direction: {:.3} {}",
         metrics.tick_direction,
         format_tick_indicator(metrics.tick_direction)
     );

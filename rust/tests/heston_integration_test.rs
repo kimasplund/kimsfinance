@@ -226,8 +226,7 @@ mod heston_integration {
         let options = generate_test_options(10, 48000.0);
 
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-        let mut pricer =
-            HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer");
+        let mut pricer = HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer");
 
         // Price 5 times
         let mut prices = Vec::new();
@@ -250,7 +249,10 @@ mod heston_integration {
             }
         }
 
-        println!("✓ GPU pricing is deterministic across {} runs", prices.len());
+        println!(
+            "✓ GPU pricing is deterministic across {} runs",
+            prices.len()
+        );
     }
 
     #[test]
@@ -502,10 +504,7 @@ mod heston_integration {
         // Should converge
         assert!(result.converged, "Did not converge within 50 iterations");
 
-        println!(
-            "✓ Calibration completed in {:?} (target: <60s)",
-            elapsed
-        );
+        println!("✓ Calibration completed in {:?} (target: <60s)", elapsed);
     }
 
     #[test]
@@ -515,8 +514,7 @@ mod heston_integration {
 
         let params = create_test_params();
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
-        let mut pricer =
-            HestonGpuPricer::new(device, 4096, 1000).expect("Failed to create pricer");
+        let mut pricer = HestonGpuPricer::new(device, 4096, 1000).expect("Failed to create pricer");
 
         // Test different batch sizes
         for n in [10, 50, 100, 500] {
@@ -580,10 +578,7 @@ mod heston_integration {
 
         // Test correlation bounds
         let result = HestonParams::new(2.0, 0.04, 0.3, -1.5, 0.04);
-        assert!(
-            result.is_err(),
-            "Should reject correlation outside [-1, 1]"
-        );
+        assert!(result.is_err(), "Should reject correlation outside [-1, 1]");
         println!("✓ Correlation bounds validated");
 
         // Test positive parameters
@@ -623,7 +618,11 @@ mod heston_integration {
             .expect("Batch Greeks calculation failed");
         let batch_time = start.elapsed().as_secs_f64() * 1000.0;
 
-        println!("Batch GPU Greeks: {:.2}ms for {} options", batch_time, options.len());
+        println!(
+            "Batch GPU Greeks: {:.2}ms for {} options",
+            batch_time,
+            options.len()
+        );
 
         // Compare with sequential calculation for accuracy
         let greeks_sequential: Vec<_> = options
@@ -633,9 +632,12 @@ mod heston_integration {
 
         // Verify accuracy: batch should match sequential within 1%
         for (i, (batch_g, seq_g)) in greeks_batch.iter().zip(&greeks_sequential).enumerate() {
-            let delta_err = (batch_g.delta.unwrap() - seq_g.delta.unwrap()).abs() / seq_g.delta.unwrap();
-            let gamma_err = (batch_g.gamma.unwrap() - seq_g.gamma.unwrap()).abs() / seq_g.gamma.unwrap();
-            let vega_err = (batch_g.vega.unwrap() - seq_g.vega.unwrap()).abs() / seq_g.vega.unwrap();
+            let delta_err =
+                (batch_g.delta.unwrap() - seq_g.delta.unwrap()).abs() / seq_g.delta.unwrap();
+            let gamma_err =
+                (batch_g.gamma.unwrap() - seq_g.gamma.unwrap()).abs() / seq_g.gamma.unwrap();
+            let vega_err =
+                (batch_g.vega.unwrap() - seq_g.vega.unwrap()).abs() / seq_g.vega.unwrap();
 
             assert!(
                 delta_err < 0.01,
@@ -763,7 +765,8 @@ mod heston_integration {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
 
         // Create Heston pricer
-        let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Failed to create pricer");
+        let pricer =
+            HestonGpuPricer::new(device.clone(), 4096, 1000).expect("Failed to create pricer");
         let pricer_arc = Arc::new(Mutex::new(pricer));
 
         let params = create_test_params();

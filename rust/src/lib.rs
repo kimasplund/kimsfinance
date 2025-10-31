@@ -61,6 +61,19 @@ pub mod validation;
 
 pub mod analysis;
 
+pub mod quantitative;
+
+#[cfg(any(
+    feature = "data-ibkr",
+    feature = "data-deribit",
+    feature = "data-downloaders"
+))]
+pub mod data;
+
+// Options trading strategy framework
+#[cfg(feature = "data-downloaders")]
+pub mod strategy;
+
 #[cfg(feature = "gpu")]
 mod batch_backtest_py;
 

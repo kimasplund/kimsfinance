@@ -33,7 +33,6 @@ impl std::fmt::Display for Outlier {
 }
 
 impl Outlier {
-
     /// Check if outlier is extremely significant (>10σ)
     ///
     /// Typically indicates data corruption rather than genuine market events.
@@ -144,11 +143,7 @@ impl OutlierDetector {
         let mean = prices.iter().sum::<f64>() / prices.len() as f64;
 
         // Calculate standard deviation
-        let variance = prices
-            .iter()
-            .map(|p| (p - mean).powi(2))
-            .sum::<f64>()
-            / prices.len() as f64;
+        let variance = prices.iter().map(|p| (p - mean).powi(2)).sum::<f64>() / prices.len() as f64;
         let std_dev = variance.sqrt();
 
         // Avoid division by zero for constant prices
@@ -231,11 +226,7 @@ impl OutlierDetector {
 
         let prices: Vec<f64> = trades.iter().map(|t| t.price).collect();
         let mean = prices.iter().sum::<f64>() / prices.len() as f64;
-        let variance = prices
-            .iter()
-            .map(|p| (p - mean).powi(2))
-            .sum::<f64>()
-            / prices.len() as f64;
+        let variance = prices.iter().map(|p| (p - mean).powi(2)).sum::<f64>() / prices.len() as f64;
         let std_dev = variance.sqrt();
 
         (mean, std_dev)
@@ -300,11 +291,7 @@ mod tests {
     #[test]
     fn test_constant_prices() {
         // All same price -> std_dev = 0 -> no outliers
-        let trades = vec![
-            make_trade(100.0),
-            make_trade(100.0),
-            make_trade(100.0),
-        ];
+        let trades = vec![make_trade(100.0), make_trade(100.0), make_trade(100.0)];
 
         let detector = OutlierDetector::new(3.0);
         let outliers = detector.find_outliers(&trades);
@@ -331,7 +318,11 @@ mod tests {
         let outliers = detector.find_outliers(&trades);
 
         // Both 150 and 50 should be detected as outliers
-        assert!(outliers.len() >= 2, "Expected at least 2 outliers, found {}", outliers.len());
+        assert!(
+            outliers.len() >= 2,
+            "Expected at least 2 outliers, found {}",
+            outliers.len()
+        );
     }
 
     #[test]
@@ -365,18 +356,18 @@ mod tests {
 
         assert!(extreme.len() > 0, "Expected at least one extreme outlier");
         if extreme.len() > 0 {
-            assert!(extreme[0].z_score > 10.0, "Z-score should be >10, got {}", extreme[0].z_score);
+            assert!(
+                extreme[0].z_score > 10.0,
+                "Z-score should be >10, got {}",
+                extreme[0].z_score
+            );
             assert!(extreme[0].is_extreme());
         }
     }
 
     #[test]
     fn test_price_statistics() {
-        let trades = vec![
-            make_trade(100.0),
-            make_trade(110.0),
-            make_trade(90.0),
-        ];
+        let trades = vec![make_trade(100.0), make_trade(110.0), make_trade(90.0)];
 
         let detector = OutlierDetector::new(5.0);
         let (mean, std_dev) = detector.price_statistics(&trades);

@@ -31,8 +31,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     if let (Some(first), Some(last)) = (candles.first(), candles.last()) {
         println!("Date range:");
-        println!("  First candle: {} (open={:.2})", first.timestamp, first.open);
-        println!("  Last candle:  {} (close={:.2})", last.timestamp, last.close);
+        println!(
+            "  First candle: {} (open={:.2})",
+            first.timestamp, first.open
+        );
+        println!(
+            "  Last candle:  {} (close={:.2})",
+            last.timestamp, last.close
+        );
         println!();
 
         let total_volume: f64 = candles.iter().map(|c| c.volume).sum();
@@ -41,7 +47,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Statistics:");
         println!("  Total volume: {:.2} BTC", total_volume);
         println!("  Total trades: {}", total_trades);
-        println!("  Avg trades/candle: {:.0}", total_trades as f64 / candles.len() as f64);
+        println!(
+            "  Avg trades/candle: {:.0}",
+            total_trades as f64 / candles.len() as f64
+        );
     }
 
     println!();

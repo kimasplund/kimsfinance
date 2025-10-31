@@ -18,8 +18,8 @@
 
 #![cfg(feature = "gpu")]
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use kimsfinance_core::binance::{aggregate_trades_to_candles, Timeframe, Trade};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use kimsfinance_core::binance::{Timeframe, Trade, aggregate_trades_to_candles};
 use kimsfinance_core::gpu::GpuAggregator;
 use std::time::Duration;
 
@@ -125,30 +125,22 @@ fn bench_cpu_vs_gpu(c: &mut Criterion) {
         let timeframe = Timeframe::minutes(5);
 
         // CPU benchmark
-        group.bench_with_input(
-            BenchmarkId::new("cpu", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    let candles = aggregate_trades_to_candles(black_box(&trades), timeframe);
-                    black_box(candles);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("cpu", size), &size, |b, _| {
+            b.iter(|| {
+                let candles = aggregate_trades_to_candles(black_box(&trades), timeframe);
+                black_box(candles);
+            });
+        });
 
         // GPU benchmark
-        group.bench_with_input(
-            BenchmarkId::new("gpu", size),
-            &size,
-            |b, _| {
-                b.iter(|| {
-                    let candles = aggregator
-                        .aggregate_trades(black_box(&trades), timeframe)
-                        .expect("GPU aggregation failed");
-                    black_box(candles);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("gpu", size), &size, |b, _| {
+            b.iter(|| {
+                let candles = aggregator
+                    .aggregate_trades(black_box(&trades), timeframe)
+                    .expect("GPU aggregation failed");
+                black_box(candles);
+            });
+        });
     }
 
     group.finish();
@@ -177,30 +169,22 @@ fn bench_timeframes(c: &mut Criterion) {
         ("1d", Timeframe::days(1)),
     ] {
         // CPU
-        group.bench_with_input(
-            BenchmarkId::new("cpu", name),
-            timeframe,
-            |b, &timeframe| {
-                b.iter(|| {
-                    let candles = aggregate_trades_to_candles(black_box(&trades), timeframe);
-                    black_box(candles);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("cpu", name), timeframe, |b, &timeframe| {
+            b.iter(|| {
+                let candles = aggregate_trades_to_candles(black_box(&trades), timeframe);
+                black_box(candles);
+            });
+        });
 
         // GPU
-        group.bench_with_input(
-            BenchmarkId::new("gpu", name),
-            timeframe,
-            |b, &timeframe| {
-                b.iter(|| {
-                    let candles = aggregator
-                        .aggregate_trades(black_box(&trades), timeframe)
-                        .expect("GPU aggregation failed");
-                    black_box(candles);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("gpu", name), timeframe, |b, &timeframe| {
+            b.iter(|| {
+                let candles = aggregator
+                    .aggregate_trades(black_box(&trades), timeframe)
+                    .expect("GPU aggregation failed");
+                black_box(candles);
+            });
+        });
     }
 
     group.finish();
