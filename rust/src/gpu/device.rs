@@ -477,6 +477,56 @@ impl GpuDevice {
                 GpuError::ExecutionError(format!("Failed to query kernel occupancy: {:?}", e))
             })
     }
+
+    /// Get GPU compute capability
+    ///
+    /// Returns the compute capability of the GPU (e.g., (8, 9) for RTX 3500 Ada).
+    ///
+    /// # Returns
+    ///
+    /// Tuple of (major, minor) compute capability version
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let device = GpuDevice::new()?;
+    /// let (major, minor) = device.compute_capability();
+    /// println!("GPU Compute Capability: {}.{}", major, minor);
+    ///
+    /// // Check for FP8 support (requires 8.9+)
+    /// if major >= 8 && minor >= 9 {
+    ///     println!("FP8 tensor cores supported!");
+    /// }
+    /// ```
+    pub fn compute_capability(&self) -> (u32, u32) {
+        use cudarc::driver::sys;
+
+        unsafe {
+            let mut major = 0i32;
+            let mut minor = 0i32;
+
+            // Query compute capability from device
+            let result_major = sys::cuDeviceGetAttribute(
+                    &mut major,
+                    sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                    self.context.cu_device(),
+                );
+
+            let result_minor = sys::cuDeviceGetAttribute(
+                    &mut minor,
+                    sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                    self.context.cu_device(),
+                );
+
+            if result_major.is_ok() && result_minor.is_ok() {
+                (major as u32, minor as u32)
+            } else {
+                // Fallback: assume compute capability 7.0 (Volta) if query fails
+                eprintln!("Warning: Failed to query compute capability, assuming 7.0");
+                (7, 0)
+            }
+        }
+    }
 }
 
 /// GPU operation errors

@@ -361,6 +361,12 @@ pub mod ichimoku;
 #[cfg(feature = "gpu")]
 pub use ichimoku::{IchimokuOutput, ichimoku_gpu};
 
+#[cfg(feature = "gpu")]
+pub mod fp8_wmma;
+
+#[cfg(feature = "gpu")]
+pub use fp8_wmma::{FP8Error, FP8TensorCore, quantize_fp8_cpu};
+
 #[cfg(feature = "heston")]
 pub use heston_pricing::HestonGpuPricer;
 
