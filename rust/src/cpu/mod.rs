@@ -6,4 +6,4 @@
 pub mod sequential;
 
 // Re-export core functions
-pub use sequential::{ema_cpu, sma_cpu, wilders_smoothing_cpu};
+pub use sequential::{ema_cpu, macd_cpu, sma_cpu, wilders_smoothing_cpu};

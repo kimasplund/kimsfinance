@@ -72,7 +72,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use super::{
-    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, ema_gpu, macd_gpu, roc_gpu, rsi_gpu,
+    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, ema_gpu, macd_hybrid, roc_gpu, rsi_gpu,
     sma_gpu, stochastic_gpu, williams_r_gpu, wma_gpu,
 };
 use cudarc::driver::CudaStream;
@@ -527,7 +527,7 @@ impl ParameterSweep {
             IndicatorType::MACD => {
                 // For MACD, param represents fast_period (slow=26, signal=9 fixed)
                 let (macd_line, _signal, _histogram) =
-                    macd_gpu(&self.device, &data.close, param, 26, 9, stream)?;
+                    macd_hybrid(&self.device, &data.close, param, 26, 9, stream)?;
                 Ok(macd_line) // Return MACD line for simplicity
             }
         }

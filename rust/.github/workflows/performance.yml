@@ -1,0 +1,127 @@
+name: Performance Regression Tests
+
+on:
+  push:
+    branches: [ master, dev-* ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  performance-tests:
+    name: Performance Regression Tests
+    runs-on: self-hosted  # Requires GPU - must use self-hosted runner
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check GPU availability
+        run: |
+          nvidia-smi || echo "WARNING: nvidia-smi not available"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release binary
+        run: |
+          cd rust
+          cargo build --release --features gpu --benches
+
+      - name: Run performance regression tests
+        id: regression_tests
+        run: |
+          cd rust
+          cargo run --release --features gpu --bench performance_regression 2>&1 | tee performance_report.txt
+        continue-on-error: true
+
+      - name: Check test results
+        run: |
+          cd rust
+          if [ ${{ steps.regression_tests.outcome }} != 'success' ]; then
+            echo "❌ Performance regression tests failed"
+            cat performance_report.txt
+            exit 1
+          else
+            echo "✅ Performance regression tests passed"
+          fi
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-report
+          path: rust/performance_report.txt
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('rust/performance_report.txt', 'utf8');
+
+            const comment = `## Performance Regression Test Results
+
+            \`\`\`
+            ${report}
+            \`\`\`
+
+            See [Performance Regression Testing Guide](../docs/PERFORMANCE_REGRESSION_TESTING.md) for details.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Optional: Run on CPU-only (for comparison)
+  performance-tests-cpu:
+    name: Performance Tests (CPU-only baseline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run CPU-only benchmarks
+        run: |
+          cd rust
+          # Run subset of CPU-only tests (MACD, EMA hybrid)
+          cargo test --release --lib test_macd_cpu -- --nocapture
+        continue-on-error: true
+
+      - name: Upload CPU report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cpu-performance-report
+          path: rust/target/release/deps/kimsfinance_core-*.out
+          retention-days: 7

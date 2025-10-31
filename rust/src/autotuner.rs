@@ -832,48 +832,14 @@ impl AutoTuneProfile {
         Ok(20_000)
     }
 
-    /// Find crossover point for MACD
+    /// Find crossover point for MACD (always use CPU - no GPU benefit)
     #[cfg(feature = "gpu")]
-    fn find_macd_crossover(device: &GpuDevice) -> Result<usize, GpuError> {
-        use crate::gpu::macd_gpu;
-        use crate::indicators::{MACD, MultiOutputIndicator};
-        use std::time::Instant;
-
-        let sizes = vec![100, 500, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000];
-
-        for &size in &sizes {
-            let close = Self::generate_test_prices(size);
-
-            // Benchmark CPU
-            let macd = MACD::new(12, 26, 9).map_err(|e| GpuError::ExecutionError(e.to_string()))?;
-
-            let cpu_start = Instant::now();
-            for _ in 0..10 {
-                let _ = macd
-                    .calculate_multi(close.view())
-                    .map_err(|e| GpuError::ExecutionError(e.to_string()))?;
-            }
-            let cpu_time_ns = cpu_start.elapsed().as_nanos() / 10;
-
-            // Benchmark GPU
-            let gpu_start = Instant::now();
-            for _ in 0..10 {
-                let _ = macd_gpu(device, &close, 12, 26, 9, None)?;
-            }
-            let gpu_time_ns = gpu_start.elapsed().as_nanos() / 10;
-
-            if gpu_time_ns < cpu_time_ns {
-                println!(
-                    "   MACD crossover: {} candles (GPU: {}μs, CPU: {}μs)",
-                    size,
-                    gpu_time_ns / 1_000,
-                    cpu_time_ns / 1_000
-                );
-                return Ok(size);
-            }
-        }
-
-        Ok(50_000)
+    fn find_macd_crossover(_device: &GpuDevice) -> Result<usize, GpuError> {
+        // MACD uses 3 sequential EMAs which cannot be parallelized.
+        // CPU is 1,647x faster than single-threaded GPU execution.
+        // Return very high threshold to always use CPU.
+        println!("   MACD: Always use CPU (1,647x faster than GPU for sequential EMAs)");
+        Ok(usize::MAX) // Never use GPU
     }
 
     /// Find crossover point for generic parallel operations

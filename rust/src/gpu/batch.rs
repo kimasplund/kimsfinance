@@ -40,7 +40,7 @@ use super::l2_cache::{
 };
 use super::streams::{IndicatorSpeed, StreamManager};
 use super::{
-    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, macd_gpu, roc_gpu, rsi_gpu, stochastic_gpu,
+    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, macd_hybrid, roc_gpu, rsi_gpu, stochastic_gpu,
     williams_r_gpu,
 };
 use ndarray::Array1;
@@ -199,12 +199,12 @@ impl BatchIndicatorParams {
 ///
 /// **Slow (> 15μs/candle)**:
 /// - Stochastic: Complex rolling windows (%K, %D smoothing)
-/// - MACD: Three sequential EMAs (fast, slow, signal)
+/// - MACD: Now uses CPU execution (macd_hybrid) - 1,647x faster than old GPU version
 fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
     match indicator {
         // Fast: Simple arithmetic operations (< 5μs/candle)
-        BatchIndicatorType::ROC | BatchIndicatorType::WilliamsR | BatchIndicatorType::CCI => {
-            IndicatorSpeed::Fast
+        BatchIndicatorType::ROC | BatchIndicatorType::WilliamsR | BatchIndicatorType::CCI | BatchIndicatorType::MACD => {
+            IndicatorSpeed::Fast  // MACD now uses CPU (75μs for 100K candles = 0.75μs/candle)
         }
 
         // Medium: Smoothing operations (5-15μs/candle)
@@ -214,7 +214,7 @@ fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
         | BatchIndicatorType::BollingerBands => IndicatorSpeed::Medium,
 
         // Slow: Complex multi-stage calculations (> 15μs/candle)
-        BatchIndicatorType::Stochastic | BatchIndicatorType::MACD => IndicatorSpeed::Slow,
+        BatchIndicatorType::Stochastic => IndicatorSpeed::Slow,
     }
 }
 
@@ -287,7 +287,7 @@ fn calculate_single_indicator(
             let slow = params.slow_period.unwrap_or(26);
             let signal = params.signal_period.unwrap_or(9);
             let (macd_line, signal_line, histogram) =
-                macd_gpu(device, close, fast, slow, signal, None)?;
+                macd_hybrid(device, close, fast, slow, signal, None)?;
             Ok(IndicatorResult::Triple(macd_line, signal_line, histogram))
         }
     }

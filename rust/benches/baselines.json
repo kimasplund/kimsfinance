@@ -1,0 +1,142 @@
+{
+  "version": "1.0.0",
+  "hardware": {
+    "gpu": "NVIDIA RTX 3500 Ada",
+    "cpu": "Intel i9-13980HX",
+    "cuda": "13.0",
+    "compute_capability": "8.9"
+  },
+  "test_config": {
+    "candles": 100000,
+    "warmup_runs": 5,
+    "measurement_runs": 10,
+    "build": "release"
+  },
+  "baselines": {
+    "simple_indicators": {
+      "description": "Simple indicators with 2-3 memory transfers (target <1ms)",
+      "indicators": {
+        "ema_hybrid": {
+          "baseline_us": 200,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "CPU fallback - fastest indicator"
+        },
+        "roc": {
+          "baseline_us": 442,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "2nd fastest - vindicated after investigation"
+        },
+        "sma": {
+          "baseline_us": 519,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "3rd fastest - pure GPU"
+        },
+        "wma": {
+          "baseline_us": 717,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Simple weighted moving average"
+        },
+        "vwma": {
+          "baseline_us": 1033,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Volume-weighted moving average"
+        }
+      }
+    },
+    "medium_indicators": {
+      "description": "Medium indicators with 4-5 memory transfers (target <2ms)",
+      "indicators": {
+        "williams_r": {
+          "baseline_us": 1079,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Williams %R momentum indicator"
+        },
+        "cci": {
+          "baseline_us": 1152,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Commodity Channel Index"
+        },
+        "donchian": {
+          "baseline_us": 1174,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Donchian Channels"
+        },
+        "stochastic": {
+          "baseline_us": 1279,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Stochastic oscillator"
+        },
+        "elder_ray": {
+          "baseline_us": 1330,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Elder Ray Index"
+        },
+        "cmf": {
+          "baseline_us": 1779,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Chaikin Money Flow"
+        }
+      }
+    },
+    "complex_indicators": {
+      "description": "Complex indicators with 6+ memory transfers (target <3ms)",
+      "indicators": {
+        "atr": {
+          "baseline_us": 1360,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Average True Range - Jules' async optimization reference"
+        },
+        "rsi": {
+          "baseline_us": 2512,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "Relative Strength Index"
+        },
+        "rsi_sync": {
+          "baseline_us": 2870,
+          "tolerance_percent": 10,
+          "warn_percent": 5,
+          "notes": "RSI sync variant"
+        }
+      }
+    },
+    "known_issues": {
+      "description": "Indicators with known performance issues",
+      "indicators": {
+        "macd_cpu": {
+          "baseline_us": 75,
+          "tolerance_percent": 20,
+          "warn_percent": 10,
+          "notes": "Now uses CPU execution (1,647x faster than old GPU version)"
+        },
+        "obv": {
+          "baseline_us": 4696,
+          "tolerance_percent": 20,
+          "warn_percent": 10,
+          "notes": "Under investigation - single-threaded cumsum bottleneck. Target: <1ms after optimization"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "created_by": "Performance investigation agent army",
+    "date": "2025-10-31",
+    "after_optimizations": [
+      "PR #9: Async pinned memory (27 files, 152 transfers)",
+      "MACD CPU execution (1,647x speedup)",
+      "Benchmark methodology fix (proper warmup)"
+    ]
+  }
+}

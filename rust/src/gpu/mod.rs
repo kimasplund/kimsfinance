@@ -52,6 +52,9 @@ pub mod async_transfers;
 pub mod triple_buffer;
 
 #[cfg(feature = "gpu")]
+pub mod timing;
+
+#[cfg(feature = "gpu")]
 pub mod compile;
 
 #[cfg(feature = "gpu")]
@@ -118,6 +121,9 @@ pub use async_transfers::{AsyncTransferExt, CudaEvent};
 pub use triple_buffer::TripleBufferedExecutor;
 
 #[cfg(feature = "gpu")]
+pub use timing::{GpuTimer, MultiPhaseTimer, TimingBreakdown};
+
+#[cfg(feature = "gpu")]
 pub use stochastic::stochastic_gpu;
 
 #[cfg(feature = "gpu")]
@@ -154,7 +160,7 @@ pub use rsi::rsi_gpu;
 pub mod macd;
 
 #[cfg(feature = "gpu")]
-pub use macd::macd_gpu;
+pub use macd::{macd_gpu, macd_hybrid};
 
 #[cfg(feature = "gpu")]
 pub mod donchian;
@@ -198,7 +204,13 @@ pub use batch::{
 pub mod obv;
 
 #[cfg(feature = "gpu")]
+pub mod obv_optimized;
+
+#[cfg(feature = "gpu")]
 pub use obv::obv_gpu;
+
+#[cfg(feature = "gpu")]
+pub use obv_optimized::obv_gpu_optimized;
 
 #[cfg(feature = "gpu")]
 pub mod cmf;
