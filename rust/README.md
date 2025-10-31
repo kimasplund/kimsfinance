@@ -386,6 +386,63 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Example 7: Heston Model Calibration (Options Pricing)
+
+**NEW in v0.2.0**: GPU-accelerated stochastic volatility model for options pricing.
+
+```rust
+use kimsfinance_core::gpu::GpuDevice;
+use kimsfinance_core::gpu::heston_pricing::HestonGpuPricer;
+use kimsfinance_core::quantitative::heston::{
+    HestonCalibrator, HestonParams, OptionQuote, OptionType,
+};
+use std::sync::Arc;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize GPU pricer
+    let device = Arc::new(GpuDevice::new()?);
+    let gpu_pricer = Arc::new(HestonGpuPricer::new(device, 4096)?);
+
+    // Load market options (from IBKR, Deribit, or other source)
+    let market_options = load_market_options()?;
+
+    // Set initial parameter guess
+    let initial_params = HestonParams {
+        kappa: 2.0,   // Mean reversion speed
+        theta: 0.04,  // Long-term variance (20% vol)
+        sigma: 0.3,   // Vol of vol
+        rho: -0.7,    // Correlation
+        v0: 0.04,     // Initial variance
+    };
+
+    // Calibrate Heston model to market prices
+    let calibrator = HestonCalibrator::new(
+        gpu_pricer,
+        market_options,
+        initial_params,
+    )?;
+
+    let result = calibrator.calibrate()?;
+
+    println!("Calibrated Parameters:");
+    println!("  κ (kappa): {:.4}", result.params.kappa);
+    println!("  θ (theta): {:.4}", result.params.theta);
+    println!("  σ (sigma): {:.4}", result.params.sigma);
+    println!("  ρ (rho):   {:.4}", result.params.rho);
+    println!("  v₀:        {:.4}", result.params.v0);
+    println!("RMSE: {:.6}", result.rmse());
+
+    Ok(())
+}
+```
+
+**Run the example**:
+```bash
+cargo run --example calibrate_heston --features heston
+```
+
+**See also**: [HESTON_CALIBRATOR.md](docs/HESTON_CALIBRATOR.md) for comprehensive guide
+
 ---
 
 ## Architecture

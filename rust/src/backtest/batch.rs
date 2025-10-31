@@ -132,6 +132,7 @@ impl Default for ExecutionMode {
 /// Strategy type enumeration for batch backtesting
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StrategyType {
+    // ===== Equity Strategies (0-9) =====
     /// RSI crossover strategy
     /// Parameters: [rsi_period, buy_threshold, sell_threshold]
     RsiCrossover = 0,
@@ -143,6 +144,76 @@ pub enum StrategyType {
     /// Bollinger Bands mean reversion
     /// Parameters: [bb_period, bb_std, entry_std, exit_std]
     BollingerMeanReversion = 2,
+
+    // ===== Options Strategies (10-19) =====
+    /// Long straddle (buy ATM call + ATM put)
+    /// Parameters: [vol_threshold, breakeven_pct]
+    /// Enter when IV < HV - vol_threshold (cheap options)
+    /// Exit when |underlying_move| > breakeven_pct
+    LongStraddle = 10,
+
+    /// Short straddle (sell ATM call + ATM put)
+    /// Parameters: [vol_threshold, max_loss_pct]
+    /// Enter when IV > HV + vol_threshold (expensive options)
+    /// Exit when loss exceeds max_loss_pct
+    ShortStraddle = 11,
+
+    /// Covered call (long stock + short OTM call)
+    /// Parameters: [strike_offset_pct, min_premium_pct]
+    /// Sell call strike_offset_pct above current price
+    /// Only enter if premium >= min_premium_pct
+    CoveredCall = 12,
+
+    /// Iron condor (sell OTM put + call, buy further OTM put + call)
+    /// Parameters: [short_put_offset, short_call_offset, long_offset, min_credit]
+    /// Collect premium from range-bound movement
+    /// Max loss capped by long options
+    IronCondor = 13,
+
+    /// Delta-neutral volatility trading
+    /// Parameters: [delta_threshold, rebalance_threshold, vol_threshold]
+    /// Maintain delta near zero via dynamic hedging
+    /// Profit from gamma/vega exposure
+    DeltaNeutral = 14,
+
+    /// Volatility arbitrage (IV vs HV)
+    /// Parameters: [vol_threshold, hedge_delta, min_edge]
+    /// Buy underpriced options (IV < HV - threshold)
+    /// Delta hedge to isolate vol exposure
+    VolatilityArbitrage = 15,
+}
+
+impl StrategyType {
+    /// Check if this strategy type requires options data
+    ///
+    /// # Returns
+    ///
+    /// `true` if strategy is in the options category (10-19), `false` for equity strategies (0-9)
+    pub fn is_options_strategy(&self) -> bool {
+        (*self as i32) >= 10 && (*self as i32) < 20
+    }
+
+    /// Check if this strategy type is an equity strategy
+    ///
+    /// # Returns
+    ///
+    /// `true` if strategy is in the equity category (0-9), `false` for options strategies (10-19)
+    pub fn is_equity_strategy(&self) -> bool {
+        (*self as i32) < 10
+    }
+
+    /// Get the strategy category name
+    ///
+    /// # Returns
+    ///
+    /// "Equity" for strategies 0-9, "Options" for strategies 10-19
+    pub fn category(&self) -> &'static str {
+        if self.is_options_strategy() {
+            "Options"
+        } else {
+            "Equity"
+        }
+    }
 }
 
 /// OHLCV data for backtesting
@@ -246,6 +317,13 @@ pub fn calculate_optimal_threshold(
 /// - Trades: 1000 × 1000 × 48 = 48 MB
 /// - Metrics: 1000 × 3 × 8 = 24 KB
 /// - **Total: ~540 MB** (well under 1GB target)
+///
+/// # Options Strategy Support (Phase 2)
+///
+/// For options strategies, adds Phase 0 (Heston GPU pricing) before backtest:
+///
+/// - Phase 0: Heston pricing: 1000 options × 4KB = 4 MB
+/// - **Total with options: ~544 MB** (still under 1GB target)
 pub struct BatchBacktestSweep {
     device: Arc<GpuDevice>,
     strategy_type: Option<StrategyType>,
@@ -253,6 +331,14 @@ pub struct BatchBacktestSweep {
     parameters: Vec<Vec<f64>>,
     config: BacktestConfig,
     execution_mode: ExecutionMode,
+
+    // Phase 2: Options strategy support
+    #[cfg(feature = "heston")]
+    heston_pricer: Option<Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>>,
+    #[cfg(feature = "heston")]
+    heston_params: Option<crate::quantitative::heston::HestonParams>,
+    #[cfg(feature = "heston")]
+    options_data: Option<Vec<crate::quantitative::heston::OptionQuote>>,
 }
 
 impl BatchBacktestSweep {
@@ -276,6 +362,12 @@ impl BatchBacktestSweep {
             parameters: Vec::new(),
             config: BacktestConfig::default(),
             execution_mode: ExecutionMode::default(),
+            #[cfg(feature = "heston")]
+            heston_pricer: None,
+            #[cfg(feature = "heston")]
+            heston_params: None,
+            #[cfg(feature = "heston")]
+            options_data: None,
         }
     }
 
@@ -380,6 +472,83 @@ impl BatchBacktestSweep {
     /// ```
     pub fn execution_mode(mut self, mode: ExecutionMode) -> Self {
         self.execution_mode = mode;
+        self
+    }
+
+    /// Set Heston GPU pricer for options strategies (Phase 2)
+    ///
+    /// Required for options-based strategies. The pricer should be pre-initialized
+    /// with appropriate FFT size and max batch size.
+    ///
+    /// # Arguments
+    ///
+    /// * `pricer` - Initialized HestonGpuPricer (wrapped in Arc<Mutex<>>)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use kimsfinance_core::gpu::HestonGpuPricer;
+    /// use parking_lot::Mutex;
+    ///
+    /// let pricer = HestonGpuPricer::new(device.clone(), 4096, 1000)?;
+    /// let pricer_arc = Arc::new(Mutex::new(pricer));
+    ///
+    /// sweep.heston_pricer(pricer_arc)
+    /// ```
+    #[cfg(feature = "heston")]
+    pub fn heston_pricer(
+        mut self,
+        pricer: Arc<parking_lot::Mutex<crate::gpu::HestonGpuPricer>>,
+    ) -> Self {
+        self.heston_pricer = Some(pricer);
+        self
+    }
+
+    /// Set Heston model parameters for options pricing
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Validated Heston parameters (kappa, theta, sigma, rho, v0)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use kimsfinance_core::quantitative::heston::HestonParams;
+    ///
+    /// let params = HestonParams::new(2.0, 0.04, 0.3, -0.7, 0.04)?;
+    /// sweep.heston_params(params)
+    /// ```
+    #[cfg(feature = "heston")]
+    pub fn heston_params(mut self, params: crate::quantitative::heston::HestonParams) -> Self {
+        self.heston_params = Some(params);
+        self
+    }
+
+    /// Set options market data for pricing
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Vec of OptionQuote structs with strikes, expirations, etc.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let options = vec![
+    ///     OptionQuote {
+    ///         underlying: "BTC".to_string(),
+    ///         strike: 50000.0,
+    ///         expiration: now + (30 * 24 * 3600),
+    ///         option_type: OptionType::Call,
+    ///         spot_price: 48000.0,
+    ///         risk_free_rate: 0.05,
+    ///         // ... other fields
+    ///     },
+    /// ];
+    /// sweep.options_data(options)
+    /// ```
+    #[cfg(feature = "heston")]
+    pub fn options_data(mut self, options: Vec<crate::quantitative::heston::OptionQuote>) -> Self {
+        self.options_data = Some(options);
         self
     }
 
@@ -640,6 +809,63 @@ impl BatchBacktestSweep {
         )
     }
 
+    // ===== Phase 2: Options Strategy Support =====
+
+    /// Check if this is an options strategy (Phase 2 detection)
+    ///
+    /// Returns true if Heston pricer and options data are configured
+    #[cfg(feature = "heston")]
+    fn is_options_strategy(&self) -> bool {
+        self.heston_pricer.is_some() && self.heston_params.is_some() && self.options_data.is_some()
+    }
+
+    /// Check if this is an options strategy (Phase 2 detection) - fallback for non-Heston builds
+    #[cfg(not(feature = "heston"))]
+    fn is_options_strategy(&self) -> bool {
+        false
+    }
+
+    /// Price options using Heston GPU pricer (Phase 0 of pipeline)
+    ///
+    /// # Performance
+    ///
+    /// - 100 options: ~3ms
+    /// - 1000 options: ~15ms
+    ///
+    /// # Returns
+    ///
+    /// Vec of option prices (length = number of options)
+    ///
+    /// # Errors
+    ///
+    /// - Missing Heston pricer, params, or options data
+    /// - GPU pricing failure
+    #[cfg(feature = "heston")]
+    fn price_options_heston(&self) -> Result<Vec<f64>, GpuError> {
+        let pricer = self
+            .heston_pricer
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Heston pricer not set".into()))?;
+
+        let params = self
+            .heston_params
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Heston params not set".into()))?;
+
+        let options = self
+            .options_data
+            .as_ref()
+            .ok_or_else(|| GpuError::InvalidParameter("Options data not set".into()))?;
+
+        // Lock pricer and price options
+        let mut pricer_guard = pricer.lock();
+        pricer_guard
+            .price_options(params, options)
+            .map_err(|e| GpuError::ExecutionError(format!("Heston pricing failed: {:?}", e)))
+    }
+
+    // ===== End Phase 2: Options Strategy Support =====
+
     /// Execute using traditional method (4 separate kernel launches)
     ///
     /// This is the fallback method for smaller batches (<100 strategies)
@@ -678,6 +904,27 @@ impl BatchBacktestSweep {
         {
             return Err(GpuError::OhlcvLengthMismatch);
         }
+
+        // ===== Phase 0: Heston Option Pricing (if options strategy) =====
+        #[cfg(feature = "heston")]
+        let phase0_ms = if self.is_options_strategy() {
+            let start_phase0 = Instant::now();
+            let _option_prices = self.price_options_heston()?;
+            let phase0_time = start_phase0.elapsed().as_secs_f64() * 1000.0;
+
+            eprintln!(
+                "[Phase 0] Heston pricing complete: {:.2}ms for {} options",
+                phase0_time,
+                _option_prices.len()
+            );
+
+            phase0_time
+        } else {
+            0.0
+        };
+
+        #[cfg(not(feature = "heston"))]
+        let phase0_ms = 0.0;
 
         // ===== Compile CUDA Kernels (with caching) =====
         let ptx_arc = compile_backtest_kernels()?;
@@ -718,11 +965,34 @@ impl BatchBacktestSweep {
         )?;
         let phase4_ms = start_phase4.elapsed().as_secs_f64() * 1000.0;
 
-        // ===== Copy Results Back to CPU =====
-        let sharpe_vec = self.device.copy_to_host(&sharpe_ratios)?;
-        let dd_vec = self.device.copy_to_host(&max_drawdowns)?;
-        let wr_vec = self.device.copy_to_host(&win_rates)?;
-        let equity_vec = self.device.copy_to_host(&equity_curves)?;
+        // ===== D2H - Asynchronously copy results back to CPU =====
+        let mut pinned_sharpe = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let mut pinned_dd = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let mut pinned_wr = self.device.pinned_pool.lock().acquire(n_strategies)?;
+        let equity_len = n_strategies * n_candles;
+        let mut pinned_equity = self.device.pinned_pool.lock().acquire(equity_len)?;
+
+        self.device.stream.memcpy_dtoh(&sharpe_ratios, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&max_drawdowns, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&win_rates, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(&equity_curves, &mut pinned_equity.as_mut_slice()[..equity_len])?;
+
+        // Synchronize stream to ensure D2H copies are complete before CPU access
+        self.device.synchronize()?;
+
+        let sharpe_vec = pinned_sharpe.as_slice()[..n_strategies].to_vec();
+        let dd_vec = pinned_dd.as_slice()[..n_strategies].to_vec();
+        let wr_vec = pinned_wr.as_slice()[..n_strategies].to_vec();
+        let equity_vec = pinned_equity.as_slice()[..equity_len].to_vec();
+
+        // Release pinned buffers
+        let mut pool = self.device.pinned_pool.lock();
+        pool.release(pinned_sharpe);
+        pool.release(pinned_dd);
+        pool.release(pinned_wr);
+        pool.release(pinned_equity);
+        drop(pool);
+
         let num_trades_vec = {
             let slice = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
                 GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
@@ -785,7 +1055,7 @@ impl BatchBacktestSweep {
         });
 
         let total_ms = start_total.elapsed().as_secs_f64() * 1000.0;
-        let gpu_ms = phase1_ms + phase2_ms + phase3_ms + phase4_ms;
+        let gpu_ms = phase0_ms + phase1_ms + phase2_ms + phase3_ms + phase4_ms;
 
         // Calculate VRAM usage (approximate)
         let vram_used_mb = (
@@ -826,8 +1096,16 @@ impl BatchBacktestSweep {
             ohlcv_flat.push(data.volume[i]);
         }
 
-        // Copy OHLCV to GPU (shared across all strategies)
-        let d_ohlcv = self.device.copy_to_device(&ohlcv_flat)?;
+        // === H2D - Asynchronously copy OHLCV to GPU (shared across all strategies) ===
+        let ohlcv_len = ohlcv_flat.len();
+        let mut pinned_ohlcv = self.device.pinned_pool.lock().acquire(ohlcv_len)?;
+        pinned_ohlcv.as_mut_slice()[..ohlcv_len].copy_from_slice(&ohlcv_flat);
+
+        let mut d_ohlcv = self.device.alloc_buffer(ohlcv_len)?;
+        self.device.stream.memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_ohlcv);
 
         // Flatten parameters: [N_strategies × N_params]
         let n_params = self.parameters[0].len();
@@ -835,7 +1113,17 @@ impl BatchBacktestSweep {
         for params in &self.parameters {
             params_flat.extend_from_slice(params);
         }
-        let d_params = self.device.copy_to_device(&params_flat)?;
+
+        // === H2D - Asynchronously copy parameters to GPU ===
+        let params_len = params_flat.len();
+        let mut pinned_params = self.device.pinned_pool.lock().acquire(params_len)?;
+        pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
+
+        let mut d_params = self.device.alloc_buffer(params_len)?;
+        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_params);
 
         // Allocate output: [N_strategies × N_indicators × N_candles]
         let n_indicators = 3; // RSI, ATR, SMA for now
@@ -902,7 +1190,17 @@ impl BatchBacktestSweep {
         for params in &self.parameters {
             params_flat.extend_from_slice(params);
         }
-        let d_params = self.device.copy_to_device(&params_flat)?;
+
+        // === H2D - Asynchronously copy parameters to GPU ===
+        let params_len = params_flat.len();
+        let mut pinned_params = self.device.pinned_pool.lock().acquire(params_len)?;
+        pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
+
+        let mut d_params = self.device.alloc_buffer(params_len)?;
+        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_params);
 
         // Allocate signals: [N_strategies × N_candles] (int8)
         let signals_len = n_strategies * n_candles;
@@ -964,8 +1262,17 @@ impl BatchBacktestSweep {
         n_strategies: usize,
         n_candles: usize,
     ) -> Result<(CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>), GpuError> {
-        // Copy close prices to GPU
-        let d_close = self.device.copy_to_device(data.close.as_slice().unwrap())?;
+        // === H2D - Asynchronously copy close prices to GPU ===
+        let close_slice = data.close.as_slice().unwrap();
+        let close_len = close_slice.len();
+        let mut pinned_close = self.device.pinned_pool.lock().acquire(close_len)?;
+        pinned_close.as_mut_slice()[..close_len].copy_from_slice(close_slice);
+
+        let mut d_close = self.device.alloc_buffer(close_len)?;
+        self.device.stream.memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
+
+        // Release pinned buffer
+        self.device.pinned_pool.lock().release(pinned_close);
 
         // Allocate equity curves: [N_strategies × N_candles]
         let equity_len = n_strategies * n_candles;

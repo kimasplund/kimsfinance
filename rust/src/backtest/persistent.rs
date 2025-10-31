@@ -125,7 +125,17 @@ pub fn execute_persistent(
     for i in 0..n_candles {
         ohlcv_flat.push(data.volume[i]);
     }
-    let d_ohlcv = device.copy_to_device(&ohlcv_flat)?;
+
+    // === H2D - Asynchronously copy OHLCV data to device ===
+    let ohlcv_len = ohlcv_flat.len();
+    let mut pinned_ohlcv = device.pinned_pool.lock().acquire(ohlcv_len)?;
+    pinned_ohlcv.as_mut_slice()[..ohlcv_len].copy_from_slice(&ohlcv_flat);
+
+    let mut d_ohlcv = device.alloc_buffer(ohlcv_len)?;
+    device.stream.memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
+
+    // Release pinned buffer
+    device.pinned_pool.lock().release(pinned_ohlcv);
 
     // Flatten parameters
     let n_params = parameters[0].len();
@@ -133,7 +143,17 @@ pub fn execute_persistent(
     for params in &parameters {
         params_flat.extend_from_slice(params);
     }
-    let d_params = device.copy_to_device(&params_flat)?;
+
+    // === H2D - Asynchronously copy parameters to device ===
+    let params_len = params_flat.len();
+    let mut pinned_params = device.pinned_pool.lock().acquire(params_len)?;
+    pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
+
+    let mut d_params = device.alloc_buffer(params_len)?;
+    device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+
+    // Release pinned buffer
+    device.pinned_pool.lock().release(pinned_params);
 
     // Allocate output buffers
     let n_indicators = 3; // RSI, ATR, SMA
@@ -151,8 +171,17 @@ pub fn execute_persistent(
         .alloc_zeros::<i8>(signals_len)
         .map_err(|e| GpuError::AllocationError(format!("Failed to allocate signals: {:?}", e)))?;
 
+    // === H2D - Asynchronously copy close prices to device ===
     let close_prices = data.close.to_vec();
-    let d_close = device.copy_to_device(&close_prices)?;
+    let close_len = close_prices.len();
+    let mut pinned_close = device.pinned_pool.lock().acquire(close_len)?;
+    pinned_close.as_mut_slice()[..close_len].copy_from_slice(&close_prices);
+
+    let mut d_close = device.alloc_buffer(close_len)?;
+    device.stream.memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
+
+    // Release pinned buffer
+    device.pinned_pool.lock().release(pinned_close);
 
     let equity_len = n_strategies * n_candles;
     let mut d_equity = device
@@ -238,14 +267,35 @@ pub fn execute_persistent(
         })?;
     }
 
+    // ===== D2H - Asynchronously copy results back =====
+    let mut pinned_sharpe = device.pinned_pool.lock().acquire(n_strategies)?;
+    let mut pinned_dd = device.pinned_pool.lock().acquire(n_strategies)?;
+    let mut pinned_wr = device.pinned_pool.lock().acquire(n_strategies)?;
+    let equity_len = n_strategies * n_candles;
+    let mut pinned_equity = device.pinned_pool.lock().acquire(equity_len)?;
+
+    device.stream.memcpy_dtoh(&d_sharpe, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
+    device.stream.memcpy_dtoh(&d_drawdown, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
+    device.stream.memcpy_dtoh(&d_win_rate, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
+    device.stream.memcpy_dtoh(&d_equity, &mut pinned_equity.as_mut_slice()[..equity_len])?;
+
+    // Synchronize stream to ensure D2H copies are complete before CPU access
     device.synchronize()?;
     let gpu_ms = start_gpu.elapsed().as_secs_f64() * 1000.0;
 
-    // ===== Copy Results Back =====
-    let sharpe_vec = device.copy_to_host(&d_sharpe)?;
-    let dd_vec = device.copy_to_host(&d_drawdown)?;
-    let wr_vec = device.copy_to_host(&d_win_rate)?;
-    let equity_vec = device.copy_to_host(&d_equity)?;
+    let sharpe_vec = pinned_sharpe.as_slice()[..n_strategies].to_vec();
+    let dd_vec = pinned_dd.as_slice()[..n_strategies].to_vec();
+    let wr_vec = pinned_wr.as_slice()[..n_strategies].to_vec();
+    let equity_vec = pinned_equity.as_slice()[..equity_len].to_vec();
+
+    // Release pinned buffers
+    let mut pool = device.pinned_pool.lock();
+    pool.release(pinned_sharpe);
+    pool.release(pinned_dd);
+    pool.release(pinned_wr);
+    pool.release(pinned_equity);
+    drop(pool);
+
     let num_trades_vec = {
         let slice = device.stream.memcpy_dtov(&d_num_trades).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))

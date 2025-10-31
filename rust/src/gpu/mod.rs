@@ -8,6 +8,7 @@
 //! - **Device Management**: GPU initialization, memory pools, error handling
 //! - **CUDA Kernels**: Custom kernels compiled from CUDA C++ source
 //! - **Indicators**: GPU-accelerated implementations with CPU fallback
+//! - **Quantitative Models**: Heston option pricing, calibration
 //!
 //! # Feature Flag
 //!
@@ -32,6 +33,9 @@
 #[cfg(feature = "gpu")]
 pub mod device;
 
+#[cfg(feature = "heston")]
+pub mod heston_pricing;
+
 #[cfg(feature = "gpu")]
 pub mod async_alloc;
 
@@ -53,18 +57,17 @@ pub mod compile;
 #[cfg(feature = "gpu")]
 pub mod l2_cache;
 
-// TODO: Fix cudarc API compatibility issues before re-enabling
-// #[cfg(feature = "gpu")]
-// pub mod aggregation;
-//
-// #[cfg(feature = "gpu")]
-// pub mod auto_select;
-//
-// #[cfg(feature = "gpu")]
-// pub use aggregation::GpuAggregator;
-//
-// #[cfg(feature = "gpu")]
-// pub use auto_select::{AggregationEngine, EngineSelector};
+#[cfg(feature = "gpu")]
+pub mod aggregation;
+
+#[cfg(feature = "gpu")]
+pub mod auto_select;
+
+#[cfg(feature = "gpu")]
+pub use aggregation::GpuAggregator;
+
+#[cfg(feature = "gpu")]
+pub use auto_select::{AggregationEngine, EngineSelector};
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
@@ -345,3 +348,6 @@ pub mod ichimoku;
 
 #[cfg(feature = "gpu")]
 pub use ichimoku::{IchimokuOutput, ichimoku_gpu};
+
+#[cfg(feature = "heston")]
+pub use heston_pricing::HestonGpuPricer;
