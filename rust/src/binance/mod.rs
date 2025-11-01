@@ -30,6 +30,10 @@ pub mod incomplete_candle;
 pub mod timeframe;
 pub mod trades;
 
+// Parquet loader for tick-level data (requires data-downloaders feature)
+#[cfg(feature = "data-downloaders")]
+pub mod parquet_loader;
+
 pub use batch::{process_binance_directory, process_binance_months};
 pub use date_utils::{DateRange, ParseError as DateParseError};
 pub use discovery::BinanceDataFinder;
@@ -40,6 +44,10 @@ pub use trades::{
     BinanceError, Candle, ParseError as CsvParseError, Trade, aggregate_trades_to_candles,
     parse_trade_csv, process_binance_month, stream_aggregate_csv,
 };
+
+// Re-export Parquet loader functions when feature enabled
+#[cfg(feature = "data-downloaders")]
+pub use parquet_loader::{load_parquet_file, load_parquet_month};
 
 // GPU-accelerated aggregation (optional, feature-gated)
 #[cfg(feature = "gpu")]

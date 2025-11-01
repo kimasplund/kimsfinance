@@ -572,6 +572,12 @@ pub enum GpuError {
     /// Parameter grid is empty
     EmptyParameterGrid,
 
+    /// Invalid input data provided
+    InvalidInput(String),
+
+    /// Backtesting error
+    BacktestError(String),
+
     /// Invalid parameter with static message
     InvalidParameterStatic(&'static str),
 
@@ -601,6 +607,8 @@ impl std::fmt::Display for GpuError {
             GpuError::EmptyOhlcvData => write!(f, "Empty OHLCV data"),
             GpuError::OhlcvLengthMismatch => write!(f, "OHLCV arrays must have same length"),
             GpuError::EmptyParameterGrid => write!(f, "Parameter grid is empty"),
+            GpuError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            GpuError::BacktestError(msg) => write!(f, "Backtest error: {}", msg),
             GpuError::InvalidParameterStatic(msg) => write!(f, "Invalid GPU parameter: {}", msg),
             GpuError::ComputationErrorStatic(msg) => write!(f, "Computation error: {}", msg),
             GpuError::InsufficientComputeCapability { required, found } => {

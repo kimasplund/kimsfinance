@@ -344,6 +344,12 @@ pub mod pivot_points;
 pub use pivot_points::{PivotPointsOutput, pivot_points_gpu};
 
 #[cfg(feature = "gpu")]
+pub mod tick_batch;
+
+#[cfg(feature = "gpu")]
+pub use tick_batch::TickBatchProcessor;
+
+#[cfg(feature = "gpu")]
 pub mod adx;
 
 #[cfg(feature = "gpu")]

@@ -151,7 +151,7 @@ impl TickEngine {
     /// println!("Final equity: ${:.2}", result.final_equity);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn run<S: TickStrategy>(
+    pub fn run<S: TickStrategy + ?Sized>(
         &self,
         strategy: &mut S,
         trades: &[Trade],

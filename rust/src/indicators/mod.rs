@@ -33,6 +33,7 @@
 pub mod core;
 pub mod momentum;
 pub mod moving_averages;
+pub mod tick_indicators;
 pub mod trend;
 pub mod utils;
 pub mod volatility;
@@ -40,6 +41,7 @@ pub mod volume;
 
 // Re-export commonly used types
 pub use core::{Indicator, IndicatorError, MultiOutputIndicator};
+pub use tick_indicators::{calculate_indicator_from_trades, TickIndicatorEngine};
 
 // Re-export all indicators
 pub use momentum::{Aroon, CCI, MACD, ROC, RSI, Stochastic, TSI, WilliamsR};

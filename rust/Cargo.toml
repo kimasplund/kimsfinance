@@ -295,6 +295,10 @@ name = "performance_regression"
 harness = false
 required-features = ["gpu"]
 
+[[bench]]
+name = "tick_genetic_optimizer"
+harness = false
+
 [[test]]
 name = "gpu_accuracy_validation"
 required-features = ["gpu"]
