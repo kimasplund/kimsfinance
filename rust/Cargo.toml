@@ -259,3 +259,13 @@ required-features = ["gpu"]
 name = "heston_gpu"
 harness = false
 required-features = ["gpu"]
+
+[[bench]]
+name = "fp8_tensor_cores"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "tensor_core_benchmark"
+harness = false
+required-features = ["gpu"]

@@ -367,6 +367,12 @@ pub mod fp8_wmma;
 #[cfg(feature = "gpu")]
 pub use fp8_wmma::{FP8Error, FP8TensorCore, quantize_fp8_cpu};
 
+#[cfg(feature = "gpu")]
+pub mod fp8_gemm_cutlass;
+
+#[cfg(feature = "gpu")]
+pub use fp8_gemm_cutlass::FP8GemmCutlass;
+
 #[cfg(feature = "heston")]
 pub use heston_pricing::HestonGpuPricer;
 

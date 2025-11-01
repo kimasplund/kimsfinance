@@ -519,13 +519,14 @@ impl GpuDevice {
                 );
 
             // Check if both results succeeded
-            match (result_major.result(), result_minor.result()) {
-                (Ok(_), Ok(_)) => (major as u32, minor as u32),
-                _ => {
-                    // Fallback: assume compute capability 7.0 (Volta) if query fails
-                    eprintln!("Warning: Failed to query compute capability, assuming 7.0");
-                    (7, 0)
-                }
+            if result_major == sys::cudaError_enum::CUDA_SUCCESS
+                && result_minor == sys::cudaError_enum::CUDA_SUCCESS
+            {
+                (major as u32, minor as u32)
+            } else {
+                // Fallback: assume compute capability 7.0 (Volta) if query fails
+                eprintln!("Warning: Failed to query compute capability, assuming 7.0");
+                (7, 0)
             }
         }
     }
@@ -576,6 +577,12 @@ pub enum GpuError {
 
     /// Computation error with static message
     ComputationErrorStatic(&'static str),
+
+    /// Insufficient compute capability for operation
+    InsufficientComputeCapability { required: String, found: String },
+
+    /// Invalid matrix dimensions
+    InvalidDimensions { expected: usize, found: usize },
 }
 
 impl std::fmt::Display for GpuError {
@@ -596,6 +603,16 @@ impl std::fmt::Display for GpuError {
             GpuError::EmptyParameterGrid => write!(f, "Parameter grid is empty"),
             GpuError::InvalidParameterStatic(msg) => write!(f, "Invalid GPU parameter: {}", msg),
             GpuError::ComputationErrorStatic(msg) => write!(f, "Computation error: {}", msg),
+            GpuError::InsufficientComputeCapability { required, found } => {
+                write!(
+                    f,
+                    "Insufficient compute capability: required {}, found {}",
+                    required, found
+                )
+            }
+            GpuError::InvalidDimensions { expected, found } => {
+                write!(f, "Invalid dimensions: expected {}, found {}", expected, found)
+            }
         }
     }
 }
