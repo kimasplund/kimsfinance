@@ -518,12 +518,14 @@ impl GpuDevice {
                     self.context.cu_device(),
                 );
 
-            if result_major.is_ok() && result_minor.is_ok() {
-                (major as u32, minor as u32)
-            } else {
-                // Fallback: assume compute capability 7.0 (Volta) if query fails
-                eprintln!("Warning: Failed to query compute capability, assuming 7.0");
-                (7, 0)
+            // Check if both results succeeded
+            match (result_major.result(), result_minor.result()) {
+                (Ok(_), Ok(_)) => (major as u32, minor as u32),
+                _ => {
+                    // Fallback: assume compute capability 7.0 (Volta) if query fails
+                    eprintln!("Warning: Failed to query compute capability, assuming 7.0");
+                    (7, 0)
+                }
             }
         }
     }

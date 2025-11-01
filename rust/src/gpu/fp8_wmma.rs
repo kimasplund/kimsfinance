@@ -42,7 +42,7 @@
 //! ```
 
 use crate::gpu::{GpuDevice, GpuError};
-use cudarc::driver::{CudaFunction, CudaSlice, LaunchConfig};
+use cudarc::driver::{CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
 use std::sync::Arc;
 
 /// FP8 E4M3 format tensor core wrapper
@@ -135,15 +135,44 @@ impl FP8TensorCore {
         // Load FP8 matmul kernel from CUDA source
         const FP8_KERNELS: &str = include_str!("kernels_fp8_wmma.cu");
 
-        // Compile PTX with FP8 support
-        let ptx = crate::gpu::compile::compile_ptx_optimized_cached(FP8_KERNELS)
+        // Compile PTX with FP8 support and CUDA include paths
+        use cudarc::nvrtc::{CompileOptions, compile_ptx_with_opts};
+
+        let arch = format!("compute_{}{}", self.compute_capability.0, self.compute_capability.1);
+
+        // Find CUDA include path (try multiple common locations)
+        let cuda_include = std::env::var("CUDA_INCLUDE_PATH")
+            .unwrap_or_else(|_| {
+                // Try common CUDA locations in order
+                for path in ["/usr/include", "/usr/local/cuda/include", "/opt/cuda/include"] {
+                    if std::path::Path::new(path).join("cuda_fp16.h").exists() {
+                        return path.to_string();
+                    }
+                }
+                "/usr/include".to_string()  // Default fallback
+            });
+
+        let opts = CompileOptions {
+            arch: Some(Box::leak(arch.into_boxed_str())),
+            use_fast_math: Some(true),
+            ftz: Some(true),
+            prec_sqrt: Some(false),
+            prec_div: Some(false),
+            fmad: None,  // use_fast_math already enables fmad
+            maxrregcount: None,
+            options: Vec::new(),
+            include_paths: vec![cuda_include],
+            name: None,
+        };
+
+        let ptx = compile_ptx_with_opts(FP8_KERNELS, opts)
             .map_err(|e| FP8Error::CompilationFailed(format!("PTX compilation failed: {:?}", e)))?;
 
         // Load module
         let module = self
             .device
             .context()
-            .load_module(Arc::unwrap_or_clone(ptx))
+            .load_module(ptx)
             .map_err(|e| {
                 FP8Error::CompilationFailed(format!("Failed to load FP8 module: {:?}", e))
             })?;
@@ -224,10 +253,10 @@ impl FP8TensorCore {
             )));
         }
 
-        // Allocate output buffer
+        // Allocate output buffer (f32 for tensor core accumulator)
         let mut c = self
             .device
-            .alloc_async(m * n)
+            .allocate_device_buffer::<f32>(m * n)
             .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e)))?;
 
         // FP8 tensor cores work on 16x16x16 tiles (MMA instruction format)
@@ -281,8 +310,8 @@ impl FP8TensorCore {
         &self,
         values: &CudaSlice<f32>,
     ) -> Result<CudaSlice<f32>, FP8Error> {
-        // Allocate output buffer
-        let mut quantized = self.device.alloc_async(values.len()).map_err(|e| {
+        // Allocate output buffer (f32 for FP8 values stored in FP32 format)
+        let mut quantized = self.device.allocate_device_buffer::<f32>(values.len()).map_err(|e| {
             FP8Error::ExecutionFailed(format!("Failed to allocate quantized buffer: {:?}", e))
         })?;
 
