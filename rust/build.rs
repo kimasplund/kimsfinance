@@ -103,6 +103,9 @@ fn main() {
     compile_fp8_wmma_kernel(&nvcc, &cuda_home, &cuda_arch);
     compile_fp8_cutlass_kernel(&nvcc, &cuda_home, &cutlass_path, &cuda_arch);
 
+    // Compile RSI fused kernel with CUB (requires nvcc, not NVRTC)
+    compile_rsi_fused_kernel(&nvcc, &cuda_home, &cuda_arch);
+
     // Emit rebuild directives
     emit_rebuild_directives();
 }
@@ -444,11 +447,125 @@ fn compile_fp8_cutlass_kernel(
     }
 }
 
+/// Compile RSI fused kernel with CUB to shared library
+///
+/// This kernel uses CUB DeviceScan for parallel Wilder's smoothing, which requires
+/// template instantiation at compile time (cannot be done with NVRTC).
+///
+/// Compilation command:
+/// ```bash
+/// nvcc -shared \
+///      -arch=sm_89 \
+///      -std=c++17 \
+///      -I{cuda}/include \
+///      -O3 \
+///      -use_fast_math \
+///      --expt-relaxed-constexpr \
+///      -Xcompiler -fPIC \
+///      -o {out_dir}/librsi_fused.so \
+///      src/gpu/kernels/rsi_fused.cu
+/// ```
+fn compile_rsi_fused_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str) {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
+    let kernel_source = PathBuf::from("src/gpu/kernels/rsi_fused.cu");
+
+    // Use .so for Linux, .dylib for macOS, .dll for Windows
+    #[cfg(target_os = "linux")]
+    let output_lib = out_dir.join("librsi_fused.so");
+    #[cfg(target_os = "macos")]
+    let output_lib = out_dir.join("librsi_fused.dylib");
+    #[cfg(target_os = "windows")]
+    let output_lib = out_dir.join("rsi_fused.dll");
+
+    if !kernel_source.exists() {
+        println!(
+            "cargo:warning=RSI fused kernel source not found: {}",
+            kernel_source.display()
+        );
+        return;
+    }
+
+    println!(
+        "cargo:warning=Compiling RSI fused kernel with CUB: {}",
+        kernel_source.display()
+    );
+
+    // Build include paths
+    let cuda_include = cuda_home.join("include");
+    let cuda_targets_include = cuda_home.join("targets/x86_64-linux/include");
+
+    // Build nvcc command
+    // Note: Use --diag-suppress to ignore rsqrt exception spec warning
+    let mut cmd = Command::new(nvcc);
+    cmd.arg("-shared") // Compile to shared library
+        .arg(format!("-arch={}", cuda_arch)) // Target architecture
+        .arg("-std=c++17") // C++17 for CUB
+        .arg(format!("-I{}", cuda_include.display())) // CUDA + CUB headers
+        .arg(format!("-I{}", cuda_targets_include.display())) // CUDA target headers
+        .arg("-O3") // Maximum optimization
+        .arg("-use_fast_math") // Fast math operations
+        .arg("--expt-relaxed-constexpr") // Relaxed constexpr for CUB
+        .arg("--expt-extended-lambda") // Extended lambda for CUB
+        .arg("-D_FORCE_INLINES") // Force inline to avoid header conflicts
+        .arg("--diag-suppress=20092") // Suppress exception spec mismatch warning
+        .arg("--diag-suppress=20041") // Suppress additional compatibility warnings
+        .arg("-Xcompiler=-fPIC") // Position-independent code for shared library
+        .arg("-Xcompiler=-w") // Suppress host compiler warnings
+        .arg("-o")
+        .arg(&output_lib)
+        .arg(&kernel_source);
+
+    println!("cargo:warning=Running: {:?}", cmd);
+
+    // Execute nvcc
+    let output = match cmd.output() {
+        Ok(output) => output,
+        Err(e) => {
+            println!("cargo:warning=Failed to execute nvcc for RSI fused kernel: {}", e);
+            return;
+        }
+    };
+
+    // Check compilation result
+    if output.status.success() {
+        println!(
+            "cargo:warning=Successfully compiled RSI fused kernel to: {}",
+            output_lib.display()
+        );
+
+        // Emit linker directives
+        println!(
+            "cargo:rustc-env=RSI_FUSED_LIB_PATH={}",
+            output_lib.display()
+        );
+        println!("cargo:rustc-link-search=native={}", out_dir.display());
+        println!("cargo:rustc-link-lib=dylib=rsi_fused");
+
+        // Print stdout/stderr for debugging
+        if !output.stdout.is_empty() {
+            println!(
+                "cargo:warning=nvcc stdout: {}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+        }
+    } else {
+        println!("cargo:warning=Failed to compile RSI fused kernel (non-critical, will use hybrid)");
+        println!("cargo:warning=Exit code: {:?}", output.status.code());
+
+        if !output.stderr.is_empty() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let first_lines: Vec<&str> = stderr.lines().take(15).collect();
+            println!("cargo:warning=nvcc stderr: {}", first_lines.join("\n"));
+        }
+    }
+}
+
 /// Emit cargo directives for rebuild detection
 fn emit_rebuild_directives() {
     // Rebuild if CUDA kernels change
     println!("cargo:rerun-if-changed=src/gpu/kernels/fp8_cutlass.cu");
     println!("cargo:rerun-if-changed=src/gpu/kernels_fp8_wmma.cu");
+    println!("cargo:rerun-if-changed=src/gpu/kernels/rsi_fused.cu");
 
     // Rebuild if build script changes
     println!("cargo:rerun-if-changed=build.rs");

@@ -51,7 +51,7 @@
 //! ```
 
 use crate::gpu::{GpuDevice, GpuError};
-use cudarc::driver::{CudaFunction, CudaSlice, CudaModule, LaunchConfig};
+use cudarc::driver::{CudaFunction, CudaSlice, CudaModule, LaunchConfig, PushKernelArg};
 use std::sync::Arc;
 
 /// FP8 E4M3 format tensor core wrapper

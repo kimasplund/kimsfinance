@@ -269,3 +269,32 @@ required-features = ["gpu"]
 name = "tensor_core_benchmark"
 harness = false
 required-features = ["gpu"]
+
+[[bench]]
+name = "cuda_graph_overhead"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "rsi_fused_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "comprehensive_gpu_validation"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "all_indicators_timing"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "performance_regression"
+harness = false
+required-features = ["gpu"]
+
+[[test]]
+name = "gpu_accuracy_validation"
+required-features = ["gpu"]

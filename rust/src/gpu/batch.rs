@@ -200,7 +200,9 @@ impl BatchIndicatorParams {
 /// **Slow (> 15μs/candle)**:
 /// - Stochastic: Complex rolling windows (%K, %D smoothing)
 /// - MACD: Now uses CPU execution (macd_hybrid) - 1,647x faster than old GPU version
-fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
+///
+/// Public for use by batch_graphs module.
+pub(crate) fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
     match indicator {
         // Fast: Simple arithmetic operations (< 5μs/candle)
         BatchIndicatorType::ROC | BatchIndicatorType::WilliamsR | BatchIndicatorType::CCI | BatchIndicatorType::MACD => {
@@ -221,7 +223,8 @@ fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
 /// Helper function to calculate a single indicator
 ///
 /// Extracted for cleaner code organization and future stream parameter support.
-fn calculate_single_indicator(
+/// Public for use by batch_graphs module.
+pub(crate) fn calculate_single_indicator(
     device: &GpuDevice,
     high: &Array1<f64>,
     low: &Array1<f64>,

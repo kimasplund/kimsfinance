@@ -154,7 +154,13 @@ pub mod rsi;
 pub mod rsi_sync;
 
 #[cfg(feature = "gpu")]
+pub mod rsi_fused;
+
+#[cfg(feature = "gpu")]
 pub use rsi::rsi_gpu;
+
+#[cfg(feature = "gpu")]
+pub use rsi_fused::{is_fused_available, rsi_fused_gpu};
 
 #[cfg(feature = "gpu")]
 pub mod macd;
@@ -303,6 +309,12 @@ pub mod cuda_graphs;
 
 #[cfg(feature = "gpu")]
 pub use cuda_graphs::{IndicatorGraph, IndicatorGraphBuilder};
+
+#[cfg(feature = "gpu")]
+pub mod batch_graphs;
+
+#[cfg(feature = "gpu")]
+pub use batch_graphs::BatchGraphExecutor;
 
 #[cfg(feature = "gpu")]
 pub mod kernels_3d;

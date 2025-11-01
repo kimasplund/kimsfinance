@@ -62,7 +62,7 @@
 use super::traits::PersistentIndicator;
 use super::{OccupancyCalculator, PinnedBuffer};
 use crate::gpu::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaFunction, CudaSlice, DevicePtr, LaunchConfig};
+use cudarc::driver::{CudaSlice, DevicePtr};
 use std::marker::PhantomData;
 
 /// Generic task for persistent kernel execution
