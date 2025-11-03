@@ -38,7 +38,7 @@
 /// ```
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 
 mod batch;
 pub mod binance;
@@ -1841,6 +1841,115 @@ fn run_backtest<'py>(
     Ok(result_dict)
 }
 
+// ============================================================================
+// Parquet Tick Data Loader - Python Bindings
+// ============================================================================
+
+/// Load tick data from a single Parquet file (Python binding)
+///
+/// Zero-copy Arrow-based loader for maximum performance (10-20M records/sec).
+///
+/// # Arguments
+/// * `parquet_path` - Path to Parquet file (e.g., "BTCUSDT-trades-2024-01-01.parquet")
+///
+/// # Returns
+/// List of dictionaries with keys: id, price, qty, quote_qty, time, is_buyer_maker
+///
+/// # Example
+/// ```python
+/// import kimsfinance_core
+///
+/// trades = kimsfinance_core.load_parquet_file(
+///     "/data/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet"
+/// )
+///
+/// print(f"Loaded {len(trades)} trades")
+/// print(f"First trade: {trades[0]}")
+/// ```
+#[pyfunction]
+#[cfg(feature = "data-downloaders")]
+fn load_parquet_file_py(py: Python, parquet_path: String) -> PyResult<PyObject> {
+    use binance::load_parquet_file;
+
+    // Load trades from Parquet (Rust implementation)
+    let trades = load_parquet_file(&parquet_path)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+    // Convert Vec<Trade> to Python list of dictionaries
+    let trades_list = PyList::empty(py);
+
+    for trade in trades {
+        let trade_dict = PyDict::new(py);
+        trade_dict.set_item("id", trade.trade_id)?;
+        trade_dict.set_item("price", trade.price)?;
+        trade_dict.set_item("qty", trade.quantity)?;
+        trade_dict.set_item("quote_qty", trade.quote_quantity)?;
+        trade_dict.set_item("time", trade.timestamp_ms)?;
+        trade_dict.set_item("is_buyer_maker", trade.is_buyer_maker)?;
+        trades_list.append(trade_dict)?;
+    }
+
+    Ok(trades_list.into())
+}
+
+/// Load all tick data from a month directory (Python binding)
+///
+/// Loads and concatenates all Parquet files in a month directory.
+/// Files are sorted by name to ensure chronological order.
+///
+/// # Arguments
+/// * `month_dir` - Path to month directory (e.g., "/data/trades_parquet/2024-01")
+/// * `max_trades` - Optional limit on number of trades to load (None = all)
+///
+/// # Returns
+/// List of dictionaries with keys: id, price, qty, quote_qty, time, is_buyer_maker
+///
+/// # Example
+/// ```python
+/// import kimsfinance_core
+///
+/// # Load full month
+/// trades = kimsfinance_core.load_parquet_month(
+///     "/data/trades_parquet/2024-01"
+/// )
+///
+/// # Load first 1M trades only (for testing)
+/// trades = kimsfinance_core.load_parquet_month(
+///     "/data/trades_parquet/2024-01",
+///     max_trades=1_000_000
+/// )
+/// ```
+#[pyfunction]
+#[cfg(feature = "data-downloaders")]
+#[pyo3(signature = (month_dir, max_trades=None))]
+fn load_parquet_month_py(
+    py: Python,
+    month_dir: String,
+    max_trades: Option<usize>,
+) -> PyResult<PyObject> {
+    use binance::load_parquet_month;
+
+    // Load trades from month directory (Rust implementation)
+    let trades = load_parquet_month(&month_dir, max_trades)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+
+    // Convert Vec<Trade> to Python list of dictionaries
+    let trades_list = PyList::empty(py);
+
+    for trade in trades {
+        let trade_dict = PyDict::new(py);
+        trade_dict.set_item("id", trade.trade_id)?;
+        trade_dict.set_item("price", trade.price)?;
+        trade_dict.set_item("qty", trade.quantity)?;
+        trade_dict.set_item("quote_qty", trade.quote_quantity)?;
+        trade_dict.set_item("time", trade.timestamp_ms)?;
+        trade_dict.set_item("is_buyer_maker", trade.is_buyer_maker)?;
+        trades_list.append(trade_dict)?;
+    }
+
+    Ok(trades_list.into())
+}
+
 /// Python module for kimsfinance core functionality
 ///
 /// This module declares support for Python 3.14 free-threading (no-GIL).
@@ -1900,6 +2009,13 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(batch_backtest_py::batch_backtest, m)?)?;
         m.add_function(wrap_pyfunction!(batch_backtest_py::batch_backtest_info, m)?)?;
         m.add_class::<batch_backtest_py::PyBacktestResult>()?;
+    }
+
+    // Parquet Tick Data Loader (zero-copy Arrow-based)
+    #[cfg(feature = "data-downloaders")]
+    {
+        m.add_function(wrap_pyfunction!(load_parquet_file_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_parquet_month_py, m)?)?;
     }
 
     // Module metadata
