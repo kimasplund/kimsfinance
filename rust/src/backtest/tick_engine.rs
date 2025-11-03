@@ -178,6 +178,9 @@ impl TickEngine {
         let timeframe_ms = timeframe.to_ms();
         let mut current_candle_timestamp = (trades[0].timestamp_ms / timeframe_ms) * timeframe_ms;
 
+        // Pending orders queue for execution latency simulation
+        let mut pending_orders: Vec<(Signal, i64)> = Vec::new();
+
         // Hot path: Process each trade
         for (idx, trade) in trades.iter().enumerate() {
             let candle_timestamp = (trade.timestamp_ms / timeframe_ms) * timeframe_ms;
@@ -190,13 +193,12 @@ impl TickEngine {
 
                     // Notify strategy
                     let signal = strategy.on_candle_complete(&complete_candle);
-                    self.process_signal(
-                        &mut position,
-                        signal,
-                        trade.price,
-                        trade.timestamp_ms,
-                        &mut backtest_trades,
-                    )?;
+
+                    // Add signal to pending orders (execute after latency)
+                    if !matches!(signal, Signal::Hold) {
+                        let execution_time = trade.timestamp_ms + self.config.execution_latency_ms;
+                        pending_orders.push((signal, execution_time));
+                    }
                 }
 
                 current_candle_timestamp = candle_timestamp;
@@ -212,17 +214,31 @@ impl TickEngine {
                 candle.update(trade);
             }
 
+            // Execute any pending orders that are due
+            pending_orders.retain(|(pending_signal, execution_time)| {
+                if trade.timestamp_ms >= *execution_time {
+                    // Execute with current price (after latency)
+                    let _ = self.process_signal(
+                        &mut position,
+                        *pending_signal,
+                        trade.price,
+                        trade.timestamp_ms,
+                        &mut backtest_trades,
+                    );
+                    false // Remove from pending
+                } else {
+                    true // Keep in pending
+                }
+            });
+
             // Call strategy for this tick
             let signal = strategy.on_tick(trade, candle);
 
-            // Execute signal
-            self.process_signal(
-                &mut position,
-                signal,
-                trade.price,
-                trade.timestamp_ms,
-                &mut backtest_trades,
-            )?;
+            // Add signal to pending orders (execute after latency)
+            if !matches!(signal, Signal::Hold) {
+                let execution_time = trade.timestamp_ms + self.config.execution_latency_ms;
+                pending_orders.push((signal, execution_time));
+            }
 
             // Update equity
             self.update_equity(&mut position, trade.price);
@@ -329,12 +345,13 @@ impl TickEngine {
         let gross_position_value = position.cash / price;
         let fee = gross_position_value * price * self.config.trading_fee;
         let slippage_cost = gross_position_value * price * self.config.slippage;
+        let total_cost = fee + slippage_cost;
 
         position.position_size = gross_position_value * direction;
         position.entry_price = price;
         position.entry_timestamp = timestamp;
-        position.position_value = gross_position_value * price;
-        position.cash -= fee + slippage_cost;
+        position.position_value = position.cash - total_cost;  // NET value after costs
+        position.cash = 0.0;  // All cash converted to position
 
         Ok(())
     }
@@ -371,7 +388,7 @@ impl TickEngine {
             position.position_value - exit_value
         };
 
-        position.cash += exit_value + pnl - fee - slippage_cost;
+        position.cash += position.position_value + pnl - fee - slippage_cost;
 
         // Record trade
         let direction = if position.position_size > 0.0 {

@@ -178,66 +178,14 @@ pub fn rsi_fused_gpu(
 
     // === Step 2: Launch fused RSI kernel ===
     // Temporarily disabled due to FFI being commented out
-    // Remove unused variable warnings
-    let _ = (device, kernel_stream, d_close, d_gains, d_losses, d_avg_gain, d_avg_loss, d_scan_input_gain, d_scan_input_loss, d_rsi);
-
-    // TODO: Uncomment when CUDA compilation is fixed
-    /*
-    let n_i32 = n as i32;
-    let period_i32 = period as i32;
-
-    // Get raw CUDA stream handle (use null for default stream, fused kernel manages stream internally)
-    let stream_handle = std::ptr::null_mut();
-
-    // Call FFI function (device_ptr returns const pointer, cast to mut for kernel that modifies data)
-    let cuda_error = unsafe {
-        launch_rsi_fused(
-            d_close.device_ptr(kernel_stream).0 as *const f64,
-            d_rsi.device_ptr(kernel_stream).0 as *mut f64,
-            d_gains.device_ptr(kernel_stream).0 as *mut f64,
-            d_losses.device_ptr(kernel_stream).0 as *mut f64,
-            d_avg_gain.device_ptr(kernel_stream).0 as *mut f64,
-            d_avg_loss.device_ptr(kernel_stream).0 as *mut f64,
-            d_scan_input_gain.device_ptr(kernel_stream).0 as *mut f64,
-            d_scan_input_loss.device_ptr(kernel_stream).0 as *mut f64,
-            n_i32,
-            period_i32,
-            stream_handle,
-        )
-    };
-
-    if cuda_error != 0 {
-        return Err(GpuError::ExecutionError(format!(
-            "Fused RSI kernel failed with CUDA error: {}",
-            cuda_error
-        )));
-    }
-    */
+    // Suppress unused variable warnings
+    let _ = (d_close, d_gains, d_losses, d_avg_gain, d_avg_loss, d_scan_input_gain, d_scan_input_loss, d_rsi);
 
     // Return error since fused kernel is disabled
-    return Err(GpuError::CompilationError(
+    // TODO: Re-enable when CUDA 13.0 rsqrt compatibility is fixed
+    Err(GpuError::CompilationError(
         "Fused RSI kernel temporarily disabled due to CUDA 13.0 compilation issues".to_string()
-    ));
-
-    // === Step 3: D2H - Copy RSI results back to host ===
-    // Acquire pinned buffer for async D2H transfer
-    let mut pinned_rsi = device.pinned_pool.lock().acquire(n)?;
-
-    kernel_stream
-        .memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..n])
-        .map_err(|e| GpuError::ExecutionError(format!("D2H RSI copy failed: {:?}", e)))?;
-
-    // Synchronize to ensure final result is ready
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("Stream sync after RSI D2H failed: {:?}", e))
-    })?;
-
-    let rsi_vec = pinned_rsi.as_slice()[..n].to_vec();
-
-    // Release buffer back to pool
-    device.pinned_pool.lock().release(pinned_rsi);
-
-    Ok(Array1::from_vec(rsi_vec))
+    ))
 }
 
 #[cfg(test)]

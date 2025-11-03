@@ -4,7 +4,7 @@
 
 use super::async_alloc::AsyncAllocator;
 use super::persistent::pinned_memory::PinnedBufferPool;
-use cudarc::driver::{CudaContext, CudaSlice, CudaStream, result::DriverError};
+use cudarc::driver::{CudaContext, CudaSlice, CudaStream, result::DriverError, PushKernelArg};
 use cudarc::nvrtc::CompileError;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -135,6 +135,74 @@ impl GpuDevice {
         } else {
             // Fallback to standard allocation
             self.alloc_buffer(len)
+        }
+    }
+
+    /// Allocate GPU memory for i32 using async allocator (1.2-1.5x faster, CUDA 11.2+)
+    ///
+    /// # Arguments
+    ///
+    /// * `len` - Number of i32 elements to allocate
+    ///
+    /// # Performance
+    ///
+    /// - **CUDA >= 11.2**: Uses cudaMallocAsync for 1.2-1.5x faster allocation
+    /// - **CUDA < 11.2**: Automatically falls back to standard allocation
+    ///
+    /// # When to Use
+    ///
+    /// - Allocation-heavy code (frequent alloc/free cycles)
+    /// - Batch processing with many temporary buffers
+    /// - Multi-stream workloads
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let device = GpuDevice::new()?;
+    ///
+    /// // Use async allocation for better performance
+    /// let buffer = device.alloc_async_i32(1_000)?;
+    /// ```
+    pub fn alloc_async_i32(&self, len: usize) -> Result<CudaSlice<i32>, GpuError> {
+        if let Some(allocator) = &self.async_allocator {
+            allocator.alloc(len)
+        } else {
+            // Fallback to standard allocation
+            self.allocate_device_buffer(len)
+        }
+    }
+
+    /// Allocate GPU memory for u8 using async allocator (1.2-1.5x faster, CUDA 11.2+)
+    ///
+    /// # Arguments
+    ///
+    /// * `len` - Number of u8 elements to allocate
+    ///
+    /// # Performance
+    ///
+    /// - **CUDA >= 11.2**: Uses cudaMallocAsync for 1.2-1.5x faster allocation
+    /// - **CUDA < 11.2**: Automatically falls back to standard allocation
+    ///
+    /// # When to Use
+    ///
+    /// - Allocation-heavy code (frequent alloc/free cycles)
+    /// - Batch processing with many temporary buffers
+    /// - Multi-stream workloads
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let device = GpuDevice::new()?;
+    ///
+    /// // Use async allocation for better performance
+    /// let buffer = device.alloc_async_u8(1024)?;
+    /// ```
+    pub fn alloc_async_u8(&self, len: usize) -> Result<CudaSlice<u8>, GpuError> {
+        if let Some(allocator) = &self.async_allocator {
+            allocator.alloc(len)
+        } else {
+            // Fallback to standard allocation
+            self.allocate_device_buffer(len)
         }
     }
 
@@ -329,6 +397,120 @@ impl GpuDevice {
         })?;
 
         Ok(buffer)
+    }
+
+    /// Copy i64 data from host to device
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Host data slice of i64 values
+    pub fn copy_to_device_i64(&self, data: &[i64]) -> Result<CudaSlice<i64>, GpuError> {
+        // Allocate device buffer
+        let mut buffer = self.stream.alloc_zeros::<i64>(data.len()).map_err(|e| {
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} i64 elements: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        // Copy data into buffer
+        self.stream.memcpy_htod(data, &mut buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!(
+                "Failed to copy {} i64 elements to device: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        Ok(buffer)
+    }
+
+    /// Copy f32 data from host to device
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Host data slice of f32 values
+    pub fn copy_to_device_f32(&self, data: &[f32]) -> Result<CudaSlice<f32>, GpuError> {
+        // Allocate device buffer
+        let mut buffer = self.stream.alloc_zeros::<f32>(data.len()).map_err(|e| {
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} f32 elements: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        // Copy data into buffer
+        self.stream.memcpy_htod(data, &mut buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!(
+                "Failed to copy {} f32 elements to device: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        Ok(buffer)
+    }
+
+    /// Copy f32 data from device to host
+    ///
+    /// # Arguments
+    ///
+    /// * `buffer` - GPU buffer to copy from
+    pub fn copy_to_host_f32(&self, buffer: &CudaSlice<f32>) -> Result<Vec<f32>, GpuError> {
+        self.stream
+            .memcpy_dtov(buffer)
+            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy f32 from device: {:?}", e)))
+    }
+
+    /// Copy i8 data from host to device
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Host data slice of i8 values
+    pub fn copy_to_device_i8(&self, data: &[i8]) -> Result<CudaSlice<i8>, GpuError> {
+        // Allocate device buffer
+        let mut buffer = self.stream.alloc_zeros::<i8>(data.len()).map_err(|e| {
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} i8 elements: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        // Copy data into buffer
+        self.stream.memcpy_htod(data, &mut buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!(
+                "Failed to copy {} i8 elements to device: {:?}",
+                data.len(),
+                e
+            ))
+        })?;
+
+        Ok(buffer)
+    }
+
+    /// Copy i8 data from device to host
+    ///
+    /// # Arguments
+    ///
+    /// * `buffer` - GPU buffer to copy from
+    pub fn copy_to_host_i8(&self, buffer: &CudaSlice<i8>) -> Result<Vec<i8>, GpuError> {
+        self.stream
+            .memcpy_dtov(buffer)
+            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy i8 from device: {:?}", e)))
+    }
+
+    /// Copy u8 data from device to host
+    ///
+    /// # Arguments
+    ///
+    /// * `buffer` - GPU buffer to copy from
+    pub fn copy_to_host_u8(&self, buffer: &CudaSlice<u8>) -> Result<Vec<u8>, GpuError> {
+        self.stream
+            .memcpy_dtov(buffer)
+            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy u8 from device: {:?}", e)))
     }
 
     /// Copy data from device to host

@@ -82,6 +82,8 @@ pub mod walkforward;
 pub mod batch;
 #[cfg(feature = "gpu")]
 pub mod persistent;
+#[cfg(feature = "gpu")]
+pub mod tick_batch;
 
 // Re-export batch tuning functions for testing
 #[cfg(feature = "gpu")]
@@ -124,3 +126,6 @@ pub use batch::{BatchBacktestResults, BatchBacktestSweep, ExecutionMode, OhlcvDa
 
 #[cfg(feature = "gpu")]
 pub use persistent::execute_persistent;
+
+#[cfg(feature = "gpu")]
+pub use tick_batch::{BatchTickBacktest, BatchBacktestResults as TickBatchResults};

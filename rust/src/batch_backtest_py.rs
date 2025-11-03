@@ -387,6 +387,7 @@ pub fn batch_backtest(
                 slippage,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 10,
             })
             .execute()
             .map_err(|e| {

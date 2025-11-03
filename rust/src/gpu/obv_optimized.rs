@@ -220,17 +220,18 @@ pub fn obv_gpu_optimized(
 
     // Launch Kernel 1: Calculate volume deltas (parallel)
     {
-        let mut builder = kernel_stream.launch_builder(&deltas_kernel);
-        builder.arg(&d_close);
-        builder.arg(&d_volume);
-        builder.arg(&mut d_deltas);
-        builder.arg(&n_i32);
-
         let config = LaunchConfig::for_num_elems(n as u32);
         unsafe {
-            builder.launch(config).map_err(|e| {
-                GpuError::ExecutionError(format!("Deltas kernel launch failed: {:?}", e))
-            })?;
+            let mut builder = kernel_stream.launch_builder(&deltas_kernel);
+            builder
+                .arg(&d_close)
+                .arg(&d_volume)
+                .arg(&mut d_deltas)
+                .arg(&n_i32)
+                .launch(config)
+                .map_err(|e| {
+                    GpuError::ExecutionError(format!("Deltas kernel launch failed: {:?}", e))
+                })?;
         }
     }
 
@@ -243,21 +244,22 @@ pub fn obv_gpu_optimized(
 
     // Launch Kernel 2: Block-level scan
     {
-        let mut builder = kernel_stream.launch_builder(&scan_blocks_kernel);
-        builder.arg(&d_deltas);
-        builder.arg(&mut d_output);
-        builder.arg(&mut d_block_sums);
-        builder.arg(&n_i32);
-
         let config = LaunchConfig {
             grid_dim: (num_blocks as u32, 1, 1),
             block_dim: (BLOCK_SIZE as u32, 1, 1),
             shared_mem_bytes: 0,
         };
         unsafe {
-            builder.launch(config).map_err(|e| {
-                GpuError::ExecutionError(format!("Scan blocks kernel launch failed: {:?}", e))
-            })?;
+            let mut builder = kernel_stream.launch_builder(&scan_blocks_kernel);
+            builder
+                .arg(&d_deltas)
+                .arg(&mut d_output)
+                .arg(&mut d_block_sums)
+                .arg(&n_i32)
+                .launch(config)
+                .map_err(|e| {
+                    GpuError::ExecutionError(format!("Scan blocks kernel launch failed: {:?}", e))
+                })?;
         }
     }
 
@@ -273,38 +275,40 @@ pub fn obv_gpu_optimized(
 
             let num_blocks_i32 = num_blocks as i32;
 
-            let mut builder = kernel_stream.launch_builder(&scan_blocks_kernel);
-            builder.arg(&d_block_sums);
-            builder.arg(&mut d_block_sums_scanned);
-            builder.arg(&d_dummy); // Pass dummy buffer (won't be used since blockIdx.x == 0)
-            builder.arg(&num_blocks_i32);
-
-            let config = LaunchConfig {
+            let config1 = LaunchConfig {
                 grid_dim: (1, 1, 1),
                 block_dim: (BLOCK_SIZE as u32, 1, 1),
                 shared_mem_bytes: 0,
             };
             unsafe {
-                builder.launch(config).map_err(|e| {
-                    GpuError::ExecutionError(format!("Block sums scan failed: {:?}", e))
-                })?;
+                let mut builder = kernel_stream.launch_builder(&scan_blocks_kernel);
+                builder
+                    .arg(&d_block_sums)
+                    .arg(&mut d_block_sums_scanned)
+                    .arg(&d_dummy) // Pass dummy buffer (won't be used since blockIdx.x == 0)
+                    .arg(&num_blocks_i32)
+                    .launch(config1)
+                    .map_err(|e| {
+                        GpuError::ExecutionError(format!("Block sums scan failed: {:?}", e))
+                    })?;
             }
 
             // Add block sums to data
-            let mut builder = kernel_stream.launch_builder(&add_block_sums_kernel);
-            builder.arg(&mut d_output);
-            builder.arg(&d_block_sums_scanned);
-            builder.arg(&n_i32);
-
-            let config = LaunchConfig {
+            let config2 = LaunchConfig {
                 grid_dim: (num_blocks as u32, 1, 1),
                 block_dim: (BLOCK_SIZE as u32, 1, 1),
                 shared_mem_bytes: 0,
             };
             unsafe {
-                builder.launch(config).map_err(|e| {
-                    GpuError::ExecutionError(format!("Add block sums kernel failed: {:?}", e))
-                })?;
+                let mut builder = kernel_stream.launch_builder(&add_block_sums_kernel);
+                builder
+                    .arg(&mut d_output)
+                    .arg(&d_block_sums_scanned)
+                    .arg(&n_i32)
+                    .launch(config2)
+                    .map_err(|e| {
+                        GpuError::ExecutionError(format!("Add block sums kernel failed: {:?}", e))
+                    })?;
             }
         } else {
             // For very large arrays, need multi-level scan

@@ -51,6 +51,10 @@ pub struct BacktestConfig {
     /// Slippage per trade (as a fraction, e.g., 0.0005 = 0.05%)
     pub slippage: f64,
 
+    /// Execution latency in milliseconds (realistic: 5-50ms)
+    /// Simulates network + exchange processing delay
+    pub execution_latency_ms: i64,
+
     /// Enable GPU acceleration (if available)
     pub use_gpu: bool,
 
@@ -64,6 +68,7 @@ impl Default for BacktestConfig {
             initial_capital: 10_000.0,
             trading_fee: 0.001, // 0.1% per trade
             slippage: 0.0005,   // 0.05% slippage
+            execution_latency_ms: 10, // 10ms realistic latency
             use_gpu: true,      // Auto-detect and use GPU if available
             force_cpu: false,   // Allow GPU by default
         }

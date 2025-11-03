@@ -39,13 +39,8 @@
 //! - Output: rsi (n elements)
 //! - Total: 6n f64 = 48n bytes (4.8 MB for 100K candles)
 
-// Include CUDA headers first to avoid conflicts
-#include <cuda_runtime.h>
-#include <cub/cub.cuh>
-
-// Avoid including system math.h after CUDA headers
-#undef __MATH_H
-#undef __MATHCALLS_H
+// NVRTC provides all CUDA built-in functions and types automatically
+// No includes needed - NVRTC has built-in support for CUDA runtime functions
 
 // Define NaN for CUDA (compatible with NVRTC)
 #ifndef CUDART_NAN

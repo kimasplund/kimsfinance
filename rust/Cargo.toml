@@ -90,6 +90,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3.14"
 proptest = "1.4"
+approx = "0.5"
 
 [profile.release]
 opt-level = 3
@@ -298,6 +299,11 @@ required-features = ["gpu"]
 [[bench]]
 name = "tick_genetic_optimizer"
 harness = false
+
+[[bench]]
+name = "gpu_tick_batch_benchmark"
+harness = false
+required-features = ["gpu"]
 
 [[test]]
 name = "gpu_accuracy_validation"

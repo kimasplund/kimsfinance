@@ -236,8 +236,16 @@ impl GeneticOptimizer {
                 use_fp8,
             )?;
 
-            // Sort by fitness (descending)
-            population.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap());
+            // Sort by fitness (descending), handling NaN values
+            // NaN fitness values are treated as worst (moved to end)
+            population.sort_by(|a, b| {
+                match (a.fitness.is_finite(), b.fitness.is_finite()) {
+                    (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
+                    (true, false) => std::cmp::Ordering::Less,    // a is better (finite)
+                    (false, true) => std::cmp::Ordering::Greater, // b is better (finite)
+                    (false, false) => std::cmp::Ordering::Equal,  // both invalid
+                }
+            });
 
             // Calculate diversity and adapt mutation rate
             let diversity = self.calculate_diversity(&population);
@@ -514,6 +522,100 @@ impl GeneticOptimizer {
         for (individual, result) in population.iter_mut().zip(results) {
             individual.fitness = result.sharpe_ratio;
         }
+
+        Ok(())
+    }
+
+    /// GPU tick batch evaluation for genetic optimizer (target: 50+ strategies × 106M trades)
+    ///
+    /// Evaluates entire population using tick-level data (trades) instead of OHLCV candles.
+    /// Uses BatchTickBacktest API for GPU-accelerated tick-by-tick backtesting.
+    ///
+    /// # Performance Target
+    ///
+    /// - 106M trades × 10 strategies: <5 seconds
+    /// - 106M trades × 20 strategies: <10 seconds
+    /// - Automatic batching based on VRAM (10-20 strategies per batch)
+    ///
+    /// # When to Use
+    ///
+    /// Use this instead of `evaluate_population_gpu` when:
+    /// - Strategy requires tick-level data (orderflow, microstructure)
+    /// - Dataset is large (>10M trades)
+    /// - Population size >= 50 (GPU batch threshold)
+    ///
+    /// # Arguments
+    ///
+    /// * `population` - Mutable slice of individuals to evaluate
+    /// * `device` - GPU device handle
+    /// * `trades` - Tick-level trade data (106M for full month)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// // In evaluate_population:
+    /// if is_tick_strategy && trades.is_some() {
+    ///     return self.evaluate_population_gpu_tick(
+    ///         population,
+    ///         &device,
+    ///         trades.unwrap(),
+    ///     );
+    /// }
+    /// ```
+    #[cfg(feature = "gpu")]
+    fn evaluate_population_gpu_tick(
+        &self,
+        population: &mut [Individual],
+        device: &std::sync::Arc<crate::gpu::GpuDevice>,
+        trades: &[crate::binance::Trade],
+    ) -> Result<(), crate::gpu::GpuError> {
+        use crate::backtest::tick_batch::BatchTickBacktest;
+
+        // Extract parameter vectors from population
+        // Note: Individual stores HashMap<String, f64>, we need Vec<Vec<f64>>
+        let param_vecs: Vec<Vec<f64>> = population
+            .iter()
+            .map(|ind| {
+                // Convert HashMap to Vec in consistent order
+                // Assuming orderflow strategy parameters:
+                // [window, imbalance_threshold, min_volume, spike_threshold, ema_period, volatility_factor]
+                vec![
+                    *ind.parameters.get("window").unwrap_or(&50.0),
+                    *ind.parameters.get("imbalance_threshold").unwrap_or(&0.15),
+                    *ind.parameters.get("min_volume").unwrap_or(&10.0),
+                    *ind.parameters.get("spike_threshold").unwrap_or(&0.001),
+                    *ind.parameters.get("ema_period").unwrap_or(&5.0),
+                    *ind.parameters.get("volatility_factor").unwrap_or(&1.0),
+                ]
+            })
+            .collect();
+
+        // Execute GPU batch tick backtest
+        let batch_config = crate::backtest::BacktestConfig {
+            initial_capital: 10_000.0,
+            trading_fee: 0.001,
+            slippage: 0.0005,
+            execution_latency_ms: 10, // 10ms execution latency
+            use_gpu: true,
+            force_cpu: false,
+        };
+
+        let results = BatchTickBacktest::new(device.clone())
+            .trades(trades)
+            .parameters_batch(&param_vecs)
+            .config(batch_config)
+            .execute()?;
+
+        // Update fitness values from results
+        for (individual, result) in population.iter_mut().zip(results.results.iter()) {
+            individual.fitness = result.sharpe_ratio;
+        }
+
+        println!(
+            "  GPU tick batch evaluation: {} strategies in {:.2}s",
+            population.len(),
+            results.total_time_ms / 1000.0
+        );
 
         Ok(())
     }
@@ -1127,8 +1229,15 @@ impl IslandGeneticOptimizer {
                     island, engine, strategy, timestamps, open, high, low, close, volume, use_fp8,
                 )?;
 
-                // Sort by fitness (descending)
-                island.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap());
+                // Sort by fitness (descending), handling NaN values
+                island.sort_by(|a, b| {
+                    match (a.fitness.is_finite(), b.fitness.is_finite()) {
+                        (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
+                        (true, false) => std::cmp::Ordering::Less,
+                        (false, true) => std::cmp::Ordering::Greater,
+                        (false, false) => std::cmp::Ordering::Equal,
+                    }
+                });
 
                 // Track best across all islands
                 if island[0].fitness > best_overall.fitness {
@@ -1451,8 +1560,16 @@ impl GeneticOptimizer {
                 population[idx].fitness = fitness;
             }
 
-            // Sort by fitness (descending)
-            population.sort_by(|a, b| b.fitness.partial_cmp(&a.fitness).unwrap());
+            // Sort by fitness (descending), handling NaN values
+            // NaN fitness values are treated as worst (moved to end)
+            population.sort_by(|a, b| {
+                match (a.fitness.is_finite(), b.fitness.is_finite()) {
+                    (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
+                    (true, false) => std::cmp::Ordering::Less,    // a is better (finite)
+                    (false, true) => std::cmp::Ordering::Greater, // b is better (finite)
+                    (false, false) => std::cmp::Ordering::Equal,  // both invalid
+                }
+            });
 
             // Calculate diversity and adapt mutation rate
             let diversity = self.calculate_diversity(&population);

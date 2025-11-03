@@ -265,16 +265,18 @@ impl GpuAggregator {
 
         // Launch binning kernel (using cudarc 0.17.3 builder pattern)
         let n_trades_i32 = n_trades as i32;
-        let mut builder = self.device.stream.launch_builder(&self.binning_kernel);
-        builder.arg(&d_timestamps);
-        builder.arg(&d_bucket_ids);
-        builder.arg(&n_trades_i32);
-        builder.arg(&timeframe_ms);
 
         unsafe {
-            builder.launch(cfg).map_err(|e| {
-                GpuError::ExecutionError(format!("Binning kernel launch failed: {:?}", e))
-            })?;
+            let mut builder = self.device.stream.launch_builder(&self.binning_kernel);
+            builder
+                .arg(&d_timestamps)
+                .arg(&d_bucket_ids)
+                .arg(&n_trades_i32)
+                .arg(&timeframe_ms)
+                .launch(cfg)
+                .map_err(|e| {
+                    GpuError::ExecutionError(format!("Binning kernel launch failed: {:?}", e))
+                })?;
         }
 
         // Step 5: Copy bucket IDs back to host for counting (sync - i32 data is small)
@@ -328,22 +330,24 @@ impl GpuAggregator {
 
         // Step 8: Launch aggregation kernel (computes high, low, volume)
         let n_trades_i32 = n_trades as i32;
-        let mut builder = self.device.stream.launch_builder(&self.aggregation_kernel);
-        builder.arg(&d_prices);
-        builder.arg(&d_quantities);
-        builder.arg(&d_quote_quantities);
-        builder.arg(&d_bucket_mapping);
-        builder.arg(&n_trades_i32);
-        builder.arg(&mut d_high);
-        builder.arg(&mut d_low);
-        builder.arg(&mut d_volume);
-        builder.arg(&mut d_quote_volume);
-        builder.arg(&mut d_num_trades);
 
         unsafe {
-            builder.launch(cfg).map_err(|e| {
-                GpuError::ExecutionError(format!("Aggregation kernel launch failed: {:?}", e))
-            })?;
+            let mut builder = self.device.stream.launch_builder(&self.aggregation_kernel);
+            builder
+                .arg(&d_prices)
+                .arg(&d_quantities)
+                .arg(&d_quote_quantities)
+                .arg(&d_bucket_mapping)
+                .arg(&n_trades_i32)
+                .arg(&mut d_high)
+                .arg(&mut d_low)
+                .arg(&mut d_volume)
+                .arg(&mut d_quote_volume)
+                .arg(&mut d_num_trades)
+                .launch(cfg)
+                .map_err(|e| {
+                    GpuError::ExecutionError(format!("Aggregation kernel launch failed: {:?}", e))
+                })?;
         }
 
         // Step 9: Synchronize and copy results back (async)
@@ -411,7 +415,7 @@ impl GpuAggregator {
 
 /// Helper method to copy i32 data from device to host
 impl GpuDevice {
-    fn copy_to_host_i32(&self, buffer: &CudaSlice<i32>) -> Result<Vec<i32>, GpuError> {
+    pub fn copy_to_host_i32(&self, buffer: &CudaSlice<i32>) -> Result<Vec<i32>, GpuError> {
         self.stream.memcpy_dtov(buffer).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy i32 from device: {:?}", e))
         })

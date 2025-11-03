@@ -67,10 +67,16 @@ pub mod aggregation;
 pub mod auto_select;
 
 #[cfg(feature = "gpu")]
+pub mod tick_aggregation;
+
+#[cfg(feature = "gpu")]
 pub use aggregation::GpuAggregator;
 
 #[cfg(feature = "gpu")]
 pub use auto_select::{AggregationEngine, EngineSelector};
+
+#[cfg(feature = "gpu")]
+pub use tick_aggregation::{TickAggregator, AggregatedCandles};
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
@@ -349,6 +355,25 @@ pub mod tick_batch;
 #[cfg(feature = "gpu")]
 pub use tick_batch::TickBatchProcessor;
 
+// FIXME: Temporarily disabled due to cudarc API changes
+// #[cfg(feature = "gpu")]
+// pub mod tick_backtest_batch;
+
+// #[cfg(feature = "gpu")]
+// pub use tick_backtest_batch::{
+//     TickBacktestBatch, BacktestConfig, BacktestResult, GpuTrade,
+//     MAX_TRADES, MAX_PENDING_ORDERS, DEFAULT_EXECUTION_DELAY_MS,
+// };
+
+#[cfg(feature = "gpu")]
+pub mod orderflow_batch;
+
+#[cfg(feature = "gpu")]
+pub use orderflow_batch::{
+    OrderflowBatchProcessor, OrderflowInput, OrderflowOutput,
+    StrategyConfig, StrategyType, Signal, NUM_FEATURES,
+};
+
 #[cfg(feature = "gpu")]
 pub mod adx;
 
@@ -390,6 +415,12 @@ pub mod fp8_gemm_cutlass;
 
 #[cfg(feature = "gpu")]
 pub use fp8_gemm_cutlass::FP8GemmCutlass;
+
+#[cfg(feature = "gpu")]
+pub mod quantization;
+
+#[cfg(feature = "gpu")]
+pub use quantization::{QuantizationCalibrator, QuantizedFeatures};
 
 #[cfg(feature = "heston")]
 pub use heston_pricing::HestonGpuPricer;

@@ -77,6 +77,13 @@ pub mod strategy;
 #[cfg(feature = "gpu")]
 mod batch_backtest_py;
 
+#[cfg(feature = "gpu")]
+mod gpu_tick_py;
+
+mod tick_backtest_py;
+
+mod orderflow_py;
+
 use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch};
 use coordinates::calculate_coordinates;
 use types::{ChartParams, OHLCVData};
@@ -1778,6 +1785,7 @@ fn run_backtest<'py>(
         initial_capital,
         trading_fee,
         slippage,
+        execution_latency_ms: 10,  // 10ms realistic latency
         use_gpu,
         force_cpu: !use_gpu,
     };
@@ -2010,6 +2018,26 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(batch_backtest_py::batch_backtest_info, m)?)?;
         m.add_class::<batch_backtest_py::PyBacktestResult>()?;
     }
+
+    // GPU Tick Aggregation (JIT-compiled CUDA kernels)
+    #[cfg(feature = "gpu")]
+    {
+        m.add_class::<gpu_tick_py::PyTickAggregator>()?;
+        m.add_class::<gpu_tick_py::PyAggregatedCandles>()?;
+        m.add_function(wrap_pyfunction!(gpu_tick_py::gpu_available, m)?)?;
+        m.add_function(wrap_pyfunction!(gpu_tick_py::gpu_info, m)?)?;
+    }
+
+    // Tick-Level (Event-Driven) Backtesting
+    m.add_class::<tick_backtest_py::PyTickBacktestConfig>()?;
+    m.add_class::<tick_backtest_py::PyTickBacktestResult>()?;
+    m.add_class::<tick_backtest_py::PyTickBacktestEngine>()?;
+
+    // Orderflow Feature Extraction + Signal Generation (GPU-accelerated)
+    m.add_class::<orderflow_py::PyStrategyConfig>()?;
+    m.add_class::<orderflow_py::PyOrderflowResult>()?;
+    m.add_class::<orderflow_py::PyOrderflowProcessor>()?;
+    m.add_function(wrap_pyfunction!(orderflow_py::orderflow_gpu_available, m)?)?;
 
     // Parquet Tick Data Loader (zero-copy Arrow-based)
     #[cfg(feature = "data-downloaders")]
