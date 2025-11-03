@@ -251,6 +251,87 @@ Metrics       RSI, ATR, SMA...   RSI, ATR (GPU)    Best Strategy
 
 ---
 
+## CPU vs GPU Architecture Clarification
+
+### Custom Tick Strategies (CPU) ✅
+
+**Use Case**: Custom tick-level strategies (LightGBM orderflow models, PyTorch, custom logic)
+
+**API**: `TickEngine` + `optimize_tick_strategy()`
+
+**Why CPU is Optimal**:
+- ML inference is sequential (not parallelizable on GPU)
+- No memory transfer overhead (model in CPU RAM)
+- Cache-friendly tree traversal for LightGBM
+- Branch prediction optimization
+
+**Performance**:
+- Single backtest: 5.5M ticks/sec
+- Genetic optimization: 8-40 backtests/sec (CPU parallel with Rayon)
+- LightGBM overhead: ~1-10μs per prediction (negligible)
+
+**Example**:
+```rust
+// Implement TickStrategy for custom model
+impl TickStrategy for LightGBMOrderflowStrategy {
+    fn on_tick(&mut self, trade: &Trade, candle: &IncompleteCandle) -> Signal {
+        let features = self.features.extract(trade, candle);
+        let prediction = self.model.predict(&features);
+        // Your custom logic
+    }
+}
+
+// Genetic optimization (CPU parallel)
+optimizer.optimize_tick_strategy(&trades, timeframe, &grid, factory)?;
+```
+
+**Documentation**: `docs/LIGHTGBM_INTEGRATION_GUIDE.md`
+
+---
+
+### GPU Batch Backtesting 🚀
+
+**Use Case**: Test 100s of PREDEFINED strategies on OHLCV data in parallel
+
+**API**: `batch_backtest()` (Python) or `BatchBacktestSweep` (Rust)
+
+**Supported Strategies**: RSI crossover, MA crossover, Bollinger bands (predefined only)
+
+**Performance**:
+- 20-40x faster than sequential CPU
+- Massively parallel (100+ strategies simultaneously)
+- CUDA kernels for each strategy type
+
+**Limitations**:
+- ❌ Cannot add custom strategies (CUDA kernel required)
+- ❌ OHLCV data only (not tick-level granularity)
+- ❌ Not suitable for ML models (LightGBM, PyTorch)
+
+**Example**:
+```python
+# Test 100 RSI strategies on GPU
+results = kimsfinance_core.batch_backtest(
+    strategy='rsi_crossover',
+    ohlcv=ohlcv_data,
+    parameters=[[14, 20+i, 70+i] for i in range(100)]
+)
+```
+
+---
+
+### When to Use What?
+
+| Use Case | Execution | Why |
+|----------|-----------|-----|
+| **LightGBM orderflow model** | ✅ CPU TickEngine | Sequential inference, cache-friendly |
+| **PyTorch strategy** | ✅ CPU TickEngine | Custom logic, model in CPU RAM |
+| **Custom rule-based** | ✅ CPU TickEngine | Flexible implementation |
+| **100s of RSI strategies** | ✅ GPU batch_backtest | Massively parallel parameter sweep |
+| **Genetic optimization (custom)** | ✅ CPU optimize_tick_strategy | Rayon parallelism (8-40 bt/sec) |
+| **Genetic optimization (RSI)** | ✅ GPU batch_backtest | GPU parallel (20-40x faster) |
+
+---
+
 ## Performance Summary
 
 ### Benchmark Targets
