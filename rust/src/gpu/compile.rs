@@ -70,28 +70,21 @@ impl CacheStats {
 
 /// Detect GPU compute capability at runtime
 ///
-/// Queries nvidia-smi for device compute capability, falling back to Ada Lovelace (8.9) if detection fails.
-/// Environment variable KIMSFINANCE_GPU_ARCH takes precedence over auto-detection.
+/// Queries the CUDA driver (`cuDeviceGetAttribute`) for device 0's compute capability,
+/// falling back to Ada Lovelace (8.9) if detection fails. This replaces the previous
+/// nvidia-smi subprocess query (~10-50ms of process spawn + fragile CSV parsing) with
+/// a direct driver call (microseconds, same code path as `GpuDevice::compute_capability`).
+///
+/// Environment variable KIMSFINANCE_GPU_ARCH takes precedence over auto-detection
+/// (handled in `get_compile_options`).
 fn detect_gpu_arch() -> String {
-    use std::process::Command;
-
-    // Try querying nvidia-smi for compute capability
-    let output = Command::new("nvidia-smi")
-        .args(["--query-gpu=compute_cap", "--format=csv,noheader"])
-        .output();
-
-    match output {
-        Ok(output) if output.status.success() => {
-            let cap_str = String::from_utf8_lossy(&output.stdout);
-            let cap_str = cap_str.trim();
-
-            if let Some((major, minor)) = cap_str.split_once('.') {
-                let arch = format!("compute_{}{}", major, minor);
-                eprintln!("🔍 Detected GPU compute capability: {} ({})", cap_str, arch);
-                return arch;
-            }
-        }
-        _ => {}
+    if let Some((major, minor)) = super::device::query_compute_capability(0) {
+        let arch = format!("compute_{}{}", major, minor);
+        eprintln!(
+            "🔍 Detected GPU compute capability: {}.{} ({})",
+            major, minor, arch
+        );
+        return arch;
     }
 
     // Fallback: Use Ada Lovelace (8.9) as reasonable default for modern GPUs
@@ -225,10 +218,60 @@ pub fn compile_ptx_optimized<S: AsRef<str>>(src: S) -> Result<Ptx, cudarc::nvrtc
     compile_ptx_with_opts(src, opts)
 }
 
+/// Compute the SHA-256 digest of kernel source code
+///
+/// Single source of truth for kernel-cache keying. Used by both the process-wide
+/// PTX cache (hex string key) and the per-device module cache (u64 key, see
+/// `kernel_source_hash_u64`).
+fn source_digest(source: &str) -> [u8; 32] {
+    let mut hasher = Sha256::new();
+    hasher.update(source.as_bytes());
+    hasher.finalize().into()
+}
+
+/// Compact 64-bit kernel-source cache key (first 8 bytes of SHA-256, little-endian)
+///
+/// Used by `GpuDevice::get_or_load_function` to key its per-device `CudaModule`
+/// cache. Derived from the same SHA-256 digest as the PTX cache key, so the two
+/// caches always agree on source identity. Collision probability for the dozens
+/// of kernels in this crate is negligible (~2^-64 per pair).
+pub fn kernel_source_hash_u64(source: &str) -> u64 {
+    let digest = source_digest(source);
+    u64::from_le_bytes(
+        digest[..8]
+            .try_into()
+            .expect("SHA-256 digest is 32 bytes; first 8 always available"),
+    )
+}
+
+/// Compile CUDA kernel with caching, returning a shared reference (`Arc<Ptx>`)
+///
+/// Identical caching semantics to `compile_ptx_optimized_cached`, exposed under a
+/// name that makes the borrow contract explicit: callers must **not** deep-clone
+/// the PTX out of the Arc (`Arc::unwrap_or_clone` copies the multi-KB PTX string
+/// on every cached hit). Instead of cloning the PTX to feed
+/// `context.load_module(ptx)` per call, use `GpuDevice::get_or_load_function`,
+/// which consumes this function internally and pays the one-time PTX clone +
+/// module load only on the first call per (device, kernel) pair.
+///
+/// # Errors
+///
+/// Returns compilation error if kernel has syntax errors or NVRTC fails.
+/// Failed compilations are NOT cached.
+pub fn compile_ptx_cached_ref<S: AsRef<str>>(
+    src: S,
+) -> Result<Arc<Ptx>, cudarc::nvrtc::CompileError> {
+    compile_ptx_optimized_cached(src)
+}
+
 /// Compile CUDA kernel with caching (50-200x faster on cache hits)
 ///
 /// This is the **recommended** compilation function for production use.
 /// Uses SHA-256 hashing to cache compiled PTX, eliminating recompilation overhead.
+///
+/// **Note**: If you need a `CudaFunction`, prefer `GpuDevice::get_or_load_function`,
+/// which additionally caches the loaded `CudaModule` per device and avoids the
+/// per-call `Arc::unwrap_or_clone` PTX deep-clone + `cuModuleLoadData` (~0.1-1ms).
 ///
 /// # Performance Impact
 ///
@@ -284,9 +327,8 @@ pub fn compile_ptx_optimized_cached<S: AsRef<str>>(
     let source = src.as_ref();
 
     // Compute SHA-256 hash of source code
-    let mut hasher = Sha256::new();
-    hasher.update(source.as_bytes());
-    let hash = format!("{:x}", hasher.finalize());
+    let digest = source_digest(source);
+    let hash: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
 
     // Check cache for existing PTX
     if let Some(ptx) = KERNEL_CACHE.get(&hash) {
@@ -372,7 +414,11 @@ pub fn clear_cache() {
 ///
 /// Returns compilation error if kernel source is not found or has syntax errors.
 pub fn compile_backtest_kernels() -> Result<Arc<Ptx>, cudarc::nvrtc::CompileError> {
-    const BACKTEST_KERNELS: &str = include_str!("kernels_backtest.cu");
+    const BACKTEST_KERNELS: &str = concat!(
+        include_str!("kernels/warp_primitives.cuh"),
+        "\n",
+        include_str!("kernels_backtest.cu"),
+    );
     compile_ptx_optimized_cached(BACKTEST_KERNELS)
 }
 
@@ -532,6 +578,46 @@ mod tests {
         let _ptx2 = compile_ptx_optimized_cached(SIMPLE_KERNEL).unwrap();
         let stats = get_cache_stats();
         assert_eq!(stats.misses, 1, "Should be cache miss after clear");
+    }
+
+    #[test]
+    fn test_kernel_source_hash_u64_known_answer() {
+        // SHA-256("abc") = ba7816bf 8f01cfea ... ; first 8 bytes little-endian.
+        // Known-answer vector pins the keying scheme: changing it silently would
+        // desynchronize the PTX cache and the per-device module cache.
+        assert_eq!(kernel_source_hash_u64("abc"), 0xeacf018fbf1678ba);
+    }
+
+    #[test]
+    fn test_kernel_source_hash_u64_deterministic_and_distinct() {
+        let src_a = "extern \"C\" __global__ void a() {}";
+        let src_b = "extern \"C\" __global__ void b() {}";
+
+        // Deterministic: same source always hashes to the same key
+        assert_eq!(kernel_source_hash_u64(src_a), kernel_source_hash_u64(src_a));
+
+        // Distinct sources produce distinct keys
+        assert_ne!(kernel_source_hash_u64(src_a), kernel_source_hash_u64(src_b));
+    }
+
+    #[test]
+    fn test_compile_ptx_cached_ref_shares_cache() {
+        const KERNEL: &str = r#"
+        extern "C" __global__ void cached_ref_kernel(double* out, int n) {
+            int idx = blockIdx.x * blockDim.x + threadIdx.x;
+            if (idx < n) {
+                out[idx] = idx * 5.0;
+            }
+        }
+        "#;
+
+        // Both entry points must resolve to the same cached Arc<Ptx>
+        let ptx1 = compile_ptx_optimized_cached(KERNEL).unwrap();
+        let ptx2 = compile_ptx_cached_ref(KERNEL).unwrap();
+        assert!(
+            Arc::ptr_eq(&ptx1, &ptx2),
+            "compile_ptx_cached_ref must share the PTX cache with compile_ptx_optimized_cached"
+        );
     }
 
     #[test]

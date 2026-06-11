@@ -3,8 +3,17 @@
 //! Production-ready 4-phase batch backtesting system for genetic optimization:
 //! 1. Batch indicator calculation (extend kernels_3d pattern)
 //! 2. Strategy signal generation (NEW - core innovation)
-//! 3. Backtest execution (NEW - sequential per strategy, parallel across strategies)
-//! 4. Metrics calculation (NEW - warp-level primitive reductions)
+//! 3. Backtest execution (sequential per strategy, parallel across strategies)
+//! 4. Metrics calculation (warp-level primitive reductions)
+//!
+//! # Source Assembly Contract (NVRTC)
+//!
+//! This file depends on the warp/block reduction primitives declared in
+//! gpu/kernels/warp_primitives.cuh. NVRTC compiles from an in-memory string
+//! with an EMPTY include path (see gpu/compile.rs), so a `#include` directive
+//! cannot be resolved at runtime. The header is therefore PREPENDED to this
+//! file at Rust compile time — see BACKTEST_KERNELS_SRC in
+//! src/backtest/batch.rs. Do NOT add #include directives to this file.
 //!
 //! # Performance Targets
 //!
@@ -15,19 +24,24 @@
 //! # Architecture
 //!
 //! RTX 3500 Ada: 14,336 CUDA cores, 12GB VRAM, 32MB L2 cache
-//! - 1000 strategies execute in parallel (1 thread per strategy)
-//! - Each thread processes its own candles sequentially
-//! - Wall time = single strategy time (not 1000×)
+//! - Execution: strategy-packed launch — 128 threads/block, each thread runs
+//!   ONE strategy's candle loop sequentially (wall time = single strategy
+//!   time, not 1000×). The old 1-thread-per-block launch left 127/128 of
+//!   every SM partition idle.
+//! - close_prices is shared by every strategy and stays L2-resident; the
+//!   former single-thread shared-memory staging loop was a pessimization and
+//!   has been removed.
+//! - Max drawdown is tracked sequentially inside the execution loop (the old
+//!   per-thread strided running_max in the metrics kernel systematically
+//!   underestimated drawdowns).
 //!
-//! # Agent 5 Optimization (Warp Primitives)
+//! # Precision
 //!
-//! - Replaced shared memory tree reductions with warp shuffle primitives
-//! - Sharpe ratio reduction: 256 cycles → 40 cycles (6.4x speedup)
-//! - Max drawdown reduction: 256 cycles → 40 cycles (6.4x speedup)
-//! - Total metrics kernel speedup: ~2x for typical workloads
-
-// Include warp-level primitives for optimized reductions
-#include "warp_primitives.cuh"
+//! Kernels intentionally use double for equity/PnL accumulation: results are
+//! compared 1:1 against the CPU reference (backtest/metrics.rs) at 0.01%
+//! tolerance, and the sequential per-strategy loops are memory-latency bound,
+//! not FP64-throughput bound, so Ada's 1:64 FP64 rate is not the bottleneck
+//! here.
 
 // NVRTC Kernel - Do NOT include system headers
 // NVRTC provides built-in CUDA types and functions
@@ -43,13 +57,19 @@ typedef long long int64_t;
 #define MAX_TRADES 1000
 
 // Trade structure
+//
+// LAYOUT CONTRACT: mirrored byte-for-byte by `GpuTrade` in
+// src/backtest/batch.rs. 3×double + 2×int64_t + int8_t, explicitly padded to
+// 48 bytes (8-byte alignment). Device buffers MUST be sized as
+// n_strategies * MAX_TRADES * 48 bytes.
 struct Trade {
-    double entry_price;
-    double exit_price;
-    int64_t entry_time;
-    int64_t exit_time;
-    double pnl;
-    int8_t direction; // 1=Long, -1=Short
+    double entry_price;   // offset  0
+    double exit_price;    // offset  8
+    int64_t entry_time;   // offset 16
+    int64_t exit_time;    // offset 24
+    double pnl;           // offset 32
+    int8_t direction;     // offset 40: 1=Long, -1=Short
+    int8_t _pad[7];       // offset 41..48: explicit padding
 };
 
 // Signal enumeration
@@ -153,7 +173,7 @@ __device__ double calculate_sma_point(
 
 // Batch Indicator Kernel (3D Grid: Strategy × Indicator × Candle)
 extern "C" __global__ void batch_indicators_kernel(
-    const double* __restrict__ ohlcv,           // [N_candles × 5] (O, H, L, C, V)
+    const double* __restrict__ ohlcv,           // [N_candles × 5] O, H, L, C, V
     const double* __restrict__ params,          // [N_strategies × N_params]
     double* __restrict__ indicators,            // [N_strategies × N_indicators × N_candles]
     int N_strategies,
@@ -207,7 +227,7 @@ extern "C" __global__ void batch_indicators_kernel(
 
 extern "C" __global__ void strategy_signals_kernel(
     const double* __restrict__ indicators,       // [N_strategies × N_indicators × N_candles]
-    const double* __restrict__ params,           // [N_strategies × N_params]
+    const double* __restrict__ params,           // [N_strategies × N_indicators × 3]
     int8_t* __restrict__ signals,                // [N_strategies × N_candles]
     int N_strategies,
     int N_indicators,
@@ -223,8 +243,12 @@ extern "C" __global__ void strategy_signals_kernel(
         return;
     }
 
-    // Get strategy parameters
-    int param_base = strategy_idx * N_indicators * 3;  // 3 params per indicator
+    // PARAM LAYOUT CONTRACT: the host packs parameters with a stride of
+    // exactly N_indicators * 3 doubles per strategy: 3 slots per indicator.
+    // Wrappers assert this before launch — see pad_params_to_kernel_layout
+    // in src/backtest/batch.rs. A mismatched stride reads out of bounds for
+    // every strategy after the first.
+    int param_base = strategy_idx * N_indicators * 3;
     double buy_threshold = params[param_base + 1];
     double sell_threshold = params[param_base + 2];
 
@@ -245,7 +269,7 @@ extern "C" __global__ void strategy_signals_kernel(
                 signal = SELL;
             }
         }
-        // Add more strategy types here (MA crossover, Bollinger, etc.)
+        // Add more strategy types here: MA crossover, Bollinger, etc.
     }
 
     // Write signal
@@ -254,8 +278,23 @@ extern "C" __global__ void strategy_signals_kernel(
 }
 
 // ============================================================================
-// KERNEL 3: BACKTEST EXECUTION (NEW - SEQUENTIAL CHALLENGE)
+// KERNEL 3: BACKTEST EXECUTION (SEQUENTIAL PER STRATEGY, PACKED THREADS)
 // ============================================================================
+//
+// Launch config (both variants):
+//   block_dim = (128, 1, 1)
+//   grid_dim  = (ceil(N_strategies / 128), 1, 1)
+//   shared_mem_bytes = 0
+//
+// Each thread executes exactly one strategy's candle loop sequentially —
+// identical per-strategy semantics to the old 1-thread-per-block launch,
+// but with ~128x better SM occupancy. The early bounds-check return is safe
+// because the kernels contain no __syncthreads().
+//
+// Max drawdown is tracked in registers during the sequential loop, mirroring
+// the CPU reference calculate_max_drawdown (src/backtest/metrics.rs): a
+// single running peak over the whole equity curve, in order. (Written as a
+// FRACTION; the CPU helper returns a percentage and callers scale.)
 
 extern "C" __global__ void backtest_execution_kernel(
     const int8_t* __restrict__ signals,          // [N_strategies × N_candles]
@@ -263,31 +302,36 @@ extern "C" __global__ void backtest_execution_kernel(
     double* __restrict__ equity_curves,          // [N_strategies × N_candles]
     Trade* __restrict__ trades,                  // [N_strategies × MAX_TRADES]
     int* __restrict__ num_trades,                // [N_strategies]
+    double* __restrict__ max_drawdowns,          // [N_strategies] fraction, not percent
     double initial_capital,
     double trading_fee,
     double slippage,
     int N_strategies,
     int N_candles
 ) {
-    int strategy_idx = blockIdx.x;
+    int strategy_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (strategy_idx >= N_strategies) {
         return;
     }
 
-    // Per-strategy state (stored in registers - very fast!)
+    // Per-strategy state - stored in registers, very fast
     double equity = initial_capital;
     double position = 0.0;  // 0=flat, >0=long, <0=short
     double entry_price = 0.0;
-    long entry_time = 0;
+    int64_t entry_time = 0;
     int trade_count = 0;
+
+    // Sequential running-peak drawdown state
+    double running_max = -CUDART_INF;
+    double max_dd = 0.0;
 
     // Base offsets
     int signal_base = strategy_idx * N_candles;
     int equity_base = strategy_idx * N_candles;
     int trade_base = strategy_idx * MAX_TRADES;
 
-    // Sequential loop through candles (this is OK - parallel across strategies!)
+    // Sequential loop through candles - this is OK, parallel across strategies
     for (int candle = 0; candle < N_candles; candle++) {
         int8_t signal = signals[signal_base + candle];
         double close = close_prices[candle];
@@ -339,7 +383,7 @@ extern "C" __global__ void backtest_execution_kernel(
                     trade_count++;
                 }
 
-                equity += pnl;
+                equity += position * exit_price;
                 position = 0.0;
             }
         }
@@ -355,17 +399,29 @@ extern "C" __global__ void backtest_execution_kernel(
         }
 
         equity_curves[equity_base + candle] = mtm_equity;
+
+        // Sequential drawdown tracking (CPU-reference semantics)
+        running_max = fmax(running_max, mtm_equity);
+        if (running_max > 1e-10) {
+            double dd = (running_max - mtm_equity) / running_max;
+            max_dd = fmax(max_dd, dd);
+        }
     }
 
-    // Store final trade count
+    // Store final per-strategy outputs
     num_trades[strategy_idx] = trade_count;
+    max_drawdowns[strategy_idx] = max_dd;
 }
 
 // ============================================================================
-// KERNEL 3 OPTIMIZED: SHARED MEMORY CACHING + REGISTER OPTIMIZATION
+// KERNEL 3 OPTIMIZED: REGISTER-RESIDENT STATE, HOISTED MULTIPLIERS
 // ============================================================================
-
-#define CHUNK_SIZE 128  // Cache 128 close prices at a time (1KB shared memory)
+//
+// The previous version staged close_prices through __shared__ memory with a
+// single-thread copy loop per 128-candle chunk — a pessimization at 1 thread
+// per block, and a deadlock hazard with packed threads since divergent
+// threads would skip its __syncthreads(). close_prices is identical for all
+// strategies and stays hot in Ada's 32MB L2, so it is read directly.
 
 extern "C" __global__ void backtest_execution_kernel_optimized(
     const int8_t* __restrict__ signals,          // [N_strategies × N_candles]
@@ -373,32 +429,32 @@ extern "C" __global__ void backtest_execution_kernel_optimized(
     double* __restrict__ equity_curves,          // [N_strategies × N_candles]
     Trade* __restrict__ trades,                  // [N_strategies × MAX_TRADES]
     int* __restrict__ num_trades,                // [N_strategies]
+    double* __restrict__ max_drawdowns,          // [N_strategies] fraction, not percent
     double initial_capital,
     double trading_fee,
     double slippage,
     int N_strategies,
     int N_candles
 ) {
-    int strategy_idx = blockIdx.x;
+    // Strategy-packed indexing: one thread per strategy.
+    int strategy_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (strategy_idx >= N_strategies) {
         return;
     }
 
-    // Shared memory for close price caching (128 doubles = 1KB)
-    __shared__ double shared_close[CHUNK_SIZE];
-
-    // Per-strategy state (minimize registers - pack into 3 doubles)
-    // state[0] = equity, state[1] = position, state[2] = entry_price
-    double state[3];
-    state[0] = initial_capital;  // equity
-    state[1] = 0.0;              // position
-    state[2] = 0.0;              // entry_price
-
-    long entry_time = 0;
+    // Per-strategy state - registers
+    double equity = initial_capital;
+    double position = 0.0;       // 0=flat, >0=long, <0=short
+    double entry_price = 0.0;
+    int64_t entry_time = 0;
     int trade_count = 0;
 
-    // Precompute fee/slippage multipliers (hoist out of loop)
+    // Sequential running-peak drawdown state
+    double running_max = -CUDART_INF;
+    double max_dd = 0.0;
+
+    // Precompute fee/slippage multipliers - hoisted out of loop
     const double buy_mult = 1.0 + slippage + trading_fee;
     const double sell_mult = 1.0 - slippage - trading_fee;
 
@@ -407,102 +463,104 @@ extern "C" __global__ void backtest_execution_kernel_optimized(
     const int equity_base = strategy_idx * N_candles;
     const int trade_base = strategy_idx * MAX_TRADES;
 
-    // Process candles in chunks of CHUNK_SIZE
-    for (int chunk_start = 0; chunk_start < N_candles; chunk_start += CHUNK_SIZE) {
-        int chunk_size = min(CHUNK_SIZE, N_candles - chunk_start);
+    for (int candle = 0; candle < N_candles; candle++) {
+        int8_t signal = signals[signal_base + candle];
+        double close = close_prices[candle];  // L2-hot, shared by all strategies
 
-        // Prefetch close prices into shared memory
-        // Single thread prefetch (could parallelize with more threads per strategy)
-        for (int i = 0; i < chunk_size; i++) {
-            shared_close[i] = close_prices[chunk_start + i];
-        }
-        __syncthreads();
+        // Compute trade prices using precomputed multipliers
+        double buy_price = close * buy_mult;
+        double sell_price = close * sell_mult;
 
-        // Process chunk
-        for (int i = 0; i < chunk_size; i++) {
-            int candle = chunk_start + i;
-            int8_t signal = signals[signal_base + candle];
-            double close = shared_close[i];  // Fast shared memory access!
+        // Execute signal
+        if (signal == BUY && position <= 0.0) {
+            // Close short if exists
+            if (position < 0.0) {
+                double pnl = position * (entry_price - buy_price);
 
-            // Compute trade prices (use precomputed multipliers)
-            double buy_price = close * buy_mult;
-            double sell_price = close * sell_mult;
-
-            // Execute signal (optimized branching)
-            if (signal == BUY && state[1] <= 0.0) {  // position <= 0
-                // Close short if exists
-                if (state[1] < 0.0) {
-                    double pnl = state[1] * (state[2] - buy_price);
-
-                    if (trade_count < MAX_TRADES) {
-                        Trade* t = &trades[trade_base + trade_count];
-                        t->entry_price = state[2];
-                        t->exit_price = buy_price;
-                        t->entry_time = entry_time;
-                        t->exit_time = candle;
-                        t->pnl = pnl;
-                        t->direction = -1;
-                        trade_count++;
-                    }
-
-                    state[0] += pnl;
-                    state[1] = 0.0;
+                if (trade_count < MAX_TRADES) {
+                    Trade* t = &trades[trade_base + trade_count];
+                    t->entry_price = entry_price;
+                    t->exit_price = buy_price;
+                    t->entry_time = entry_time;
+                    t->exit_time = candle;
+                    t->pnl = pnl;
+                    t->direction = -1;
+                    trade_count++;
                 }
 
-                // Open long
-                state[1] = state[0] / buy_price;
-                state[2] = buy_price;
-                entry_time = candle;
-                state[0] = 0.0;
-            }
-            else if (signal == SELL && state[1] >= 0.0) {  // position >= 0
-                // Close long if exists
-                if (state[1] > 0.0) {
-                    double pnl = state[1] * (sell_price - state[2]);
-
-                    if (trade_count < MAX_TRADES) {
-                        Trade* t = &trades[trade_base + trade_count];
-                        t->entry_price = state[2];
-                        t->exit_price = sell_price;
-                        t->entry_time = entry_time;
-                        t->exit_time = candle;
-                        t->pnl = pnl;
-                        t->direction = 1;
-                        trade_count++;
-                    }
-
-                    state[0] += pnl;
-                    state[1] = 0.0;
-                }
+                equity += pnl;
+                position = 0.0;
             }
 
-            // Mark-to-market equity (branchless version)
-            double mtm_equity = state[0];
-            if (state[1] > 0.0) {
-                mtm_equity = state[1] * close;
-            } else if (state[1] < 0.0) {
-                mtm_equity = state[0] + state[1] * (state[2] - close);
-            }
-
-            equity_curves[equity_base + candle] = mtm_equity;
+            // Open long
+            position = equity / buy_price;
+            entry_price = buy_price;
+            entry_time = candle;
+            equity = 0.0;
         }
-        __syncthreads();
+        else if (signal == SELL && position >= 0.0) {
+            // Close long if exists
+            if (position > 0.0) {
+                double pnl = position * (sell_price - entry_price);
+
+                if (trade_count < MAX_TRADES) {
+                    Trade* t = &trades[trade_base + trade_count];
+                    t->entry_price = entry_price;
+                    t->exit_price = sell_price;
+                    t->entry_time = entry_time;
+                    t->exit_time = candle;
+                    t->pnl = pnl;
+                    t->direction = 1;
+                    trade_count++;
+                }
+
+                equity += position * sell_price;
+                position = 0.0;
+            }
+        }
+
+        // Mark-to-market equity
+        double mtm_equity = equity;
+        if (position > 0.0) {
+            mtm_equity = position * close;
+        } else if (position < 0.0) {
+            mtm_equity = equity + position * (entry_price - close);
+        }
+
+        equity_curves[equity_base + candle] = mtm_equity;
+
+        // Sequential drawdown tracking (CPU-reference semantics)
+        running_max = fmax(running_max, mtm_equity);
+        if (running_max > 1e-10) {
+            double dd = (running_max - mtm_equity) / running_max;
+            max_dd = fmax(max_dd, dd);
+        }
     }
 
-    // Store final trade count
+    // Store final per-strategy outputs
     num_trades[strategy_idx] = trade_count;
+    max_drawdowns[strategy_idx] = max_dd;
 }
 
 // ============================================================================
-// KERNEL 4: METRICS CALCULATION (NEW - PARALLEL REDUCTION)
+// KERNEL 4: METRICS CALCULATION (PARALLEL REDUCTION)
 // ============================================================================
+//
+// Launch config: grid = (N_strategies, 1, 1), block = (256, 1, 1),
+// shared_mem_bytes = 0. All block reductions use the static __shared__
+// buffers inside warp_primitives' block_reduce_* helpers; no dynamic shared
+// memory is needed.
+//
+// Max drawdown is NOT computed here anymore: the per-thread strided
+// running_max approach systematically underestimated it (each thread only
+// saw the peak of its own stride-256 subsequence). The execution kernels now
+// write max_drawdowns directly from their sequential loops.
 
 extern "C" __global__ void metrics_calculation_kernel(
     const double* __restrict__ equity_curves,    // [N_strategies × N_candles]
     const Trade* __restrict__ trades,            // [N_strategies × MAX_TRADES]
     const int* __restrict__ num_trades,          // [N_strategies]
     double* __restrict__ sharpe_ratios,          // [N_strategies]
-    double* __restrict__ max_drawdowns,          // [N_strategies]
     double* __restrict__ win_rates,              // [N_strategies]
     int N_strategies,
     int N_candles
@@ -511,22 +569,21 @@ extern "C" __global__ void metrics_calculation_kernel(
     int tid = threadIdx.x;
     int block_size = blockDim.x;
 
+    // Uniform per-block early exit - safe: taken by the whole block, so the
+    // block_reduce_* barriers below are still reached by all live threads.
     if (strategy_idx >= N_strategies) {
         return;
     }
-
-    // Note: Shared memory for warp-level reductions is managed internally
-    // by block_reduce_sum_pair() and block_reduce_max() in warp_primitives.cuh
-    // No external shared memory allocation needed anymore!
 
     int equity_base = strategy_idx * N_candles;
 
     // ========== SHARPE RATIO CALCULATION (WARP OPTIMIZED) ==========
 
-    // Phase 1: Each thread calculates partial sums
+    // Phase 1: Each thread calculates partial sums over a strided subset of
+    // returns, counting only valid samples (finite values, prev > 0).
     double local_sum = 0.0;
     double local_sq_sum = 0.0;
-    int count = 0;
+    int local_count = 0;
 
     for (int i = tid + 1; i < N_candles; i += block_size) {
         double curr = equity_curves[equity_base + i];
@@ -536,26 +593,29 @@ extern "C" __global__ void metrics_calculation_kernel(
             double ret = (curr - prev) / prev;
             local_sum += ret;
             local_sq_sum += ret * ret;
-            count++;
+            local_count++;
         }
     }
 
-    // Phase 2: Warp-level reduction (6.4x faster than tree reduction)
-    // Uses warp shuffle primitives instead of shared memory + __syncthreads()
+    // Phase 2: Block-level reductions via warp shuffle primitives.
     double total_sum, total_sq_sum;
     block_reduce_sum_pair<double>(local_sum, local_sq_sum, total_sum, total_sq_sum);
+    double total_count = block_reduce_sum<double>((double)local_count);
 
-    // Thread 0 calculates final Sharpe ratio
+    // Thread 0 calculates final Sharpe ratio. The divisor is the VALID
+    // sample count - the old code counted valid samples and then divided by
+    // N_candles - 1 anyway, deflating mean/variance whenever the curve
+    // contained NaNs or non-positive equity values. Matches CPU
+    // calculate_sharpe_ratio_scalar: mean over returns.len(), annualized by
+    // sqrt(252): mean * 252 / (std * sqrt(252)) == (mean / std) * sqrt(252).
     if (tid == 0) {
-        int n_returns = N_candles - 1;
-
-        if (n_returns > 0) {
-            double mean = total_sum / n_returns;
-            double variance = (total_sq_sum / n_returns) - (mean * mean);
+        if (total_count > 0.5) {
+            double mean = total_sum / total_count;
+            double variance = (total_sq_sum / total_count) - (mean * mean);
 
             if (variance > 1e-10) {
                 double std_dev = sqrt(variance);
-                // Annualized Sharpe ratio (assuming daily data, 252 trading days)
+                // Annualized Sharpe ratio - daily data, 252 trading days
                 sharpe_ratios[strategy_idx] = (mean / std_dev) * sqrt(252.0);
             } else {
                 sharpe_ratios[strategy_idx] = 0.0;
@@ -565,42 +625,23 @@ extern "C" __global__ void metrics_calculation_kernel(
         }
     }
 
-    // ========== MAX DRAWDOWN CALCULATION (WARP OPTIMIZED) ==========
+    // ========== WIN RATE CALCULATION (PARALLEL) ==========
 
-    __syncthreads();
+    // Strided over the recorded trades instead of the old thread-0-only loop.
+    int total_trades = num_trades[strategy_idx];
+    int trade_base = strategy_idx * MAX_TRADES;
+    int local_wins = 0;
 
-    // Each thread calculates local max drawdown
-    double local_max_dd = 0.0;
-    double running_max = equity_curves[equity_base];
-
-    for (int i = tid; i < N_candles; i += block_size) {
-        double equity = equity_curves[equity_base + i];
-        running_max = fmax(running_max, equity);
-
-        if (running_max > 1e-10) {
-            double dd = (running_max - equity) / running_max;
-            local_max_dd = fmax(local_max_dd, dd);
+    for (int t = tid; t < total_trades; t += block_size) {
+        if (trades[trade_base + t].pnl > 0.0) {
+            local_wins++;
         }
     }
 
-    // Warp-level max reduction (6.4x faster than tree reduction)
-    double global_max_dd = block_reduce_max<double>(local_max_dd);
+    int total_wins = block_reduce_sum<int>(local_wins);
 
-    // Thread 0 writes results
     if (tid == 0) {
-        max_drawdowns[strategy_idx] = global_max_dd;
-
-        // ========== WIN RATE CALCULATION ==========
-        int total_trades = num_trades[strategy_idx];
-        int wins = 0;
-        int trade_base = strategy_idx * MAX_TRADES;
-
-        for (int t = 0; t < total_trades; t++) {
-            if (trades[trade_base + t].pnl > 0.0) {
-                wins++;
-            }
-        }
-
-        win_rates[strategy_idx] = (total_trades > 0) ? ((double)wins / (double)total_trades) : 0.0;
+        win_rates[strategy_idx] =
+            (total_trades > 0) ? ((double)total_wins / (double)total_trades) : 0.0;
     }
 }

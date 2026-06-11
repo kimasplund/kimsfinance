@@ -15,10 +15,9 @@
 
 #[cfg(feature = "gpu")]
 mod batch_backtest_tests {
-    use cudarc::driver::{CudaSlice, LaunchConfig};
+    use cudarc::driver::{LaunchConfig, PushKernelArg};
     use kimsfinance_core::gpu::compile::compile_backtest_kernels;
     use kimsfinance_core::gpu::device::GpuDevice;
-    use ndarray::Array1;
 
     /// Generate test price data (simple upward trend)
     fn generate_test_data(n: usize) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
@@ -93,36 +92,41 @@ mod batch_backtest_tests {
         let d_ohlcv = device.copy_to_device(&ohlcv).unwrap();
         let d_params = device.copy_to_device(&params).unwrap();
         let mut d_indicators = device
-            .alloc_buffer::<f64>(n_strategies * n_indicators * n_candles)
+            .alloc_buffer(n_strategies * n_indicators * n_candles)
             .unwrap();
 
         // Compile kernels
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("batch_indicators_kernel").unwrap();
 
         // Launch kernel
         let config = LaunchConfig {
             grid_dim: (
-                ((n_candles + 255) / 256) as u32,
                 n_strategies as u32,
                 n_indicators as u32,
+                ((n_candles + 255) / 256) as u32,
             ),
             block_dim: (256, 1, 1),
             shared_mem_bytes: 0,
         };
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let n_strategies_i32 = n_strategies as i32;
+        let n_indicators_i32 = n_indicators as i32;
+        let n_candles_i32 = n_candles as i32;
+        let n_params_i32 = n_params as i32;
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_ohlcv);
         builder.arg(&d_params);
         builder.arg(&mut d_indicators);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_indicators as i32));
-        builder.arg(&(n_candles as i32));
-        builder.arg(&(n_params as i32));
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_indicators_i32);
+        builder.arg(&n_candles_i32);
+        builder.arg(&n_params_i32);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         // Copy results back
         let indicators = device.copy_to_host(&d_indicators).unwrap();
@@ -195,11 +199,11 @@ mod batch_backtest_tests {
         // Allocate GPU memory
         let d_indicators = device.copy_to_device(&indicators).unwrap();
         let d_params = device.copy_to_device(&params).unwrap();
-        let mut d_signals = device.alloc_buffer::<i8>(n_strategies * n_candles).unwrap();
+        let mut d_signals = device.allocate_device_buffer::<i8>(n_strategies * n_candles).unwrap();
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("strategy_signals_kernel").unwrap();
 
         // Launch kernel
@@ -211,20 +215,24 @@ mod batch_backtest_tests {
 
         let strategy_type = 0i32; // RSI crossover
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let n_strategies_i32 = n_strategies as i32;
+        let n_indicators_i32 = n_indicators as i32;
+        let n_candles_i32 = n_candles as i32;
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_indicators);
         builder.arg(&d_params);
         builder.arg(&mut d_signals);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_indicators as i32));
-        builder.arg(&(n_candles as i32));
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_indicators_i32);
+        builder.arg(&n_candles_i32);
         builder.arg(&strategy_type);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         // Copy results back
-        let signals = device.copy_to_host(&d_signals).unwrap();
+        let signals = device.copy_to_host_i8(&d_signals).unwrap();
 
         // Validate signals
         for strategy_idx in 0..n_strategies {
@@ -282,19 +290,19 @@ mod batch_backtest_tests {
         }
 
         // Allocate GPU memory
-        let d_signals = device.copy_to_device(&signals).unwrap();
+        let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
         let mut d_equity_curves = device
-            .alloc_buffer::<f64>(n_strategies * n_candles)
+            .alloc_buffer(n_strategies * n_candles)
             .unwrap();
 
         // Trade structure size: 6 doubles + 2 longs + 1 i8 = 56 bytes (padded to 64)
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
         let mut d_trades = device
-            .alloc_buffer_raw::<u8>(n_strategies * max_trades * trade_size)
+            .allocate_device_buffer::<u8>(n_strategies * max_trades * trade_size)
             .unwrap();
-        let mut d_num_trades = device.alloc_buffer::<i32>(n_strategies).unwrap();
+        let mut d_num_trades = device.allocate_device_buffer::<i32>(n_strategies).unwrap();
 
         let initial_capital = 10000.0;
         let trading_fee = 0.001;
@@ -302,7 +310,7 @@ mod batch_backtest_tests {
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         // Launch kernel
@@ -312,24 +320,30 @@ mod batch_backtest_tests {
             shared_mem_bytes: 0,
         };
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let n_strategies_i32 = n_strategies as i32;
+        let n_candles_i32 = n_candles as i32;
+
+        let mut d_max_drawdowns = device.stream().alloc_zeros::<f64>(n_strategies).unwrap();
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_signals);
         builder.arg(&d_close);
         builder.arg(&mut d_equity_curves);
         builder.arg(&mut d_trades);
         builder.arg(&mut d_num_trades);
+        builder.arg(&mut d_max_drawdowns);
         builder.arg(&initial_capital);
         builder.arg(&trading_fee);
         builder.arg(&slippage);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_candles as i32));
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_candles_i32);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         // Copy results back
         let equity_curves = device.copy_to_host(&d_equity_curves).unwrap();
-        let num_trades = device.copy_to_host(&d_num_trades).unwrap();
+        let num_trades = device.stream().memcpy_dtov(&d_num_trades).unwrap();
 
         // Validate results
         for strategy_idx in 0..n_strategies {
@@ -389,31 +403,32 @@ mod batch_backtest_tests {
         // Create equity curves with known characteristics
         let mut equity_curves = Vec::new();
 
-        for strategy_idx in 0..n_strategies {
+        for _strategy_idx in 0..n_strategies {
             // Upward trend: equity increases linearly
-            let mut curve: Vec<f64> = (0..n_candles).map(|i| 10000.0 + i as f64 * 10.0).collect();
+            let curve: Vec<f64> = (0..n_candles).map(|i| 10000.0 + i as f64 * 10.0).collect();
             equity_curves.extend_from_slice(&curve);
         }
 
         // Create simple trade data (all winning trades)
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
-        let mut trades_bytes = vec![0u8; n_strategies * max_trades * trade_size];
+        let trades_bytes = vec![0u8; n_strategies * max_trades * trade_size];
 
         // Set up 5 winning trades per strategy
         let num_trades = vec![5i32; n_strategies];
 
         // Allocate GPU memory
         let d_equity_curves = device.copy_to_device(&equity_curves).unwrap();
-        let d_trades = device.copy_to_device_raw(&trades_bytes).unwrap();
-        let d_num_trades = device.copy_to_device(&num_trades).unwrap();
-        let mut d_sharpe = device.alloc_buffer::<f64>(n_strategies).unwrap();
-        let mut d_max_dd = device.alloc_buffer::<f64>(n_strategies).unwrap();
-        let mut d_win_rate = device.alloc_buffer::<f64>(n_strategies).unwrap();
+        let mut d_trades = device.allocate_device_buffer::<u8>(trades_bytes.len()).unwrap();
+        device.stream().memcpy_htod(&trades_bytes, &mut d_trades).unwrap();
+        let d_num_trades = device.copy_to_device_i32(&num_trades).unwrap();
+        let mut d_sharpe = device.alloc_buffer(n_strategies).unwrap();
+        let d_max_dd = device.stream().alloc_zeros::<f64>(n_strategies).unwrap();
+        let mut d_win_rate = device.alloc_buffer(n_strategies).unwrap();
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("metrics_calculation_kernel").unwrap();
 
         // Launch kernel
@@ -424,23 +439,25 @@ mod batch_backtest_tests {
             shared_mem_bytes,
         };
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let n_strategies_i32 = n_strategies as i32;
+        let n_candles_i32 = n_candles as i32;
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_equity_curves);
         builder.arg(&d_trades);
         builder.arg(&d_num_trades);
         builder.arg(&mut d_sharpe);
-        builder.arg(&mut d_max_dd);
         builder.arg(&mut d_win_rate);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_candles as i32));
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_candles_i32);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         // Copy results back
         let sharpe_ratios = device.copy_to_host(&d_sharpe).unwrap();
         let max_drawdowns = device.copy_to_host(&d_max_dd).unwrap();
-        let win_rates = device.copy_to_host(&d_win_rate).unwrap();
+        let _win_rates = device.copy_to_host(&d_win_rate).unwrap();
 
         // Validate results
         for strategy_idx in 0..n_strategies {
@@ -490,24 +507,24 @@ mod batch_backtest_tests {
         let signals = vec![0i8; n_strategies * n_candles];
 
         // Allocate GPU memory
-        let d_signals = device.copy_to_device(&signals).unwrap();
+        let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
         let mut d_equity_curves = device
-            .alloc_buffer::<f64>(n_strategies * n_candles)
+            .alloc_buffer(n_strategies * n_candles)
             .unwrap();
 
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
         let mut d_trades = device
-            .alloc_buffer_raw::<u8>(n_strategies * max_trades * trade_size)
+            .allocate_device_buffer::<u8>(n_strategies * max_trades * trade_size)
             .unwrap();
-        let mut d_num_trades = device.alloc_buffer::<i32>(n_strategies).unwrap();
+        let mut d_num_trades = device.allocate_device_buffer::<i32>(n_strategies).unwrap();
 
         let initial_capital = 10000.0;
 
         // Compile and launch kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         let config = LaunchConfig {
@@ -516,23 +533,31 @@ mod batch_backtest_tests {
             shared_mem_bytes: 0,
         };
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let trading_fee = 0.001f64;
+        let slippage = 0.0005f64;
+        let n_strategies_i32 = n_strategies as i32;
+        let n_candles_i32 = n_candles as i32;
+
+        let mut d_max_drawdowns = device.stream().alloc_zeros::<f64>(n_strategies).unwrap();
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_signals);
         builder.arg(&d_close);
         builder.arg(&mut d_equity_curves);
         builder.arg(&mut d_trades);
         builder.arg(&mut d_num_trades);
+        builder.arg(&mut d_max_drawdowns);
         builder.arg(&initial_capital);
-        builder.arg(&0.001);
-        builder.arg(&0.0005);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_candles as i32));
+        builder.arg(&trading_fee);
+        builder.arg(&slippage);
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_candles_i32);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         // Validate
-        let num_trades = device.copy_to_host(&d_num_trades).unwrap();
+        let num_trades = device.stream().memcpy_dtov(&d_num_trades).unwrap();
         let equity_curves = device.copy_to_host(&d_equity_curves).unwrap();
 
         for strategy_idx in 0..n_strategies {
@@ -588,22 +613,22 @@ mod batch_backtest_tests {
         }
 
         // Allocate GPU memory
-        let d_signals = device.copy_to_device(&signals).unwrap();
+        let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
         let mut d_equity_curves = device
-            .alloc_buffer::<f64>(n_strategies * n_candles)
+            .alloc_buffer(n_strategies * n_candles)
             .unwrap();
 
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
         let mut d_trades = device
-            .alloc_buffer_raw::<u8>(n_strategies * max_trades * trade_size)
+            .allocate_device_buffer::<u8>(n_strategies * max_trades * trade_size)
             .unwrap();
-        let mut d_num_trades = device.alloc_buffer::<i32>(n_strategies).unwrap();
+        let mut d_num_trades = device.allocate_device_buffer::<i32>(n_strategies).unwrap();
 
         // Compile and launch kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(ptx).unwrap();
+        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         let config = LaunchConfig {
@@ -614,20 +639,29 @@ mod batch_backtest_tests {
 
         let start = Instant::now();
 
-        let mut builder = device.stream.launch_builder(&kernel);
+        let initial_capital = 10000.0f64;
+        let trading_fee = 0.001f64;
+        let slippage = 0.0005f64;
+        let n_strategies_i32 = n_strategies as i32;
+        let n_candles_i32 = n_candles as i32;
+
+        let mut d_max_drawdowns = device.stream().alloc_zeros::<f64>(n_strategies).unwrap();
+
+        let mut builder = device.stream().launch_builder(&kernel);
         builder.arg(&d_signals);
         builder.arg(&d_close);
         builder.arg(&mut d_equity_curves);
         builder.arg(&mut d_trades);
         builder.arg(&mut d_num_trades);
-        builder.arg(&10000.0);
-        builder.arg(&0.001);
-        builder.arg(&0.0005);
-        builder.arg(&(n_strategies as i32));
-        builder.arg(&(n_candles as i32));
+        builder.arg(&mut d_max_drawdowns);
+        builder.arg(&initial_capital);
+        builder.arg(&trading_fee);
+        builder.arg(&slippage);
+        builder.arg(&n_strategies_i32);
+        builder.arg(&n_candles_i32);
 
         unsafe { builder.launch(config).unwrap() };
-        device.stream.synchronize().unwrap();
+        device.stream().synchronize().unwrap();
 
         let elapsed = start.elapsed();
 

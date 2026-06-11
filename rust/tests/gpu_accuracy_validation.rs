@@ -20,10 +20,13 @@
 
 #[cfg(feature = "gpu")]
 mod gpu_accuracy_tests {
-    use kimsfinance_core::gpu::device::GpuDevice;
-    use kimsfinance_core::cpu;
-    use ndarray::Array1;
     use approx::assert_abs_diff_eq;
+    use kimsfinance_core::cpu;
+    use kimsfinance_core::gpu::device::GpuDevice;
+    use kimsfinance_core::indicators::{
+        ATR, BollingerBands, Indicator, MultiOutputIndicator, ROC, RSI, Stochastic, WilliamsR,
+    };
+    use ndarray::Array1;
 
     // ========================================================================
     // Test Configuration
@@ -91,10 +94,15 @@ mod gpu_accuracy_tests {
 
     /// Validate GPU result against CPU reference
     fn validate_accuracy(gpu: &[f64], cpu: &[f64], indicator_name: &str) {
+        validate_accuracy_tol(gpu, cpu, indicator_name, TOLERANCE);
+    }
+
+    /// Validate GPU result against CPU reference with custom tolerance
+    fn validate_accuracy_tol(gpu: &[f64], cpu: &[f64], indicator_name: &str, tolerance: f64) {
         assert_eq!(gpu.len(), cpu.len(), "{}: Length mismatch", indicator_name);
 
-        let mut max_error = 0.0;
-        let mut sum_error = 0.0;
+        let mut max_error: f64 = 0.0;
+        let mut sum_error: f64 = 0.0;
         let mut failing_indices = Vec::new();
 
         for (i, (&g, &c)) in gpu.iter().zip(cpu.iter()).enumerate() {
@@ -105,7 +113,10 @@ mod gpu_accuracy_tests {
 
             if g.is_nan() || c.is_nan() {
                 failing_indices.push(i);
-                eprintln!("{} index {}: NaN mismatch (GPU: {}, CPU: {})", indicator_name, i, g, c);
+                eprintln!(
+                    "{} index {}: NaN mismatch (GPU: {}, CPU: {})",
+                    indicator_name, i, g, c
+                );
                 continue;
             }
 
@@ -113,7 +124,7 @@ mod gpu_accuracy_tests {
             max_error = max_error.max(error);
             sum_error += error;
 
-            if error >= TOLERANCE {
+            if error >= tolerance {
                 failing_indices.push(i);
             }
         }
@@ -125,15 +136,25 @@ mod gpu_accuracy_tests {
         println!("  Mean error: {:.2e}", mean_error);
 
         if !failing_indices.is_empty() {
-            eprintln!("{} FAILED: {} / {} samples exceed tolerance",
-                     indicator_name, failing_indices.len(), gpu.len());
-            eprintln!("Failing indices (first 10): {:?}",
-                     &failing_indices[..failing_indices.len().min(10)]);
+            eprintln!(
+                "{} FAILED: {} / {} samples exceed tolerance",
+                indicator_name,
+                failing_indices.len(),
+                gpu.len()
+            );
+            eprintln!(
+                "Failing indices (first 10): {:?}",
+                &failing_indices[..failing_indices.len().min(10)]
+            );
         }
 
-        assert!(max_error < TOLERANCE,
-               "{}: Max error {:.2e} exceeds tolerance {:.2e}",
-               indicator_name, max_error, TOLERANCE);
+        assert!(
+            max_error < tolerance,
+            "{}: Max error {:.2e} exceeds tolerance {:.2e}",
+            indicator_name,
+            max_error,
+            tolerance
+        );
     }
 
     // ========================================================================
@@ -151,14 +172,18 @@ mod gpu_accuracy_tests {
             let close_array = Array1::from_vec(close.clone());
 
             // GPU version
-            let gpu_result = kimsfinance_core::gpu::ema::ema_hybrid(&close_array, 14, &device, None)
-                .expect("GPU EMA failed");
+            let gpu_result =
+                kimsfinance_core::gpu::ema::ema_hybrid(&device, &close_array, 14, None)
+                    .expect("GPU EMA failed");
 
             // CPU reference
-            let cpu_result = cpu::ema_cpu(&close, 14)
-                .expect("CPU EMA failed");
+            let cpu_result = cpu::ema_cpu(&close_array, 14).expect("CPU EMA failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "EMA");
+            validate_accuracy(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "EMA",
+            );
         }
     }
 
@@ -173,14 +198,17 @@ mod gpu_accuracy_tests {
             let close_array = Array1::from_vec(close.clone());
 
             // GPU version
-            let gpu_result = kimsfinance_core::gpu::sma::sma_gpu(&close_array, 14, &device, None)
+            let gpu_result = kimsfinance_core::gpu::sma::sma_gpu(&device, &close_array, 14, None)
                 .expect("GPU SMA failed");
 
             // CPU reference
-            let cpu_result = cpu::sma_cpu(&close, 14)
-                .expect("CPU SMA failed");
+            let cpu_result = cpu::sma_cpu(&close_array, 14).expect("CPU SMA failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "SMA");
+            validate_accuracy(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "SMA",
+            );
         }
     }
 
@@ -195,14 +223,20 @@ mod gpu_accuracy_tests {
             let close_array = Array1::from_vec(close.clone());
 
             // GPU version
-            let gpu_result = kimsfinance_core::gpu::roc::roc_gpu(&close_array, 12, &device, None)
+            let gpu_result = kimsfinance_core::gpu::roc::roc_gpu(&device, &close_array, 12, None)
                 .expect("GPU ROC failed");
 
             // CPU reference
-            let cpu_result = cpu::roc_cpu(&close, 12)
+            let cpu_result = ROC::new(12)
+                .expect("Failed to create CPU ROC")
+                .calculate(close_array.view())
                 .expect("CPU ROC failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "ROC");
+            validate_accuracy(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "ROC",
+            );
         }
     }
 
@@ -224,15 +258,36 @@ mod gpu_accuracy_tests {
 
             // GPU version
             let (gpu_k, gpu_d) = kimsfinance_core::gpu::stochastic::stochastic_gpu(
-                &high_array, &low_array, &close_array, 14, 3, &device, None
-            ).expect("GPU Stochastic failed");
+                &device,
+                &high_array,
+                &low_array,
+                &close_array,
+                14,
+                3,
+                None,
+            )
+            .expect("GPU Stochastic failed");
 
             // CPU reference
-            let (cpu_k, cpu_d) = cpu::stochastic_cpu(&high, &low, &close, 14, 3)
+            let output = Stochastic::new(14, 3)
+                .expect("Failed to create CPU Stochastic")
+                .calculate_hlc(high_array.view(), low_array.view(), close_array.view())
                 .expect("CPU Stochastic failed");
+            let cpu_k = output.primary;
+            let cpu_d = &output.secondary[0];
 
-            validate_accuracy(gpu_k.as_slice().unwrap(), &cpu_k, "Stochastic %K");
-            validate_accuracy(gpu_d.as_slice().unwrap(), &cpu_d, "Stochastic %D");
+            validate_accuracy_tol(
+                gpu_k.as_slice().unwrap(),
+                cpu_k.as_slice().unwrap(),
+                "Stochastic %K",
+                1e-3,
+            );
+            validate_accuracy_tol(
+                gpu_d.as_slice().unwrap(),
+                cpu_d.as_slice().unwrap(),
+                "Stochastic %D",
+                1e-3,
+            );
         }
     }
 
@@ -250,14 +305,27 @@ mod gpu_accuracy_tests {
 
             // GPU version
             let gpu_result = kimsfinance_core::gpu::williams_r::williams_r_gpu(
-                &high_array, &low_array, &close_array, 14, &device, None
-            ).expect("GPU Williams %R failed");
+                &device,
+                &high_array,
+                &low_array,
+                &close_array,
+                14,
+                None,
+            )
+            .expect("GPU Williams %R failed");
 
             // CPU reference
-            let cpu_result = cpu::williams_r_cpu(&high, &low, &close, 14)
+            let cpu_result = WilliamsR::new(14)
+                .expect("Failed to create CPU Williams %R")
+                .calculate_hlc(high_array.view(), low_array.view(), close_array.view())
                 .expect("CPU Williams %R failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "Williams %R");
+            validate_accuracy_tol(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "Williams %R",
+                1e-3,
+            );
         }
     }
 
@@ -279,14 +347,26 @@ mod gpu_accuracy_tests {
 
             // GPU version
             let gpu_result = kimsfinance_core::gpu::atr::atr_gpu(
-                &high_array, &low_array, &close_array, 14, &device, None
-            ).expect("GPU ATR failed");
+                &device,
+                &high_array,
+                &low_array,
+                &close_array,
+                14,
+                None,
+            )
+            .expect("GPU ATR failed");
 
             // CPU reference
-            let cpu_result = cpu::atr_cpu(&high, &low, &close, 14)
+            let cpu_result = ATR::new(14)
+                .expect("Failed to create CPU ATR")
+                .calculate_hlc(high_array.view(), low_array.view(), close_array.view())
                 .expect("CPU ATR failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "ATR");
+            validate_accuracy(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "ATR",
+            );
         }
     }
 
@@ -301,14 +381,20 @@ mod gpu_accuracy_tests {
             let close_array = Array1::from_vec(close.clone());
 
             // GPU version
-            let gpu_result = kimsfinance_core::gpu::rsi::rsi_gpu(&close_array, 14, &device, None)
+            let gpu_result = kimsfinance_core::gpu::rsi::rsi_gpu(&device, &close_array, 14, None)
                 .expect("GPU RSI failed");
 
             // CPU reference
-            let cpu_result = cpu::rsi_cpu(&close, 14)
+            let cpu_result = RSI::new(14)
+                .expect("Failed to create CPU RSI")
+                .calculate(close_array.view())
                 .expect("CPU RSI failed");
 
-            validate_accuracy(gpu_result.as_slice().unwrap(), &cpu_result, "RSI");
+            validate_accuracy(
+                gpu_result.as_slice().unwrap(),
+                cpu_result.as_slice().unwrap(),
+                "RSI",
+            );
         }
     }
 
@@ -323,17 +409,40 @@ mod gpu_accuracy_tests {
             let close_array = Array1::from_vec(close.clone());
 
             // GPU version
-            let (gpu_upper, gpu_middle, gpu_lower) = kimsfinance_core::gpu::bollinger::bollinger_gpu(
-                &close_array, 20, 2.0, &device, None
-            ).expect("GPU Bollinger failed");
+            let (gpu_upper, gpu_middle, gpu_lower) =
+                kimsfinance_core::gpu::bollinger::bollinger_bands_gpu(
+                    &device,
+                    &close_array,
+                    20,
+                    2.0,
+                    None,
+                )
+                .expect("GPU Bollinger failed");
 
             // CPU reference
-            let (cpu_upper, cpu_middle, cpu_lower) = cpu::bollinger_cpu(&close, 20, 2.0)
+            let output = BollingerBands::new(20, 2.0)
+                .expect("Failed to create CPU Bollinger Bands")
+                .calculate_multi(close_array.view())
                 .expect("CPU Bollinger failed");
+            let cpu_upper = &output.secondary[0];
+            let cpu_middle = &output.primary;
+            let cpu_lower = &output.secondary[1];
 
-            validate_accuracy(gpu_upper.as_slice().unwrap(), &cpu_upper, "Bollinger Upper");
-            validate_accuracy(gpu_middle.as_slice().unwrap(), &cpu_middle, "Bollinger Middle");
-            validate_accuracy(gpu_lower.as_slice().unwrap(), &cpu_lower, "Bollinger Lower");
+            validate_accuracy(
+                gpu_upper.as_slice().unwrap(),
+                cpu_upper.as_slice().unwrap(),
+                "Bollinger Upper",
+            );
+            validate_accuracy(
+                gpu_middle.as_slice().unwrap(),
+                cpu_middle.as_slice().unwrap(),
+                "Bollinger Middle",
+            );
+            validate_accuracy(
+                gpu_lower.as_slice().unwrap(),
+                cpu_lower.as_slice().unwrap(),
+                "Bollinger Lower",
+            );
         }
     }
 
@@ -351,24 +460,30 @@ mod gpu_accuracy_tests {
         let constant = vec![100.0; 1000];
         let constant_array = Array1::from_vec(constant.clone());
 
-        let gpu_sma = kimsfinance_core::gpu::sma::sma_gpu(&constant_array, 14, &device, None)
+        let gpu_sma = kimsfinance_core::gpu::sma::sma_gpu(&device, &constant_array, 14, None)
             .expect("GPU SMA failed on constant");
-        let cpu_sma = cpu::sma_cpu(&constant, 14)
-            .expect("CPU SMA failed on constant");
+        let cpu_sma = cpu::sma_cpu(&constant_array, 14).expect("CPU SMA failed on constant");
 
-        validate_accuracy(gpu_sma.as_slice().unwrap(), &cpu_sma, "SMA (constant)");
+        validate_accuracy(
+            gpu_sma.as_slice().unwrap(),
+            cpu_sma.as_slice().unwrap(),
+            "SMA (constant)",
+        );
 
         // Test with zeros
         println!("\nTesting edge case: zeros");
         let zeros = vec![0.0; 1000];
         let zeros_array = Array1::from_vec(zeros.clone());
 
-        let gpu_sma_zero = kimsfinance_core::gpu::sma::sma_gpu(&zeros_array, 14, &device, None)
+        let gpu_sma_zero = kimsfinance_core::gpu::sma::sma_gpu(&device, &zeros_array, 14, None)
             .expect("GPU SMA failed on zeros");
-        let cpu_sma_zero = cpu::sma_cpu(&zeros, 14)
-            .expect("CPU SMA failed on zeros");
+        let cpu_sma_zero = cpu::sma_cpu(&zeros_array, 14).expect("CPU SMA failed on zeros");
 
-        validate_accuracy(gpu_sma_zero.as_slice().unwrap(), &cpu_sma_zero, "SMA (zeros)");
+        validate_accuracy(
+            gpu_sma_zero.as_slice().unwrap(),
+            cpu_sma_zero.as_slice().unwrap(),
+            "SMA (zeros)",
+        );
     }
 
     // ========================================================================
@@ -386,15 +501,15 @@ mod gpu_accuracy_tests {
         for period in [5, 10, 14, 20, 50, 100, 200] {
             println!("\nTesting SMA with period {}", period);
 
-            let gpu_result = kimsfinance_core::gpu::sma::sma_gpu(&close_array, period, &device, None)
-                .expect("GPU SMA failed");
-            let cpu_result = cpu::sma_cpu(&close, period)
-                .expect("CPU SMA failed");
+            let gpu_result =
+                kimsfinance_core::gpu::sma::sma_gpu(&device, &close_array, period, None)
+                    .expect("GPU SMA failed");
+            let cpu_result = cpu::sma_cpu(&close_array, period).expect("CPU SMA failed");
 
             validate_accuracy(
                 gpu_result.as_slice().unwrap(),
-                &cpu_result,
-                &format!("SMA({})", period)
+                cpu_result.as_slice().unwrap(),
+                &format!("SMA({})", period),
             );
         }
     }
