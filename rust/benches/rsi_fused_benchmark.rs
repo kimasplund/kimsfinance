@@ -20,8 +20,8 @@
 //! cargo bench --bench rsi_fused_benchmark --features gpu
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use kimsfinance_core::gpu::{is_fused_available, rsi_fused_gpu, rsi_gpu, GpuDevice};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use kimsfinance_core::gpu::{GpuDevice, is_fused_available, rsi_fused_gpu, rsi_gpu};
 use ndarray::Array1;
 
 /// Generate realistic price data
@@ -47,8 +47,13 @@ fn bench_rsi_hybrid(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                rsi_gpu(black_box(&device), black_box(&close), black_box(14), black_box(None))
-                    .expect("RSI hybrid failed")
+                rsi_gpu(
+                    black_box(&device),
+                    black_box(&close),
+                    black_box(14),
+                    black_box(None),
+                )
+                .expect("RSI hybrid failed")
             });
         });
     }
@@ -74,8 +79,13 @@ fn bench_rsi_fused(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                rsi_fused_gpu(black_box(&device), black_box(&close), black_box(14), black_box(None))
-                    .expect("RSI fused failed")
+                rsi_fused_gpu(
+                    black_box(&device),
+                    black_box(&close),
+                    black_box(14),
+                    black_box(None),
+                )
+                .expect("RSI fused failed")
             });
         });
     }
@@ -98,15 +108,25 @@ fn bench_rsi_comparison(c: &mut Criterion) {
 
     group.bench_function("hybrid_100k", |b| {
         b.iter(|| {
-            rsi_gpu(black_box(&device), black_box(&close), black_box(14), black_box(None))
-                .expect("RSI hybrid failed")
+            rsi_gpu(
+                black_box(&device),
+                black_box(&close),
+                black_box(14),
+                black_box(None),
+            )
+            .expect("RSI hybrid failed")
         });
     });
 
     group.bench_function("fused_100k", |b| {
         b.iter(|| {
-            rsi_fused_gpu(black_box(&device), black_box(&close), black_box(14), black_box(None))
-                .expect("RSI fused failed")
+            rsi_fused_gpu(
+                black_box(&device),
+                black_box(&close),
+                black_box(14),
+                black_box(None),
+            )
+            .expect("RSI fused failed")
         });
     });
 
@@ -139,7 +159,11 @@ fn validate_accuracy(c: &mut Criterion) {
     println!("Max error vs hybrid: {:.12}", max_error);
     println!(
         "Status: {}",
-        if max_error < 1e-6 { "PASS ✓" } else { "FAIL ✗" }
+        if max_error < 1e-6 {
+            "PASS ✓"
+        } else {
+            "FAIL ✗"
+        }
     );
 
     assert!(

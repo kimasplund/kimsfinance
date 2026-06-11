@@ -307,8 +307,8 @@ fn bench_strategy_overhead(c: &mut Criterion) {
     let trades = generate_tick_data(size);
     let trade = &trades[0];
 
-    use kimsfinance_core::binance::IncompleteCandle;
     use kimsfinance_core::backtest::{OrderFlowStrategy, TickStrategy, VolumeSpikeStrategy};
+    use kimsfinance_core::binance::IncompleteCandle;
 
     let candle = IncompleteCandle::new(trade, 0);
 

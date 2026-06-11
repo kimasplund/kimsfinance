@@ -9,8 +9,10 @@ use std::time::Instant;
 fn main() {
     let n = 100_000;
     println!("\n{:=^100}", " GPU INDICATOR TIMING (100K CANDLES) ");
-    println!("{:<30} {:>12} {:>12} {:>12} {:>12} {:>15}",
-             "Indicator", "Cold (μs)", "Warm (μs)", "Cold (ms)", "Warm (ms)", "Candles/sec");
+    println!(
+        "{:<30} {:>12} {:>12} {:>12} {:>12} {:>15}",
+        "Indicator", "Cold (μs)", "Warm (μs)", "Cold (ms)", "Warm (ms)", "Candles/sec"
+    );
     println!("{:-^100}", "");
 
     // Generate test data
@@ -26,13 +28,15 @@ fn main() {
             // COLD START: First run includes CUDA kernel compilation
             let cold_start = Instant::now();
             match $warmup {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     println!("{:<30} {:>12}", $name, format!("ERROR: {:?}", e));
                     return;
                 }
             }
-            device.synchronize().expect("Failed to sync after cold start");
+            device
+                .synchronize()
+                .expect("Failed to sync after cold start");
             let cold_micros = cold_start.elapsed().as_micros();
 
             // WARMUP: Run 4 more times to ensure kernels are compiled and caches filled
@@ -45,22 +49,26 @@ fn main() {
             let warm_start = Instant::now();
             for _ in 0..10 {
                 match $timed {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(e) => {
                         println!("{:<30} {:>12}", $name, format!("ERROR: {:?}", e));
                         return;
                     }
                 }
             }
-            device.synchronize().expect("Failed to sync after warm runs");
+            device
+                .synchronize()
+                .expect("Failed to sync after warm runs");
             let warm_micros = warm_start.elapsed().as_micros() / 10;
 
             let cold_millis = cold_micros as f64 / 1000.0;
             let warm_millis = warm_micros as f64 / 1000.0;
             let candles_per_sec = (n as f64 / warm_millis) * 1000.0;
 
-            println!("{:<30} {:>12} {:>12} {:>12.2} {:>12.2} {:>15.0}",
-                     $name, cold_micros, warm_micros, cold_millis, warm_millis, candles_per_sec);
+            println!(
+                "{:<30} {:>12} {:>12} {:>12.2} {:>12.2} {:>15.0}",
+                $name, cold_micros, warm_micros, cold_millis, warm_millis, candles_per_sec
+            );
         }};
     }
 
@@ -68,31 +76,36 @@ fn main() {
     println!("\n{}", "GROUP 1: SIMPLE INDICATORS (2-3 transfers)");
 
     use kimsfinance_core::gpu::ema::ema_hybrid;
-    time_it!("EMA (hybrid)",
+    time_it!(
+        "EMA (hybrid)",
         ema_hybrid(&device, &close, 14, None),
         ema_hybrid(&device, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::roc::roc_gpu;
-    time_it!("ROC",
+    time_it!(
+        "ROC",
         roc_gpu(&device, &close, 12, None),
         roc_gpu(&device, &close, 12, None)
     );
 
     use kimsfinance_core::gpu::wma::wma_gpu;
-    time_it!("WMA",
+    time_it!(
+        "WMA",
         wma_gpu(&device, &close, 14, None),
         wma_gpu(&device, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::obv::obv_gpu;
-    time_it!("OBV",
+    time_it!(
+        "OBV",
         obv_gpu(&device, &close, &volume, None),
         obv_gpu(&device, &close, &volume, None)
     );
 
     use kimsfinance_core::gpu::vwma::vwma_gpu;
-    time_it!("VWMA",
+    time_it!(
+        "VWMA",
         vwma_gpu(&device, &close, &volume, 14, None),
         vwma_gpu(&device, &close, &volume, 14, None)
     );
@@ -101,49 +114,57 @@ fn main() {
     println!("\n{}", "GROUP 2: MEDIUM INDICATORS (4-5 transfers)");
 
     use kimsfinance_core::gpu::cci::cci_gpu;
-    time_it!("CCI",
+    time_it!(
+        "CCI",
         cci_gpu(&device, &high, &low, &close, 20, None),
         cci_gpu(&device, &high, &low, &close, 20, None)
     );
 
     use kimsfinance_core::gpu::macd::macd_hybrid;
-    time_it!("MACD [CPU]",
+    time_it!(
+        "MACD [CPU]",
         macd_hybrid(&device, &close, 12, 26, 9, None),
         macd_hybrid(&device, &close, 12, 26, 9, None)
     );
 
     use kimsfinance_core::gpu::sma::sma_gpu;
-    time_it!("SMA",
+    time_it!(
+        "SMA",
         sma_gpu(&device, &close, 14, None),
         sma_gpu(&device, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::williams_r::williams_r_gpu;
-    time_it!("Williams %R",
+    time_it!(
+        "Williams %R",
         williams_r_gpu(&device, &high, &low, &close, 14, None),
         williams_r_gpu(&device, &high, &low, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::cmf::cmf_gpu;
-    time_it!("CMF",
+    time_it!(
+        "CMF",
         cmf_gpu(&device, &high, &low, &close, &volume, 20, None),
         cmf_gpu(&device, &high, &low, &close, &volume, 20, None)
     );
 
     use kimsfinance_core::gpu::donchian::donchian_gpu;
-    time_it!("Donchian Channels",
+    time_it!(
+        "Donchian Channels",
         donchian_gpu(&device, &high, &low, 20, None),
         donchian_gpu(&device, &high, &low, 20, None)
     );
 
     use kimsfinance_core::gpu::elder_ray::elder_ray_gpu;
-    time_it!("Elder Ray",
+    time_it!(
+        "Elder Ray",
         elder_ray_gpu(&device, &high, &low, &close, 13, None),
         elder_ray_gpu(&device, &high, &low, &close, 13, None)
     );
 
     use kimsfinance_core::gpu::stochastic::stochastic_gpu;
-    time_it!("Stochastic",
+    time_it!(
+        "Stochastic",
         stochastic_gpu(&device, &high, &low, &close, 14, 3, None),
         stochastic_gpu(&device, &high, &low, &close, 14, 3, None)
     );
@@ -152,19 +173,22 @@ fn main() {
     println!("\n{}", "GROUP 3: COMPLEX INDICATORS (6+ transfers)");
 
     use kimsfinance_core::gpu::atr::atr_gpu;
-    time_it!("ATR (reference - Jules' opt)",
+    time_it!(
+        "ATR (reference - Jules' opt)",
         atr_gpu(&device, &high, &low, &close, 14, None),
         atr_gpu(&device, &high, &low, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::rsi::rsi_gpu;
-    time_it!("RSI",
+    time_it!(
+        "RSI",
         rsi_gpu(&device, &close, 14, None),
         rsi_gpu(&device, &close, 14, None)
     );
 
     use kimsfinance_core::gpu::rsi_sync::rsi_gpu_sync;
-    time_it!("RSI (sync variant)",
+    time_it!(
+        "RSI (sync variant)",
         rsi_gpu_sync(&device, &close, 14, None),
         rsi_gpu_sync(&device, &close, 14, None)
     );

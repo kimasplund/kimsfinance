@@ -38,7 +38,7 @@
 //! ```
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
@@ -59,8 +59,12 @@ fn main() {
             path
         }
         None => {
-            println!("cargo:warning=nvcc not found in PATH. Skipping FP8 CUTLASS kernel compilation.");
-            println!("cargo:warning=Install CUDA Toolkit (https://developer.nvidia.com/cuda-downloads) to enable FP8 support.");
+            println!(
+                "cargo:warning=nvcc not found in PATH. Skipping FP8 CUTLASS kernel compilation."
+            );
+            println!(
+                "cargo:warning=Install CUDA Toolkit (https://developer.nvidia.com/cuda-downloads) to enable FP8 support."
+            );
             return;
         }
     };
@@ -85,7 +89,9 @@ fn main() {
         }
         None => {
             println!("cargo:warning=CUTLASS not found. FP8 kernels require CUTLASS headers.");
-            println!("cargo:warning=Clone CUTLASS: git clone https://github.com/NVIDIA/cutlass.git /tmp/cutlass");
+            println!(
+                "cargo:warning=Clone CUTLASS: git clone https://github.com/NVIDIA/cutlass.git /tmp/cutlass"
+            );
             println!("cargo:warning=Or set CUTLASS_PATH environment variable.");
             return;
         }
@@ -95,9 +101,12 @@ fn main() {
     // Can also auto-detect GPU if available
     let cuda_arch = env::var("CUDA_ARCH").unwrap_or_else(|_| {
         // Try to auto-detect GPU architecture
-        detect_gpu_architecture(&nvcc).unwrap_or_else(|| "sm_89".to_string())
+        detect_cuda_architecture(&nvcc).unwrap_or_else(|| "sm_89".to_string())
     });
-    println!("cargo:warning=Compiling for CUDA architecture: {}", cuda_arch);
+    println!(
+        "cargo:warning=Compiling for CUDA architecture: {}",
+        cuda_arch
+    );
 
     // Compile FP8 kernels (both WMMA and CUTLASS variants)
     compile_fp8_wmma_kernel(&nvcc, &cuda_home, &cuda_arch);
@@ -114,7 +123,7 @@ fn main() {
 ///
 /// Uses nvidia-smi to query GPU compute capability.
 /// Returns architecture string like "sm_89" or None if detection fails.
-fn detect_gpu_architecture(nvcc: &PathBuf) -> Option<String> {
+fn detect_cuda_architecture(_nvcc: &PathBuf) -> Option<String> {
     // Try nvidia-smi first (most reliable)
     let output = Command::new("nvidia-smi")
         .args(["--query-gpu=compute_cap", "--format=csv,noheader"])
@@ -196,12 +205,10 @@ fn find_cuda_home() -> Option<PathBuf> {
 
     // Try to detect from nvcc path (remove /bin/nvcc)
     if let Some(nvcc) = find_nvcc() {
-        if let Some(parent) = nvcc.parent() {
-            if let Some(cuda_root) = parent.parent() {
-                if cuda_root.join("include").exists() {
-                    return Some(cuda_root.to_path_buf());
-                }
-            }
+        let parent = nvcc.parent()?;
+        let cuda_root = parent.parent()?;
+        if cuda_root.join("include").exists() {
+            return Some(cuda_root.to_path_buf());
         }
     }
 
@@ -255,7 +262,7 @@ fn find_cutlass_path() -> Option<PathBuf> {
 ///      -o {out_dir}/fp8_wmma_kernels.cubin \
 ///      src/gpu/kernels_fp8_wmma.cu
 /// ```
-fn compile_fp8_wmma_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str) {
+fn compile_fp8_wmma_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
     let kernel_source = PathBuf::from("src/gpu/kernels_fp8_wmma.cu");
     let output_cubin = out_dir.join("fp8_wmma_kernels.cubin");
@@ -301,7 +308,10 @@ fn compile_fp8_wmma_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str)
     let output = match cmd.output() {
         Ok(output) => output,
         Err(e) => {
-            println!("cargo:warning=Failed to execute nvcc for WMMA kernel: {}", e);
+            println!(
+                "cargo:warning=Failed to execute nvcc for WMMA kernel: {}",
+                e
+            );
             return;
         }
     };
@@ -355,12 +365,7 @@ fn compile_fp8_wmma_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str)
 ///      -o {out_dir}/fp8_kernels.cubin \
 ///      src/gpu/kernels/fp8_cutlass.cu
 /// ```
-fn compile_fp8_cutlass_kernel(
-    nvcc: &PathBuf,
-    cuda_home: &PathBuf,
-    cutlass_path: &PathBuf,
-    cuda_arch: &str,
-) {
+fn compile_fp8_cutlass_kernel(nvcc: &Path, cuda_home: &Path, cutlass_path: &Path, cuda_arch: &str) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
     let kernel_source = PathBuf::from("src/gpu/kernels/fp8_cutlass.cu");
     let output_cubin = out_dir.join("fp8_kernels.cubin");
@@ -436,13 +441,18 @@ fn compile_fp8_cutlass_kernel(
     } else {
         println!("cargo:warning=Failed to compile FP8 CUTLASS kernel (non-critical)");
         println!("cargo:warning=Exit code: {:?}", output.status.code());
-        println!("cargo:warning=Note: FP8 WMMA kernel may still work. CUTLASS kernel is experimental.");
+        println!(
+            "cargo:warning=Note: FP8 WMMA kernel may still work. CUTLASS kernel is experimental."
+        );
 
         if !output.stderr.is_empty() {
             // Only show first few lines of error to avoid spam
             let stderr = String::from_utf8_lossy(&output.stderr);
             let first_lines: Vec<&str> = stderr.lines().take(10).collect();
-            println!("cargo:warning=nvcc stderr (first 10 lines): {}", first_lines.join("\n"));
+            println!(
+                "cargo:warning=nvcc stderr (first 10 lines): {}",
+                first_lines.join("\n")
+            );
         }
     }
 }
@@ -465,7 +475,7 @@ fn compile_fp8_cutlass_kernel(
 ///      -o {out_dir}/librsi_fused.so \
 ///      src/gpu/kernels/rsi_fused.cu
 /// ```
-fn compile_rsi_fused_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str) {
+fn compile_rsi_fused_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
     let kernel_source = PathBuf::from("src/gpu/kernels/rsi_fused.cu");
 
@@ -521,7 +531,10 @@ fn compile_rsi_fused_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str
     let output = match cmd.output() {
         Ok(output) => output,
         Err(e) => {
-            println!("cargo:warning=Failed to execute nvcc for RSI fused kernel: {}", e);
+            println!(
+                "cargo:warning=Failed to execute nvcc for RSI fused kernel: {}",
+                e
+            );
             return;
         }
     };
@@ -549,7 +562,9 @@ fn compile_rsi_fused_kernel(nvcc: &PathBuf, cuda_home: &PathBuf, cuda_arch: &str
             );
         }
     } else {
-        println!("cargo:warning=Failed to compile RSI fused kernel (non-critical, will use hybrid)");
+        println!(
+            "cargo:warning=Failed to compile RSI fused kernel (non-critical, will use hybrid)"
+        );
         println!("cargo:warning=Exit code: {:?}", output.status.code());
 
         if !output.stderr.is_empty() {

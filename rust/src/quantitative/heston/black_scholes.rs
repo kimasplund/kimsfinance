@@ -3,7 +3,7 @@
 //! CPU-based analytical option pricing using the Black-Scholes formula.
 //! Used as a fallback when GPU FFT pricing fails or produces invalid results.
 
-use crate::quantitative::heston::{Greeks, OptionQuote, OptionType};
+use crate::quantitative::heston::{Greeks, OptionType};
 use std::f64::consts::PI;
 
 /// Black-Scholes pricer with analytical Greeks

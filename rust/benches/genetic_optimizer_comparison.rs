@@ -39,8 +39,8 @@ use ndarray::Array1;
 use std::time::Duration;
 
 use kimsfinance_core::backtest::{
-    BacktestConfig, BacktestEngine, GeneticOptimizer, IndicatorConfig, IndicatorValues,
-    OHLCVBar, ParameterGrid, ParameterRange, Signal, Strategy,
+    BacktestConfig, BacktestEngine, GeneticOptimizer, IndicatorConfig, IndicatorValues, OHLCVBar,
+    ParameterGrid, ParameterRange, Signal, Strategy,
 };
 
 #[path = "statistics.rs"]
@@ -224,27 +224,23 @@ fn bench_population_scaling(c: &mut Criterion) {
             .generations(10) // Fewer generations for larger populations
             .fp8_exploration_ratio(0.0);
 
-        group.bench_with_input(
-            BenchmarkId::new("Scaling", pop_size),
-            &pop_size,
-            |b, _| {
-                b.iter(|| {
-                    optimizer
-                        .optimize(
-                            black_box(&engine),
-                            black_box(&mut strategy.clone()),
-                            black_box(&timestamps),
-                            black_box(&open),
-                            black_box(&high),
-                            black_box(&low),
-                            black_box(&close),
-                            black_box(&volume),
-                            black_box(&grid),
-                        )
-                        .expect("Optimization failed")
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("Scaling", pop_size), &pop_size, |b, _| {
+            b.iter(|| {
+                optimizer
+                    .optimize(
+                        black_box(&engine),
+                        black_box(&mut strategy.clone()),
+                        black_box(&timestamps),
+                        black_box(&open),
+                        black_box(&high),
+                        black_box(&low),
+                        black_box(&close),
+                        black_box(&volume),
+                        black_box(&grid),
+                    )
+                    .expect("Optimization failed")
+            });
+        });
     }
 
     group.finish();

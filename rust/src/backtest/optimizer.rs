@@ -205,15 +205,23 @@ impl GeneticOptimizer {
         let mut current_mutation_rate = self.mutation_rate;
 
         // Print optimizer configuration
-        println!("Genetic Optimizer: {} individuals, {} generations",
-            self.population_size, self.generations);
-        println!("  Adaptive mutation enabled (initial rate: {:.4})", current_mutation_rate);
+        println!(
+            "Genetic Optimizer: {} individuals, {} generations",
+            self.population_size, self.generations
+        );
+        println!(
+            "  Adaptive mutation enabled (initial rate: {:.4})",
+            current_mutation_rate
+        );
 
         #[cfg(feature = "gpu")]
         {
             const GPU_BATCH_THRESHOLD: usize = 50;
             if self.population_size >= GPU_BATCH_THRESHOLD {
-                println!("  GPU batch evaluation enabled (threshold: {})", GPU_BATCH_THRESHOLD);
+                println!(
+                    "  GPU batch evaluation enabled (threshold: {})",
+                    GPU_BATCH_THRESHOLD
+                );
             }
         }
 
@@ -241,9 +249,9 @@ impl GeneticOptimizer {
             population.sort_by(|a, b| {
                 match (a.fitness.is_finite(), b.fitness.is_finite()) {
                     (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
-                    (true, false) => std::cmp::Ordering::Less,    // a is better (finite)
+                    (true, false) => std::cmp::Ordering::Less, // a is better (finite)
                     (false, true) => std::cmp::Ordering::Greater, // b is better (finite)
-                    (false, false) => std::cmp::Ordering::Equal,  // both invalid
+                    (false, false) => std::cmp::Ordering::Equal, // both invalid
                 }
             });
 
@@ -264,9 +272,16 @@ impl GeneticOptimizer {
             // Print progress with adaptive info
             if generation % 10 == 0 || generation == self.generations - 1 {
                 let precision = if use_fp8 { "FP8" } else { "FP64" };
-                let mutation_change = if (current_mutation_rate - prev_mutation_rate).abs() > 0.001 {
-                    if current_mutation_rate > prev_mutation_rate { " ↑" } else { " ↓" }
-                } else { "" };
+                let mutation_change = if (current_mutation_rate - prev_mutation_rate).abs() > 0.001
+                {
+                    if current_mutation_rate > prev_mutation_rate {
+                        " ↑"
+                    } else {
+                        " ↓"
+                    }
+                } else {
+                    ""
+                };
 
                 println!(
                     "Gen {}/{} [{}]: Fitness={:.4}, Diversity={:.4}, Mutation={:.4}{}",
@@ -290,7 +305,10 @@ impl GeneticOptimizer {
             // Create next generation with adaptive mutation (skip on last iteration)
             if generation < self.generations - 1 {
                 population = self.evolve_population_adaptive(
-                    &population, param_grid, &mut rng, current_mutation_rate
+                    &population,
+                    param_grid,
+                    &mut rng,
+                    current_mutation_rate,
                 );
             }
         }
@@ -412,8 +430,14 @@ impl GeneticOptimizer {
                         }
                         Err(e) => {
                             // GPU batch failed - fall back to CPU parallel
-                            println!("  GPU batch unavailable ({}), falling back to CPU parallel",
-                                     e.to_string().split_whitespace().take(6).collect::<Vec<_>>().join(" "));
+                            println!(
+                                "  GPU batch unavailable ({}), falling back to CPU parallel",
+                                e.to_string()
+                                    .split_whitespace()
+                                    .take(6)
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            );
                         }
                     }
                 }
@@ -425,7 +449,15 @@ impl GeneticOptimizer {
             for individual in population.iter_mut() {
                 let mut strategy_clone = strategy.clone();
                 let result = self.evaluate_individual(
-                    individual, engine, &mut strategy_clone, timestamps, open, high, low, close, volume,
+                    individual,
+                    engine,
+                    &mut strategy_clone,
+                    timestamps,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
                     use_fp8,
                 )?;
                 individual.fitness = result.fitness();
@@ -815,9 +847,11 @@ impl GeneticOptimizer {
         let low_diversity = diversity < MIN_DIVERSITY;
 
         // Check 3: Consecutive same best
-        let consecutive_same = recent.windows(2)
+        let consecutive_same = recent
+            .windows(2)
             .filter(|w| (w[0] - w[1]).abs() < 1e-6)
-            .count() >= CONVERGENCE_WINDOW - 1;
+            .count()
+            >= CONVERGENCE_WINDOW - 1;
 
         // Converged if 2+ criteria met
         let convergence_score = [fitness_plateau, low_diversity, consecutive_same]
@@ -828,7 +862,10 @@ impl GeneticOptimizer {
         if convergence_score >= 2 {
             println!("  Convergence detected:");
             if fitness_plateau {
-                println!("    ✓ Fitness plateau: {:.6}% improvement", improvement * 100.0);
+                println!(
+                    "    ✓ Fitness plateau: {:.6}% improvement",
+                    improvement * 100.0
+                );
             }
             if low_diversity {
                 println!("    ✓ Low diversity: {:.4}%", diversity * 100.0);
@@ -858,10 +895,7 @@ impl GeneticOptimizer {
 
         // 30% diverse solutions
         let diversity_count = elite_count - top_count;
-        let diverse = self.select_diverse_individuals(
-            &population[top_count..],
-            diversity_count
-        );
+        let diverse = self.select_diverse_individuals(&population[top_count..], diversity_count);
         elite.extend(diverse);
 
         elite
@@ -876,9 +910,9 @@ impl GeneticOptimizer {
         let mut selected = Vec::new();
 
         for candidate in population {
-            let is_diverse = selected.iter().all(|sel: &Individual| {
-                self.parameter_distance(candidate, sel) > 0.15
-            });
+            let is_diverse = selected
+                .iter()
+                .all(|sel: &Individual| self.parameter_distance(candidate, sel) > 0.15);
 
             if is_diverse {
                 selected.push(candidate.clone());
@@ -912,7 +946,11 @@ impl GeneticOptimizer {
             }
         }
 
-        if count > 0 { diff_sum / count as f64 } else { 0.0 }
+        if count > 0 {
+            diff_sum / count as f64
+        } else {
+            0.0
+        }
     }
 
     /// Calculate population diversity (coefficient of variation)
@@ -1214,7 +1252,8 @@ impl IslandGeneticOptimizer {
         );
 
         // Calculate FP8/FP64 transition point
-        let fp8_generations = (self.base.generations as f64 * self.base.fp8_exploration_ratio) as usize;
+        let fp8_generations =
+            (self.base.generations as f64 * self.base.fp8_exploration_ratio) as usize;
 
         // Evolution loop
         for generation_idx in 0..self.base.generations {
@@ -1230,14 +1269,14 @@ impl IslandGeneticOptimizer {
                 )?;
 
                 // Sort by fitness (descending), handling NaN values
-                island.sort_by(|a, b| {
-                    match (a.fitness.is_finite(), b.fitness.is_finite()) {
+                island.sort_by(
+                    |a, b| match (a.fitness.is_finite(), b.fitness.is_finite()) {
                         (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
                         (true, false) => std::cmp::Ordering::Less,
                         (false, true) => std::cmp::Ordering::Greater,
                         (false, false) => std::cmp::Ordering::Equal,
-                    }
-                });
+                    },
+                );
 
                 // Track best across all islands
                 if island[0].fitness > best_overall.fitness {
@@ -1258,7 +1297,11 @@ impl IslandGeneticOptimizer {
             // Periodic migration
             if generation_idx % self.migration_interval == 0 && generation_idx > 0 {
                 self.migrate_individuals(&mut islands);
-                println!("  Gen {} [{}]: Migration complete", generation_idx + 1, precision);
+                println!(
+                    "  Gen {} [{}]: Migration complete",
+                    generation_idx + 1,
+                    precision
+                );
             }
 
             // Print progress
@@ -1280,10 +1323,17 @@ impl IslandGeneticOptimizer {
             }
 
             // Check convergence (use best island for diversity check)
-            let best_island = islands.iter()
+            let best_island = islands
+                .iter()
                 .max_by(|a, b| {
-                    let max_a = a.iter().map(|ind| ind.fitness).fold(f64::NEG_INFINITY, f64::max);
-                    let max_b = b.iter().map(|ind| ind.fitness).fold(f64::NEG_INFINITY, f64::max);
+                    let max_a = a
+                        .iter()
+                        .map(|ind| ind.fitness)
+                        .fold(f64::NEG_INFINITY, f64::max);
+                    let max_b = b
+                        .iter()
+                        .map(|ind| ind.fitness)
+                        .fold(f64::NEG_INFINITY, f64::max);
                     max_a.partial_cmp(&max_b).unwrap()
                 })
                 .unwrap();
@@ -1318,10 +1368,17 @@ impl IslandGeneticOptimizer {
         )?;
 
         // Calculate final diversity from best island
-        let best_island = islands.iter()
+        let best_island = islands
+            .iter()
             .max_by(|a, b| {
-                let max_a = a.iter().map(|ind| ind.fitness).fold(f64::NEG_INFINITY, f64::max);
-                let max_b = b.iter().map(|ind| ind.fitness).fold(f64::NEG_INFINITY, f64::max);
+                let max_a = a
+                    .iter()
+                    .map(|ind| ind.fitness)
+                    .fold(f64::NEG_INFINITY, f64::max);
+                let max_b = b
+                    .iter()
+                    .map(|ind| ind.fitness)
+                    .fold(f64::NEG_INFINITY, f64::max);
                 max_a.partial_cmp(&max_b).unwrap()
             })
             .unwrap();
@@ -1467,8 +1524,8 @@ impl GeneticOptimizer {
     where
         F: Fn(&HashMap<String, f64>) -> Box<dyn crate::backtest::TickStrategy> + Send + Sync,
     {
-        use crate::backtest::tick_engine::TickEngine;
         use crate::backtest::BacktestConfig;
+        use crate::backtest::tick_engine::TickEngine;
 
         if param_grid.is_empty() {
             return Err(GpuError::EmptyParameterGrid);
@@ -1502,8 +1559,15 @@ impl GeneticOptimizer {
             "Genetic Optimizer (Tick Strategy): {} individuals, {} generations",
             self.population_size, self.generations
         );
-        println!("  Tick data: {} trades, timeframe: {:?}", trades.len(), timeframe);
-        println!("  Adaptive mutation enabled (initial rate: {:.4})", current_mutation_rate);
+        println!(
+            "  Tick data: {} trades, timeframe: {:?}",
+            trades.len(),
+            timeframe
+        );
+        println!(
+            "  Adaptive mutation enabled (initial rate: {:.4})",
+            current_mutation_rate
+        );
 
         // Create tick engine for backtesting
         let engine = TickEngine::new(BacktestConfig::default());
@@ -1515,44 +1579,45 @@ impl GeneticOptimizer {
             let precision = if use_fp8 { "FP8" } else { "FP64" };
 
             // Evaluate fitness for all individuals (PARALLEL or SEQUENTIAL)
-            let fitness_results: Result<Vec<(usize, f64)>, GpuError> = if population.len() >= PARALLEL_THRESHOLD {
-                // Parallel evaluation using Rayon
-                population
-                    .par_iter()
-                    .enumerate()
-                    .map(|(idx, individual)| {
-                        // Create strategy via factory
-                        let mut strategy = strategy_factory(&individual.parameters);
+            let fitness_results: Result<Vec<(usize, f64)>, GpuError> =
+                if population.len() >= PARALLEL_THRESHOLD {
+                    // Parallel evaluation using Rayon
+                    population
+                        .par_iter()
+                        .enumerate()
+                        .map(|(idx, individual)| {
+                            // Create strategy via factory
+                            let mut strategy = strategy_factory(&individual.parameters);
 
-                        // Run tick backtest (Box<dyn TickStrategy> derefences to &mut dyn TickStrategy)
-                        let result = engine
-                            .run(&mut *strategy, trades, timeframe)
-                            .map_err(|e| GpuError::BacktestError(e.to_string()))?;
+                            // Run tick backtest (Box<dyn TickStrategy> derefences to &mut dyn TickStrategy)
+                            let result = engine
+                                .run(&mut *strategy, trades, timeframe)
+                                .map_err(|e| GpuError::BacktestError(e.to_string()))?;
 
-                        // Use total return as fitness
-                        let fitness = result.total_return;
+                            // Use total return as fitness
+                            let fitness = result.total_return;
 
-                        Ok((idx, fitness))
-                    })
-                    .collect()
-            } else {
-                // Sequential evaluation (less overhead for small populations)
-                population
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, individual)| {
-                        let mut strategy = strategy_factory(&individual.parameters);
+                            Ok((idx, fitness))
+                        })
+                        .collect()
+                } else {
+                    // Sequential evaluation (less overhead for small populations)
+                    population
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, individual)| {
+                            let mut strategy = strategy_factory(&individual.parameters);
 
-                        let result = engine
-                            .run(&mut *strategy, trades, timeframe)
-                            .map_err(|e| GpuError::BacktestError(e.to_string()))?;
+                            let result = engine
+                                .run(&mut *strategy, trades, timeframe)
+                                .map_err(|e| GpuError::BacktestError(e.to_string()))?;
 
-                        let fitness = result.total_return;
+                            let fitness = result.total_return;
 
-                        Ok((idx, fitness))
-                    })
-                    .collect()
-            };
+                            Ok((idx, fitness))
+                        })
+                        .collect()
+                };
 
             // Update population with fitness values
             let fitness_results = fitness_results?;
@@ -1565,9 +1630,9 @@ impl GeneticOptimizer {
             population.sort_by(|a, b| {
                 match (a.fitness.is_finite(), b.fitness.is_finite()) {
                     (true, true) => b.fitness.partial_cmp(&a.fitness).unwrap(),
-                    (true, false) => std::cmp::Ordering::Less,    // a is better (finite)
+                    (true, false) => std::cmp::Ordering::Less, // a is better (finite)
                     (false, true) => std::cmp::Ordering::Greater, // b is better (finite)
-                    (false, false) => std::cmp::Ordering::Equal,  // both invalid
+                    (false, false) => std::cmp::Ordering::Equal, // both invalid
                 }
             });
 
@@ -1587,7 +1652,8 @@ impl GeneticOptimizer {
 
             // Print progress with adaptive info
             if generation % 10 == 0 || generation == self.generations - 1 {
-                let mutation_change = if (current_mutation_rate - prev_mutation_rate).abs() > 0.001 {
+                let mutation_change = if (current_mutation_rate - prev_mutation_rate).abs() > 0.001
+                {
                     if current_mutation_rate > prev_mutation_rate {
                         " ↑"
                     } else {
@@ -1787,26 +1853,48 @@ mod tests {
 
         // Create test population with varying diversity
         let high_diversity_pop = vec![
-            Individual { parameters: HashMap::new(), fitness: 1.0 },
-            Individual { parameters: HashMap::new(), fitness: 2.0 },
-            Individual { parameters: HashMap::new(), fitness: 5.0 },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 1.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 2.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 5.0,
+            },
         ];
 
         let low_diversity_pop = vec![
-            Individual { parameters: HashMap::new(), fitness: 5.0 },
-            Individual { parameters: HashMap::new(), fitness: 5.001 },
-            Individual { parameters: HashMap::new(), fitness: 5.002 },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 5.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 5.001,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 5.002,
+            },
         ];
 
         // Not converged (too few samples)
         assert!(!optimizer.has_converged(&[1.0, 2.0, 3.0], &high_diversity_pop));
 
         // Not converged (still improving)
-        let improving = vec![1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0];
+        let improving = vec![
+            1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0,
+        ];
         assert!(!optimizer.has_converged(&improving, &high_diversity_pop));
 
         // Converged (flat for 15 generations + low diversity)
-        let flat = vec![5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
+        let flat = vec![
+            5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
+        ];
         assert!(optimizer.has_converged(&flat, &low_diversity_pop));
     }
 
@@ -1816,18 +1904,36 @@ mod tests {
 
         // High diversity population (widely spread fitness values)
         let high_div_pop = vec![
-            Individual { parameters: HashMap::new(), fitness: 1.0 },
-            Individual { parameters: HashMap::new(), fitness: 2.0 },
-            Individual { parameters: HashMap::new(), fitness: 5.0 },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 1.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 2.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 5.0,
+            },
         ];
         let div = optimizer.calculate_diversity(&high_div_pop);
         assert!(div > 0.5, "High diversity should be > 0.5, got {}", div);
 
         // Low diversity population (similar fitness values)
         let low_div_pop = vec![
-            Individual { parameters: HashMap::new(), fitness: 2.0 },
-            Individual { parameters: HashMap::new(), fitness: 2.01 },
-            Individual { parameters: HashMap::new(), fitness: 2.02 },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 2.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 2.01,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 2.02,
+            },
         ];
         let div = optimizer.calculate_diversity(&low_div_pop);
         assert!(div < 0.1, "Low diversity should be < 0.1, got {}", div);
@@ -1839,8 +1945,14 @@ mod tests {
 
         // Zero mean population should return 0
         let zero_pop = vec![
-            Individual { parameters: HashMap::new(), fitness: 0.0 },
-            Individual { parameters: HashMap::new(), fitness: 0.0 },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 0.0,
+            },
+            Individual {
+                parameters: HashMap::new(),
+                fitness: 0.0,
+            },
         ];
         let div = optimizer.calculate_diversity(&zero_pop);
         assert_eq!(div, 0.0, "Zero mean population should have diversity 0");
@@ -1852,17 +1964,37 @@ mod tests {
 
         // Low diversity should increase mutation rate
         let rate = optimizer.adapt_mutation_rate(0.2, 0.05);
-        assert!(rate > 0.2, "Low diversity (0.05) should increase mutation, got {}", rate);
-        assert!(rate <= 0.5, "Mutation rate should be capped at 0.5, got {}", rate);
+        assert!(
+            rate > 0.2,
+            "Low diversity (0.05) should increase mutation, got {}",
+            rate
+        );
+        assert!(
+            rate <= 0.5,
+            "Mutation rate should be capped at 0.5, got {}",
+            rate
+        );
 
         // High diversity should decrease mutation rate
         let rate = optimizer.adapt_mutation_rate(0.2, 0.4);
-        assert!(rate < 0.2, "High diversity (0.4) should decrease mutation, got {}", rate);
-        assert!(rate >= 0.05, "Mutation rate should be >= 0.05, got {}", rate);
+        assert!(
+            rate < 0.2,
+            "High diversity (0.4) should decrease mutation, got {}",
+            rate
+        );
+        assert!(
+            rate >= 0.05,
+            "Mutation rate should be >= 0.05, got {}",
+            rate
+        );
 
         // Medium diversity should maintain rate (approximately)
         let rate = optimizer.adapt_mutation_rate(0.2, 0.2);
-        assert!((rate - 0.2).abs() < 0.05, "Medium diversity should maintain rate, got {}", rate);
+        assert!(
+            (rate - 0.2).abs() < 0.05,
+            "Medium diversity should maintain rate, got {}",
+            rate
+        );
 
         // Test bounds (max cap at 0.5)
         let rate = optimizer.adapt_mutation_rate(0.5, 0.01); // Very low diversity
@@ -1875,7 +2007,9 @@ mod tests {
 
     #[test]
     fn test_evolve_population_adaptive() {
-        let optimizer = GeneticOptimizer::new().population_size(10).elitism_rate(0.2);
+        let optimizer = GeneticOptimizer::new()
+            .population_size(10)
+            .elitism_rate(0.2);
         let mut rng = thread_rng();
 
         // Create parameter grid
@@ -1920,8 +2054,7 @@ mod tests {
         let elite_count = (optimizer.population_size as f64 * optimizer.elitism_rate) as usize;
         for i in 0..elite_count {
             assert_eq!(
-                low_mutation_pop[i].fitness,
-                population[i].fitness,
+                low_mutation_pop[i].fitness, population[i].fitness,
                 "Elite individual {} should be preserved",
                 i
             );

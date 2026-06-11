@@ -3,13 +3,21 @@
 //!
 //! Tests all optimized GPU indicators with 100K candles to measure actual performance.
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::gpu::device::GpuDevice;
 use ndarray::Array1;
 use std::time::Instant;
 
 /// Generate test OHLCV data
-fn generate_ohlcv(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv(
+    n: usize,
+) -> (
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     let high = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64 * 0.01)).collect());
     let low = Array1::from_vec((0..n).map(|i| 95.0 + (i as f64 * 0.01)).collect());
     let close = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64 * 0.01)).collect());
@@ -201,7 +209,10 @@ fn single_run_timing() {
     let device = GpuDevice::new().expect("Failed to initialize GPU");
 
     println!("\n{:=^80}", " GPU INDICATOR TIMING (100K CANDLES) ");
-    println!("{:<25} {:>12} {:>15}", "Indicator", "Time (μs)", "Speedup vs CPU");
+    println!(
+        "{:<25} {:>12} {:>15}",
+        "Indicator", "Time (μs)", "Speedup vs CPU"
+    );
     println!("{:-^80}", "");
 
     macro_rules! time_indicator {

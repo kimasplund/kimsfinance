@@ -303,9 +303,9 @@ impl FP8GemmCutlass {
         builder.arg(&alpha);
         builder.arg(&beta);
         unsafe {
-            builder.launch(config).map_err(|e| {
-                GpuError::ExecutionError(format!("FP8 GEMM failed: {:?}", e))
-            })?;
+            builder
+                .launch(config)
+                .map_err(|e| GpuError::ExecutionError(format!("FP8 GEMM failed: {:?}", e)))?;
         }
 
         device.synchronize()?;
@@ -381,12 +381,9 @@ impl FP8GemmCutlass {
         let mut c_batch = device.allocate_device_buffer::<f32>(batch_size * m * n)?;
 
         // Load batched kernel
-        let kernel = self
-            .module
-            .load_function("fp8_gemm_batched")
-            .map_err(|e| {
-                GpuError::ExecutionError(format!("Failed to load fp8_gemm_batched kernel: {:?}", e))
-            })?;
+        let kernel = self.module.load_function("fp8_gemm_batched").map_err(|e| {
+            GpuError::ExecutionError(format!("Failed to load fp8_gemm_batched kernel: {:?}", e))
+        })?;
 
         // Launch configuration (one block per batch element)
         let config = LaunchConfig {
@@ -466,10 +463,9 @@ impl FP8GemmCutlass {
         device.synchronize()?;
 
         // Check result (copy f32 buffer to host manually)
-        let result_host: Vec<f32> = device
-            .stream
-            .memcpy_dtov(&test_result)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy test result: {:?}", e)))?;
+        let result_host: Vec<f32> = device.stream.memcpy_dtov(&test_result).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy test result: {:?}", e))
+        })?;
 
         if result_host[0] == 1.0 {
             Ok(())
@@ -504,18 +500,16 @@ mod tests {
         // Create test data
         let test_data: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
         let d_fp32 = device
-            .copy_to_device(&test_data)
+            .copy_to_device_f32(&test_data)
             .expect("Failed to copy to device");
 
         // Convert FP32 → FP8 → FP32
         let d_fp8 = gemm.fp32_to_fp8(&device, &d_fp32).expect("FP32→FP8 failed");
-        let d_fp32_back = gemm
-            .fp8_to_fp32(&device, &d_fp8)
-            .expect("FP8→FP32 failed");
+        let d_fp32_back = gemm.fp8_to_fp32(&device, &d_fp8).expect("FP8→FP32 failed");
 
         // Copy back to host
         let result = device
-            .copy_to_host(&d_fp32_back)
+            .copy_to_host_f32(&d_fp32_back)
             .expect("Failed to copy to host");
 
         // Check accuracy (FP8 E4M3 has ~1% precision)
@@ -543,12 +537,16 @@ mod tests {
         let k = 4;
 
         // Create test matrices (identity-like)
-        let a_fp32: Vec<f32> = (0..m * k).map(|i| if i % (k + 1) == 0 { 1.0 } else { 0.0 }).collect();
-        let b_fp32: Vec<f32> = (0..k * n).map(|i| if i % (n + 1) == 0 { 1.0 } else { 0.0 }).collect();
+        let a_fp32: Vec<f32> = (0..m * k)
+            .map(|i| if i % (k + 1) == 0 { 1.0 } else { 0.0 })
+            .collect();
+        let b_fp32: Vec<f32> = (0..k * n)
+            .map(|i| if i % (n + 1) == 0 { 1.0 } else { 0.0 })
+            .collect();
 
         // Convert to FP8
-        let d_a_fp32 = device.copy_to_device(&a_fp32).unwrap();
-        let d_b_fp32 = device.copy_to_device(&b_fp32).unwrap();
+        let d_a_fp32 = device.copy_to_device_f32(&a_fp32).unwrap();
+        let d_b_fp32 = device.copy_to_device_f32(&b_fp32).unwrap();
 
         let d_a_fp8 = gemm.fp32_to_fp8(&device, &d_a_fp32).unwrap();
         let d_b_fp8 = gemm.fp32_to_fp8(&device, &d_b_fp32).unwrap();
@@ -557,7 +555,7 @@ mod tests {
         let d_c_fp32 = gemm.matmul(&device, &d_a_fp8, &d_b_fp8, m, n, k).unwrap();
 
         // Copy result to host
-        let c_result = device.copy_to_host(&d_c_fp32).unwrap();
+        let c_result = device.copy_to_host_f32(&d_c_fp32).unwrap();
 
         // Verify (identity @ identity = identity)
         for i in 0..m {

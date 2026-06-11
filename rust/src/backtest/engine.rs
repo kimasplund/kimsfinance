@@ -66,11 +66,11 @@ impl Default for BacktestConfig {
     fn default() -> Self {
         Self {
             initial_capital: 10_000.0,
-            trading_fee: 0.001, // 0.1% per trade
-            slippage: 0.0005,   // 0.05% slippage
+            trading_fee: 0.001,       // 0.1% per trade
+            slippage: 0.0005,         // 0.05% slippage
             execution_latency_ms: 10, // 10ms realistic latency
-            use_gpu: true,      // Auto-detect and use GPU if available
-            force_cpu: false,   // Allow GPU by default
+            use_gpu: true,            // Auto-detect and use GPU if available
+            force_cpu: false,         // Allow GPU by default
         }
     }
 }

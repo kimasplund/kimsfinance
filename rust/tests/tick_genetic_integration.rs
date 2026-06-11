@@ -111,7 +111,9 @@ fn load_parquet_trades(path: &str, limit: Option<usize>) -> Result<Vec<Trade>, S
         let builder = ParquetRecordBatchReaderBuilder::try_new(file)
             .map_err(|e| format!("Failed to create parquet reader: {}", e))?;
 
-        let mut reader = builder.build().map_err(|e| format!("Failed to build reader: {}", e))?;
+        let mut reader = builder
+            .build()
+            .map_err(|e| format!("Failed to build reader: {}", e))?;
 
         let mut trades = Vec::new();
 
@@ -121,7 +123,9 @@ fn load_parquet_trades(path: &str, limit: Option<usize>) -> Result<Vec<Trade>, S
             // Extract columns (schema-dependent)
             // This is a simplified example - actual schema may differ
             let num_rows = batch.num_rows();
-            let max_rows = limit.map(|l| (l - trades.len()).min(num_rows)).unwrap_or(num_rows);
+            let max_rows = limit
+                .map(|l| (l - trades.len()).min(num_rows))
+                .unwrap_or(num_rows);
 
             for i in 0..max_rows {
                 // Placeholder: actual column extraction depends on parquet schema
@@ -543,6 +547,12 @@ fn test_multiple_strategies_same_data() {
     let r2 = result2.unwrap();
 
     println!("\nStrategy comparison:");
-    println!("  Momentum: Return={:.2}%, Sharpe={:.2}", r1.total_return, r1.sharpe_ratio);
-    println!("  OrderFlow: Return={:.2}%, Sharpe={:.2}", r2.total_return, r2.sharpe_ratio);
+    println!(
+        "  Momentum: Return={:.2}%, Sharpe={:.2}",
+        r1.total_return, r1.sharpe_ratio
+    );
+    println!(
+        "  OrderFlow: Return={:.2}%, Sharpe={:.2}",
+        r2.total_return, r2.sharpe_ratio
+    );
 }

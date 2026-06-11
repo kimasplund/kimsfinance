@@ -60,13 +60,110 @@
 
 use crate::backtest::core::BacktestResult;
 use crate::backtest::engine::BacktestConfig;
-use crate::gpu::compile::compile_backtest_kernels;
+use crate::gpu::compile::compile_ptx_optimized_cached;
 use crate::gpu::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaSlice, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+
+/// Assembled CUDA source for the batch backtest kernels.
+///
+/// `kernels_backtest.cu` depends on the warp/block reduction primitives in
+/// `gpu/kernels/warp_primitives.cuh`, but NVRTC compiles from an in-memory
+/// string with an EMPTY include path (see `gpu/compile.rs`), so a runtime
+/// `#include` directive can never be resolved. The header is therefore
+/// prepended here at Rust compile time. Every compile site must use this
+/// exact constant so the SHA-256-keyed PTX cache in
+/// `compile_ptx_optimized_cached` hits instead of recompiling.
+pub(crate) const BACKTEST_KERNELS_SRC: &str = concat!(
+    include_str!("../gpu/kernels/warp_primitives.cuh"),
+    "\n",
+    include_str!("../gpu/kernels_backtest.cu"),
+);
+
+/// Maximum recorded trades per strategy.
+///
+/// Must match `#define MAX_TRADES` in `kernels_backtest.cu` — the kernels
+/// index `trades[strategy_idx * MAX_TRADES + i]`.
+pub(crate) const MAX_TRADES: usize = 1000;
+
+/// Threads per block for the strategy-packed backtest execution launch.
+///
+/// One GPU thread runs one strategy's candle loop sequentially; see
+/// `execute_backtests_batch`. The kernels derive the strategy index as
+/// `blockIdx.x * blockDim.x + threadIdx.x`, so any block size is correct;
+/// 128 balances occupancy against register pressure for these
+/// register-heavy sequential loops.
+const EXECUTION_BLOCK_SIZE: u32 = 128;
+
+/// Host mirror of the CUDA `Trade` struct in `kernels_backtest.cu`.
+///
+/// Layout contract (both sides 8-byte aligned, 48 bytes total):
+///
+/// | offset | field        | type    |
+/// |--------|--------------|---------|
+/// | 0      | entry_price  | f64     |
+/// | 8      | exit_price   | f64     |
+/// | 16     | entry_time   | i64     |
+/// | 24     | exit_time    | i64     |
+/// | 32     | pnl          | f64     |
+/// | 40     | direction    | i8      |
+/// | 41..48 | explicit pad | [u8; 7] |
+///
+/// The device trades buffer MUST be sized in bytes as
+/// `n_strategies * MAX_TRADES * size_of::<GpuTrade>()`. A previous version
+/// allocated 7 *bytes* per trade while the kernel wrote 48-byte structs,
+/// silently corrupting adjacent device memory on every recorded trade.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GpuTrade {
+    pub entry_price: f64,
+    pub exit_price: f64,
+    pub entry_time: i64,
+    pub exit_time: i64,
+    pub pnl: f64,
+    /// 1 = Long, -1 = Short
+    pub direction: i8,
+    pub _pad: [u8; 7],
+}
+
+// Compile-time layout guards cross-referencing `struct Trade` in
+// kernels_backtest.cu (3×double + 2×int64_t + int8_t, padded to 48 bytes).
+const _: () = assert!(std::mem::size_of::<GpuTrade>() == 48);
+const _: () = assert!(std::mem::align_of::<GpuTrade>() == 8);
+
+/// Flatten strategy parameters into the GPU param-layout contract.
+///
+/// `strategy_signals_kernel` indexes parameters as
+/// `strategy_idx * N_indicators * 3 + {1, 2}` (3 slots per indicator), so
+/// the device buffer stride MUST be exactly `n_indicators * 3` f64 values
+/// per strategy — anything else reads out of bounds for every strategy after
+/// the first. User-facing parameter vectors may be shorter (RSI crossover
+/// passes 3 values); the tail is zero-padded. Slot `k` of strategy `s` keeps
+/// the user's parameter `k`, preserving `batch_indicators_kernel`'s
+/// historical `params[s * N_params + indicator_idx]` period lookups.
+fn pad_params_to_kernel_layout(
+    parameters: &[Vec<f64>],
+    n_indicators: usize,
+) -> Result<Vec<f64>, GpuError> {
+    let stride = n_indicators * 3;
+    let mut flat = vec![0.0_f64; parameters.len() * stride];
+    for (s, params) in parameters.iter().enumerate() {
+        if params.len() > stride {
+            return Err(GpuError::InvalidParameter(format!(
+                "Strategy {} has {} parameters, but the GPU param layout holds at most \
+                 n_indicators * 3 = {} per strategy",
+                s,
+                params.len(),
+                stride
+            )));
+        }
+        flat[s * stride..s * stride + params.len()].copy_from_slice(params);
+    }
+    Ok(flat)
+}
 
 /// Execution mode for batch backtesting
 ///
@@ -764,7 +861,7 @@ impl BatchBacktestSweep {
         let vram_used_mb = (n_strategies * 5 * n_candles * 8 // indicators
             + n_strategies * n_candles * 1     // signals
             + n_strategies * n_candles * 8     // equity
-            + n_strategies * 1000 * 48         // trades
+            + n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>() // trades
             + n_strategies * 3 * 8) as f64
             // metrics
             / (1024.0 * 1024.0);
@@ -927,7 +1024,9 @@ impl BatchBacktestSweep {
         let phase0_ms = 0.0;
 
         // ===== Compile CUDA Kernels (with caching) =====
-        let ptx_arc = compile_backtest_kernels()?;
+        // Compiles the assembled source (warp_primitives.cuh + kernels) —
+        // see BACKTEST_KERNELS_SRC for the NVRTC include rationale.
+        let ptx_arc = compile_ptx_optimized_cached(BACKTEST_KERNELS_SRC)?;
         let ptx = Arc::unwrap_or_clone(ptx_arc);
         let module = self.device.context().load_module(ptx)?;
 
@@ -948,14 +1047,17 @@ impl BatchBacktestSweep {
         let phase2_ms = start_phase2.elapsed().as_secs_f64() * 1000.0;
 
         // ===== Phase 3: Backtest Execution (100ms target - bottleneck) =====
+        // Also produces max drawdowns: the execution kernel tracks the
+        // running equity peak sequentially per strategy (the old strided
+        // metrics-kernel pass systematically underestimated drawdowns).
         let start_phase3 = Instant::now();
-        let (equity_curves, trades_data, num_trades) =
+        let (equity_curves, trades_data, num_trades, max_drawdowns) =
             self.execute_backtests_batch(&module, &signals, &data, n_strategies, n_candles)?;
         let phase3_ms = start_phase3.elapsed().as_secs_f64() * 1000.0;
 
         // ===== Phase 4: Metrics Calculation (5ms target) =====
         let start_phase4 = Instant::now();
-        let (sharpe_ratios, max_drawdowns, win_rates) = self.compute_metrics_batch(
+        let (sharpe_ratios, win_rates) = self.compute_metrics_batch(
             &module,
             &equity_curves,
             &trades_data,
@@ -972,10 +1074,21 @@ impl BatchBacktestSweep {
         let equity_len = n_strategies * n_candles;
         let mut pinned_equity = self.device.pinned_pool.lock().acquire(equity_len)?;
 
-        self.device.stream.memcpy_dtoh(&sharpe_ratios, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
-        self.device.stream.memcpy_dtoh(&max_drawdowns, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
-        self.device.stream.memcpy_dtoh(&win_rates, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
-        self.device.stream.memcpy_dtoh(&equity_curves, &mut pinned_equity.as_mut_slice()[..equity_len])?;
+        self.device.stream.memcpy_dtoh(
+            &sharpe_ratios,
+            &mut pinned_sharpe.as_mut_slice()[..n_strategies],
+        )?;
+        self.device.stream.memcpy_dtoh(
+            &max_drawdowns,
+            &mut pinned_dd.as_mut_slice()[..n_strategies],
+        )?;
+        self.device
+            .stream
+            .memcpy_dtoh(&win_rates, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
+        self.device.stream.memcpy_dtoh(
+            &equity_curves,
+            &mut pinned_equity.as_mut_slice()[..equity_len],
+        )?;
 
         // Synchronize stream to ensure D2H copies are complete before CPU access
         self.device.synchronize()?;
@@ -1062,7 +1175,7 @@ impl BatchBacktestSweep {
             n_strategies * 5 * n_candles * 8  // indicators (f64)
             + n_strategies * n_candles * 1     // signals (i8)
             + n_strategies * n_candles * 8     // equity (f64)
-            + n_strategies * 1000 * 48         // trades (struct)
+            + n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>() // trades (struct)
             + n_strategies * 3 * 8
             // metrics (f64)
         ) as f64
@@ -1102,17 +1215,18 @@ impl BatchBacktestSweep {
         pinned_ohlcv.as_mut_slice()[..ohlcv_len].copy_from_slice(&ohlcv_flat);
 
         let mut d_ohlcv = self.device.alloc_buffer(ohlcv_len)?;
-        self.device.stream.memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
 
         // Release pinned buffer
         self.device.pinned_pool.lock().release(pinned_ohlcv);
 
-        // Flatten parameters: [N_strategies × N_params]
-        let n_params = self.parameters[0].len();
-        let mut params_flat = Vec::with_capacity(n_strategies * n_params);
-        for params in &self.parameters {
-            params_flat.extend_from_slice(params);
-        }
+        // Flatten parameters padded to the kernel layout:
+        // [N_strategies × (N_indicators * 3)] — see pad_params_to_kernel_layout.
+        let n_indicators = 3; // RSI, ATR, SMA for now
+        let n_params = n_indicators * 3;
+        let params_flat = pad_params_to_kernel_layout(&self.parameters, n_indicators)?;
 
         // === H2D - Asynchronously copy parameters to GPU ===
         let params_len = params_flat.len();
@@ -1120,13 +1234,14 @@ impl BatchBacktestSweep {
         pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
 
         let mut d_params = self.device.alloc_buffer(params_len)?;
-        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
 
         // Release pinned buffer
         self.device.pinned_pool.lock().release(pinned_params);
 
         // Allocate output: [N_strategies × N_indicators × N_candles]
-        let n_indicators = 3; // RSI, ATR, SMA for now
         let indicators_len = n_strategies * n_indicators * n_candles;
         let mut d_indicators = self
             .device
@@ -1184,12 +1299,22 @@ impl BatchBacktestSweep {
         n_strategies: usize,
         n_candles: usize,
     ) -> Result<CudaSlice<i8>, GpuError> {
-        // Flatten parameters again (for signal generation kernel)
-        let n_params = self.parameters[0].len();
-        let mut params_flat = Vec::with_capacity(n_strategies * n_params);
-        for params in &self.parameters {
-            params_flat.extend_from_slice(params);
-        }
+        // Flatten parameters again for the signal generation kernel, padded
+        // to the kernel's layout contract.
+        let n_indicators = 3;
+        let n_params = n_indicators * 3;
+        let params_flat = pad_params_to_kernel_layout(&self.parameters, n_indicators)?;
+
+        // strategy_signals_kernel reads buy/sell thresholds at
+        // strategy_idx * N_indicators * 3 + {1, 2}; any other stride reads
+        // out of bounds for every strategy after the first.
+        assert_eq!(
+            params_flat.len(),
+            n_strategies * n_params,
+            "strategy_signals_kernel param-layout contract violated: \
+             expected n_indicators * 3 = {} params per strategy",
+            n_params
+        );
 
         // === H2D - Asynchronously copy parameters to GPU ===
         let params_len = params_flat.len();
@@ -1197,7 +1322,9 @@ impl BatchBacktestSweep {
         pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
 
         let mut d_params = self.device.alloc_buffer(params_len)?;
-        self.device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
 
         // Release pinned buffer
         self.device.pinned_pool.lock().release(pinned_params);
@@ -1226,8 +1353,6 @@ impl BatchBacktestSweep {
             shared_mem_bytes: 0,
         };
 
-        let n_indicators = 3;
-
         // Store kernel arguments as variables to avoid temporary value lifetime issues
         let n_strategies_i32 = n_strategies as i32;
         let n_indicators_i32 = n_indicators as i32;
@@ -1254,6 +1379,12 @@ impl BatchBacktestSweep {
     }
 
     /// Phase 3: Execute backtests (sequential per strategy, parallel across strategies)
+    ///
+    /// Returns `(equity_curves, trades, num_trades, max_drawdowns)`. Max
+    /// drawdowns are produced here (not in the metrics kernel): each strategy
+    /// thread tracks its running equity peak sequentially, matching the CPU
+    /// reference `calculate_max_drawdown` (backtest/metrics.rs) semantics
+    /// as a fraction.
     fn execute_backtests_batch(
         &self,
         module: &Arc<cudarc::driver::CudaModule>,
@@ -1261,7 +1392,7 @@ impl BatchBacktestSweep {
         data: &OhlcvData,
         n_strategies: usize,
         n_candles: usize,
-    ) -> Result<(CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>), GpuError> {
+    ) -> Result<(CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>, CudaSlice<f64>), GpuError> {
         // === H2D - Asynchronously copy close prices to GPU ===
         let close_slice = data.close.as_slice().unwrap();
         let close_len = close_slice.len();
@@ -1269,7 +1400,9 @@ impl BatchBacktestSweep {
         pinned_close.as_mut_slice()[..close_len].copy_from_slice(close_slice);
 
         let mut d_close = self.device.alloc_buffer(close_len)?;
-        self.device.stream.memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
 
         // Release pinned buffer
         self.device.pinned_pool.lock().release(pinned_close);
@@ -1284,10 +1417,11 @@ impl BatchBacktestSweep {
                 GpuError::AllocationError(format!("Failed to allocate equity: {:?}", e))
             })?;
 
-        // Allocate trades: [N_strategies × MAX_TRADES × Trade_size]
-        // Trade struct: 6 f64 fields + 1 i8 = 49 bytes (rounded to 56 for alignment)
-        let max_trades = 1000;
-        let trades_len = n_strategies * max_trades * 7; // Simplified: 7 f64-sized slots per trade
+        // Allocate trades: [N_strategies × MAX_TRADES] of 48-byte structs,
+        // sized in BYTES via the GpuTrade layout mirror. (A previous version
+        // allocated 7 bytes per trade against the kernel's 48-byte writes —
+        // silent device-memory corruption on every recorded trade.)
+        let trades_len = n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>();
         let mut d_trades = self
             .device
             .stream
@@ -1305,21 +1439,32 @@ impl BatchBacktestSweep {
                 GpuError::AllocationError(format!("Failed to allocate num_trades: {:?}", e))
             })?;
 
-        // Get optimized kernel function (shared memory caching + register optimization)
+        // Allocate max drawdowns: [N_strategies] (written by the execution kernel)
+        let mut d_max_drawdowns = self
+            .device
+            .stream
+            .alloc_zeros::<f64>(n_strategies)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate max_drawdowns: {:?}", e))
+            })?;
+
+        // Get optimized kernel function (register-resident state, hoisted multipliers)
         let func = module
             .load_function("backtest_execution_kernel_optimized")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
-        // Grid: (N_strategies, 1) - one thread per strategy!
-        // Block: (1, 1) - sequential execution within each strategy
-        // Shared memory: 128 doubles (1KB) for close price caching
-        const CHUNK_SIZE: u32 = 128;
-        let shared_mem_bytes = CHUNK_SIZE * std::mem::size_of::<f64>() as u32;
-
+        // Strategy-packed launch: 128 threads per block, each thread runs ONE
+        // strategy's candle loop sequentially (the kernel derives the
+        // strategy index as blockIdx.x * blockDim.x + threadIdx.x). The old
+        // grid=(N,1,1)/block=(1,1,1) config wasted 127/128 of every SM
+        // partition. No shared memory: the kernel reads close_prices straight
+        // from L2 (the previous 1KB dynamic allocation backed a since-removed
+        // single-thread staging loop).
+        let grid_x = (n_strategies as u32 + EXECUTION_BLOCK_SIZE - 1) / EXECUTION_BLOCK_SIZE;
         let cfg = LaunchConfig {
-            grid_dim: (n_strategies as u32, 1, 1),
-            block_dim: (1, 1, 1),
-            shared_mem_bytes,
+            grid_dim: (grid_x, 1, 1),
+            block_dim: (EXECUTION_BLOCK_SIZE, 1, 1),
+            shared_mem_bytes: 0,
         };
 
         // Store kernel arguments as variables to avoid temporary value lifetime issues
@@ -1332,6 +1477,7 @@ impl BatchBacktestSweep {
         builder.arg(&mut d_equity);
         builder.arg(&mut d_trades);
         builder.arg(&mut d_num_trades);
+        builder.arg(&mut d_max_drawdowns);
         builder.arg(&self.config.initial_capital);
         builder.arg(&self.config.trading_fee);
         builder.arg(&self.config.slippage);
@@ -1345,10 +1491,14 @@ impl BatchBacktestSweep {
         }
 
         self.device.synchronize()?;
-        Ok((d_equity, d_trades, d_num_trades))
+        Ok((d_equity, d_trades, d_num_trades, d_max_drawdowns))
     }
 
-    /// Phase 4: Calculate performance metrics
+    /// Phase 4: Calculate performance metrics (Sharpe ratio + win rate)
+    ///
+    /// Max drawdown is NOT computed here — the execution kernel produces it
+    /// (see `execute_backtests_batch`); the old strided metrics-kernel pass
+    /// underestimated drawdowns.
     fn compute_metrics_batch(
         &self,
         module: &Arc<cudarc::driver::CudaModule>,
@@ -1357,7 +1507,7 @@ impl BatchBacktestSweep {
         num_trades: &CudaSlice<i32>,
         n_strategies: usize,
         n_candles: usize,
-    ) -> Result<(CudaSlice<f64>, CudaSlice<f64>, CudaSlice<f64>), GpuError> {
+    ) -> Result<(CudaSlice<f64>, CudaSlice<f64>), GpuError> {
         // Allocate outputs
         let mut d_sharpe = self
             .device
@@ -1365,13 +1515,6 @@ impl BatchBacktestSweep {
             .alloc_zeros::<f64>(n_strategies)
             .map_err(|e| {
                 GpuError::AllocationError(format!("Failed to allocate sharpe: {:?}", e))
-            })?;
-        let mut d_dd = self
-            .device
-            .stream
-            .alloc_zeros::<f64>(n_strategies)
-            .map_err(|e| {
-                GpuError::AllocationError(format!("Failed to allocate drawdown: {:?}", e))
             })?;
         let mut d_wr = self
             .device
@@ -1386,13 +1529,16 @@ impl BatchBacktestSweep {
             .load_function("metrics_calculation_kernel")
             .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
-        // Grid: (N_strategies, 1)
+        // Grid: (N_strategies, 1) — one block per strategy
         // Block: (256, 1) - 256 threads for parallel reduction
+        // No dynamic shared memory: the block_reduce_* helpers in
+        // warp_primitives.cuh use their own static __shared__ buffers (the
+        // old 6KB dynamic allocation was never referenced by the kernel).
         let block_size = 256;
         let cfg = LaunchConfig {
             grid_dim: (n_strategies as u32, 1, 1),
             block_dim: (block_size, 1, 1),
-            shared_mem_bytes: (block_size * 3 * 8) as u32, // 3 f64 arrays for reduction
+            shared_mem_bytes: 0,
         };
 
         // Store kernel arguments as variables to avoid temporary value lifetime issues
@@ -1404,7 +1550,6 @@ impl BatchBacktestSweep {
         builder.arg(trades);
         builder.arg(num_trades);
         builder.arg(&mut d_sharpe);
-        builder.arg(&mut d_dd);
         builder.arg(&mut d_wr);
         builder.arg(&n_strategies_i32);
         builder.arg(&n_candles_i32);
@@ -1416,7 +1561,7 @@ impl BatchBacktestSweep {
         }
 
         self.device.synchronize()?;
-        Ok((d_sharpe, d_dd, d_wr))
+        Ok((d_sharpe, d_wr))
     }
 }
 
@@ -1486,12 +1631,215 @@ mod tests {
     #[test]
     fn test_builder_api_construction() {
         // Just test API construction (not execution - requires GPU)
-        let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
+        let device = match crate::gpu::GpuDevice::new() {
+            Ok(d) => Arc::new(d),
+            Err(_) => {
+                println!("Skipping test_builder_api_construction: No GPU available");
+                return;
+            }
+        };
 
         let _sweep = BatchBacktestSweep::new(device)
             .strategy_type(StrategyType::RsiCrossover)
             .parameters_batch(&vec![vec![14.0, 25.0, 75.0]]);
 
         // If this compiles, builder API is correctly structured
+    }
+
+    // ===== Host-side tests (no GPU required) =====
+
+    #[test]
+    fn test_assembled_kernel_source_has_no_include() {
+        // NVRTC compiles BACKTEST_KERNELS_SRC from memory with an empty
+        // include path; any include directive fails the whole module at
+        // runtime. The header must be prepended at assembly time instead.
+        // A directive is a line whose first non-whitespace token is
+        // `#include` (comments mentioning the word are fine).
+        for (i, line) in BACKTEST_KERNELS_SRC.lines().enumerate() {
+            assert!(
+                !line.trim_start().starts_with("#include"),
+                "assembled kernel source contains an include directive at line {}: {}",
+                i + 1,
+                line
+            );
+        }
+    }
+
+    #[test]
+    fn test_assembled_kernel_source_prepends_warp_primitives() {
+        let header_pos = BACKTEST_KERNELS_SRC
+            .find("WARP_PRIMITIVES_CUH")
+            .expect("warp_primitives.cuh missing from assembled source");
+        let user_pos = BACKTEST_KERNELS_SRC
+            .find("block_reduce_sum_pair<double>")
+            .expect("metrics kernel reduction call missing from assembled source");
+        assert!(
+            header_pos < user_pos,
+            "warp_primitives.cuh must precede the kernels that use block_reduce_*"
+        );
+    }
+
+    #[test]
+    fn test_assembled_kernel_source_entry_points() {
+        for name in [
+            "batch_indicators_kernel",
+            "strategy_signals_kernel",
+            "backtest_execution_kernel",
+            "backtest_execution_kernel_optimized",
+            "metrics_calculation_kernel",
+        ] {
+            let needle = format!("extern \"C\" __global__ void {}(", name);
+            assert!(
+                BACKTEST_KERNELS_SRC.contains(&needle),
+                "missing extern \"C\" kernel entry point: {}",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_warp_primitives_float_overloads_present() {
+        // Ada (sm_89) runs FP64 at 1:64 vs FP32 — without these overloads,
+        // float operands silently promote to the double versions.
+        for sig in [
+            "float warp_reduce_sum(float val)",
+            "float warp_reduce_max(float val)",
+            "float warp_reduce_min(float val)",
+        ] {
+            assert!(
+                BACKTEST_KERNELS_SRC.contains(sig),
+                "missing float overload in warp_primitives.cuh: {}",
+                sig
+            );
+        }
+        // Per-type reduction identities replace the double-only -inf pattern
+        assert!(BACKTEST_KERNELS_SRC.contains("wp_limits<float>"));
+        assert!(BACKTEST_KERNELS_SRC.contains("wp_limits<int>"));
+    }
+
+    /// Extract the parameter list text of a kernel signature from the
+    /// assembled source (from the opening paren to the first closing paren;
+    /// signature comments are kept parenthesis-free to make this valid).
+    fn kernel_param_list(kernel_marker: &str) -> &'static str {
+        let start = BACKTEST_KERNELS_SRC
+            .find(kernel_marker)
+            .unwrap_or_else(|| panic!("kernel signature not found: {}", kernel_marker));
+        let end = start
+            + BACKTEST_KERNELS_SRC[start..]
+                .find(')')
+                .expect("unterminated kernel parameter list");
+        &BACKTEST_KERNELS_SRC[start..end]
+    }
+
+    #[test]
+    fn test_execution_kernels_take_drawdown_output() {
+        // Both execution kernels write max_drawdowns from their sequential
+        // loops; the launch sites pass the buffer after num_trades.
+        for marker in [
+            "void backtest_execution_kernel(",
+            "void backtest_execution_kernel_optimized(",
+        ] {
+            assert!(
+                kernel_param_list(marker).contains("max_drawdowns"),
+                "{} must take a max_drawdowns output parameter",
+                marker
+            );
+        }
+    }
+
+    #[test]
+    fn test_metrics_kernel_no_longer_takes_drawdown_output() {
+        let params = kernel_param_list("void metrics_calculation_kernel(");
+        assert!(
+            !params.contains("max_drawdowns"),
+            "metrics kernel must not take max_drawdowns (computed in execution kernel)"
+        );
+        assert!(params.contains("sharpe_ratios"));
+        assert!(params.contains("win_rates"));
+    }
+
+    #[test]
+    fn test_optimized_execution_kernel_has_no_shared_memory() {
+        // The single-thread shared-memory staging loop was removed; with
+        // packed threads its divergent __syncthreads() would be UB.
+        let start = BACKTEST_KERNELS_SRC
+            .find("void backtest_execution_kernel_optimized(")
+            .unwrap();
+        let body = &BACKTEST_KERNELS_SRC[start..];
+        let end = body.find("KERNEL 4").unwrap_or(body.len());
+        let body = &body[..end];
+        assert!(!body.contains("__shared__"), "execution kernel must not use shared memory");
+        assert!(!body.contains("__syncthreads"), "execution kernel must not synchronize");
+    }
+
+    #[test]
+    fn test_max_trades_matches_cuda_define() {
+        assert!(
+            BACKTEST_KERNELS_SRC.contains(&format!("#define MAX_TRADES {}", MAX_TRADES)),
+            "Rust MAX_TRADES ({}) must match the CUDA #define",
+            MAX_TRADES
+        );
+    }
+
+    #[test]
+    fn test_gpu_trade_layout_matches_cuda() {
+        use std::mem::{align_of, offset_of, size_of};
+
+        // Must mirror `struct Trade` in kernels_backtest.cu exactly.
+        assert_eq!(size_of::<GpuTrade>(), 48);
+        assert_eq!(align_of::<GpuTrade>(), 8);
+        assert_eq!(offset_of!(GpuTrade, entry_price), 0);
+        assert_eq!(offset_of!(GpuTrade, exit_price), 8);
+        assert_eq!(offset_of!(GpuTrade, entry_time), 16);
+        assert_eq!(offset_of!(GpuTrade, exit_time), 24);
+        assert_eq!(offset_of!(GpuTrade, pnl), 32);
+        assert_eq!(offset_of!(GpuTrade, direction), 40);
+        assert_eq!(offset_of!(GpuTrade, _pad), 41);
+    }
+
+    #[test]
+    fn test_trades_buffer_size_arithmetic() {
+        // The trades buffer is sized in bytes; the kernel writes 48-byte
+        // structs at trades[strategy * MAX_TRADES + i].
+        let n_strategies = 1000;
+        let bytes = n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>();
+        assert_eq!(bytes, 1000 * 1000 * 48);
+        assert_eq!(bytes % std::mem::size_of::<GpuTrade>(), 0);
+    }
+
+    #[test]
+    fn test_pad_params_to_kernel_layout() {
+        let params = vec![vec![14.0, 25.0, 75.0], vec![20.0, 30.0, 70.0]];
+        let flat = pad_params_to_kernel_layout(&params, 3).unwrap();
+
+        // Stride is n_indicators * 3 = 9 per strategy
+        assert_eq!(flat.len(), 2 * 9);
+        assert_eq!(&flat[0..3], &[14.0, 25.0, 75.0]);
+        assert!(flat[3..9].iter().all(|&v| v == 0.0), "padding must be zero");
+        assert_eq!(&flat[9..12], &[20.0, 30.0, 70.0]);
+        assert!(flat[12..18].iter().all(|&v| v == 0.0), "padding must be zero");
+    }
+
+    #[test]
+    fn test_pad_params_rejects_oversized_strategy() {
+        let params = vec![vec![0.0; 10]]; // > n_indicators * 3 = 9
+        assert!(pad_params_to_kernel_layout(&params, 3).is_err());
+    }
+
+    #[test]
+    fn test_execution_launch_grid_covers_all_strategies() {
+        for n in [1usize, 127, 128, 129, 1000, 4096] {
+            let grid_x = (n as u32 + EXECUTION_BLOCK_SIZE - 1) / EXECUTION_BLOCK_SIZE;
+            assert!(
+                grid_x * EXECUTION_BLOCK_SIZE >= n as u32,
+                "grid must cover all {} strategies",
+                n
+            );
+            assert!(
+                (grid_x - 1) * EXECUTION_BLOCK_SIZE < n as u32,
+                "grid must not over-allocate a full empty block for {} strategies",
+                n
+            );
+        }
     }
 }

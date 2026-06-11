@@ -478,7 +478,7 @@ impl MultiObjectiveOptimizer {
         fronts.push(current_front.clone());
 
         // Subsequent fronts
-        let mut rank = 1;
+        let mut _rank = 1;
         while !current_front.is_empty() {
             let mut next_front = Vec::new();
 
@@ -491,7 +491,7 @@ impl MultiObjectiveOptimizer {
                 }
             }
 
-            rank += 1;
+            _rank += 1;
             if !next_front.is_empty() {
                 fronts.push(next_front.clone());
             }
@@ -510,9 +510,9 @@ impl MultiObjectiveOptimizer {
         let num_objectives = self.objectives.len();
 
         // For each objective
-        for obj_idx in 0..num_objectives {
+        for _obj_idx in 0..num_objectives {
             // Sort by this objective
-            let mut sorted_indices: Vec<usize> = front.to_vec();
+            let _sorted_indices: Vec<usize> = front.to_vec();
             // Note: Cannot sort by objectives as Solution is not Copy
             // This is a simplified version - in production, use proper sorting
 

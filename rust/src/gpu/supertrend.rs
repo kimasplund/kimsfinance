@@ -282,9 +282,15 @@ pub fn supertrend_gpu(
     let mut d_low = device.alloc_buffer(n)?;
     let mut d_close = device.alloc_buffer(n)?;
 
-    device.stream.memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
-    device.stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
 
     // Release pinned buffers
     let mut pool = device.pinned_pool.lock();
@@ -314,7 +320,9 @@ pub fn supertrend_gpu(
 
     // === Step 3: D2H - Copy True Range back to CPU for Wilder's smoothing ===
     let mut pinned_true_range = device.pinned_pool.lock().acquire(n)?;
-    device.stream.memcpy_dtoh(&d_true_range, &mut pinned_true_range.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_true_range, &mut pinned_true_range.as_mut_slice()[..n])?;
 
     // Synchronize stream to ensure D2H copy is complete before CPU access
     device.stream.synchronize().map_err(|e| {
@@ -351,7 +359,9 @@ pub fn supertrend_gpu(
     pinned_atr.as_mut_slice()[..n].copy_from_slice(atr.as_slice().unwrap());
 
     let mut d_atr = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_atr.as_slice()[..n], &mut d_atr)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_atr.as_slice()[..n], &mut d_atr)?;
 
     // Release pinned buffer
     device.pinned_pool.lock().release(pinned_atr);
@@ -378,8 +388,12 @@ pub fn supertrend_gpu(
     let mut pinned_basic_upper = device.pinned_pool.lock().acquire(n)?;
     let mut pinned_basic_lower = device.pinned_pool.lock().acquire(n)?;
 
-    device.stream.memcpy_dtoh(&d_basic_upper, &mut pinned_basic_upper.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_basic_lower, &mut pinned_basic_lower.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_basic_upper, &mut pinned_basic_upper.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_basic_lower, &mut pinned_basic_lower.as_mut_slice()[..n])?;
 
     // Synchronize stream to ensure D2H copies are complete before CPU access
     device.stream.synchronize().map_err(|e| {

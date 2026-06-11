@@ -36,10 +36,10 @@
 
 #![cfg(feature = "gpu")]
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use kimsfinance_core::backtest::BacktestConfig;
 use kimsfinance_core::binance::Trade;
 use kimsfinance_core::gpu::device::GpuDevice;
-use kimsfinance_core::backtest::BacktestConfig;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -48,8 +48,8 @@ use std::time::Duration;
 // ============================================================================
 
 fn generate_test_trades(n: usize) -> Vec<Trade> {
-    use rand::{Rng, SeedableRng};
     use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
 
     let mut rng = StdRng::seed_from_u64(42);
     let base_price = 45000.0;
@@ -57,7 +57,7 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
 
     (0..n)
         .map(|i| {
-            let price_change = (rng.gen::<f64>() - 0.5) * 0.002;
+            let price_change = (rng.r#gen::<f64>() - 0.5) * 0.002;
             let price = base_price * (1.0 + price_change);
             let quantity = rng.gen_range(0.001..1.0);
 
@@ -74,20 +74,20 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
 }
 
 fn generate_parameter_sets(n: usize) -> Vec<Vec<f64>> {
-    use rand::{Rng, SeedableRng};
     use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
 
     let mut rng = StdRng::seed_from_u64(123);
 
     (0..n)
         .map(|_| {
             vec![
-                rng.gen_range(50.0..200.0),    // window_size
-                rng.gen_range(0.5..0.7),       // imbalance_threshold
-                rng.gen_range(5.0..20.0),      // min_volume
-                rng.gen_range(0.0005..0.002),  // spike_threshold
-                rng.gen_range(3.0..10.0),      // ema_period
-                rng.gen_range(0.8..1.5),       // volatility_factor
+                rng.gen_range(50.0..200.0),   // window_size
+                rng.gen_range(0.5..0.7),      // imbalance_threshold
+                rng.gen_range(5.0..20.0),     // min_volume
+                rng.gen_range(0.0005..0.002), // spike_threshold
+                rng.gen_range(3.0..10.0),     // ema_period
+                rng.gen_range(0.8..1.5),      // volatility_factor
             ]
         })
         .collect()

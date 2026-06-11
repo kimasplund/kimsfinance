@@ -508,7 +508,7 @@ mod tests {
 
         // Try to open 3rd position (should fail)
         let signal3 = create_test_signal(SignalType::OpenLong, OptionType::Call, 120.0, 1);
-        let result = engine.execute_signals(&[signal3], &market_data);
+        let _result = engine.execute_signals(&[signal3], &market_data);
 
         // Should still have 2 positions (3rd failed)
         assert_eq!(engine.position_manager().position_count(), 2);

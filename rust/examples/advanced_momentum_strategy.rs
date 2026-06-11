@@ -240,12 +240,14 @@ impl AdvancedMomentumStrategy {
         let is_bear = bear_imbalance && bear_volume && (bear_momentum || high_intensity);
 
         // Calculate signal strength (number of conditions met / total conditions)
-        let bull_strength = (bull_imbalance as u8 + bull_volume as u8 + bull_momentum as u8
-            + high_intensity as u8) as f64
-            / 4.0;
-        let bear_strength = (bear_imbalance as u8 + bear_volume as u8 + bear_momentum as u8
-            + high_intensity as u8) as f64
-            / 4.0;
+        let bull_strength =
+            (bull_imbalance as u8 + bull_volume as u8 + bull_momentum as u8 + high_intensity as u8)
+                as f64
+                / 4.0;
+        let bear_strength =
+            (bear_imbalance as u8 + bear_volume as u8 + bear_momentum as u8 + high_intensity as u8)
+                as f64
+                / 4.0;
 
         let strength = if is_bull {
             1.0 + bull_strength // 1.0-2.0
@@ -281,7 +283,7 @@ impl TickStrategy for AdvancedMomentumStrategy {
 
     fn on_candle_complete(&mut self, candle: &Candle) -> Signal {
         self.features.update_candle(candle);
-        Signal::Hold  // Just update state, don't trade on candle completion
+        Signal::Hold // Just update state, don't trade on candle completion
     }
 }
 
@@ -290,8 +292,11 @@ impl TickStrategy for AdvancedMomentumStrategy {
 // ============================================================================
 
 #[cfg(feature = "data-downloaders")]
-fn generate_synthetic_trades(num_trades: usize, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    use arrow::array::{Float64Array, Int64Array, UInt64Array, BooleanArray};
+fn generate_synthetic_trades(
+    num_trades: usize,
+    output_path: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use arrow::array::{BooleanArray, Float64Array, Int64Array, UInt64Array};
     use arrow::datatypes::{DataType, Field, Schema};
     use arrow::record_batch::RecordBatch;
     use parquet::arrow::ArrowWriter;
@@ -375,9 +380,16 @@ fn generate_synthetic_trades(num_trades: usize, output_path: &str) -> Result<(),
     writer.close()?;
 
     let elapsed = start.elapsed();
-    println!("✓ Generated {} trades in {:.2}s", num_trades, elapsed.as_secs_f64());
+    println!(
+        "✓ Generated {} trades in {:.2}s",
+        num_trades,
+        elapsed.as_secs_f64()
+    );
     println!("✓ Output: {}", output_path);
-    println!("✓ File size: {:.2} MB", std::fs::metadata(output_path)?.len() as f64 / 1_000_000.0);
+    println!(
+        "✓ File size: {:.2} MB",
+        std::fs::metadata(output_path)?.len() as f64 / 1_000_000.0
+    );
 
     Ok(())
 }
@@ -387,7 +399,10 @@ fn generate_synthetic_trades(num_trades: usize, output_path: &str) -> Result<(),
 // ============================================================================
 
 #[cfg(feature = "data-downloaders")]
-fn run_backtest(data_path: &str, max_trades: Option<usize>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_backtest(
+    data_path: &str,
+    max_trades: Option<usize>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Single Backtest ===\n");
 
     // Load data
@@ -401,17 +416,24 @@ fn run_backtest(data_path: &str, max_trades: Option<usize>) -> Result<(), Box<dy
     let load_time = load_start.elapsed();
 
     let num_trades = trades.len();
-    println!("✓ Loaded {} trades in {:.2}s", num_trades, load_time.as_secs_f64());
-    println!("  Throughput: {:.2}M records/sec\n", num_trades as f64 / load_time.as_secs_f64() / 1_000_000.0);
+    println!(
+        "✓ Loaded {} trades in {:.2}s",
+        num_trades,
+        load_time.as_secs_f64()
+    );
+    println!(
+        "  Throughput: {:.2}M records/sec\n",
+        num_trades as f64 / load_time.as_secs_f64() / 1_000_000.0
+    );
 
     // Create strategy with default parameters
     let mut strategy = AdvancedMomentumStrategy::new(
-        100,    // window_size
-        0.1,    // imbalance_threshold
-        10.0,   // volume_delta_threshold
-        0.001,  // momentum_threshold
-        5.0,    // intensity_threshold
-        1.0,    // base_position_size
+        100,   // window_size
+        0.1,   // imbalance_threshold
+        10.0,  // volume_delta_threshold
+        0.001, // momentum_threshold
+        5.0,   // intensity_threshold
+        1.0,   // base_position_size
     );
 
     // Configure backtest
@@ -419,8 +441,8 @@ fn run_backtest(data_path: &str, max_trades: Option<usize>) -> Result<(), Box<dy
         initial_capital: 10_000.0,
         trading_fee: 0.001,
         slippage: 0.0005,
-        execution_latency_ms: 10,  // 10ms realistic execution latency
-        use_gpu: false,  // Tick backtesting uses CPU
+        execution_latency_ms: 10, // 10ms realistic execution latency
+        use_gpu: false,           // Tick backtesting uses CPU
         force_cpu: true,
     };
 
@@ -435,8 +457,14 @@ fn run_backtest(data_path: &str, max_trades: Option<usize>) -> Result<(), Box<dy
     // Print results
     println!("\n=== Performance Metrics ===");
     println!("Processing time: {:.2}s", backtest_time.as_secs_f64());
-    println!("Throughput: {:.2}M ticks/sec", num_trades as f64 / backtest_time.as_secs_f64() / 1_000_000.0);
-    println!("Ticks per ms: {:.2}", num_trades as f64 / backtest_time.as_millis() as f64);
+    println!(
+        "Throughput: {:.2}M ticks/sec",
+        num_trades as f64 / backtest_time.as_secs_f64() / 1_000_000.0
+    );
+    println!(
+        "Ticks per ms: {:.2}",
+        num_trades as f64 / backtest_time.as_millis() as f64
+    );
 
     println!("\n=== Trading Results ===");
     println!("Final Equity: ${:.2}", result.final_equity);
@@ -474,34 +502,62 @@ fn run_optimization(
     };
     let load_time = load_start.elapsed();
 
-    println!("✓ Loaded {} trades in {:.2}s\n", trades.len(), load_time.as_secs_f64());
+    println!(
+        "✓ Loaded {} trades in {:.2}s\n",
+        trades.len(),
+        load_time.as_secs_f64()
+    );
 
     // Define parameter space
     let mut param_grid = ParameterGrid::new();
 
     param_grid.add_range(
         "window_size",
-        ParameterRange::Int { min: 50, max: 200, step: 50 },
+        ParameterRange::Int {
+            min: 50,
+            max: 200,
+            step: 50,
+        },
     );
     param_grid.add_range(
         "imbalance_threshold",
-        ParameterRange::Float { min: 0.05, max: 0.2, step: 0.05 },
+        ParameterRange::Float {
+            min: 0.05,
+            max: 0.2,
+            step: 0.05,
+        },
     );
     param_grid.add_range(
         "volume_delta_threshold",
-        ParameterRange::Float { min: 5.0, max: 20.0, step: 5.0 },
+        ParameterRange::Float {
+            min: 5.0,
+            max: 20.0,
+            step: 5.0,
+        },
     );
     param_grid.add_range(
         "momentum_threshold",
-        ParameterRange::Float { min: 0.0005, max: 0.002, step: 0.0005 },
+        ParameterRange::Float {
+            min: 0.0005,
+            max: 0.002,
+            step: 0.0005,
+        },
     );
     param_grid.add_range(
         "intensity_threshold",
-        ParameterRange::Float { min: 2.0, max: 10.0, step: 2.0 },
+        ParameterRange::Float {
+            min: 2.0,
+            max: 10.0,
+            step: 2.0,
+        },
     );
     param_grid.add_range(
         "base_position_size",
-        ParameterRange::Float { min: 0.5, max: 1.5, step: 0.25 },
+        ParameterRange::Float {
+            min: 0.5,
+            max: 1.5,
+            step: 0.25,
+        },
     );
 
     println!("Parameter Space:");
@@ -538,7 +594,10 @@ fn run_optimization(
     };
 
     // Run optimization
-    println!("Starting genetic optimization with {} CPU cores...\n", rayon::current_num_threads());
+    println!(
+        "Starting genetic optimization with {} CPU cores...\n",
+        rayon::current_num_threads()
+    );
     let opt_start = Instant::now();
     let result = optimizer.optimize_tick_strategy(
         &trades,
@@ -555,8 +614,14 @@ fn run_optimization(
     println!("\n=== Optimization Results ===");
     println!("Total time: {:.2} minutes", opt_time.as_secs_f64() / 60.0);
     println!("Evaluations: {}", total_evaluations);
-    println!("Throughput: {:.2} backtests/sec", total_evaluations as f64 / opt_time.as_secs_f64());
-    println!("Time per backtest: {:.2}ms", opt_time.as_millis() as f64 / total_evaluations as f64);
+    println!(
+        "Throughput: {:.2} backtests/sec",
+        total_evaluations as f64 / opt_time.as_secs_f64()
+    );
+    println!(
+        "Time per backtest: {:.2}ms",
+        opt_time.as_millis() as f64 / total_evaluations as f64
+    );
 
     println!("\n=== Best Parameters ===");
     for (param, value) in &result.best_parameters {
@@ -565,9 +630,15 @@ fn run_optimization(
 
     println!("\n=== Best Performance ===");
     println!("  Fitness (Sharpe): {:.2}", result.best_fitness);
-    println!("  Total Return: {:.2}%", result.best_result.total_return * 100.0);
+    println!(
+        "  Total Return: {:.2}%",
+        result.best_result.total_return * 100.0
+    );
     println!("  Sharpe Ratio: {:.2}", result.best_result.sharpe_ratio);
-    println!("  Max Drawdown: {:.2}%", result.best_result.max_drawdown * 100.0);
+    println!(
+        "  Max Drawdown: {:.2}%",
+        result.best_result.max_drawdown * 100.0
+    );
 
     println!("\n=== Convergence ===");
     if let Some(generation) = result.convergence_stats.generation_converged {
@@ -575,7 +646,10 @@ fn run_optimization(
     } else {
         println!("  Did not converge early");
     }
-    println!("  Final diversity: {:.4}", result.convergence_stats.final_diversity);
+    println!(
+        "  Final diversity: {:.4}",
+        result.convergence_stats.final_diversity
+    );
 
     // Save metrics if requested
     if collect_metrics {
@@ -583,27 +657,59 @@ fn run_optimization(
         let mut file = File::create(metrics_path)?;
 
         writeln!(file, "=== Optimization Metrics ===")?;
-        writeln!(file, "Date: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))?;
+        writeln!(
+            file,
+            "Date: {}",
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+        )?;
         writeln!(file, "\n=== Configuration ===")?;
         writeln!(file, "Population: {}", population)?;
         writeln!(file, "Generations: {}", generations)?;
         writeln!(file, "Total evaluations: {}", total_evaluations)?;
         writeln!(file, "Dataset size: {} trades", trades.len())?;
         writeln!(file, "\n=== Performance ===")?;
-        writeln!(file, "Total time: {:.2} minutes", opt_time.as_secs_f64() / 60.0)?;
-        writeln!(file, "Throughput: {:.2} backtests/sec", total_evaluations as f64 / opt_time.as_secs_f64())?;
-        writeln!(file, "Time per backtest: {:.2}ms", opt_time.as_millis() as f64 / total_evaluations as f64)?;
-        writeln!(file, "CPU cores used: {} (detected by Rayon)", rayon::current_num_threads())?;
+        writeln!(
+            file,
+            "Total time: {:.2} minutes",
+            opt_time.as_secs_f64() / 60.0
+        )?;
+        writeln!(
+            file,
+            "Throughput: {:.2} backtests/sec",
+            total_evaluations as f64 / opt_time.as_secs_f64()
+        )?;
+        writeln!(
+            file,
+            "Time per backtest: {:.2}ms",
+            opt_time.as_millis() as f64 / total_evaluations as f64
+        )?;
+        writeln!(
+            file,
+            "CPU cores used: {} (detected by Rayon)",
+            rayon::current_num_threads()
+        )?;
         writeln!(file, "\n=== Best Parameters ===")?;
         for (param, value) in &result.best_parameters {
             writeln!(file, "{}: {:.4}", param, value)?;
         }
         writeln!(file, "\n=== Best Results ===")?;
         writeln!(file, "Fitness (Sharpe): {:.2}", result.best_fitness)?;
-        writeln!(file, "Total Return: {:.2}%", result.best_result.total_return * 100.0)?;
+        writeln!(
+            file,
+            "Total Return: {:.2}%",
+            result.best_result.total_return * 100.0
+        )?;
         writeln!(file, "Sharpe Ratio: {:.2}", result.best_result.sharpe_ratio)?;
-        writeln!(file, "Max Drawdown: {:.2}%", result.best_result.max_drawdown * 100.0)?;
-        writeln!(file, "Win Rate: {:.2}%", result.best_result.win_rate * 100.0)?;
+        writeln!(
+            file,
+            "Max Drawdown: {:.2}%",
+            result.best_result.max_drawdown * 100.0
+        )?;
+        writeln!(
+            file,
+            "Win Rate: {:.2}%",
+            result.best_result.win_rate * 100.0
+        )?;
 
         println!("\n✓ Metrics saved to: {}", metrics_path);
     }
@@ -618,25 +724,35 @@ fn run_optimization(
 fn print_usage() {
     eprintln!("Advanced Momentum Strategy - Tick-level Backtesting");
     eprintln!("\nUsage:");
-    eprintln!("  cargo run --release --features data-downloaders --example advanced_momentum_strategy <MODE> [OPTIONS]");
+    eprintln!(
+        "  cargo run --release --features data-downloaders --example advanced_momentum_strategy <MODE> [OPTIONS]"
+    );
     eprintln!("\nModes:");
     eprintln!("  generate [TRADES] [OUTPUT]    - Generate synthetic test data");
     eprintln!("  backtest [DATA]               - Run single backtest");
     eprintln!("  optimize [DATA] [POP] [GENS]  - Run genetic optimization");
     eprintln!("\nExamples:");
     eprintln!("  Generate 10M trades:");
-    eprintln!("    cargo run --release --features data-downloaders --example advanced_momentum_strategy generate 10000000 data/test_trades.parquet");
+    eprintln!(
+        "    cargo run --release --features data-downloaders --example advanced_momentum_strategy generate 10000000 data/test_trades.parquet"
+    );
     eprintln!("\n  Run backtest:");
-    eprintln!("    cargo run --release --features data-downloaders --example advanced_momentum_strategy backtest data/test_trades.parquet");
+    eprintln!(
+        "    cargo run --release --features data-downloaders --example advanced_momentum_strategy backtest data/test_trades.parquet"
+    );
     eprintln!("\n  Run optimization:");
-    eprintln!("    cargo run --release --features data-downloaders --example advanced_momentum_strategy optimize data/test_trades.parquet 100 50");
+    eprintln!(
+        "    cargo run --release --features data-downloaders --example advanced_momentum_strategy optimize data/test_trades.parquet 100 50"
+    );
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "data-downloaders"))]
     {
         eprintln!("Error: This example requires the 'data-downloaders' feature");
-        eprintln!("Run with: cargo run --release --features data-downloaders --example advanced_momentum_strategy");
+        eprintln!(
+            "Run with: cargo run --release --features data-downloaders --example advanced_momentum_strategy"
+        );
         std::process::exit(1);
     }
 
@@ -653,16 +769,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match mode {
             "generate" => {
-                let trades = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1_000_000);
-                let output = args.get(3).map(|s| s.as_str()).unwrap_or("data/test_trades.parquet");
+                let trades = args
+                    .get(2)
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(1_000_000);
+                let output = args
+                    .get(3)
+                    .map(|s| s.as_str())
+                    .unwrap_or("data/test_trades.parquet");
                 generate_synthetic_trades(trades, output)?;
             }
             "backtest" => {
-                let data = args.get(2).map(|s| s.as_str()).unwrap_or("data/test_trades.parquet");
+                let data = args
+                    .get(2)
+                    .map(|s| s.as_str())
+                    .unwrap_or("data/test_trades.parquet");
                 run_backtest(data, None)?;
             }
             "optimize" => {
-                let data = args.get(2).map(|s| s.as_str()).unwrap_or("data/test_trades.parquet");
+                let data = args
+                    .get(2)
+                    .map(|s| s.as_str())
+                    .unwrap_or("data/test_trades.parquet");
                 let population = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(100);
                 let generations = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(50);
                 run_optimization(data, population, generations, None, true)?;

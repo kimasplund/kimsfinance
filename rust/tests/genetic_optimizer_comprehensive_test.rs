@@ -106,9 +106,7 @@ fn test_strategy_cloning_no_mutex() {
         },
     );
 
-    let optimizer = GeneticOptimizer::new()
-        .population_size(50)
-        .generations(10);
+    let optimizer = GeneticOptimizer::new().population_size(50).generations(10);
 
     println!("Running genetic optimizer with cloneable strategy...");
     let start = Instant::now();
@@ -234,9 +232,7 @@ fn test_sequential_vs_parallel_correctness() {
 
     // Sequential execution (population < 20)
     println!("Running sequential optimization (10 individuals)...");
-    let optimizer_seq = GeneticOptimizer::new()
-        .population_size(10)
-        .generations(15);
+    let optimizer_seq = GeneticOptimizer::new().population_size(10).generations(15);
 
     let result_seq = optimizer_seq.optimize(
         &engine,
@@ -256,9 +252,7 @@ fn test_sequential_vs_parallel_correctness() {
 
     // Parallel execution (population >= 20)
     println!("Running parallel optimization (50 individuals)...");
-    let optimizer_par = GeneticOptimizer::new()
-        .population_size(50)
-        .generations(15);
+    let optimizer_par = GeneticOptimizer::new().population_size(50).generations(15);
 
     let result_par = optimizer_par.optimize(
         &engine,
@@ -281,9 +275,7 @@ fn test_sequential_vs_parallel_correctness() {
     assert!(result_par.best_fitness.is_finite());
 
     // Parallel should generally find better solutions (larger population)
-    println!(
-        "✅ Both sequential and parallel produce valid results"
-    );
+    println!("✅ Both sequential and parallel produce valid results");
     println!(
         "   Parallel improvement: {:.1}%",
         (result_par.best_fitness / result_seq.best_fitness - 1.0) * 100.0
@@ -337,9 +329,7 @@ fn test_large_population_stress_test() {
         .elitism_rate(0.1);
 
     println!("Running stress test with 200 individuals, 30 generations...");
-    println!(
-        "This is a good test for mutex-free parallel execution"
-    );
+    println!("This is a good test for mutex-free parallel execution");
 
     let start = Instant::now();
     let result = optimizer.optimize(
@@ -360,10 +350,22 @@ fn test_large_population_stress_test() {
 
     println!("✅ Stress test completed in {:.2?}", elapsed);
     println!("   Best fitness: {:.4}", result.best_fitness);
-    println!("   Converged at generation: {}", result.convergence_history.len());
-    println!("   Best RSI period: {:.0}", result.best_parameters.get("rsi_period").unwrap());
-    println!("   Best buy threshold: {:.1}", result.best_parameters.get("buy_threshold").unwrap());
-    println!("   Best sell threshold: {:.1}", result.best_parameters.get("sell_threshold").unwrap());
+    println!(
+        "   Converged at generation: {}",
+        result.convergence_history.len()
+    );
+    println!(
+        "   Best RSI period: {:.0}",
+        result.best_parameters.get("rsi_period").unwrap()
+    );
+    println!(
+        "   Best buy threshold: {:.1}",
+        result.best_parameters.get("buy_threshold").unwrap()
+    );
+    println!(
+        "   Best sell threshold: {:.1}",
+        result.best_parameters.get("sell_threshold").unwrap()
+    );
 
     // Should complete without deadlock or panic
     assert!(result.best_fitness.is_finite());
@@ -393,9 +395,7 @@ fn test_convergence_detection() {
         },
     );
 
-    let optimizer = GeneticOptimizer::new()
-        .population_size(50)
-        .generations(100); // Allow many generations
+    let optimizer = GeneticOptimizer::new().population_size(50).generations(100); // Allow many generations
 
     println!("Running optimizer with convergence detection...");
     let start = Instant::now();
@@ -422,7 +422,10 @@ fn test_convergence_detection() {
 
     // Should converge early due to small search space
     if result.convergence_history.len() < 100 {
-        println!("   ✅ Converged early at generation {}", result.convergence_history.len());
+        println!(
+            "   ✅ Converged early at generation {}",
+            result.convergence_history.len()
+        );
     } else {
         println!("   Ran all 100 generations (did not converge early)");
     }
@@ -513,9 +516,18 @@ fn test_end_to_end_optimization() {
     println!("   Max drawdown: {:.2}%", result.best_result.max_drawdown);
     println!("   Num trades: {}", result.best_result.num_trades);
     println!("\n   Best parameters:");
-    println!("     RSI period: {:.0}", result.best_parameters.get("rsi_period").unwrap());
-    println!("     Buy threshold: {:.1}", result.best_parameters.get("buy_threshold").unwrap());
-    println!("     Sell threshold: {:.1}", result.best_parameters.get("sell_threshold").unwrap());
+    println!(
+        "     RSI period: {:.0}",
+        result.best_parameters.get("rsi_period").unwrap()
+    );
+    println!(
+        "     Buy threshold: {:.1}",
+        result.best_parameters.get("buy_threshold").unwrap()
+    );
+    println!(
+        "     Sell threshold: {:.1}",
+        result.best_parameters.get("sell_threshold").unwrap()
+    );
     println!("\n   Precision breakdown:");
     println!("     FP8 generations: {}", result.fp8_generations);
     println!("     FP64 generations: {}", result.fp64_generations);

@@ -3,33 +3,36 @@
 //! Provides 5-12x speedup over CPU-only implementation for large datasets.
 //! VWAP Anchored calculates VWAP from a custom anchor point (typically session start).
 //!
-//! # Hybrid Architecture (v0.2.0)
+//! # Hybrid Architecture (v0.3.0)
 //!
-//! - **GPU**: Parallel typical price calculation (~15μs)
-//! - **GPU**: Parallel TPV (Typical Price × Volume) calculation (~15μs)
-//! - **CPU**: Cumulative sums from anchor point (~30μs)
-//! - **Total**: ~110μs (vs ~600μs for CPU-only)
+//! - **GPU**: One fused kernel computes TPV = ((High + Low + Close) / 3) × Volume (~15μs)
+//! - **D2H**: Copy TPV (~15μs)
+//! - **CPU**: Cumulative sums + division from anchor point (~30μs)
+//! - **Total**: ~90μs (vs ~600μs for CPU-only)
+//!
+//! v0.3.0 fused the separate typical-price and TPV kernels into one (the TP
+//! intermediate was written to global memory and immediately re-read for no
+//! benefit) and removed a dead n×8B typical-price D2H transfer whose result
+//! was discarded on every call.
 //!
 //! # Why Hybrid?
 //!
 //! Cumulative sums are sequential (O(n) with dependencies) and run faster on CPU.
-//! GPU excels at parallel TP and TPV calculations.
+//! GPU excels at the parallel TPV calculation.
 //!
 //! - **Hybrid (this implementation)**:
-//!   - GPU: Parallel typical price (~15μs)
-//!   - GPU: Parallel TPV (~15μs)
-//!   - D2H: Copy TP/TPV (~30μs)
-//!   - CPU: Cumulative sums from anchor (~30μs) ← 3-4x faster than GPU!
-//!   - H2D: Copy VWAP (~25μs)
-//!   - **Total**: ~110μs
+//!   - GPU: Fused TPV kernel (~15μs)
+//!   - D2H: Copy TPV (~15μs)
+//!   - CPU: Cumulative sums from anchor (~30μs) ← 3-4x faster than 1-thread GPU!
+//!   - **Total**: ~90μs (result is produced on the host; nothing is copied back
+//!     to the GPU)
 //!
 //! # Algorithm
 //!
-//! 1. **GPU**: Typical Price = (High + Low + Close) / 3
-//! 2. **GPU**: TPV = Typical Price × Volume
-//! 3. **CPU**: Cumulative TPV from anchor point
-//! 4. **CPU**: Cumulative Volume from anchor point
-//! 5. **CPU**: VWAP = Cumulative TPV / Cumulative Volume
+//! 1. **GPU**: TPV = ((High + Low + Close) / 3) × Volume (fused, parallel)
+//! 2. **CPU**: Cumulative TPV from anchor point
+//! 3. **CPU**: Cumulative Volume from anchor point
+//! 4. **CPU**: VWAP = Cumulative TPV / Cumulative Volume
 //!
 //! # Anchoring
 //!
@@ -39,7 +42,8 @@
 //! # Performance Target
 //!
 //! Expected: **5-12x speedup** for datasets >10K rows
-//! Measured: ~110μs (hybrid) vs ~600μs (CPU-only) = **5.5x speedup**
+//! Measured: ~110μs (two-kernel hybrid v0.2.x) vs ~600μs (CPU-only) = **5.5x speedup**;
+//! v0.3.0 removes one kernel launch and one n×8B PCIe transfer from that path
 
 use super::device::{GpuDevice, GpuError};
 use crate::gpu::compile::compile_ptx_optimized_cached;
@@ -47,35 +51,25 @@ use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 
-/// CUDA kernel source code for VWAP Anchored calculation (Hybrid v0.2.0)
+/// CUDA kernel source code for VWAP Anchored calculation (Hybrid v0.3.0)
 ///
-/// Contains only parallel kernels - sequential cumulative sums moved to CPU.
+/// Contains one fused parallel kernel - sequential cumulative sums run on CPU.
+/// NVRTC-compatible: no `#include` directives, extern "C" entry point.
 const VWAP_ANCHORED_KERNEL: &str = r#"
-// Define constants directly to avoid header dependencies with NVRTC
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-
-// Kernel 1: Calculate Typical Price (PARALLEL - Good for GPU)
-// TP = (High + Low + Close) / 3
-extern "C" __global__ void calculate_typical_price_kernel(
+// Fused kernel: TPV = Typical Price x Volume in one pass (PARALLEL - Good for GPU)
+//
+// Replaces the previous two-kernel pipeline (TP kernel + TPV kernel) that
+// materialized the typical-price intermediate in global memory only to re-read
+// it immediately.
+//
+// Division by 3.0 (not multiplication by a reciprocal constant) matches the
+// CPU reference (indicators/volume.rs) per element. FP64 is required for
+// agreement with the host-side f64 cumulative sums; this elementwise kernel is
+// memory-bound, so Ada's 1:64 FP64 throughput is not the bottleneck.
+extern "C" __global__ void calculate_tpv_kernel(
     const double* __restrict__ high,
     const double* __restrict__ low,
     const double* __restrict__ close,
-    double* __restrict__ typical_price,
-    int n
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx >= n) return;
-
-    // Fused multiply-add optimization: (h + l + c) * (1/3)
-    double tp = (high[idx] + low[idx] + close[idx]) * 0.33333333333333331;
-    typical_price[idx] = tp;
-}
-
-// Kernel 2: Calculate TPV (Typical Price × Volume) (PARALLEL - Good for GPU)
-// TPV = Typical Price × Volume
-extern "C" __global__ void calculate_tpv_kernel(
-    const double* __restrict__ typical_price,
     const double* __restrict__ volume,
     double* __restrict__ tpv,
     int n
@@ -84,7 +78,7 @@ extern "C" __global__ void calculate_tpv_kernel(
 
     if (idx >= n) return;
 
-    tpv[idx] = typical_price[idx] * volume[idx];
+    tpv[idx] = ((high[idx] + low[idx] + close[idx]) / 3.0) * volume[idx];
 }
 "#;
 
@@ -104,18 +98,21 @@ extern "C" __global__ void calculate_tpv_kernel(
 ///
 /// Array1<f64> with VWAP values. Values before `anchor_index` are NaN.
 ///
-/// # Performance (Async v0.2.1)
+/// # Performance (Hybrid v0.3.0)
 ///
-/// Expected performance: **~110μs** for 100K candles (5-12x faster than CPU-only)
+/// Expected performance: **~90μs** for 100K candles (5-12x faster than CPU-only)
 ///
 /// Breakdown (with async transfers):
 /// - H2D `high`/`low`/`close`/`volume` (pinned): ~30μs
-/// - GPU typical price kernel: ~15μs
-/// - GPU TPV kernel: ~15μs
-/// - D2H `typical_price`/`tpv` (pinned): ~30μs
-/// - CPU cumulative sums from anchor: ~30μs
-/// - H2D `vwap` (pinned): ~25μs
-/// - **Total**: ~110μs (vs ~600μs CPU-only = **5.5x speedup**)
+/// - GPU fused TPV kernel: ~15μs
+/// - D2H `tpv` (pinned): ~15μs
+/// - CPU cumulative sums + VWAP from anchor: ~30μs
+/// - **Total**: ~90μs (the VWAP result is produced on the host and returned
+///   directly - nothing is copied back to the GPU)
+///
+/// The previous v0.2.x pipeline measured ~110μs; v0.3.0 fuses the TP and TPV
+/// kernels and drops a dead n×8B typical-price D2H transfer that was discarded
+/// on every call.
 ///
 /// # Stream Concurrency
 ///
@@ -127,17 +124,16 @@ extern "C" __global__ void calculate_tpv_kernel(
 ///
 /// # Algorithm
 ///
-/// 1. **GPU**: Calculate Typical Price = (H+L+C)/3 (parallel)
-/// 2. **GPU**: Calculate TPV = TP × Volume (parallel)
-/// 3. **CPU**: Cumulative TPV from anchor point (sequential, O(n))
-/// 4. **CPU**: Cumulative Volume from anchor point (sequential, O(n))
-/// 5. **CPU**: VWAP = Cumulative TPV / Cumulative Volume (O(n))
+/// 1. **GPU**: Calculate TPV = ((H+L+C)/3) × Volume (fused, parallel)
+/// 2. **CPU**: Cumulative TPV from anchor point (sequential, O(n))
+/// 3. **CPU**: Cumulative Volume from anchor point (sequential, O(n))
+/// 4. **CPU**: VWAP = Cumulative TPV / Cumulative Volume (O(n))
 ///
 /// # Why Hybrid?
 ///
 /// Cumulative sums are sequential with dependencies. CPU is 3-4x faster than
 /// single-thread GPU for this operation. Hybrid approach with 1 round-trip is
-/// 5-12x faster overall due to massive parallelism in TP/TPV calculations.
+/// 5-12x faster overall due to massive parallelism in the TPV calculation.
 ///
 /// # Errors
 ///
@@ -182,13 +178,7 @@ pub fn vwap_anchored_gpu(
         .load_module(ptx)
         .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
 
-    // Get kernel functions
-    let tp_kernel = module
-        .load_function("calculate_typical_price_kernel")
-        .map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to load typical_price kernel: {:?}", e))
-        })?;
-
+    // Get kernel function
     let tpv_kernel = module
         .load_function("calculate_tpv_kernel")
         .map_err(|e| GpuError::ExecutionError(format!("Failed to load TPV kernel: {:?}", e)))?;
@@ -196,7 +186,7 @@ pub fn vwap_anchored_gpu(
     // Select stream: use provided stream or device default
     let kernel_stream = stream.unwrap_or(&device.stream);
 
-    // === Step 1: GPU - Calculate Typical Price (parallel) ===
+    // === Step 1: H2D - Copy inputs to device ===
     // Acquire pinned buffers for async H2D transfer
     let mut pinned_high = device.pinned_pool.lock().acquire(n)?;
     pinned_high.as_mut_slice()[..n].copy_from_slice(high.as_slice().unwrap());
@@ -212,7 +202,6 @@ pub fn vwap_anchored_gpu(
     let mut d_low = device.alloc_buffer(n)?;
     let mut d_close = device.alloc_buffer(n)?;
     let mut d_volume = device.alloc_buffer(n)?;
-    let mut d_typical_price = device.alloc_buffer(n)?;
     let mut d_tpv = device.alloc_buffer(n)?;
 
     // Asynchronous H2D copies using pinned memory (20-30% faster)
@@ -239,61 +228,41 @@ pub fn vwap_anchored_gpu(
 
     let n_i32 = n as i32;
 
-    // Launch typical price kernel
-    let mut builder = kernel_stream.launch_builder(&tp_kernel);
+    // === Step 2: GPU - Calculate TPV (fused, parallel) ===
+    let mut builder = kernel_stream.launch_builder(&tpv_kernel);
     builder.arg(&d_high);
     builder.arg(&d_low);
     builder.arg(&d_close);
-    builder.arg(&mut d_typical_price);
-    builder.arg(&n_i32);
-
-    let config = LaunchConfig::for_num_elems(n as u32);
-    unsafe {
-        builder.launch(config).map_err(|e| {
-            GpuError::ExecutionError(format!("Typical price kernel launch failed: {:?}", e))
-        })?;
-    }
-
-    // === Step 2: GPU - Calculate TPV (parallel) ===
-    let mut builder = kernel_stream.launch_builder(&tpv_kernel);
-    builder.arg(&d_typical_price);
     builder.arg(&d_volume);
     builder.arg(&mut d_tpv);
     builder.arg(&n_i32);
 
+    let config = LaunchConfig::for_num_elems(n as u32);
     unsafe {
         builder
             .launch(config)
             .map_err(|e| GpuError::ExecutionError(format!("TPV kernel launch failed: {:?}", e)))?;
     }
 
-    // === Step 3: D2H - Copy typical_price and tpv back to CPU for cumulative sums ===
-    // Acquire pinned buffers for async D2H transfer
-    let mut pinned_tp = device.pinned_pool.lock().acquire(n)?;
+    // === Step 3: D2H - Copy tpv back to CPU for cumulative sums ===
+    // Acquire pinned buffer for async D2H transfer
     let mut pinned_tpv = device.pinned_pool.lock().acquire(n)?;
 
-    // Asynchronous D2H copies
-    kernel_stream
-        .memcpy_dtoh(&d_typical_price, &mut pinned_tp.as_mut_slice()[..n])
-        .map_err(|e| GpuError::ExecutionError(format!("D2H copy failed (tp): {:?}", e)))?;
+    // Asynchronous D2H copy
     kernel_stream
         .memcpy_dtoh(&d_tpv, &mut pinned_tpv.as_mut_slice()[..n])
         .map_err(|e| GpuError::ExecutionError(format!("D2H copy failed (tpv): {:?}", e)))?;
 
-    // Synchronize stream to ensure D2H copies are complete before CPU access
+    // Synchronize stream to ensure D2H copy is complete before CPU access
     kernel_stream.synchronize().map_err(|e| {
         GpuError::SynchronizationError(format!("Stream sync after D2H failed: {:?}", e))
     })?;
 
-    // Access data from pinned buffers
-    let _typical_price = Array1::from_vec(pinned_tp.as_slice()[..n].to_vec()); // Kept for debugging
+    // Access data from pinned buffer
     let tpv = Array1::from_vec(pinned_tpv.as_slice()[..n].to_vec());
 
-    // Release buffers back to pool
-    let mut pool = device.pinned_pool.lock();
-    pool.release(pinned_tp);
-    pool.release(pinned_tpv);
-    drop(pool);
+    // Release buffer back to pool
+    device.pinned_pool.lock().release(pinned_tpv);
 
     // === Step 4: CPU - Calculate cumulative sums from anchor and VWAP ===
     let vwap = calculate_vwap_from_anchor_cpu(&tpv, volume, anchor_index)?;
@@ -370,6 +339,21 @@ fn calculate_vwap_from_anchor_cpu(
 mod tests {
     use super::*;
     use ndarray::arr1;
+
+    #[test]
+    fn test_vwap_anchored_kernel_source_nvrtc_compatible() {
+        assert!(
+            !VWAP_ANCHORED_KERNEL.contains("#include"),
+            "NVRTC source must not contain #include directives"
+        );
+        assert!(
+            !VWAP_ANCHORED_KERNEL.contains("NULL"),
+            "NVRTC source must not use NULL (not defined without headers)"
+        );
+        assert!(VWAP_ANCHORED_KERNEL.contains("extern \"C\" __global__ void calculate_tpv_kernel"));
+        // The fused kernel replaced the standalone typical-price kernel
+        assert!(!VWAP_ANCHORED_KERNEL.contains("calculate_typical_price_kernel"));
+    }
 
     #[test]
     #[ignore] // Requires GPU

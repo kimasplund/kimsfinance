@@ -348,25 +348,53 @@ fn test_fp8_special_values() {
     // Test special IEEE-754 values
     assert!(quantize_fp8_sim(f64::NAN).is_nan(), "NaN should remain NaN");
     assert_eq!(quantize_fp8_sim(0.0), 0.0, "Zero should remain zero");
-    assert_eq!(quantize_fp8_sim(-0.0), -0.0, "Negative zero should remain negative zero");
+    assert_eq!(
+        quantize_fp8_sim(-0.0),
+        -0.0,
+        "Negative zero should remain negative zero"
+    );
 
     // Clamping tests
-    assert_eq!(quantize_fp8_sim(500.0), 448.0, "Over-max should clamp to 448");
-    assert_eq!(quantize_fp8_sim(-500.0), -448.0, "Under-min should clamp to -448");
+    assert_eq!(
+        quantize_fp8_sim(500.0),
+        448.0,
+        "Over-max should clamp to 448"
+    );
+    assert_eq!(
+        quantize_fp8_sim(-500.0),
+        -448.0,
+        "Under-min should clamp to -448"
+    );
     assert_eq!(quantize_fp8_sim(448.0), 448.0, "Max should remain at 448");
-    assert_eq!(quantize_fp8_sim(-448.0), -448.0, "Min should remain at -448");
+    assert_eq!(
+        quantize_fp8_sim(-448.0),
+        -448.0,
+        "Min should remain at -448"
+    );
 
     // Precision tests
-    assert_eq!(quantize_fp8_sim(1.234567), 1.23, "Should round to 2 decimals");
-    assert_eq!(quantize_fp8_sim(100.456), 100.46, "Should round up correctly");
-    assert_eq!(quantize_fp8_sim(-50.789), -50.79, "Should round negative values");
+    assert_eq!(
+        quantize_fp8_sim(1.234567),
+        1.23,
+        "Should round to 2 decimals"
+    );
+    assert_eq!(
+        quantize_fp8_sim(100.456),
+        100.46,
+        "Should round up correctly"
+    );
+    assert_eq!(
+        quantize_fp8_sim(-50.789),
+        -50.79,
+        "Should round negative values"
+    );
 }
 
 #[test]
 #[cfg(feature = "gpu")]
 #[ignore] // Requires GPU
 fn test_async_allocator_zero_size() {
-    use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
+    use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
     let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
@@ -389,7 +417,7 @@ fn test_async_allocator_zero_size() {
 #[cfg(feature = "gpu")]
 #[ignore] // Requires GPU
 fn test_async_allocator_huge_size() {
-    use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
+    use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
     let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
@@ -399,7 +427,10 @@ fn test_async_allocator_huge_size() {
     let huge_size = 125_000_000_000usize; // 1TB
     let result = allocator.alloc::<f64>(huge_size);
 
-    assert!(result.is_err(), "Huge allocation should fail with OOM error");
+    assert!(
+        result.is_err(),
+        "Huge allocation should fail with OOM error"
+    );
 
     // Should not panic, just return error
     if let Err(e) = result {

@@ -112,6 +112,7 @@ impl GpuTimer {
                     super::persistent::pinned_memory::PinnedBufferPool::new(0, 0)?,
                 ),
                 async_allocator: device.async_allocator.clone(),
+                module_cache: dashmap::DashMap::new(),
             }),
             start_event: CudaEvent::new()?,
             end_event: CudaEvent::new()?,
@@ -224,11 +225,15 @@ impl GpuTimer {
     fn elapsed_time_ms(&self) -> Result<f32, GpuError> {
         unsafe {
             let mut ms = 0.0f32;
-            sys::cuEventElapsedTime_v2(&mut ms, self.start_event.raw_event(), self.end_event.raw_event())
-                .result()
-                .map_err(|e| {
-                    GpuError::ExecutionError(format!("Failed to get elapsed time: {:?}", e))
-                })?;
+            sys::cuEventElapsedTime_v2(
+                &mut ms,
+                self.start_event.raw_event(),
+                self.end_event.raw_event(),
+            )
+            .result()
+            .map_err(|e| {
+                GpuError::ExecutionError(format!("Failed to get elapsed time: {:?}", e))
+            })?;
             Ok(ms)
         }
     }
@@ -333,7 +338,10 @@ impl TimingBreakdown {
             (self.d2h_us / self.total_us) * 100.0
         );
         println!("╟────────────────────────────────────────────╢");
-        println!("║  Total GPU      {:>8.2}       100.0%       ║", self.total_us);
+        println!(
+            "║  Total GPU      {:>8.2}       100.0%       ║",
+            self.total_us
+        );
         println!("╠════════════════════════════════════════════╣");
         println!(
             "║  Transfer Overhead: {:.1}%                  ║",
@@ -359,6 +367,7 @@ impl MultiPhaseTimer {
                     super::persistent::pinned_memory::PinnedBufferPool::new(0, 0)?,
                 ),
                 async_allocator: device.async_allocator.clone(),
+                module_cache: dashmap::DashMap::new(),
             }),
             start_event: CudaEvent::new()?,
             h2d_event: CudaEvent::new()?,
@@ -405,24 +414,40 @@ impl MultiPhaseTimer {
             let mut total_ms = 0.0f32;
 
             // H2D time: start → h2d_event
-            sys::cuEventElapsedTime_v2(&mut h2d_ms, self.start_event.raw_event(), self.h2d_event.raw_event())
-                .result()
-                .map_err(|e| GpuError::ExecutionError(format!("Failed to get H2D time: {:?}", e)))?;
+            sys::cuEventElapsedTime_v2(
+                &mut h2d_ms,
+                self.start_event.raw_event(),
+                self.h2d_event.raw_event(),
+            )
+            .result()
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to get H2D time: {:?}", e)))?;
 
             // Kernel time: h2d_event → kernel_event
-            sys::cuEventElapsedTime_v2(&mut kernel_ms, self.h2d_event.raw_event(), self.kernel_event.raw_event())
-                .result()
-                .map_err(|e| GpuError::ExecutionError(format!("Failed to get kernel time: {:?}", e)))?;
+            sys::cuEventElapsedTime_v2(
+                &mut kernel_ms,
+                self.h2d_event.raw_event(),
+                self.kernel_event.raw_event(),
+            )
+            .result()
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to get kernel time: {:?}", e)))?;
 
             // D2H time: kernel_event → d2h_event
-            sys::cuEventElapsedTime_v2(&mut d2h_ms, self.kernel_event.raw_event(), self.d2h_event.raw_event())
-                .result()
-                .map_err(|e| GpuError::ExecutionError(format!("Failed to get D2H time: {:?}", e)))?;
+            sys::cuEventElapsedTime_v2(
+                &mut d2h_ms,
+                self.kernel_event.raw_event(),
+                self.d2h_event.raw_event(),
+            )
+            .result()
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to get D2H time: {:?}", e)))?;
 
             // Total time: start → d2h_event
-            sys::cuEventElapsedTime_v2(&mut total_ms, self.start_event.raw_event(), self.d2h_event.raw_event())
-                .result()
-                .map_err(|e| GpuError::ExecutionError(format!("Failed to get total time: {:?}", e)))?;
+            sys::cuEventElapsedTime_v2(
+                &mut total_ms,
+                self.start_event.raw_event(),
+                self.d2h_event.raw_event(),
+            )
+            .result()
+            .map_err(|e| GpuError::ExecutionError(format!("Failed to get total time: {:?}", e)))?;
 
             Ok(TimingBreakdown {
                 h2d_us: h2d_ms * 1000.0,
@@ -469,14 +494,18 @@ mod tests {
         timer.record_start().expect("Failed to record start");
 
         // H2D
-        let device_buf = device.copy_to_device(&data).expect("Failed to copy to device");
+        let device_buf = device
+            .copy_to_device(&data)
+            .expect("Failed to copy to device");
         timer.record_h2d_done().expect("Failed to record H2D");
 
         // No kernel (just testing timing infrastructure)
         timer.record_kernel_done().expect("Failed to record kernel");
 
         // D2H
-        let _ = device.copy_to_host(&device_buf).expect("Failed to copy to host");
+        let _ = device
+            .copy_to_host(&device_buf)
+            .expect("Failed to copy to host");
         timer.record_d2h_done().expect("Failed to record D2H");
 
         let breakdown = timer.get_breakdown().expect("Failed to get breakdown");

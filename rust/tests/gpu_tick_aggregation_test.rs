@@ -26,9 +26,9 @@
 
 #[cfg(feature = "gpu")]
 mod gpu_tick_aggregation_tests {
-    use kimsfinance_core::binance::{Candle, Trade, Timeframe};
-    use kimsfinance_core::gpu::device::GpuDevice;
     use approx::assert_abs_diff_eq;
+    use kimsfinance_core::binance::{Candle, Timeframe, Trade};
+    use kimsfinance_core::gpu::device::GpuDevice;
     use std::sync::Arc;
 
     // ========================================================================
@@ -45,8 +45,8 @@ mod gpu_tick_aggregation_tests {
 
     /// Generate realistic test trades
     fn generate_test_trades(n: usize, num_candles: usize, timeframe_minutes: i64) -> Vec<Trade> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(42);
 
@@ -62,7 +62,7 @@ mod gpu_tick_aggregation_tests {
             let timestamp = base_timestamp + (candle_idx as i64 * timeframe_ms) + (i as i64 * 10);
 
             // Price variation within candle (±1%)
-            let price_variation = (rng.gen::<f64>() - 0.5) * 0.02;
+            let price_variation = (rng.r#gen::<f64>() - 0.5) * 0.02;
             let price = base_price * (1.0 + price_variation);
 
             let quantity = rng.gen_range(0.001..1.0);
@@ -111,28 +111,70 @@ mod gpu_tick_aggregation_tests {
 
         for (i, (g, c)) in gpu.iter().zip(cpu.iter()).enumerate() {
             // Timestamp must match exactly
-            assert_eq!(g.timestamp, c.timestamp,
-                "{} candle {}: Timestamp mismatch", name, i);
+            assert_eq!(
+                g.timestamp, c.timestamp,
+                "{} candle {}: Timestamp mismatch",
+                name, i
+            );
 
             // OHLC prices
-            assert_abs_diff_eq!(g.open, c.open, epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Open mismatch", name, i);
-            assert_abs_diff_eq!(g.high, c.high, epsilon = PRICE_TOLERANCE,
-                "{} candle {}: High mismatch", name, i);
-            assert_abs_diff_eq!(g.low, c.low, epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Low mismatch", name, i);
-            assert_abs_diff_eq!(g.close, c.close, epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Close mismatch", name, i);
+            assert_abs_diff_eq!(
+                g.open,
+                c.open,
+                epsilon = PRICE_TOLERANCE,
+                "{} candle {}: Open mismatch",
+                name,
+                i
+            );
+            assert_abs_diff_eq!(
+                g.high,
+                c.high,
+                epsilon = PRICE_TOLERANCE,
+                "{} candle {}: High mismatch",
+                name,
+                i
+            );
+            assert_abs_diff_eq!(
+                g.low,
+                c.low,
+                epsilon = PRICE_TOLERANCE,
+                "{} candle {}: Low mismatch",
+                name,
+                i
+            );
+            assert_abs_diff_eq!(
+                g.close,
+                c.close,
+                epsilon = PRICE_TOLERANCE,
+                "{} candle {}: Close mismatch",
+                name,
+                i
+            );
 
             // Volume
-            assert_abs_diff_eq!(g.volume, c.volume, epsilon = VOLUME_TOLERANCE,
-                "{} candle {}: Volume mismatch", name, i);
-            assert_abs_diff_eq!(g.quote_volume, c.quote_volume, epsilon = VOLUME_TOLERANCE,
-                "{} candle {}: Quote volume mismatch", name, i);
+            assert_abs_diff_eq!(
+                g.volume,
+                c.volume,
+                epsilon = VOLUME_TOLERANCE,
+                "{} candle {}: Volume mismatch",
+                name,
+                i
+            );
+            assert_abs_diff_eq!(
+                g.quote_volume,
+                c.quote_volume,
+                epsilon = VOLUME_TOLERANCE,
+                "{} candle {}: Quote volume mismatch",
+                name,
+                i
+            );
 
             // Trade count must match exactly
-            assert_eq!(g.num_trades, c.num_trades,
-                "{} candle {}: Trade count mismatch", name, i);
+            assert_eq!(
+                g.num_trades, c.num_trades,
+                "{} candle {}: Trade count mismatch",
+                name, i
+            );
         }
 
         println!("✅ {} validation passed: {} candles", name, gpu.len());
@@ -153,8 +195,8 @@ mod gpu_tick_aggregation_tests {
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
 
         // GPU implementation
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "1min");
     }
@@ -167,8 +209,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::minutes(5);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "5min");
     }
@@ -181,8 +223,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::hours(1);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "1hour");
     }
@@ -196,8 +238,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::minutes(1);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "large_dataset");
     }
@@ -229,8 +271,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::minutes(1);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "single_candle");
         assert_eq!(gpu_candles.len(), 1);
@@ -244,8 +286,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::minutes(1);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "many_small_candles");
     }
@@ -272,8 +314,8 @@ mod gpu_tick_aggregation_tests {
         let timeframe = Timeframe::minutes(1);
 
         let cpu_candles = cpu_aggregate_trades(&trades, timeframe);
-        let gpu_candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let gpu_candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
 
         validate_candles(&gpu_candles, &cpu_candles, "identical_timestamps");
     }
@@ -298,17 +340,22 @@ mod gpu_tick_aggregation_tests {
 
         // Measure
         let start = Instant::now();
-        let _candles = gpu_aggregate_trades(&device, &trades, timeframe)
-            .expect("GPU aggregation failed");
+        let _candles =
+            gpu_aggregate_trades(&device, &trades, timeframe).expect("GPU aggregation failed");
         let elapsed = start.elapsed();
 
         let throughput = trades.len() as f64 / elapsed.as_secs_f64();
-        println!("GPU tick aggregation throughput: {:.2} M/sec", throughput / 1e6);
+        println!(
+            "GPU tick aggregation throughput: {:.2} M/sec",
+            throughput / 1e6
+        );
 
         // Target: 1-2B trades/sec (1,000-2,000 M/sec)
-        assert!(throughput > 100e6,
+        assert!(
+            throughput > 100e6,
             "Throughput too low: {:.2} M/sec (target: >100 M/sec)",
-            throughput / 1e6);
+            throughput / 1e6
+        );
     }
 }
 

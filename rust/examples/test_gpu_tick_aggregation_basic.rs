@@ -43,25 +43,21 @@ fn main() {
 
     // Test 3: Simple aggregation test
     println!("\nTest 3: Testing tick aggregation execution...");
-    
+
     // Create simple test data: 10 trades
     let timestamps: Vec<i64> = vec![
-        1000, 1500, 2000, 2500, 3000,  // Candle 1 (0-2999)
-        3500, 4000, 4500, 5000, 5500,  // Candle 2 (3000-5999)
+        1000, 1500, 2000, 2500, 3000, // Candle 1 (0-2999)
+        3500, 4000, 4500, 5000, 5500, // Candle 2 (3000-5999)
     ];
     let prices: Vec<f32> = vec![
-        100.0, 101.0, 102.0, 103.0, 104.0,
-        105.0, 106.0, 107.0, 108.0, 109.0,
+        100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0, 109.0,
     ];
-    let volumes: Vec<f32> = vec![
-        1.0, 2.0, 3.0, 4.0, 5.0,
-        6.0, 7.0, 8.0, 9.0, 10.0,
-    ];
+    let volumes: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
     let sides: Vec<i8> = vec![
-        1, 1, -1, 1, -1,  // Mix of buy/sell
+        1, 1, -1, 1, -1, // Mix of buy/sell
         1, -1, 1, 1, -1,
     ];
-    
+
     match aggregator.aggregate(
         &timestamps,
         &prices,
@@ -73,7 +69,7 @@ fn main() {
             println!("✓ Tick aggregation executed successfully");
             println!("  Input: {} trades", timestamps.len());
             println!("  Output: {} candles", candles.num_candles);
-            
+
             if candles.num_candles > 0 {
                 println!("\n  First candle:");
                 println!("    Timestamp: {}", candles.timestamps[0]);
@@ -103,6 +99,8 @@ fn main() {
 #[cfg(not(feature = "gpu"))]
 fn main() {
     eprintln!("GPU feature not enabled!");
-    eprintln!("Compile with: cargo run --release --features gpu --example test_gpu_tick_aggregation_basic");
+    eprintln!(
+        "Compile with: cargo run --release --features gpu --example test_gpu_tick_aggregation_basic"
+    );
     std::process::exit(1);
 }

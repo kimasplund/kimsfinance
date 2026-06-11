@@ -8,10 +8,10 @@
 //! cargo run --example tick_indicators_strategy
 //! ```
 
-use kimsfinance_core::backtest::tick_strategy::TickStrategy;
 use kimsfinance_core::backtest::Signal;
+use kimsfinance_core::backtest::tick_strategy::TickStrategy;
 use kimsfinance_core::binance::{Candle, IncompleteCandle, Timeframe, Trade};
-use kimsfinance_core::indicators::{TickIndicatorEngine, RSI, SMA};
+use kimsfinance_core::indicators::{RSI, SMA, TickIndicatorEngine};
 
 /// RSI-based strategy using tick indicators
 ///
@@ -98,8 +98,7 @@ impl TickStrategy for SMACrossoverStrategy {
         let slow_result = self.engine.calculate_indicator(&self.sma_slow);
 
         if let (Ok(fast_values), Ok(slow_values)) = (fast_result, slow_result) {
-            if let (Some(&curr_fast), Some(&curr_slow)) = (fast_values.last(), slow_values.last())
-            {
+            if let (Some(&curr_fast), Some(&curr_slow)) = (fast_values.last(), slow_values.last()) {
                 if !curr_fast.is_nan() && !curr_slow.is_nan() {
                     // Check for crossover
                     if let (Some(prev_fast), Some(prev_slow)) = (self.prev_fast, self.prev_slow) {
@@ -257,7 +256,10 @@ fn main() {
             }
         }
 
-        println!("SMA Crossover Strategy generated {} signals:", signals.len());
+        println!(
+            "SMA Crossover Strategy generated {} signals:",
+            signals.len()
+        );
         for (timestamp, signal) in signals.iter().take(5) {
             println!("  {} → {:?}", timestamp, signal);
         }

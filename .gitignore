@@ -8,7 +8,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-
+data/
 # Distribution / packaging
 build/
 develop-eggs/
@@ -125,6 +125,17 @@ dmypy.json
 
 # Windows
 Thumbs.db
+
+# ==============================================================================
+# Secrets and Credentials (NEVER COMMIT)
+# ==============================================================================
+.env.local
+.env.*.local
+*.pem
+*.key
+*credentials*.json
+*secrets*.json
+*api_key*
 
 # ==============================================================================
 # Project-Specific

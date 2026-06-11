@@ -186,7 +186,9 @@ impl OrderflowInput {
         }
 
         if self.close_prices.len() != n {
-            return Err(GpuError::InvalidParameter("close_prices length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "close_prices length mismatch".into(),
+            ));
         }
 
         if self.volumes.len() != n {
@@ -194,11 +196,15 @@ impl OrderflowInput {
         }
 
         if self.buy_volumes.len() != n {
-            return Err(GpuError::InvalidParameter("buy_volumes length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "buy_volumes length mismatch".into(),
+            ));
         }
 
         if self.sell_volumes.len() != n {
-            return Err(GpuError::InvalidParameter("sell_volumes length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "sell_volumes length mismatch".into(),
+            ));
         }
 
         Ok(())
@@ -265,8 +271,8 @@ impl CircularBuffer {
             return 0.0;
         }
         let mean = self.mean();
-        let variance: f32 = self.buffer.iter().map(|x| (x - mean).powi(2)).sum::<f32>()
-            / self.buffer.len() as f32;
+        let variance: f32 =
+            self.buffer.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / self.buffer.len() as f32;
         variance.sqrt()
     }
 
@@ -339,7 +345,10 @@ impl OrderflowBatchProcessor {
     /// # Returns
     ///
     /// Array of [min, max] pairs for each of the 6 features
-    pub fn calibrate_ranges(&self, input: &OrderflowInput) -> Result<[f32; NUM_FEATURES * 2], GpuError> {
+    pub fn calibrate_ranges(
+        &self,
+        input: &OrderflowInput,
+    ) -> Result<[f32; NUM_FEATURES * 2], GpuError> {
         input.validate()?;
 
         let num_ticks = input.len();
@@ -492,11 +501,7 @@ impl OrderflowBatchProcessor {
     }
 
     /// Generate trading signal for a strategy
-    fn generate_signal(
-        &self,
-        strategy_type: StrategyType,
-        features: &OrderflowFeatures,
-    ) -> i8 {
+    fn generate_signal(&self, strategy_type: StrategyType, features: &OrderflowFeatures) -> i8 {
         match strategy_type {
             StrategyType::Momentum => {
                 // Buy when imbalance > 0.6 && volume_delta > 1000
@@ -543,7 +548,8 @@ impl OrderflowBatchProcessor {
                     Signal::Buy as i8
                 }
                 // Sell when imbalance < 0.45 && abs(volume_delta) < 500
-                else if features.buy_sell_imbalance < 0.45 && features.volume_delta.abs() < 500.0 {
+                else if features.buy_sell_imbalance < 0.45 && features.volume_delta.abs() < 500.0
+                {
                     Signal::Sell as i8
                 } else {
                     Signal::Hold as i8
@@ -819,7 +825,7 @@ mod tests {
             close_prices: vec![100.0, 101.0],
             volumes: vec![2000.0, 2000.0],
             buy_volumes: vec![1600.0, 1600.0], // 80% buy (imbalance = 0.8)
-            sell_volumes: vec![400.0, 400.0],   // volume_delta = 1200 (> 1000)
+            sell_volumes: vec![400.0, 400.0],  // volume_delta = 1200 (> 1000)
         };
 
         let strategies = vec![StrategyConfig::momentum()];
@@ -847,10 +853,7 @@ mod tests {
             sell_volumes: vec![400.0; num_ticks],
         };
 
-        let strategies = vec![
-            StrategyConfig::momentum(),
-            StrategyConfig::mean_reversion(),
-        ];
+        let strategies = vec![StrategyConfig::momentum(), StrategyConfig::mean_reversion()];
 
         let start = std::time::Instant::now();
         let result = processor.process_batch(&input, &strategies);

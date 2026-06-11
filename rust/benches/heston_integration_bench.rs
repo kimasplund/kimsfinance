@@ -9,11 +9,13 @@
 //! - Total pipeline: <250ms for 1000 strategies × 10K candles
 //! - GPU memory: <1GB VRAM
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use kimsfinance_core::backtest::batch::{BatchBacktestSweep, ExecutionMode, StrategyType};
 use kimsfinance_core::backtest::engine::BacktestConfig;
 use kimsfinance_core::gpu::{GpuDevice, HestonGpuPricer};
-use kimsfinance_core::quantitative::heston::{GreeksGpuCalculator, HestonParams, OptionType, OptionQuote};
+use kimsfinance_core::quantitative::heston::{
+    GreeksGpuCalculator, HestonParams, OptionQuote, OptionType,
+};
 use std::sync::Arc;
 
 // Test data module
@@ -42,15 +44,16 @@ mod test_data {
         for i in 0..num_candles {
             timestamps.push(start_time + i as i64 * 60);
             let dt = 1.0 / 525600.0;
-            let vol_term = volatility * current_price * dt.sqrt() * rng.sample(rand_distr::StandardNormal);
+            let vol_term =
+                volatility * current_price * dt.sqrt() * rng.sample(rand_distr::StandardNormal);
 
             let open_price = current_price;
             current_price += vol_term;
             let close_price = current_price;
 
             let range = volatility * current_price * dt.sqrt();
-            let high_price = current_price.max(open_price) + range * rng.gen::<f64>();
-            let low_price = current_price.min(open_price) - range * rng.gen::<f64>();
+            let high_price = current_price.max(open_price) + range * rng.r#gen::<f64>();
+            let low_price = current_price.min(open_price) - range * rng.r#gen::<f64>();
 
             open.push(open_price);
             high.push(high_price);
@@ -143,7 +146,9 @@ fn bench_phase0_heston_pricing(c: &mut Criterion) {
             num_options,
             |b, _| {
                 b.iter(|| {
-                    let prices = pricer.price_options(&params, &options).expect("Pricing failed");
+                    let prices = pricer
+                        .price_options(&params, &options)
+                        .expect("Pricing failed");
                     black_box(prices)
                 });
             },
@@ -171,7 +176,9 @@ fn bench_phase0_greeks_calculation(c: &mut Criterion) {
             num_options,
             |b, _| {
                 b.iter(|| {
-                    let greeks = calculator.calculate_batch(&params, &options).expect("Greeks failed");
+                    let greeks = calculator
+                        .calculate_batch(&params, &options)
+                        .expect("Greeks failed");
                     black_box(greeks)
                 });
             },
@@ -387,7 +394,8 @@ fn bench_data_size_scaling(c: &mut Criterion) {
     let params_strategy = generate_strategy_params(100);
 
     for num_candles in [1_000, 5_000, 10_000].iter() {
-        let (timestamps, open, high, low, close, volume) = generate_btc_ohlcv(*num_candles, 0.3, 42);
+        let (timestamps, open, high, low, close, volume) =
+            generate_btc_ohlcv(*num_candles, 0.3, 42);
         let options = generate_options_chain(close[close.len() - 1], 20, 30);
 
         group.throughput(Throughput::Elements(*num_candles as u64));

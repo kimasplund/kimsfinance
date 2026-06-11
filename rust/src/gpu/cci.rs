@@ -39,20 +39,26 @@ extern "C" __global__ void cci_pass1_kernel(
     if (idx >= n) return;
 
     // Calculate typical price: (high + low + close) / 3
+    // Stored only for cci_pass2_kernel (a separate launch on the same stream,
+    // so stream ordering makes these writes visible to pass 2).
     typical_price[idx] = (high[idx] + low[idx] + close[idx]) / 3.0;
 
-    // Synchronize to ensure all TP values are computed
-    __syncthreads();
-
-    // Calculate rolling SMA of typical price
+    // Calculate rolling SMA of typical price.
+    //
+    // The window TP values are recomputed inline from high/low/close instead
+    // of reading the typical_price array: the window spans 1024-thread block
+    // boundaries, where sibling-thread writes cannot be ordered by any
+    // in-kernel barrier (block-local barriers only order one block - relying
+    // on one here was a cross-block data race). The inline recompute is
+    // bit-identical to the stored values (same FP expression) and costs 3
+    // extra L2-cached loads per window element, cheaper than a second launch.
     if (idx >= period - 1) {
         double sum = 0.0;
 
+        // idx >= period - 1 guarantees idx - i >= 0 for all i < period
         for (int i = 0; i < period; i++) {
             int window_idx = idx - i;
-            if (window_idx >= 0) {
-                sum += typical_price[window_idx];
-            }
+            sum += (high[window_idx] + low[window_idx] + close[window_idx]) / 3.0;
         }
 
         sma[idx] = sum / period;
@@ -219,13 +225,6 @@ pub fn cci_gpu(
     exec_stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
     exec_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
 
-    // Release pinned buffers
-    let mut pool = device.pinned_pool.lock();
-    pool.release(pinned_high);
-    pool.release(pinned_low);
-    pool.release(pinned_close);
-    drop(pool);
-
     // Allocate intermediate and output buffers
     let mut d_typical_price = device.alloc_buffer(n)?;
     let mut d_sma = device.alloc_buffer(n)?;
@@ -234,9 +233,6 @@ pub fn cci_gpu(
     let n_i32 = n as i32;
     let period_i32 = period as i32;
     let config = LaunchConfig::for_num_elems(n as u32);
-
-    // Use provided stream or fall back to device default stream
-    let exec_stream = stream.unwrap_or(&device.stream);
 
     // Pass 1: Calculate typical price and SMA
     let mut builder = exec_stream.launch_builder(&kernel_pass1);
@@ -254,12 +250,9 @@ pub fn cci_gpu(
         })?;
     }
 
-    // Synchronize stream before pass 2 (ensure pass 1 completes)
-    exec_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("Failed to sync after pass1: {:?}", e))
-    })?;
-
-    // Pass 2: Calculate MAD and CCI
+    // Pass 2: Calculate MAD and CCI.
+    // No host synchronize needed: both passes run on the same stream, so
+    // stream ordering guarantees pass 1 completes before pass 2 starts.
     let mut builder = exec_stream.launch_builder(&kernel_pass2);
     builder.arg(&d_typical_price);
     builder.arg(&d_sma);
@@ -288,8 +281,14 @@ pub fn cci_gpu(
     // Copy to output array
     let cci_vec = pinned_cci.as_slice()[..n].to_vec();
 
-    // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_cci);
+    // Release ALL pinned staging buffers only after the final sync: the async
+    // H2D/D2H copies may still be reading/writing them until the stream drains.
+    let mut pool = device.pinned_pool.lock();
+    pool.release(pinned_high);
+    pool.release(pinned_low);
+    pool.release(pinned_close);
+    pool.release(pinned_cci);
+    drop(pool);
 
     Ok(Array1::from_vec(cci_vec))
 }
@@ -298,6 +297,49 @@ pub fn cci_gpu(
 mod tests {
     use super::*;
     use ndarray::arr1;
+
+    // ==================== Host-side tests (no GPU required) ====================
+
+    #[test]
+    fn test_kernel_source_nvrtc_compatible() {
+        // NVRTC compilation path provides no SDK headers
+        assert!(
+            !CCI_KERNEL.contains("#include"),
+            "kernel must not use #include (NVRTC-incompatible)"
+        );
+        assert!(CCI_KERNEL.contains(r#"extern "C" __global__ void cci_pass1_kernel"#));
+        assert!(CCI_KERNEL.contains(r#"extern "C" __global__ void cci_pass2_kernel"#));
+    }
+
+    #[test]
+    fn test_kernel_source_no_cross_block_barrier() {
+        // The SMA window spans block boundaries; producer/consumer ordering
+        // must come from the inline TP recompute (pass 1) and same-stream
+        // launches (pass 1 -> pass 2). An in-kernel __syncthreads() cannot
+        // order threads across blocks and was the source of nondeterministic
+        // CCI values near every block boundary.
+        assert!(
+            !CCI_KERNEL.contains("__syncthreads"),
+            "kernel must not rely on __syncthreads for cross-block ordering"
+        );
+    }
+
+    #[test]
+    fn test_pass1_recomputes_typical_price_inline() {
+        // Pass 1 must not read sibling-thread typical_price[] writes inside
+        // its SMA window loop; it recomputes TP from high/low/close instead.
+        assert!(
+            CCI_KERNEL
+                .contains("sum += (high[window_idx] + low[window_idx] + close[window_idx]) / 3.0"),
+            "pass1 SMA loop must recompute typical price inline"
+        );
+        assert!(
+            !CCI_KERNEL.contains("sum += typical_price[window_idx]"),
+            "pass1 SMA loop must not read typical_price written by sibling threads"
+        );
+    }
+
+    // ==================== GPU tests ====================
 
     #[test]
     #[ignore] // Requires GPU

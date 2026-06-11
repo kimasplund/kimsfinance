@@ -1,11 +1,13 @@
+use crate::gpu::{
+    GpuDevice,
+    tick_aggregation::{AggregatedCandles, TickAggregator},
+};
+use numpy::{IntoPyArray, PyReadonlyArray1};
 /// Python bindings for GPU tick aggregation
 ///
 /// Exposes GPU-accelerated tick aggregation to Python via PyO3.
-
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use numpy::{IntoPyArray, PyReadonlyArray1};
-use crate::gpu::{GpuDevice, tick_aggregation::{TickAggregator, AggregatedCandles}};
 
 /// Python wrapper for AggregatedCandles
 #[pyclass(name = "AggregatedCandles")]
@@ -83,7 +85,8 @@ impl PyAggregatedCandles {
             "AggregatedCandles(num_candles={}, timeframe={}ms)",
             self.inner.num_candles,
             if self.inner.num_candles > 1 {
-                self.inner.timestamps.get(1).unwrap_or(&0) - self.inner.timestamps.get(0).unwrap_or(&0)
+                self.inner.timestamps.get(1).unwrap_or(&0)
+                    - self.inner.timestamps.get(0).unwrap_or(&0)
             } else {
                 0
             }
@@ -108,15 +111,19 @@ impl PyTickAggregator {
     /// ```
     #[new]
     fn new() -> PyResult<Self> {
-        let device = GpuDevice::new()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to initialize GPU device: {:?}", e)
-            ))?;
+        let device = GpuDevice::new().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to initialize GPU device: {:?}",
+                e
+            ))
+        })?;
 
-        let aggregator = TickAggregator::new(device)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Failed to create tick aggregator: {:?}", e)
-            ))?;
+        let aggregator = TickAggregator::new(device).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Failed to create tick aggregator: {:?}",
+                e
+            ))
+        })?;
 
         Ok(Self { aggregator })
     }
@@ -163,7 +170,10 @@ impl PyTickAggregator {
         timeframe_ms: i64,
     ) -> PyResult<PyAggregatedCandles> {
         let timestamps = timestamps.as_slice().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid timestamps array: {}", e))
+            PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "Invalid timestamps array: {}",
+                e
+            ))
         })?;
         let prices = prices.as_slice().map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid prices array: {}", e))
@@ -175,10 +185,15 @@ impl PyTickAggregator {
             PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid sides array: {}", e))
         })?;
 
-        let candles = self.aggregator.aggregate(timestamps, prices, volumes, sides, timeframe_ms)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("GPU aggregation failed: {:?}", e)
-            ))?;
+        let candles = self
+            .aggregator
+            .aggregate(timestamps, prices, volumes, sides, timeframe_ms)
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                    "GPU aggregation failed: {:?}",
+                    e
+                ))
+            })?;
 
         Ok(PyAggregatedCandles { inner: candles })
     }
@@ -218,16 +233,15 @@ pub fn gpu_available() -> bool {
 /// ```
 #[pyfunction]
 pub fn gpu_info(py: Python<'_>) -> PyResult<Py<PyDict>> {
-    let device = GpuDevice::new()
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-            format!("GPU not available: {:?}", e)
-        ))?;
+    let device = GpuDevice::new().map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("GPU not available: {:?}", e))
+    })?;
 
     let dict = PyDict::new(py);
     dict.set_item("device_id", 0)?;
     dict.set_item("cuda_version", "13.0")?;
     dict.set_item("compute_capability", "8.9")?;
-    dict.set_item("async_allocator", true)?;  // Always enabled in GpuDevice::new()
+    dict.set_item("async_allocator", true)?; // Always enabled in GpuDevice::new()
 
     Ok(dict.into())
 }

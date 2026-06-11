@@ -30,10 +30,10 @@
 //! ```
 
 use kimsfinance_core::backtest::{
-    BacktestEngine, IndicatorConfig, IndicatorValues, OHLCVBar, ParameterGrid, ParameterRange,
-    Signal, Strategy, IslandGeneticOptimizer, GeneticOptimizer,
+    BacktestEngine, GeneticOptimizer, IndicatorConfig, IndicatorValues, IslandGeneticOptimizer,
+    OHLCVBar, ParameterGrid, ParameterRange, Signal, Strategy,
 };
-use kimsfinance_core::binance::{process_binance_month, Timeframe};
+use kimsfinance_core::binance::{Timeframe, process_binance_month};
 use ndarray::Array1;
 use std::error::Error;
 use std::time::Instant;
@@ -53,9 +53,9 @@ struct RSIStrategy {
 impl RSIStrategy {
     fn new() -> Self {
         Self {
-            rsi_period: 14,         // Will be optimized
-            buy_threshold: 30.0,    // Will be optimized
-            sell_threshold: 70.0,   // Will be optimized
+            rsi_period: 14,       // Will be optimized
+            buy_threshold: 30.0,  // Will be optimized
+            sell_threshold: 70.0, // Will be optimized
         }
     }
 }
@@ -101,7 +101,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let timeframe = Timeframe::minutes(15);
     let candles = process_binance_month(data_path, timeframe)?;
 
-    println!("Loaded {} candles in {:.2}s\n", candles.len(), load_start.elapsed().as_secs_f64());
+    println!(
+        "Loaded {} candles in {:.2}s\n",
+        candles.len(),
+        load_start.elapsed().as_secs_f64()
+    );
 
     // Convert to vectors and ndarray
     let timestamps: Vec<i64> = candles.iter().map(|c| c.timestamp).collect();
@@ -154,18 +158,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create base genetic optimizer
     let base_optimizer = GeneticOptimizer::new()
-        .population_size(100)          // 100 individuals per island
-        .generations(50)                // 50 generations
-        .mutation_rate(0.15)           // 15% mutation rate
-        .crossover_rate(0.8)           // 80% crossover rate
-        .fp8_exploration_ratio(0.8)    // 80% FP8, 20% FP64
-        .elitism_rate(0.1);            // Top 10% survive
+        .population_size(100) // 100 individuals per island
+        .generations(50) // 50 generations
+        .mutation_rate(0.15) // 15% mutation rate
+        .crossover_rate(0.8) // 80% crossover rate
+        .fp8_exploration_ratio(0.8) // 80% FP8, 20% FP64
+        .elitism_rate(0.1); // Top 10% survive
 
     // Create island model optimizer
     let island_optimizer = IslandGeneticOptimizer::new(base_optimizer)
-        .num_islands(4)                // 4 independent populations
-        .migration_interval(10)        // Migrate every 10 generations
-        .migration_rate(0.1);          // Migrate top 10% of each island
+        .num_islands(4) // 4 independent populations
+        .migration_interval(10) // Migrate every 10 generations
+        .migration_rate(0.1); // Migrate top 10% of each island
 
     println!("Island Model Configuration:");
     println!("  Islands: 4");
@@ -206,8 +210,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     println!("\nBest Fitness (Sharpe Ratio): {:.4}", result.best_fitness);
     println!("\nBacktest Results:");
-    println!("  Total Return: {:.2}%", result.best_result.total_return * 100.0);
-    println!("  Max Drawdown: {:.2}%", result.best_result.max_drawdown * 100.0);
+    println!(
+        "  Total Return: {:.2}%",
+        result.best_result.total_return * 100.0
+    );
+    println!(
+        "  Max Drawdown: {:.2}%",
+        result.best_result.max_drawdown * 100.0
+    );
     println!("  Win Rate: {:.2}%", result.best_result.win_rate * 100.0);
     println!("  Profit Factor: {:.2}", result.best_result.profit_factor);
     println!("  Total Trades: {}", result.best_result.num_trades);

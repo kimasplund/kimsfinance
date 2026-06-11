@@ -3,240 +3,213 @@
  *
  * High-performance OHLCV candle aggregation for large trade datasets.
  *
- * ## Performance Characteristics
+ * ## Pipeline (mirrors rust/src/gpu/aggregation.rs — keep in sync)
  *
- * - **Binning**: O(n) fully parallel, no shared memory, coalesced access
- * - **Aggregation**: O(n) with atomic contention (low for typical data)
- * - **Expected speedup**: 5-10x vs CPU for >100K trades
+ * 1. init_ohlcv_state_kernel : write ordered-encoded -inf/+inf into high/low
+ * 2. bin_trades_kernel       : i64 timestamp -> dense candle index (rebased)
+ * 3. aggregate_ohlcv_kernel  : single pass; high/low/volume/count via atomics,
+ *                              open/close via segment-boundary detection
  *
- * ## Memory Layout
+ * ## Preconditions (enforced on the host in aggregation.rs)
  *
- * Inputs:  Structure-of-Arrays (SoA) for coalesced access
- * Outputs: Separate arrays per OHLCV field
+ * - Trades are sorted by timestamp (non-decreasing). Dense candle indices are
+ *   therefore non-decreasing and each candle's trades occupy one contiguous
+ *   index range, which makes segment-boundary open/close detection race-free
+ *   (exactly one writer per open/close slot).
+ * - n_candles = last_bucket - first_bucket + 1 fits in i32.
  *
- * ## Atomic Operations
+ * ## Precision rationale (Ada FP64:FP32 = 1:64)
  *
- * - Open/Close: Use first/last trade (tracked via timestamp atomics)
- * - High/Low: atomicMax/atomicMin on double (requires atomicCAS)
- * - Volume: atomicAdd on double (native support on compute_60+)
- * - Count: atomicAdd on int (native support)
+ * Prices/volumes stay f64 to match the CPU reference (`CandleBuilder` in
+ * rust/src/binance/trades.rs) bit-for-bit. These kernels are memory/atomic
+ * bound, not FP-ALU bound: the only f64 arithmetic is atomicAdd(double)
+ * (native since sm_60, limited by L2 atomic throughput, not the FP64 ALU).
+ * High/low comparisons run as *integer* u64 atomics on an order-preserving
+ * encoding of f64, so the slow FP64 ALU is not on the hot path at all.
+ *
+ * ## Ordered-int encoding of double (layout contract with aggregation.rs)
+ *
+ * encode(v) = sign-bit set ? ~bits(v) : bits(v) | 0x8000000000000000
+ *
+ * is strictly monotonic over all non-NaN doubles (financial data is NaN-free),
+ * so native integer atomics replace the old CAS retry loops:
+ *
+ *   max(price) == decode(atomicMax(encoded_high, encode(price)))
+ *   min(price) == decode(atomicMin(encoded_low,  encode(price)))
+ *
+ * Initialization values (written by init_ohlcv_state_kernel — NOT zero;
+ * a zero-initialized high buffer floors at 0.0 and corrupts results for
+ * negative-price instruments):
+ *
+ *   encode(-inf) = 0x000FFFFFFFFFFFFF  (high identity)
+ *   encode(+inf) = 0xFFF0000000000000  (low  identity)
+ *
+ * Host-side decode lives in aggregation.rs (decode_ordered_u64) and MUST
+ * stay in sync with this transform.
+ *
+ * ## Launch configuration (must match aggregation.rs)
+ *
+ * - 256 threads per block for all kernels
+ * - init_ohlcv_state_kernel : grid = ceil(n_candles / 256)
+ * - bin_trades_kernel       : grid = ceil(n_trades  / 256)
+ * - aggregate_ohlcv_kernel  : grid = ceil(n_trades  / 256)
+ *
+ * NVRTC-compatible: no #include directives, extern "C" entry points only.
  */
 
 // ============================================================================
-// Atomic Helpers for Double-Precision
+// Ordered-int encoding helpers
 // ============================================================================
 
-/**
- * Atomic maximum for double-precision floats
- *
- * Uses compare-and-swap (CAS) loop since there's no native atomicMax for doubles.
- * This is safe for OHLCV because:
- * - Contention is low (trades distributed across candles)
- * - NaN/Inf not present in financial data
- * - Eventual consistency is sufficient (all threads converge to true max)
- */
-__device__ inline double atomicMaxDouble(double* address, double val) {
-    unsigned long long* address_as_ull = (unsigned long long*)address;
-    unsigned long long old = *address_as_ull;
-    unsigned long long assumed;
-
-    do {
-        assumed = old;
-        double old_val = __longlong_as_double(assumed);
-
-        // Only update if val > old_val
-        if (val <= old_val) {
-            break;
-        }
-
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
+// Order-preserving u64 image of an f64 (see header contract).
+__device__ __forceinline__ unsigned long long ordered_encode_double(double v) {
+    unsigned long long bits = (unsigned long long)__double_as_longlong(v);
+    return (bits & 0x8000000000000000ULL) ? ~bits : (bits | 0x8000000000000000ULL);
 }
 
+// encode(-infinity): identity element for atomicMax on the encoded domain
+#define ORDERED_ENCODED_NEG_INF 0x000FFFFFFFFFFFFFULL
+// encode(+infinity): identity element for atomicMin on the encoded domain
+#define ORDERED_ENCODED_POS_INF 0xFFF0000000000000ULL
+
+// ============================================================================
+// Kernel 0: High/Low State Initialization
+// ============================================================================
+
 /**
- * Atomic minimum for double-precision floats
+ * Initialize encoded high/low buffers to their atomic identity values.
  *
- * Uses compare-and-swap (CAS) loop similar to atomicMaxDouble.
+ * @param out_high_bits  Encoded high prices (u64 array, size n_candles)
+ * @param out_low_bits   Encoded low prices  (u64 array, size n_candles)
+ * @param n_candles      Number of dense candle slots
  */
-__device__ inline double atomicMinDouble(double* address, double val) {
-    unsigned long long* address_as_ull = (unsigned long long*)address;
-    unsigned long long old = *address_as_ull;
-    unsigned long long assumed;
+extern "C" __global__ void init_ohlcv_state_kernel(
+    unsigned long long* __restrict__ out_high_bits,
+    unsigned long long* __restrict__ out_low_bits,
+    int n_candles
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    do {
-        assumed = old;
-        double old_val = __longlong_as_double(assumed);
-
-        // Only update if val < old_val
-        if (val >= old_val) {
-            break;
-        }
-
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
+    if (idx < n_candles) {
+        out_high_bits[idx] = ORDERED_ENCODED_NEG_INF;
+        out_low_bits[idx] = ORDERED_ENCODED_POS_INF;
+    }
 }
 
 // ============================================================================
-// Kernel 1: Trade Binning
+// Kernel 1: Trade Binning (dense candle indices)
 // ============================================================================
 
 /**
- * Bin trades into timestamp buckets (fully parallel, no contention)
+ * Bin trades into dense candle indices (fully parallel, no contention).
  *
- * Each thread maps one trade to its candle bucket based on timeframe.
+ * @param timestamps    Trade timestamps in epoch milliseconds (i64 array)
+ * @param bucket_ids    Output: dense candle index per trade (i32 array)
+ * @param n_trades      Number of trades
+ * @param timeframe_ms  Candle timeframe in milliseconds (e.g., 300000 for 5m)
+ * @param first_bucket  trades[0].timestamp_ms / timeframe_ms (host-computed)
  *
- * @param timestamps      Trade timestamps in milliseconds (f64 array)
- * @param bucket_ids      Output: Bucket ID for each trade (i32 array)
- * @param n_trades        Number of trades
- * @param timeframe_ms    Candle timeframe in milliseconds (e.g., 300000 for 5m)
- *
- * ## Performance
- *
- * - Memory-bound kernel (1 read, 1 write per thread)
- * - Coalesced access pattern (sequential memory access)
- * - No shared memory needed
- * - Expected bandwidth: ~80% of theoretical peak
- *
- * ## Grid Configuration
- *
- * - Block size: 256 threads (8 warps, good occupancy)
- * - Grid size: ceil(n_trades / 256)
+ * Truncating i64 division matches the CPU reference bucket math
+ * (`trade.timestamp_ms / timeframe_ms` in rust/src/binance/trades.rs).
+ * Rebasing by first_bucket yields dense candle indices starting at 0 that
+ * fit in i32 even for sub-second timeframes on epoch-ms timestamps — the
+ * raw quotient ts / timeframe_ms exceeds i32::MAX for timeframe_ms < ~800
+ * on current timestamps and used to overflow the old (int) cast.
  */
 extern "C" __global__ void bin_trades_kernel(
-    const double* timestamps,
-    int* bucket_ids,
+    const long long* __restrict__ timestamps,
+    int* __restrict__ bucket_ids,
     int n_trades,
-    long long timeframe_ms
+    long long timeframe_ms,
+    long long first_bucket
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n_trades) {
-        // Convert timestamp to bucket ID
-        // Example: timestamp=1609459250000ms, timeframe=300000ms → bucket=5364864
-        long long ts = (long long)timestamps[idx];
-        bucket_ids[idx] = (int)(ts / timeframe_ms);
+        bucket_ids[idx] = (int)(timestamps[idx] / timeframe_ms - first_bucket);
     }
 }
 
 // ============================================================================
-// Kernel 2: OHLCV Aggregation with Atomics
+// Kernel 2: OHLCV Aggregation (atomics + segment-boundary open/close)
 // ============================================================================
 
 /**
- * Aggregate trades into OHLCV candles using atomic operations
+ * Aggregate trades into OHLCV candles in a single pass.
  *
- * Each thread processes one trade and atomically updates the corresponding candle.
- * This approach works well when trades are distributed across many candles
- * (typical for 1m-1h timeframes). For very short timeframes (<1s), contention
- * may increase.
+ * Each thread processes one trade:
+ * - High/Low: native u64 atomicMax/atomicMin on the order-preserving
+ *   encoding (no CAS retry loop, correct for negative prices)
+ * - Volume / Quote Volume: atomicAdd(double) (native on sm_60+)
+ * - Trade count: atomicAdd(int)
+ * - Open/Close: segment-boundary detection. Trades are time-ordered, so
+ *   bucket indices are non-decreasing and each candle owns a contiguous
+ *   trade range. Thread i compares bucket(i) with bucket(i-1): on a
+ *   discontinuity it is the unique first trade of bucket(i) (writes open)
+ *   and trade i-1 is the unique last trade of bucket(i-1) (writes close).
+ *   Edges: thread 0 opens the first candle, thread n-1 closes the last.
+ *   No atomics needed — exactly one writer per slot.
  *
- * @param prices           Trade prices (f64 array)
- * @param quantities       Trade quantities (base asset, f64 array)
- * @param quote_quantities Trade quote quantities (USDT, f64 array)
- * @param bucket_mapping   Bucket index for each trade (i32 array)
+ * Candle slots with no trades (time gaps) receive no writes and are
+ * filtered on the host via out_num_trades == 0.
+ *
+ * @param prices           Trade prices (f64 array, size n_trades)
+ * @param quantities       Trade base-asset quantities (f64 array)
+ * @param quote_quantities Trade quote-asset quantities (f64 array)
+ * @param bucket_ids       Dense candle index per trade (from bin_trades_kernel)
  * @param n_trades         Number of trades
- * @param out_high         Output: High prices (f64 array, size n_candles)
- * @param out_low          Output: Low prices (f64 array, size n_candles, init to +inf)
- * @param out_volume       Output: Base volume (f64 array, size n_candles)
- * @param out_quote_volume Output: Quote volume (f64 array, size n_candles)
- * @param out_num_trades   Output: Trade counts (i32 array, size n_candles)
- *
- * ## Atomic Strategy
- *
- * - **High**: atomicMaxDouble (find max price)
- * - **Low**: atomicMinDouble (find min price) - must be initialized to +inf
- * - **Volume**: atomicAdd (sum quantities)
- * - **Quote Volume**: atomicAdd (sum quote quantities)
- * - **Num Trades**: atomicAdd (count trades)
- *
- * ## Note on Open/Close
- *
- * Open and close are computed on CPU because they require timestamp ordering:
- * - **Open**: First trade in bucket (min timestamp)
- * - **Close**: Last trade in bucket (max timestamp)
- *
- * **Why CPU?**
- * - Tracking min/max timestamp + associated price requires complex atomic logic
- * - CPU can easily group by bucket and find first/last trade
- * - Cost is minimal: O(n) scan on CPU vs GPU kernel overhead
- *
- * **Future optimization**: Use GPU sorting (thrust::sort) + parallel scan
- * for fully GPU-based open/close computation.
- *
- * ## Performance
- *
- * - Atomic contention: Low for typical data (trades spread across candles)
- * - Memory bandwidth: ~60-70% of theoretical (atomic overhead)
- * - Scalability: Linear with n_trades (until atomic contention saturates)
- * - Expected speedup: 5-10x vs CPU for >100K trades
+ * @param out_high_bits    Encoded highs (u64, size n_candles, init: encode(-inf))
+ * @param out_low_bits     Encoded lows  (u64, size n_candles, init: encode(+inf))
+ * @param out_open         Open prices  (f64, size n_candles)
+ * @param out_close        Close prices (f64, size n_candles)
+ * @param out_volume       Base volume sums  (f64, size n_candles, zero-init)
+ * @param out_quote_volume Quote volume sums (f64, size n_candles, zero-init)
+ * @param out_num_trades   Trade counts (i32, size n_candles, zero-init)
  */
 extern "C" __global__ void aggregate_ohlcv_kernel(
-    const double* prices,
-    const double* quantities,
-    const double* quote_quantities,
-    const int* bucket_mapping,
+    const double* __restrict__ prices,
+    const double* __restrict__ quantities,
+    const double* __restrict__ quote_quantities,
+    const int* __restrict__ bucket_ids,
     int n_trades,
-    double* out_high,
-    double* out_low,
-    double* out_volume,
-    double* out_quote_volume,
-    int* out_num_trades
+    unsigned long long* __restrict__ out_high_bits,
+    unsigned long long* __restrict__ out_low_bits,
+    double* __restrict__ out_open,
+    double* __restrict__ out_close,
+    double* __restrict__ out_volume,
+    double* __restrict__ out_quote_volume,
+    int* __restrict__ out_num_trades
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (idx < n_trades) {
-        // Get bucket index for this trade
-        int bucket_idx = bucket_mapping[idx];
-
-        // Load trade data
-        double price = prices[idx];
-        double quantity = quantities[idx];
-        double quote_qty = quote_quantities[idx];
-
-        // Update OHLCV using atomic operations
-        // Note: Open and close are computed on CPU (requires timestamp ordering)
-
-        // High: atomic max
-        atomicMaxDouble(&out_high[bucket_idx], price);
-
-        // Low: atomic min (must be initialized to +inf before kernel launch)
-        atomicMinDouble(&out_low[bucket_idx], price);
-
-        // Volume: atomic sum
-        atomicAdd(&out_volume[bucket_idx], quantity);
-
-        // Quote volume: atomic sum
-        atomicAdd(&out_quote_volume[bucket_idx], quote_qty);
-
-        // Trade count: atomic increment
-        atomicAdd(&out_num_trades[bucket_idx], 1);
+    if (idx >= n_trades) {
+        return;
     }
-}
 
-/**
- * Simplified aggregation kernel (for testing/validation)
- *
- * This version only computes volume and trade count (no atomicMax/Min complexity).
- * Useful for benchmarking atomic contention vs pure summation.
- */
-extern "C" __global__ void aggregate_volume_only_kernel(
-    const double* quantities,
-    const int* bucket_mapping,
-    int n_trades,
-    double* out_volume,
-    int* out_num_trades
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int c = bucket_ids[idx];
+    double price = prices[idx];
+    unsigned long long encoded = ordered_encode_double(price);
 
-    if (idx < n_trades) {
-        int bucket_idx = bucket_mapping[idx];
-        double quantity = quantities[idx];
+    // High/Low as integer atomics on the order-preserving encoding.
+    atomicMax(&out_high_bits[c], encoded);
+    atomicMin(&out_low_bits[c], encoded);
 
-        atomicAdd(&out_volume[bucket_idx], quantity);
-        atomicAdd(&out_num_trades[bucket_idx], 1);
+    // Sums and counts.
+    atomicAdd(&out_volume[c], quantities[idx]);
+    atomicAdd(&out_quote_volume[c], quote_quantities[idx]);
+    atomicAdd(&out_num_trades[c], 1);
+
+    // Open/Close via segment boundaries (single writer per slot).
+    if (idx == 0) {
+        out_open[c] = price;
+    } else {
+        int c_prev = bucket_ids[idx - 1];
+        if (c_prev != c) {
+            out_open[c] = price;
+            out_close[c_prev] = prices[idx - 1];
+        }
+    }
+    if (idx == n_trades - 1) {
+        out_close[c] = price;
     }
 }

@@ -178,18 +178,47 @@ impl Default for L2CachePolicy {
     }
 }
 
+/// Result of attempting to apply an L2 cache persist policy
+///
+/// `set_l2_persist_policy` is currently a stub (no FFI to
+/// `cudaStreamSetAttribute`), so callers must be able to distinguish
+/// "applied" from "silently skipped". Until the FFI lands, a non-empty policy
+/// always yields [`L2PolicyStatus::NotImplemented`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "the L2 policy may not have been applied; check the returned status"]
+pub enum L2PolicyStatus {
+    /// Policy contained no windows; there was nothing to apply.
+    Empty,
+
+    /// FFI to `cudaStreamSetAttribute()` is not implemented.
+    /// **No** access-policy window was installed on the stream.
+    NotImplemented,
+}
+
+/// Pure host-side status computation for a policy application attempt
+///
+/// Extracted from `set_l2_persist_policy` so the not-implemented contract is
+/// unit-testable without a GPU or a CUDA stream.
+pub(crate) fn l2_policy_application_status(policy: &L2CachePolicy) -> L2PolicyStatus {
+    if policy.is_empty() {
+        L2PolicyStatus::Empty
+    } else {
+        L2PolicyStatus::NotImplemented
+    }
+}
+
 /// Set L2 cache persist policy for a stream (CUDA 11.0+)
 ///
 /// # Implementation Status
 ///
-/// **PLACEHOLDER**: This function requires FFI to CUDA driver API.
+/// **NOT IMPLEMENTED**: This function requires FFI to the CUDA driver API and
+/// currently applies **nothing**. It returns [`L2PolicyStatus::NotImplemented`]
+/// for any non-empty policy so callers cannot mistake the no-op for success.
 ///
 /// Full implementation requires:
 /// - Unsafe FFI bindings to `cudaStreamSetAttribute()`
 /// - `cudaStreamAttributeAccessPolicyWindow` attribute
 /// - Proper error handling for driver API calls
-///
-/// Currently falls back to no-op (no L2 optimization).
 ///
 /// # Expected Performance Gain
 ///
@@ -239,18 +268,10 @@ impl Default for L2CachePolicy {
 pub fn set_l2_persist_policy(
     _stream: &Arc<CudaStream>,
     policy: L2CachePolicy,
-) -> Result<(), GpuError> {
-    if !policy.is_empty() {
-        eprintln!("INFO: L2 cache persist policy requested but not yet implemented");
-        eprintln!("      Requires FFI to cudaStreamSetAttribute()");
-        eprintln!("      Expected improvement when implemented: +10-20% for memory-bound kernels");
-        eprintln!("      Configured {} L2 cache windows", policy.len());
-    }
-
-    // TODO: When FFI is implemented, apply policy via cudaStreamSetAttribute()
-    // This is a placeholder to maintain API compatibility
-
-    Ok(())
+) -> Result<L2PolicyStatus, GpuError> {
+    // TODO: When FFI is implemented, apply the windows via
+    // cudaStreamSetAttribute() and return a new `Applied` status variant.
+    Ok(l2_policy_application_status(&policy))
 }
 
 /// Clear L2 cache persist policy for a stream
@@ -315,6 +336,64 @@ pub fn calculate_l2_chunk_size(
     chunk_elements.min(data_size)
 }
 
+/// Calculate L2-aware chunk size for the overlap-and-discard chunker
+///
+/// The batch indicator pipeline processes large inputs in chunks, prefixing
+/// every chunk after the first with `overlap` warmup candles that are
+/// recomputed and discarded (see `gpu::batch`). The *extended* chunk
+/// (`chunk + overlap` elements per buffer) is what must fit in the L2 budget,
+/// so the returned kept-chunk size is reduced accordingly.
+///
+/// # Arguments
+///
+/// * `data_size` - Total number of elements (e.g., candles)
+/// * `num_buffers` - Number of buffers resident per chunk (HLC = 3, OHLCV = 5)
+/// * `l2_cache_size_mb` - L2 cache size in MB (32 for RTX 3500 Ada)
+/// * `utilization` - Target L2 utilization (0.0-1.0, typically 0.7-0.8)
+/// * `overlap` - Warmup candles re-processed at the head of each chunk
+///
+/// # Returns
+///
+/// Kept-chunk size in elements. Returns `data_size` (i.e., "do not chunk")
+/// when the overlap would consume half or more of the L2 budget: in that
+/// regime most of each chunk is redundant warmup recomputation and chunking
+/// has no locality benefit.
+///
+/// # Example
+///
+/// ```rust
+/// use kimsfinance_core::gpu::l2_cache::calculate_l2_chunk_size_with_overlap;
+///
+/// // 10M candles, HLC (3 buffers), RTX 3500 Ada (32 MB L2), 56-candle warmup
+/// let chunk = calculate_l2_chunk_size_with_overlap(10_000_000, 3, 32, 0.75, 56);
+///
+/// // Extended chunk (kept + overlap) fits the 24 MB budget
+/// assert!((chunk + 56) * 3 * 8 <= 32 * 1024 * 1024);
+/// ```
+pub fn calculate_l2_chunk_size_with_overlap(
+    data_size: usize,
+    num_buffers: usize,
+    l2_cache_size_mb: usize,
+    utilization: f64,
+    overlap: usize,
+) -> usize {
+    let l2_cache_bytes = l2_cache_size_mb * 1024 * 1024;
+    let target_chunk_bytes = (l2_cache_bytes as f64 * utilization) as usize;
+    let bytes_per_element = std::mem::size_of::<f64>();
+
+    // Elements per buffer that fit in the L2 budget (extended chunk size)
+    let budget_elements = target_chunk_bytes / (num_buffers * bytes_per_element);
+
+    // If the warmup overlap would consume >= 50% of the budget, every chunk
+    // would spend most of its time recomputing discarded warmup values.
+    // Disable chunking instead (caller takes the single-chunk path).
+    if budget_elements <= overlap.saturating_mul(2) {
+        return data_size;
+    }
+
+    (budget_elements - overlap).min(data_size)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,6 +452,74 @@ mod tests {
         let policy = L2CachePolicy::new();
         assert_eq!(policy.len(), 0);
         assert!(policy.is_empty());
+    }
+
+    #[test]
+    fn test_l2_policy_status_empty() {
+        let policy = L2CachePolicy::new();
+        assert_eq!(l2_policy_application_status(&policy), L2PolicyStatus::Empty);
+    }
+
+    #[test]
+    fn test_l2_policy_status_not_implemented_for_non_empty() {
+        // Construct a window directly (same-module access to private fields)
+        // so this contract is testable without a GPU.
+        let policy = L2CachePolicy {
+            windows: vec![L2CacheWindow {
+                base_ptr: std::ptr::null(),
+                num_bytes: 1024,
+                hit_ratio: 0.8,
+                hit_prop: AccessProperty::Persisting,
+                miss_prop: AccessProperty::Streaming,
+            }],
+        };
+
+        assert_eq!(
+            l2_policy_application_status(&policy),
+            L2PolicyStatus::NotImplemented,
+            "non-empty policies must report NotImplemented until the FFI lands"
+        );
+    }
+
+    #[test]
+    fn test_chunk_size_with_overlap_fits_budget() {
+        // 10M candles, HLC (3 buffers), 32 MB L2, 75% utilization, 56 overlap
+        let chunk = calculate_l2_chunk_size_with_overlap(10_000_000, 3, 32, 0.75, 56);
+
+        assert!(chunk > 0);
+        assert!(chunk < 10_000_000, "large dataset must be chunked");
+
+        // Extended chunk (kept + overlap) must fit within the utilization budget
+        let budget_bytes = (32.0 * 1024.0 * 1024.0 * 0.75) as usize;
+        assert!((chunk + 56) * 3 * 8 <= budget_bytes);
+    }
+
+    #[test]
+    fn test_chunk_size_with_overlap_zero_overlap_matches_plain() {
+        // With overlap = 0 both functions must agree
+        let plain = calculate_l2_chunk_size(10_000_000, 3, 32, 0.75);
+        let with_overlap = calculate_l2_chunk_size_with_overlap(10_000_000, 3, 32, 0.75, 0);
+        assert_eq!(plain, with_overlap);
+    }
+
+    #[test]
+    fn test_chunk_size_with_overlap_clamps_to_data_size() {
+        let chunk = calculate_l2_chunk_size_with_overlap(1_000, 3, 32, 0.75, 56);
+        assert_eq!(chunk, 1_000, "small dataset fits in a single chunk");
+    }
+
+    #[test]
+    fn test_chunk_size_with_overlap_disables_chunking_when_overlap_dominates() {
+        // Budget for 3 f64 buffers at 75% of 32 MB is ~1.05M elements.
+        // An overlap consuming >= half of that must disable chunking.
+        let budget = ((32 * 1024 * 1024) as f64 * 0.75) as usize / (3 * 8);
+        let huge_overlap = budget.div_ceil(2); // ensures overlap * 2 >= budget
+
+        let chunk = calculate_l2_chunk_size_with_overlap(10_000_000, 3, 32, 0.75, huge_overlap);
+        assert_eq!(
+            chunk, 10_000_000,
+            "overlap-dominated chunking must fall back to single-chunk processing"
+        );
     }
 
     #[test]

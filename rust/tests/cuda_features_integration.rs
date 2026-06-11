@@ -7,11 +7,12 @@
 //!
 //! Run with: cargo test --release --features gpu --test cuda_features_integration
 
-#[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{
-    AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder,
+use kimsfinance_core::backtest::{
+    BacktestEngine, GeneticOptimizer, IndicatorConfig, IndicatorValues, OHLCVBar, ParameterGrid,
+    ParameterRange, Signal, Strategy,
 };
-use kimsfinance_core::backtest::{GeneticOptimizer, BacktestEngine, Strategy, Signal, OHLCVBar, IndicatorValues, IndicatorConfig, ParameterGrid, ParameterRange};
+#[cfg(feature = "gpu")]
+use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder};
 use ndarray::Array1;
 use std::sync::Arc;
 use std::time::Instant;
@@ -65,7 +66,10 @@ fn test_async_allocator_many_allocations() {
     let elapsed = start.elapsed();
 
     println!("1000 allocations took: {:?}", elapsed);
-    println!("Average: {:.2}μs per allocation", elapsed.as_micros() as f64 / n_allocations as f64);
+    println!(
+        "Average: {:.2}μs per allocation",
+        elapsed.as_micros() as f64 / n_allocations as f64
+    );
 
     // Check stats
     let stats = allocator.stats();
@@ -92,8 +96,13 @@ fn test_async_allocator_memory_reuse() {
 
         if i % 10 == 0 {
             let stats = allocator.stats();
-            println!("Iteration {}: {} allocs, {} deallocs, {} MB peak",
-                i, stats.allocations, stats.deallocations, stats.peak_bytes_used / (1024 * 1024));
+            println!(
+                "Iteration {}: {} allocs, {} deallocs, {} MB peak",
+                i,
+                stats.allocations,
+                stats.deallocations,
+                stats.peak_bytes_used / (1024 * 1024)
+            );
         }
     }
 
@@ -114,7 +123,7 @@ fn test_async_allocator_concurrent_access() {
     let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
     let allocator = Arc::new(
         AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
-            .expect("Failed to create async allocator")
+            .expect("Failed to create async allocator"),
     );
 
     // Simulate concurrent access from multiple threads
@@ -125,7 +134,9 @@ fn test_async_allocator_concurrent_access() {
         let allocator_clone = Arc::clone(&allocator);
         let handle = thread::spawn(move || {
             for _ in 0..100 {
-                let _buffer = allocator_clone.alloc::<f64>(1024).expect("Allocation failed");
+                let _buffer = allocator_clone
+                    .alloc::<f64>(1024)
+                    .expect("Allocation failed");
                 thread::sleep(std::time::Duration::from_micros(10));
             }
             println!("Thread {} completed", thread_id);
@@ -155,8 +166,7 @@ fn test_cuda_graph_builder_lifecycle() {
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
 
     // Test builder creation
-    let mut builder = IndicatorGraphBuilder::new(&device)
-        .expect("Failed to create graph builder");
+    let mut builder = IndicatorGraphBuilder::new(&device).expect("Failed to create graph builder");
 
     println!("✓ Graph builder created");
 
@@ -189,7 +199,10 @@ fn test_cuda_graph_error_handling() {
     // Test 1: Cannot end capture before beginning
     let builder = IndicatorGraphBuilder::new(&device).unwrap();
     let result = builder.end_capture();
-    assert!(result.is_err(), "Should fail when ending capture without beginning");
+    assert!(
+        result.is_err(),
+        "Should fail when ending capture without beginning"
+    );
     println!("✓ Error handling for premature end_capture works");
 
     // Test 2: Cannot begin capture twice
@@ -211,24 +224,51 @@ fn test_cuda_graph_break_even_calculations() {
 
     // Small batch (2 indicators): very high break-even
     let iterations = break_even_iterations(2);
-    assert!(iterations > 100, "Small batches should have high break-even, got {}", iterations);
-    println!("2 indicators: {} iterations to break even (expected >100)", iterations);
+    assert!(
+        iterations > 100,
+        "Small batches should have high break-even, got {}",
+        iterations
+    );
+    println!(
+        "2 indicators: {} iterations to break even (expected >100)",
+        iterations
+    );
 
     // Medium batch (5 indicators): reasonable break-even
     let iterations = break_even_iterations(5);
-    assert!(iterations > 10 && iterations < 100,
-        "Medium batches should break even in 10-100 iterations, got {}", iterations);
-    println!("5 indicators: {} iterations to break even (10-100 expected)", iterations);
+    assert!(
+        iterations > 10 && iterations < 100,
+        "Medium batches should break even in 10-100 iterations, got {}",
+        iterations
+    );
+    println!(
+        "5 indicators: {} iterations to break even (10-100 expected)",
+        iterations
+    );
 
     // Large batch (10 indicators): low break-even
     let iterations = break_even_iterations(10);
-    assert!(iterations < 50, "Large batches should break even quickly, got {}", iterations);
-    println!("10 indicators: {} iterations to break even (<50 expected)", iterations);
+    assert!(
+        iterations < 50,
+        "Large batches should break even quickly, got {}",
+        iterations
+    );
+    println!(
+        "10 indicators: {} iterations to break even (<50 expected)",
+        iterations
+    );
 
     // Very large batch (20 indicators): very low break-even
     let iterations = break_even_iterations(20);
-    assert!(iterations < 30, "Very large batches should break even very quickly, got {}", iterations);
-    println!("20 indicators: {} iterations to break even (<30 expected)", iterations);
+    assert!(
+        iterations < 30,
+        "Very large batches should break even very quickly, got {}",
+        iterations
+    );
+    println!(
+        "20 indicators: {} iterations to break even (<30 expected)",
+        iterations
+    );
 
     println!("✓ Break-even calculation test passed");
 }
@@ -242,24 +282,35 @@ fn test_cuda_graph_performance_targets() {
 
     // Verify performance targets are sensible
     for &(num_indicators, traditional_ms, graph_ms) in PERFORMANCE_TARGETS {
-        println!("Testing {} indicators: traditional={:.3}ms, graph={:.3}ms",
-            num_indicators, traditional_ms, graph_ms);
+        println!(
+            "Testing {} indicators: traditional={:.3}ms, graph={:.3}ms",
+            num_indicators, traditional_ms, graph_ms
+        );
 
         // Graph overhead should be relatively constant
-        assert!(graph_ms < 0.15,
+        assert!(
+            graph_ms < 0.15,
             "Graph overhead should be < 150μs, got {}ms for {} indicators",
-            graph_ms, num_indicators);
+            graph_ms,
+            num_indicators
+        );
 
         // Traditional overhead should scale with num_indicators
         let expected_traditional = num_indicators as f64 * 0.007;
-        assert!((traditional_ms - expected_traditional).abs() < 0.001,
+        assert!(
+            (traditional_ms - expected_traditional).abs() < 0.001,
             "Traditional overhead should be ~7μs per indicator, got {}ms vs {}ms expected",
-            traditional_ms, expected_traditional);
+            traditional_ms,
+            expected_traditional
+        );
 
         // Graphs should be faster for large batches
         if num_indicators >= MIN_BATCH_SIZE {
-            assert!(graph_ms < traditional_ms,
-                "Graphs should be faster for {} indicators", num_indicators);
+            assert!(
+                graph_ms < traditional_ms,
+                "Graphs should be faster for {} indicators",
+                num_indicators
+            );
 
             let speedup = traditional_ms / graph_ms;
             println!("  → Speedup: {:.1}x", speedup);
@@ -291,7 +342,10 @@ fn test_fp8_quantization_accuracy() {
 
     for (input, expected, description) in test_cases {
         // We can't access quantize_fp8 directly, so we'll document the expected behavior
-        println!("  {} → {}: {} (expected {:.2})", input, expected, description, expected);
+        println!(
+            "  {} → {}: {} (expected {:.2})",
+            input, expected, description, expected
+        );
     }
 
     println!("✓ FP8 quantization spec validated");
@@ -372,7 +426,9 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
         }
 
         fn indicators(&self) -> Vec<IndicatorConfig> {
-            vec![IndicatorConfig::RSI { period: self.rsi_period }]
+            vec![IndicatorConfig::RSI {
+                period: self.rsi_period,
+            }]
         }
 
         fn initial_capital(&self) -> f64 {
@@ -388,9 +444,30 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
 
     let engine = BacktestEngine::default();
     let mut grid = ParameterGrid::new();
-    grid.add_range("rsi_period", ParameterRange::Int { min: 10, max: 20, step: 2 });
-    grid.add_range("buy_threshold", ParameterRange::Float { min: 25.0, max: 35.0, step: 5.0 });
-    grid.add_range("sell_threshold", ParameterRange::Float { min: 65.0, max: 75.0, step: 5.0 });
+    grid.add_range(
+        "rsi_period",
+        ParameterRange::Int {
+            min: 10,
+            max: 20,
+            step: 2,
+        },
+    );
+    grid.add_range(
+        "buy_threshold",
+        ParameterRange::Float {
+            min: 25.0,
+            max: 35.0,
+            step: 5.0,
+        },
+    );
+    grid.add_range(
+        "sell_threshold",
+        ParameterRange::Float {
+            min: 65.0,
+            max: 75.0,
+            step: 5.0,
+        },
+    );
 
     // Test 1: FP8-heavy optimization (80% FP8)
     println!("\n--- Running FP8-heavy optimization (80% FP8) ---");
@@ -401,13 +478,27 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
 
     let start = Instant::now();
     let result_fp8 = optimizer_fp8
-        .optimize(&engine, &mut strategy.clone(), &timestamps, &open, &high, &low, &close, &volume, &grid)
+        .optimize(
+            &engine,
+            &mut strategy.clone(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+            &grid,
+        )
         .expect("FP8 optimization failed");
     let time_fp8 = start.elapsed();
 
     println!("FP8 optimization completed in {:?}", time_fp8);
     println!("Best fitness: {:.4}", result_fp8.best_fitness);
-    println!("FP8 generations: {}/{}", result_fp8.fp8_generations, result_fp8.fp8_generations + result_fp8.fp64_generations);
+    println!(
+        "FP8 generations: {}/{}",
+        result_fp8.fp8_generations,
+        result_fp8.fp8_generations + result_fp8.fp64_generations
+    );
 
     // Test 2: FP64-only optimization
     println!("\n--- Running FP64-only optimization (0% FP8) ---");
@@ -418,7 +509,17 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
 
     let start = Instant::now();
     let result_fp64 = optimizer_fp64
-        .optimize(&engine, &mut strategy.clone(), &timestamps, &open, &high, &low, &close, &volume, &grid)
+        .optimize(
+            &engine,
+            &mut strategy.clone(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+            &grid,
+        )
         .expect("FP64 optimization failed");
     let time_fp64 = start.elapsed();
 
@@ -430,11 +531,17 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
     let fitness_diff = (result_fp8.best_fitness - result_fp64.best_fitness).abs();
     let fitness_diff_pct = (fitness_diff / result_fp64.best_fitness.abs()) * 100.0;
 
-    println!("Fitness difference: {:.4} ({:.2}%)", fitness_diff, fitness_diff_pct);
+    println!(
+        "Fitness difference: {:.4} ({:.2}%)",
+        fitness_diff, fitness_diff_pct
+    );
 
     // FP8 should give similar results (within ~5% due to precision loss)
-    assert!(fitness_diff_pct < 10.0,
-        "FP8 fitness differs too much from FP64: {:.2}%", fitness_diff_pct);
+    assert!(
+        fitness_diff_pct < 10.0,
+        "FP8 fitness differs too much from FP64: {:.2}%",
+        fitness_diff_pct
+    );
 
     println!("✓ FP8 vs FP64 comparison passed (within 10% tolerance)");
 }
@@ -455,7 +562,10 @@ fn test_combined_cuda_features() {
     // 1. Create async allocator
     let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
-    println!("✓ Async allocator created (supports_async: {})", allocator.supports_async());
+    println!(
+        "✓ Async allocator created (supports_async: {})",
+        allocator.supports_async()
+    );
 
     // 2. Allocate buffers using async allocator
     let buffer1 = allocator.alloc::<f64>(10_000).expect("Allocation 1 failed");
@@ -463,8 +573,7 @@ fn test_combined_cuda_features() {
     println!("✓ Allocated 2 buffers via async allocator");
 
     // 3. Create CUDA graph
-    let mut builder = IndicatorGraphBuilder::new(&device)
-        .expect("Failed to create graph builder");
+    let mut builder = IndicatorGraphBuilder::new(&device).expect("Failed to create graph builder");
     builder.begin_capture().expect("Failed to begin capture");
 
     // TODO: Add kernel launches here when cudarc supports graphs
@@ -481,8 +590,11 @@ fn test_combined_cuda_features() {
     // 5. Check allocator stats
     let stats = allocator.stats();
     assert_eq!(stats.allocations, 2);
-    println!("✓ Allocator stats: {} allocations, {} MB peak",
-        stats.allocations, stats.peak_bytes_used / (1024 * 1024));
+    println!(
+        "✓ Allocator stats: {} allocations, {} MB peak",
+        stats.allocations,
+        stats.peak_bytes_used / (1024 * 1024)
+    );
 
     // Clean up
     drop(buffer1);
@@ -513,7 +625,8 @@ fn test_async_allocator_performance_regression() {
     let start = Instant::now();
     let mut buffers = Vec::new();
     for _ in 0..n_allocations {
-        let buffer = allocator.alloc::<f64>(allocation_size)
+        let buffer = allocator
+            .alloc::<f64>(allocation_size)
             .expect("Allocation failed");
         buffers.push(buffer);
     }
@@ -527,14 +640,23 @@ fn test_async_allocator_performance_regression() {
     if allocator.supports_async() {
         println!("Async allocation is ENABLED");
         // Relaxed target: < 15μs (cudarc fallback may not achieve full 1.2-1.5x speedup)
-        assert!(avg_time_us < 15.0,
-            "Async allocation slower than expected: {:.2}μs (target: <15μs)", avg_time_us);
+        assert!(
+            avg_time_us < 15.0,
+            "Async allocation slower than expected: {:.2}μs (target: <15μs)",
+            avg_time_us
+        );
         println!("✓ Performance target met: {:.2}μs < 15μs", avg_time_us);
     } else {
         println!("Async allocation is DISABLED (fallback to standard)");
-        assert!(avg_time_us < 20.0,
-            "Standard allocation slower than expected: {:.2}μs (target: <20μs)", avg_time_us);
-        println!("✓ Fallback performance acceptable: {:.2}μs < 20μs", avg_time_us);
+        assert!(
+            avg_time_us < 20.0,
+            "Standard allocation slower than expected: {:.2}μs (target: <20μs)",
+            avg_time_us
+        );
+        println!(
+            "✓ Fallback performance acceptable: {:.2}μs < 20μs",
+            avg_time_us
+        );
     }
 
     println!("✓ Async allocator performance regression test passed");
@@ -570,7 +692,7 @@ fn test_async_allocator_no_double_free() {
     let device = GpuDevice::new().expect("Failed to initialize GPU");
     let allocator = Arc::new(
         AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
-            .expect("Failed to create async allocator")
+            .expect("Failed to create async allocator"),
     );
 
     // Allocate buffer
@@ -612,7 +734,10 @@ fn test_async_allocator_leak_detection() {
 
     let current_stats = allocator.stats();
 
-    println!("Previous allocator: {} allocations", initial_stats.allocations);
+    println!(
+        "Previous allocator: {} allocations",
+        initial_stats.allocations
+    );
     println!("New allocator: {} allocations", current_stats.allocations);
 
     // New allocator should start fresh

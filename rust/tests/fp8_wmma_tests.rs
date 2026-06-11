@@ -157,7 +157,8 @@ mod fp8_tests {
             return;
         }
 
-        let cubin_path = get_cubin_path().expect("cubin_exists() returned true but get_cubin_path() returned None");
+        let cubin_path = get_cubin_path()
+            .expect("cubin_exists() returned true but get_cubin_path() returned None");
         println!("✓ Found .cubin at: {}", cubin_path);
 
         // Kernels are auto-loaded during FP8TensorCore::new()
@@ -197,26 +198,27 @@ mod fp8_tests {
 
         // Test data: various FP32 values
         let test_data: Vec<f32> = vec![
-            0.0, 1.0, -1.0, 0.5, -0.5,
-            10.0, -10.0, 100.0, -100.0,
-            1.234, 5.678, 10.111, 50.555, 100.999,
-            200.456, 447.888, // Near FP8 max
+            0.0, 1.0, -1.0, 0.5, -0.5, 10.0, -10.0, 100.0, -100.0, 1.234, 5.678, 10.111, 50.555,
+            100.999, 200.456, 447.888, // Near FP8 max
         ];
 
         println!("Testing {} values", test_data.len());
 
         // Copy to device
-        let d_data = match device.copy_to_device(&test_data.iter().map(|&x| x as f64).collect::<Vec<_>>()) {
-            Ok(d) => d,
-            Err(e) => {
-                println!("✗ Failed to copy data to device: {:?}", e);
-                return;
-            }
-        };
+        let d_data =
+            match device.copy_to_device(&test_data.iter().map(|&x| x as f64).collect::<Vec<_>>()) {
+                Ok(d) => d,
+                Err(e) => {
+                    println!("✗ Failed to copy data to device: {:?}", e);
+                    return;
+                }
+            };
 
         // Convert f64 to f32 slice
         let d_data_f32 = unsafe {
-            std::mem::transmute::<cudarc::driver::CudaSlice<f64>, cudarc::driver::CudaSlice<f32>>(d_data)
+            std::mem::transmute::<cudarc::driver::CudaSlice<f64>, cudarc::driver::CudaSlice<f32>>(
+                d_data,
+            )
         };
 
         // Quantize: FP32 -> FP8 (stored as FP32)
@@ -231,7 +233,9 @@ mod fp8_tests {
 
         // Copy back to host
         let quantized_host_f32 = match device.copy_to_host(&unsafe {
-            std::mem::transmute::<cudarc::driver::CudaSlice<f32>, cudarc::driver::CudaSlice<f64>>(d_quantized)
+            std::mem::transmute::<cudarc::driver::CudaSlice<f32>, cudarc::driver::CudaSlice<f64>>(
+                d_quantized,
+            )
         }) {
             Ok(h) => h,
             Err(e) => {
@@ -242,7 +246,10 @@ mod fp8_tests {
 
         // Validate round-trip accuracy
         println!("\nRound-Trip Results (FP32 -> FP8 -> FP32):");
-        println!("  {:>12} {:>12} {:>12} {}", "Original", "Quantized", "Error", "Status");
+        println!(
+            "  {:>12} {:>12} {:>12} {}",
+            "Original", "Quantized", "Error", "Status"
+        );
 
         let mut max_error = 0.0f32;
         let mut num_clamped = 0;
@@ -310,9 +317,9 @@ mod fp8_tests {
 
         // Test multiple matrix sizes
         let test_sizes = vec![
-            (16, 16, 16),   // Exactly one 16x16 tile
-            (32, 32, 32),   // 2x2 tiles
-            (64, 64, 64),   // 4x4 tiles
+            (16, 16, 16), // Exactly one 16x16 tile
+            (32, 32, 32), // 2x2 tiles
+            (64, 64, 64), // 4x4 tiles
         ];
 
         for (m, n, k) in test_sizes {
@@ -335,8 +342,12 @@ mod fp8_tests {
             }
 
             // GPU FP8 result
-            let d_a = device.copy_to_device(&a_host.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
-            let d_b = device.copy_to_device(&b_host.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
+            let d_a = device
+                .copy_to_device(&a_host.iter().map(|&x| x as f64).collect::<Vec<_>>())
+                .unwrap();
+            let d_b = device
+                .copy_to_device(&b_host.iter().map(|&x| x as f64).collect::<Vec<_>>())
+                .unwrap();
             let d_a_f32 = unsafe { std::mem::transmute(d_a) };
             let d_b_f32 = unsafe { std::mem::transmute(d_b) };
 
@@ -348,7 +359,9 @@ mod fp8_tests {
                 }
             };
 
-            let c_host_f64 = device.copy_to_host(&unsafe { std::mem::transmute(d_c_f32) }).unwrap();
+            let c_host_f64 = device
+                .copy_to_host(&unsafe { std::mem::transmute(d_c_f32) })
+                .unwrap();
             let c_host: Vec<f32> = c_host_f64.iter().map(|&x| x as f32).collect();
 
             // Compare FP8 vs FP32
@@ -370,7 +383,9 @@ mod fp8_tests {
                 if i < 5 {
                     println!(
                         "  FP32: {:.6}, FP8: {:.6}, Rel Error: {:.2}%",
-                        c_ref[i], c_host[i], rel_error * 100.0
+                        c_ref[i],
+                        c_host[i],
+                        rel_error * 100.0
                     );
                 }
             }
@@ -427,16 +442,25 @@ mod fp8_tests {
         let a_zeros = vec![0.0f32; m * k];
         let b_zeros = vec![0.0f32; k * n];
 
-        let d_a = device.copy_to_device(&a_zeros.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
-        let d_b = device.copy_to_device(&b_zeros.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
+        let d_a = device
+            .copy_to_device(&a_zeros.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
+        let d_b = device
+            .copy_to_device(&b_zeros.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
         let d_a_f32 = unsafe { std::mem::transmute(d_a) };
         let d_b_f32 = unsafe { std::mem::transmute(d_b) };
 
         let d_c = fp8_core.matmul_fp8(&d_a_f32, &d_b_f32, m, n, k).unwrap();
-        let c_host_f64 = device.copy_to_host(&unsafe { std::mem::transmute(d_c) }).unwrap();
+        let c_host_f64 = device
+            .copy_to_host(&unsafe { std::mem::transmute(d_c) })
+            .unwrap();
         let c_host: Vec<f32> = c_host_f64.iter().map(|&x| x as f32).collect();
 
-        assert!(c_host.iter().all(|&x| x.abs() < 1e-6), "All zeros should produce all zeros");
+        assert!(
+            c_host.iter().all(|&x| x.abs() < 1e-6),
+            "All zeros should produce all zeros"
+        );
         println!("✓ All zeros: PASS");
 
         // Test 2: Identity matrix
@@ -447,32 +471,50 @@ mod fp8_tests {
         }
         let b_ones = vec![1.0f32; k * n];
 
-        let d_a = device.copy_to_device(&a_identity.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
-        let d_b = device.copy_to_device(&b_ones.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
+        let d_a = device
+            .copy_to_device(&a_identity.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
+        let d_b = device
+            .copy_to_device(&b_ones.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
         let d_a_f32 = unsafe { std::mem::transmute(d_a) };
         let d_b_f32 = unsafe { std::mem::transmute(d_b) };
 
         let d_c = fp8_core.matmul_fp8(&d_a_f32, &d_b_f32, m, n, k).unwrap();
-        let c_host_f64 = device.copy_to_host(&unsafe { std::mem::transmute(d_c) }).unwrap();
+        let c_host_f64 = device
+            .copy_to_host(&unsafe { std::mem::transmute(d_c) })
+            .unwrap();
         let c_host: Vec<f32> = c_host_f64.iter().map(|&x| x as f32).collect();
 
         // Each row should sum to k (identity * ones)
         let non_zero_count = c_host.iter().filter(|&&x| x.abs() > 0.1).count();
-        assert!(non_zero_count > 0, "Identity matrix should produce non-zero values");
-        println!("✓ Identity matrix: PASS ({} non-zero values)", non_zero_count);
+        assert!(
+            non_zero_count > 0,
+            "Identity matrix should produce non-zero values"
+        );
+        println!(
+            "✓ Identity matrix: PASS ({} non-zero values)",
+            non_zero_count
+        );
 
         // Test 3: Max FP8 values
         println!("\n--- Test: Max FP8 Values (±448) ---");
         let a_max = vec![448.0f32; m * k];
         let b_small = vec![0.01f32; k * n];
 
-        let d_a = device.copy_to_device(&a_max.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
-        let d_b = device.copy_to_device(&b_small.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
+        let d_a = device
+            .copy_to_device(&a_max.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
+        let d_b = device
+            .copy_to_device(&b_small.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
         let d_a_f32 = unsafe { std::mem::transmute(d_a) };
         let d_b_f32 = unsafe { std::mem::transmute(d_b) };
 
         let d_c = fp8_core.matmul_fp8(&d_a_f32, &d_b_f32, m, n, k).unwrap();
-        let c_host_f64 = device.copy_to_host(&unsafe { std::mem::transmute(d_c) }).unwrap();
+        let c_host_f64 = device
+            .copy_to_host(&unsafe { std::mem::transmute(d_c) })
+            .unwrap();
         let c_host: Vec<f32> = c_host_f64.iter().map(|&x| x as f32).collect();
 
         // Expected: 448 * 0.01 * k ≈ 71.68 (for k=16)
@@ -480,8 +522,17 @@ mod fp8_tests {
         let avg_value = c_host.iter().sum::<f32>() / c_host.len() as f32;
         let error = (avg_value - expected).abs() / expected;
 
-        println!("  Expected avg: {:.2}, Got: {:.2}, Error: {:.2}%", expected, avg_value, error * 100.0);
-        assert!(error < 0.05, "Max value test failed: error {:.2}%", error * 100.0);
+        println!(
+            "  Expected avg: {:.2}, Got: {:.2}, Error: {:.2}%",
+            expected,
+            avg_value,
+            error * 100.0
+        );
+        assert!(
+            error < 0.05,
+            "Max value test failed: error {:.2}%",
+            error * 100.0
+        );
         println!("✓ Max FP8 values: PASS");
 
         println!("\n✓ All edge cases passed");
@@ -525,8 +576,12 @@ mod fp8_tests {
         let b_host: Vec<f32> = (0..k * n).map(|i| (i % 10) as f32 / 10.0).collect();
 
         // Copy to device once
-        let d_a = device.copy_to_device(&a_host.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
-        let d_b = device.copy_to_device(&b_host.iter().map(|&x| x as f64).collect::<Vec<_>>()).unwrap();
+        let d_a = device
+            .copy_to_device(&a_host.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
+        let d_b = device
+            .copy_to_device(&b_host.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            .unwrap();
         let d_a_f32 = unsafe { std::mem::transmute(d_a) };
         let d_b_f32 = unsafe { std::mem::transmute(d_b) };
 

@@ -54,6 +54,15 @@ jit = [
 optimization = [
     "deap>=1.4",  # Genetic algorithm optimization (NSGA-II)
 ]
+reporting = [
+    "reportlab>=4.0",  # PDF report generation
+    "matplotlib>=3.5",  # Chart generation for reports
+]
+interactive = [
+    "plotly>=5.0",  # Interactive Plotly charts
+    "bokeh>=3.0",  # Interactive Bokeh charts
+    "kaleido>=0.2",  # PNG export for Plotly (optional)
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -71,7 +80,7 @@ test = [
     "svgwrite>=1.4",
 ]
 all = [
-    "kimsfinance[gpu,jit,optimization,dev,test]",
+    "kimsfinance[gpu,jit,optimization,reporting,interactive,dev,test]",
 ]
 
 [project.urls]

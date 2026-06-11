@@ -67,10 +67,15 @@
 
 pub mod core;
 pub mod engine;
+#[cfg(feature = "gpu")]
+pub mod euler_search;
+pub mod grid_search;
+pub mod matching_engine;
 pub mod metrics;
 pub mod microstructure_strategy;
 pub mod multi_objective;
 pub mod optimizer;
+pub mod orders;
 pub mod portfolio;
 pub mod sweep;
 pub mod tick_engine;
@@ -95,6 +100,10 @@ pub use core::{
     Signal, Strategy, Trade, TradeDirection,
 };
 pub use engine::{BacktestConfig, BacktestEngine};
+#[cfg(feature = "gpu")]
+pub use euler_search::{EulerSearchOptimizer, EulerSearchResult, RefinementStep};
+pub use grid_search::GridSearchOptimizer;
+pub use matching_engine::{MarketSnapshot, MatchingConfig, MatchingEngine};
 pub use metrics::{
     calculate_calmar_ratio, calculate_max_drawdown, calculate_profit_factor,
     calculate_sharpe_ratio, calculate_sortino_ratio, calculate_win_rate,
@@ -102,6 +111,9 @@ pub use metrics::{
 pub use microstructure_strategy::MicrostructureStrategy;
 pub use multi_objective::{MultiObjectiveOptimizer, MultiObjectiveResult, Objective, Solution};
 pub use optimizer::{GeneticOptimizer, IslandGeneticOptimizer, OptimizerResult};
+pub use orders::{
+    Fill, Order, OrderGroup, OrderId, OrderSide, OrderStatus, OrderType, TimeInForce,
+};
 pub use portfolio::{
     AllocationStrategy, AssetData, PortfolioBacktest, PortfolioConfig, PortfolioResult,
     PortfolioStrategy, RebalanceFrequency,
@@ -128,4 +140,4 @@ pub use batch::{BatchBacktestResults, BatchBacktestSweep, ExecutionMode, OhlcvDa
 pub use persistent::execute_persistent;
 
 #[cfg(feature = "gpu")]
-pub use tick_batch::{BatchTickBacktest, BatchBacktestResults as TickBatchResults};
+pub use tick_batch::{BatchBacktestResults as TickBatchResults, BatchTickBacktest};

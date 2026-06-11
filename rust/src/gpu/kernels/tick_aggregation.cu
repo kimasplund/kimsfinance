@@ -1,501 +1,339 @@
 /**
- * GPU Tick-Level Aggregation with Hash-Based Bucketing
+ * GPU Tick-Level Aggregation (Sorted Boundary Detection)
  *
- * Implements high-throughput trade→OHLCV aggregation using shared memory hash tables
- * for improved performance over global memory atomics.
+ * Aggregates timestamp-sorted trade streams into OHLCV candles in a single
+ * pass with zero atomics for open/close and single hardware atomics for
+ * high/low/volume/count.
  *
- * ## Algorithm: Two-Pass Hash-Based Aggregation
+ * ## Algorithm
  *
- * **Pass 1: Parallel Binning**
- * - Each thread computes timestamp bucket for one trade
- * - Fully parallel, no contention
- * - Coalesced memory access (SoA layout)
+ * Exchange tick data is timestamp-sorted. The host verifies this with
+ * `check_sorted_kernel` (unsorted input falls back to the CPU aggregator).
+ * For a sorted stream, candle membership changes are detectable locally:
  *
- * **Pass 2: Hash-Based Aggregation**
- * - Block-level shared memory hash table (99KB on CUDA 13.0)
- * - Atomic updates within shared memory (10-20x faster than global atomics)
- * - Flush to global memory at end of block
- * - Multiple strategies processed in parallel
+ * - bucket(i)   = timestamps[i] / timeframe_ms          (i64 math throughout)
+ * - candle c    = bucket(i) - first_bucket              (dense i32 index)
+ * - bucket(i) != bucket(i-1) (or i == 0)   => trade i opens candle c
+ * - bucket(i) != bucket(i+1) (or i == n-1) => trade i closes candle c
  *
- * ## Performance Target
+ * Open/close/timestamp writes are therefore race-free plain stores: exactly
+ * one trade per candle satisfies each boundary predicate. High/low use one
+ * hardware atomicMax/atomicMin each on a monotonic ordered-uint image of the
+ * f32 price (see encoding below). Volume uses native atomicAdd(float).
  *
- * - **Throughput**: 1-2B trades/sec (vs 100M/sec CPU)
- * - **GPU Utilization**: >80% during kernel execution
- * - **Memory Efficiency**: Minimize H2D/D2H transfers (pinned memory)
- * - **Numerical Accuracy**: Match CPU aggregation exactly
+ * ## Precision
  *
- * ## Memory Layout: Structure-of-Arrays (SoA)
+ * All price/volume math is f32. Ada (sm_89) executes FP64 at 1/64 the FP32
+ * rate, and the input feed is f32 to begin with, so widening adds cost
+ * without adding information. Bucket/timestamp math stays in i64 (exact).
  *
- * **Input**:
- *   - timestamps[N]  - i64 (milliseconds since epoch)
- *   - prices[N]      - f32 (price per trade)
- *   - volumes[N]     - f32 (volume per trade)
- *   - sides[N]       - i8 (1=buy, -1=sell)
+ * ## Ordered-uint encoding of f32 (layout contract with Rust host)
  *
- * **Output**:
- *   - open[C]        - f32 (first trade price in candle)
- *   - high[C]        - f32 (max price)
- *   - low[C]         - f32 (min price)
- *   - close[C]       - f32 (last trade price)
- *   - volume[C]      - f32 (sum of volumes)
- *   - num_trades[C]  - i32 (trade count)
+ * encode(x): b = bits(x); b has sign bit clear (x >= 0.0 or +NaN payloads)
+ *            -> b | 0x80000000, otherwise -> ~b
+ * decode(e): e has top bit set -> bits = e & 0x7FFFFFFF, otherwise bits = ~e
  *
- * C = number of unique candles (determined after Pass 1)
+ * Under *unsigned* integer comparison the encoded values are strictly
+ * monotonic in float order (negatives handled, -0.0 < +0.0). Identity values
+ * for the reductions:
+ *   encoded(-inf) = 0x007FFFFF  (high buffer init, neutral for atomicMax)
+ *   encoded(+inf) = 0xFF800000  (low  buffer init, neutral for atomicMin)
+ * These constants and the decode transform are mirrored in
+ * rust/src/gpu/tick_aggregation.rs -- keep them in sync.
  *
- * ## Quantization (Post-Aggregation)
+ * ## NVRTC compatibility
  *
- * After aggregation, convert f32→i8 using per-feature dynamic range:
- * - open: quantize([min_open, max_open] → [0, 255])
- * - high: quantize([min_high, max_high] → [0, 255])
- * - low: quantize([min_low, max_low] → [0, 255])
- * - close: quantize([min_close, max_close] → [0, 255])
- * - volume: log-scale quantize (financial data is skewed)
- *
- * Quantization is done in separate kernel (not in this file).
- *
- * ## Shared Memory Layout (per block)
- *
- * 99KB shared memory budget (CUDA 13.0):
- * - Hash table entries: (bucket_id, ohlcv_data)
- * - ~1024 buckets per block × 32 bytes/entry = 32KB
- * - Remaining 67KB for intermediate buffers
- *
- * ## CUDA 13.0 Optimizations
- *
- * - L2 cache persistence hints for input arrays
- * - Async memory allocator for temporary buffers
- * - Pinned memory for faster H2D/D2H transfers
- * - Warp-level primitives for hash table probing
+ * No include directives, extern "C" __global__ entry points only, no shared
+ * memory (shared-memory kernels in this file previously failed PTX module
+ * loading under NVRTC JIT on sm_89).
  */
 
 // ============================================================================
-// Type Definitions
+// Type Definitions (NVRTC built-in widths, no includes needed)
 // ============================================================================
 
-// NVRTC built-in types (no includes needed)
 typedef signed char int8_t;
 typedef int int32_t;
 typedef long long int64_t;
+typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
 
-// Constants
-#define CUDART_NAN __int_as_float(0x7fc00000)
-#define CUDART_INF __int_as_float(0x7f800000)
 #define LLONG_MAX 9223372036854775807LL
 #define LLONG_MIN (-9223372036854775807LL - 1LL)
 
-// Hash table configuration
-#define HASH_TABLE_SIZE 1024  // Power of 2 for fast modulo
-#define HASH_EMPTY_BUCKET (-1)  // Sentinel for empty hash slot
+// Ordered-uint encodings of +/-infinity (see header layout contract)
+#define ENCODED_NEG_INF 0x007FFFFFu
+#define ENCODED_POS_INF 0xFF800000u
 
 // ============================================================================
-// Hash Table Entry Structure
+// Ordered-uint encoding helpers
 // ============================================================================
 
 /**
- * Hash table entry stored in shared memory
+ * Map f32 to a uint32 whose unsigned ordering matches float ordering.
  *
- * Total size: 36 bytes (aligned to 8 bytes → 40 bytes)
- * 1024 entries × 40 bytes = 40KB shared memory usage
+ * Non-negative floats (sign bit clear): set the top bit -> [0x80000000, ...]
+ * Negative floats (sign bit set): bitwise NOT reverses their ordering and
+ * clears the top bit -> [0x0, 0x7FFFFFFF].
  */
-struct HashEntry {
-    int32_t bucket_id;      // Timestamp bucket ID (-1 = empty)
-    int64_t first_ts;       // Timestamp of first trade (for open)
-    int64_t last_ts;        // Timestamp of last trade (for close)
-    double first_price;     // Open price
-    double last_price;      // Close price
-    double high;            // Highest price
-    double low;             // Lowest price
-    double volume;          // Sum of volumes
-    int32_t num_trades;     // Trade count
-};
+__device__ __forceinline__ uint32_t float_to_ordered_uint(float x) {
+    uint32_t b = __float_as_uint(x);
+    return (b & 0x80000000u) ? ~b : (b | 0x80000000u);
+}
 
 // ============================================================================
-// Atomic Helpers for Float/Double
+// Kernel 1: Parallel Binning (standalone utility, rebased indices)
 // ============================================================================
 
 /**
- * Atomic maximum for double-precision floats
- */
-__device__ inline double atomicMaxDouble(double* address, double val) {
-    unsigned long long* address_as_ull = (unsigned long long*)address;
-    unsigned long long old = *address_as_ull;
-    unsigned long long assumed;
-
-    do {
-        assumed = old;
-        double old_val = __longlong_as_double(assumed);
-
-        // Only update if val > old_val
-        if (val <= old_val) {
-            break;
-        }
-
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
-/**
- * Atomic minimum for double-precision floats
- */
-__device__ inline double atomicMinDouble(double* address, double val) {
-    unsigned long long* address_as_ull = (unsigned long long*)address;
-    unsigned long long old = *address_as_ull;
-    unsigned long long assumed;
-
-    do {
-        assumed = old;
-        double old_val = __longlong_as_double(assumed);
-
-        // Only update if val < old_val
-        if (val >= old_val) {
-            break;
-        }
-
-        old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val));
-    } while (assumed != old);
-
-    return __longlong_as_double(old);
-}
-
-/**
- * Atomic compare-and-swap for int64_t (timestamp tracking)
+ * Bin trades into rebased timestamp-bucket indices (fully parallel).
  *
- * Updates timestamp and associated price if new timestamp is smaller/larger.
- */
-__device__ inline void atomicMinTimestampAndPrice(
-    int64_t* ts_address,
-    double* price_address,
-    int64_t new_ts,
-    double new_price
-) {
-    unsigned long long* ts_as_ull = (unsigned long long*)ts_address;
-    unsigned long long old_ts = *ts_as_ull;
-    unsigned long long assumed_ts;
-
-    do {
-        assumed_ts = old_ts;
-        int64_t old_ts_val = (int64_t)assumed_ts;
-
-        // Only update if new timestamp is earlier
-        if (new_ts >= old_ts_val) {
-            break;
-        }
-
-        // Try to update timestamp
-        old_ts = atomicCAS(ts_as_ull, assumed_ts, (unsigned long long)new_ts);
-
-        // If successful, update price (not atomic, but timestamp guarantees uniqueness)
-        if (old_ts == assumed_ts) {
-            *price_address = new_price;
-        }
-    } while (assumed_ts != old_ts);
-}
-
-__device__ inline void atomicMaxTimestampAndPrice(
-    int64_t* ts_address,
-    double* price_address,
-    int64_t new_ts,
-    double new_price
-) {
-    unsigned long long* ts_as_ull = (unsigned long long*)ts_address;
-    unsigned long long old_ts = *ts_as_ull;
-    unsigned long long assumed_ts;
-
-    do {
-        assumed_ts = old_ts;
-        int64_t old_ts_val = (int64_t)assumed_ts;
-
-        // Only update if new timestamp is later
-        if (new_ts <= old_ts_val) {
-            break;
-        }
-
-        // Try to update timestamp
-        old_ts = atomicCAS(ts_as_ull, assumed_ts, (unsigned long long)new_ts);
-
-        // If successful, update price
-        if (old_ts == assumed_ts) {
-            *price_address = new_price;
-        }
-    } while (assumed_ts != old_ts);
-}
-
-// ============================================================================
-// Hash Function
-// ============================================================================
-
-/**
- * Fast hash function for bucket IDs
+ * Bucket math is i64; only the index rebased to `first_bucket` is narrowed
+ * to i32, which cannot overflow when the candle range fits i32 (the host
+ * enforces this). Writing the raw bucket `ts / timeframe_ms` as i32 would
+ * overflow for epoch-millisecond timestamps with sub-second timeframes.
  *
- * Uses multiplicative hashing with prime number for good distribution.
- */
-__device__ inline int32_t hash_bucket_id(int32_t bucket_id) {
-    // Multiplicative hash with prime (avoids clustering)
-    return (bucket_id * 2654435761u) & (HASH_TABLE_SIZE - 1);
-}
-
-// ============================================================================
-// Kernel 1: Parallel Binning (Unchanged from aggregation.cu)
-// ============================================================================
-
-/**
- * Bin trades into timestamp buckets (fully parallel, no contention)
- *
- * Each thread maps one trade to its candle bucket based on timeframe.
+ * Not launched by the main aggregation path (which computes buckets inline);
+ * retained as a standalone utility kernel.
  *
  * @param timestamps      Trade timestamps in milliseconds (i64 array)
- * @param bucket_ids      Output: Bucket ID for each trade (i32 array)
+ * @param bucket_indices  Output: rebased bucket index per trade (i32 array)
  * @param n_trades        Number of trades
  * @param timeframe_ms    Candle timeframe in milliseconds (e.g., 300000 for 5m)
+ * @param first_bucket    Smallest bucket id in the stream (from
+ *                        compute_bucket_range_kernel)
  */
 extern "C" __global__ void bin_trades_kernel(
     const int64_t* timestamps,
-    int32_t* bucket_ids,
+    int32_t* bucket_indices,
     int32_t n_trades,
-    int64_t timeframe_ms
+    int64_t timeframe_ms,
+    int64_t first_bucket
 ) {
-    int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n_trades) {
-        // Convert timestamp to bucket ID
-        int64_t ts = timestamps[idx];
-        bucket_ids[idx] = (int32_t)(ts / timeframe_ms);
+        int64_t bucket = timestamps[idx] / timeframe_ms;
+        bucket_indices[idx] = (int32_t)(bucket - first_bucket);
     }
 }
 
 // ============================================================================
-// Kernel 2: Hash-Based Aggregation (NEW IMPLEMENTATION)
+// Kernel 2: Sortedness Check
 // ============================================================================
 
 /**
- * Aggregate trades into OHLCV candles using shared memory hash table
+ * Set *out_unsorted_flag to 1 if any timestamps[i] < timestamps[i-1].
  *
- * **Algorithm**:
- * 1. Each block maintains a hash table in shared memory (40KB)
- * 2. Threads process trades and update hash table entries
- * 3. At end of block, flush hash table to global memory
+ * The flag must be zero-initialized by the host. All racing writers store
+ * the same 32-bit value, so a plain store is sufficient (no atomic needed).
  *
- * **Performance**:
- * - Shared memory atomics: 10-20x faster than global memory
- * - Reduced memory bandwidth (only final results written to global)
- * - Better cache locality (hash table fits in shared memory)
+ * @param timestamps        Trade timestamps (i64 array)
+ * @param out_unsorted_flag Output flag (single i32, host-initialized to 0)
+ * @param n_trades          Number of trades
+ */
+extern "C" __global__ void check_sorted_kernel(
+    const int64_t* timestamps,
+    int32_t* out_unsorted_flag,
+    int32_t n_trades
+) {
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx >= 1 && idx < n_trades) {
+        if (timestamps[idx] < timestamps[idx - 1]) {
+            *out_unsorted_flag = 1;
+        }
+    }
+}
+
+// ============================================================================
+// Kernel 3: Bucket Range Reduction
+// ============================================================================
+
+/**
+ * Grid-stride min/max reduction over bucket = ts / timeframe_ms.
  *
- * @param timestamps       Trade timestamps (i64, for open/close tracking)
- * @param prices           Trade prices (f32 array)
- * @param volumes          Trade volumes (f32 array)
- * @param bucket_ids       Bucket ID for each trade (i32, from Pass 1)
+ * Produces the first and last bucket ids so the host can size the dense
+ * candle range (n_candles = last - first + 1) without copying per-trade
+ * bucket ids back to the host.
+ *
+ * Reduction strategy: per-thread local min/max over a grid-stride loop,
+ * then a warp shuffle reduction (no shared memory, see header note), then
+ * one atomicMin/atomicMax per warp on the global results.
+ *
+ * @param timestamps       Trade timestamps (i64 array)
  * @param n_trades         Number of trades
- * @param out_timestamps   Output: Candle timestamps (i64 array, size n_candles)
- * @param out_open         Output: Open prices (f32 array, size n_candles)
- * @param out_high         Output: High prices (f32 array, size n_candles)
- * @param out_low          Output: Low prices (f32 array, size n_candles, init to +inf)
- * @param out_close        Output: Close prices (f32 array, size n_candles)
- * @param out_volume       Output: Volumes (f32 array, size n_candles)
- * @param out_num_trades   Output: Trade counts (i32 array, size n_candles)
- * @param bucket_to_idx    Mapping: bucket_id → candle_index (i32 array, size max_bucket_id)
- * @param timeframe_ms     Candle timeframe (for timestamp reconstruction)
+ * @param timeframe_ms     Candle timeframe in milliseconds
+ * @param out_first_bucket Output (single i64, host-initialized to LLONG_MAX)
+ * @param out_last_bucket  Output (single i64, host-initialized to LLONG_MIN)
  *
- * ## Launch Configuration
- *
- * - Block size: 256 threads (good occupancy)
- * - Grid size: ceil(n_trades / 256)
- * - Shared memory: 40KB + 1KB (warp reduction buffers)
+ * Launch: 256-thread blocks; grid capped by the host (grid-stride loop
+ * covers any n_trades).
  */
-/*
- * COMMENTED OUT: Hash kernel with __shared__ memory causes PTX loading failure with JIT compilation
- * on sm_89 architecture. Use aggregate_ohlcv_direct_kernel instead.
- *
-extern "C" __global__ void aggregate_ohlcv_hash_kernel(
+extern "C" __global__ void compute_bucket_range_kernel(
     const int64_t* timestamps,
-    const double* prices,
-    const double* volumes,
-    const int32_t* bucket_ids,
     int32_t n_trades,
-    int64_t* out_timestamps,
-    double* out_open,
-    double* out_high,
-    double* out_low,
-    double* out_close,
-    double* out_volume,
-    int32_t* out_num_trades,
-    const int32_t* bucket_to_idx,
-    int64_t timeframe_ms
+    int64_t timeframe_ms,
+    int64_t* out_first_bucket,
+    int64_t* out_last_bucket
 ) {
-    // Shared memory hash table (40KB)
-    __shared__ HashEntry hash_table[HASH_TABLE_SIZE];
+    int64_t local_min = LLONG_MAX;
+    int64_t local_max = LLONG_MIN;
 
-    int32_t tid = threadIdx.x;
-    int32_t idx = blockIdx.x * blockDim.x + tid;
-
-    // Initialize hash table (each thread initializes multiple entries)
-    for (int32_t i = tid; i < HASH_TABLE_SIZE; i += blockDim.x) {
-        hash_table[i].bucket_id = HASH_EMPTY_BUCKET;
-        hash_table[i].first_ts = LLONG_MAX;
-        hash_table[i].last_ts = LLONG_MIN;
-        hash_table[i].first_price = 0.0f;
-        hash_table[i].last_price = 0.0f;
-        hash_table[i].high = -CUDART_INF;
-        hash_table[i].low = CUDART_INF;
-        hash_table[i].volume = 0.0f;
-        hash_table[i].num_trades = 0;
+    int64_t stride = (int64_t)gridDim.x * blockDim.x;
+    for (int64_t i = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
+         i < n_trades;
+         i += stride) {
+        int64_t bucket = timestamps[i] / timeframe_ms;
+        if (bucket < local_min) local_min = bucket;
+        if (bucket > local_max) local_max = bucket;
     }
 
-    __syncthreads();  // Wait for initialization
+    // Warp shuffle reduction. Block size is a multiple of 32, so every warp
+    // is full and the full mask is valid; threads with no elements hold the
+    // neutral LLONG_MAX/LLONG_MIN values.
+    for (int offset = 16; offset > 0; offset >>= 1) {
+        int64_t other_min = __shfl_down_sync(0xFFFFFFFFu, local_min, offset);
+        int64_t other_max = __shfl_down_sync(0xFFFFFFFFu, local_max, offset);
+        if (other_min < local_min) local_min = other_min;
+        if (other_max > local_max) local_max = other_max;
+    }
 
-    // Process trades assigned to this block
+    if ((threadIdx.x & 31) == 0 && local_min != LLONG_MAX) {
+        atomicMin(out_first_bucket, local_min);
+        atomicMax(out_last_bucket, local_max);
+    }
+}
+
+// ============================================================================
+// Kernel 4: High/Low Buffer Initialization
+// ============================================================================
+
+/**
+ * Initialize encoded high/low buffers to the reduction identities.
+ *
+ * Required because zero-fill is NOT neutral for the ordered-uint min/max
+ * reductions (0x00000000 decodes to NaN-payload territory below -inf, which
+ * would poison atomicMin on the low buffer).
+ *
+ * @param out_high_enc Encoded high buffer (set to encoded(-inf))
+ * @param out_low_enc  Encoded low buffer (set to encoded(+inf))
+ * @param n_candles    Number of dense candle slots
+ */
+extern "C" __global__ void init_ohlcv_extrema_kernel(
+    uint32_t* out_high_enc,
+    uint32_t* out_low_enc,
+    int32_t n_candles
+) {
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < n_candles) {
+        out_high_enc[idx] = ENCODED_NEG_INF;
+        out_low_enc[idx] = ENCODED_POS_INF;
+    }
+}
+
+// ============================================================================
+// Kernel 5: Sorted OHLCV Aggregation (f32, boundary detection)
+// ============================================================================
+
+/**
+ * Aggregate a timestamp-sorted trade stream into dense OHLCV candle slots.
+ *
+ * Preconditions (enforced by the host wrapper):
+ * - timestamps are non-decreasing (check_sorted_kernel passed)
+ * - first_bucket = min(ts / timeframe_ms) over the stream
+ * - candle range (last_bucket - first_bucket + 1) fits the output buffers
+ * - out_high_enc/out_low_enc initialized by init_ohlcv_extrema_kernel
+ * - out_volume/out_num_trades zero-initialized
+ *
+ * Open/close/timestamps: race-free plain stores at bucket boundaries
+ * (exactly one trade per candle satisfies each predicate on a sorted
+ * stream). Ties in timestamp are fine: boundaries compare bucket ids, so
+ * open/close follow stream order exactly like the CPU reference
+ * (binance::aggregate_trades_to_candles).
+ *
+ * Empty candle slots (gaps in the bucket range) keep num_trades == 0 and
+ * are filtered by the host during candle construction.
+ *
+ * @param timestamps     Trade timestamps (i64, sorted non-decreasing)
+ * @param prices         Trade prices (f32)
+ * @param volumes        Trade volumes (f32)
+ * @param n_trades       Number of trades
+ * @param timeframe_ms   Candle timeframe in milliseconds
+ * @param first_bucket   Smallest bucket id (dense index origin)
+ * @param out_timestamps Output: candle open times, bucket * timeframe_ms (i64)
+ * @param out_open       Output: open prices (f32)
+ * @param out_high_enc   Output: encoded high prices (uint32, ordered image)
+ * @param out_low_enc    Output: encoded low prices (uint32, ordered image)
+ * @param out_close      Output: close prices (f32)
+ * @param out_volume     Output: volume sums (f32)
+ * @param out_num_trades Output: trade counts (i32)
+ */
+extern "C" __global__ void aggregate_ohlcv_sorted_kernel(
+    const int64_t* timestamps,
+    const float* prices,
+    const float* volumes,
+    int32_t n_trades,
+    int64_t timeframe_ms,
+    int64_t first_bucket,
+    int64_t* out_timestamps,
+    float* out_open,
+    uint32_t* out_high_enc,
+    uint32_t* out_low_enc,
+    float* out_close,
+    float* out_volume,
+    int32_t* out_num_trades
+) {
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
+
     if (idx < n_trades) {
-        int32_t bucket_id = bucket_ids[idx];
         int64_t ts = timestamps[idx];
-        double price = prices[idx];
-        double volume = volumes[idx];
+        int64_t bucket = ts / timeframe_ms;
+        int32_t c = (int32_t)(bucket - first_bucket);
+        float price = prices[idx];
 
-        // Hash bucket_id to find slot in hash table
-        int32_t hash_idx = hash_bucket_id(bucket_id);
-
-        // Linear probing for collision resolution
-        int32_t probe_count = 0;
-        while (probe_count < HASH_TABLE_SIZE) {
-            int32_t current_bucket = atomicCAS(
-                &hash_table[hash_idx].bucket_id,
-                HASH_EMPTY_BUCKET,
-                bucket_id
-            );
-
-            // Found empty slot or matching bucket
-            if (current_bucket == HASH_EMPTY_BUCKET || current_bucket == bucket_id) {
-                // Update OHLCV in shared memory
-                atomicMinTimestampAndPrice(
-                    &hash_table[hash_idx].first_ts,
-                    &hash_table[hash_idx].first_price,
-                    ts,
-                    price
-                );
-
-                atomicMaxTimestampAndPrice(
-                    &hash_table[hash_idx].last_ts,
-                    &hash_table[hash_idx].last_price,
-                    ts,
-                    price
-                );
-
-                atomicMaxDouble(&hash_table[hash_idx].high, price);
-                atomicMinDouble(&hash_table[hash_idx].low, price);
-                atomicAdd(&hash_table[hash_idx].volume, volume);
-                atomicAdd(&hash_table[hash_idx].num_trades, 1);
-
-                break;  // Successfully updated
-            }
-
-            // Collision - try next slot (linear probing)
-            hash_idx = (hash_idx + 1) & (HASH_TABLE_SIZE - 1);
-            probe_count++;
+        // First trade of the candle: plain stores, exactly one writer.
+        if (idx == 0 || (timestamps[idx - 1] / timeframe_ms) != bucket) {
+            out_open[c] = price;
+            out_timestamps[c] = bucket * timeframe_ms;
         }
 
-        // If probe_count == HASH_TABLE_SIZE, hash table is full!
-        // This shouldn't happen if HASH_TABLE_SIZE is large enough.
-        // TODO: Add overflow handling (spill to global memory)
-    }
-
-    __syncthreads();  // Wait for all threads to finish aggregation
-
-    // Flush hash table to global memory (only one warp does this)
-    if (tid < 32) {  // Warp 0
-        for (int32_t i = tid; i < HASH_TABLE_SIZE; i += 32) {
-            if (hash_table[i].bucket_id != HASH_EMPTY_BUCKET) {
-                int32_t bucket_id = hash_table[i].bucket_id;
-                int32_t candle_idx = bucket_to_idx[bucket_id];
-
-                // Write to global memory (no contention across blocks)
-                if (candle_idx >= 0) {
-                    out_timestamps[candle_idx] = bucket_id * timeframe_ms;
-                    out_open[candle_idx] = hash_table[i].first_price;
-                    out_high[candle_idx] = hash_table[i].high;
-                    out_low[candle_idx] = hash_table[i].low;
-                    out_close[candle_idx] = hash_table[i].last_price;
-                    out_volume[candle_idx] = hash_table[i].volume;
-                    out_num_trades[candle_idx] = hash_table[i].num_trades;
-                }
-            }
+        // Last trade of the candle: plain store, exactly one writer.
+        if (idx == n_trades - 1 || (timestamps[idx + 1] / timeframe_ms) != bucket) {
+            out_close[c] = price;
         }
-    }
-}
-*/
 
-// ============================================================================
-// Kernel 3: Simplified Aggregation (Direct Global Memory, for comparison)
-// ============================================================================
-
-/**
- * Fallback kernel using global memory atomics (no shared memory optimization)
- *
- * Useful for:
- * - Benchmarking hash-based vs direct approach
- * - Small datasets where shared memory overhead isn't worth it
- * - Validation (simpler implementation)
- */
-extern "C" __global__ void aggregate_ohlcv_direct_kernel(
-    const int64_t* timestamps,
-    const double* prices,
-    const double* volumes,
-    const int32_t* bucket_ids,
-    int32_t n_trades,
-    int64_t* out_timestamps,
-    double* out_open,
-    double* out_high,
-    double* out_low,
-    double* out_close,
-    double* out_volume,
-    int32_t* out_num_trades,
-    const int32_t* bucket_to_idx,
-    int64_t timeframe_ms
-) {
-    int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < n_trades) {
-        int32_t bucket_id = bucket_ids[idx];
-        int32_t candle_idx = bucket_to_idx[bucket_id];
-
-        if (candle_idx >= 0) {
-            int64_t ts = timestamps[idx];
-            double price = prices[idx];
-            double volume = volumes[idx];
-
-            // Update OHLCV using global memory atomics
-            // Note: This is slower than shared memory but simpler
-            atomicMaxDouble(&out_high[candle_idx], price);
-            atomicMinDouble(&out_low[candle_idx], price);
-            atomicAdd(&out_volume[candle_idx], volume);
-            atomicAdd(&out_num_trades[candle_idx], 1);
-
-            // Open/close require timestamp tracking (use helper functions)
-            // For now, compute on CPU (same as aggregation.cu)
-            // TODO: Add GPU-based first/last tracking with atomics
-        }
+        uint32_t enc = float_to_ordered_uint(price);
+        atomicMax(&out_high_enc[c], enc);
+        atomicMin(&out_low_enc[c], enc);
+        atomicAdd(&out_volume[c], volumes[idx]);
+        atomicAdd(&out_num_trades[c], 1);
     }
 }
 
 // ============================================================================
-// Kernel 4: Post-Aggregation Quantization (INT8 Compression)
+// Kernel 6: Post-Aggregation Quantization (INT8 Compression)
 // ============================================================================
 
 /**
- * Quantize float32 OHLCV arrays to int8 using dynamic range
+ * Quantize f32 arrays to raw 0-255 codes stored through the i8 ABI.
  *
- * Each feature (O, H, L, C, V) is quantized independently based on its range.
- * This preserves relative differences while achieving 4x compression.
+ * Convention (shared with rust/src/gpu/quantization.rs and
+ * kernels/quantize_int8.cu): the full byte range 0-255 is used and carried
+ * through int8 via `(int8_t)(unsigned char)code`. A plain `(int8_t)` cast of
+ * the float would compile to a saturating cvt and collapse codes 128-255 to
+ * 127 (losing the top half of every feature range). Rounding (not
+ * truncation) preserves a half-code of accuracy.
  *
- * @param in_values     Input float32 array
- * @param out_values    Output int8 array
- * @param n             Array length
- * @param min_val       Minimum value in array (computed beforehand)
- * @param max_val       Maximum value in array (computed beforehand)
+ * Degenerate range (max ~= min): emit code 0 so dequantization returns
+ * min_val, round-tripping the constant exactly.
  *
- * Quantization formula:
- *   out = (in - min) / (max - min) * 255
- *   out = clamp(out, 0, 255)
+ * @param in_values  Input f32 array
+ * @param out_values Output i8 array (raw 0-255 codes)
+ * @param n          Array length
+ * @param min_val    Minimum value in array (computed beforehand)
+ * @param max_val    Maximum value in array (computed beforehand)
  */
 extern "C" __global__ void quantize_to_int8_kernel(
     const float* in_values,
@@ -504,31 +342,31 @@ extern "C" __global__ void quantize_to_int8_kernel(
     float min_val,
     float max_val
 ) {
-    int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n) {
-        float val = in_values[idx];
         float range = max_val - min_val;
 
-        // Handle edge case: constant values
         if (range < 1e-6f) {
-            out_values[idx] = 127;  // Middle of range
+            out_values[idx] = (int8_t)(unsigned char)0;
         } else {
-            // Normalize to [0, 1] then scale to [0, 255]
-            float normalized = (val - min_val) / range;
-            int32_t quantized = (int32_t)(normalized * 255.0f);
+            float normalized = (in_values[idx] - min_val) / range;
+            int32_t quantized = __float2int_rn(normalized * 255.0f);
 
-            // Clamp to [0, 255]
-            quantized = max(0, min(255, quantized));
+            if (quantized < 0) quantized = 0;
+            if (quantized > 255) quantized = 255;
 
-            // Convert to signed int8 (subtract 128 for zero-centered)
-            out_values[idx] = (int8_t)(quantized - 128);
+            out_values[idx] = (int8_t)(unsigned char)quantized;
         }
     }
 }
 
 /**
- * Dequantize int8 back to float32 (for validation)
+ * Dequantize raw 0-255 codes (stored as i8) back to f32.
+ *
+ * Reads the code through `(unsigned char)` to recover the raw 0-255 value
+ * (a direct i8 read would interpret codes 128-255 as negative). For a
+ * degenerate range the stored code is 0 and the result is min_val.
  */
 extern "C" __global__ void dequantize_from_int8_kernel(
     const int8_t* in_values,
@@ -537,17 +375,11 @@ extern "C" __global__ void dequantize_from_int8_kernel(
     float min_val,
     float max_val
 ) {
-    int32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int64_t idx = (int64_t)blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n) {
-        int8_t quantized = in_values[idx];
+        int32_t code = (int32_t)(unsigned char)in_values[idx];
         float range = max_val - min_val;
-
-        // Convert from signed int8 to [0, 255]
-        int32_t unsigned_val = (int32_t)quantized + 128;
-
-        // Denormalize: [0, 255] → [min, max]
-        float normalized = (float)unsigned_val / 255.0f;
-        out_values[idx] = min_val + normalized * range;
+        out_values[idx] = fmaf((float)code * (1.0f / 255.0f), range, min_val);
     }
 }

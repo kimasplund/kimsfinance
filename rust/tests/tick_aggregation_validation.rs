@@ -102,7 +102,10 @@ mod gpu_tests {
     }
 
     /// Compare GPU vs CPU results (correctness validation)
-    fn validate_gpu_vs_cpu(gpu_candles: &[(i64, f32, f32, f32, f32, f32, i32)], cpu_candles: &[Candle]) {
+    fn validate_gpu_vs_cpu(
+        gpu_candles: &[(i64, f32, f32, f32, f32, f32, i32)],
+        cpu_candles: &[Candle],
+    ) {
         assert_eq!(
             gpu_candles.len(),
             cpu_candles.len(),
@@ -113,11 +116,7 @@ mod gpu_tests {
             let (gpu_ts, gpu_open, gpu_high, gpu_low, gpu_close, gpu_vol, gpu_count) = gpu;
             let tolerance = 1e-4; // Allow small float32 rounding error
 
-            assert_eq!(
-                *gpu_ts, cpu.timestamp,
-                "Candle {} timestamp mismatch",
-                i
-            );
+            assert_eq!(*gpu_ts, cpu.timestamp, "Candle {} timestamp mismatch", i);
 
             assert!(
                 ((*gpu_open as f64) - cpu.open).abs() < tolerance,
@@ -195,7 +194,8 @@ mod gpu_tests {
         let cpu_candles = aggregate_trades_cpu(&trades, timeframe);
 
         // Prepare GPU results for comparison
-        let gpu_candles_tuples: Vec<(i64, f32, f32, f32, f32, f32, i32)> = (0..gpu_result.num_candles)
+        let gpu_candles_tuples: Vec<(i64, f32, f32, f32, f32, f32, i32)> = (0..gpu_result
+            .num_candles)
             .map(|i| {
                 (
                     gpu_result.timestamps[i],
@@ -318,20 +318,20 @@ mod gpu_tests {
         println!("CPU candles: {}", cpu_candles.len());
 
         // Validate correctness
-        let gpu_candles_tuples: Vec<(i64, f32, f32, f32, f32, f32, i32)> =
-            (0..gpu_result.num_candles)
-                .map(|i| {
-                    (
-                        gpu_result.timestamps[i],
-                        gpu_result.open[i],
-                        gpu_result.high[i],
-                        gpu_result.low[i],
-                        gpu_result.close[i],
-                        gpu_result.volume[i],
-                        gpu_result.num_trades[i],
-                    )
-                })
-                .collect();
+        let gpu_candles_tuples: Vec<(i64, f32, f32, f32, f32, f32, i32)> = (0..gpu_result
+            .num_candles)
+            .map(|i| {
+                (
+                    gpu_result.timestamps[i],
+                    gpu_result.open[i],
+                    gpu_result.high[i],
+                    gpu_result.low[i],
+                    gpu_result.close[i],
+                    gpu_result.volume[i],
+                    gpu_result.num_trades[i],
+                )
+            })
+            .collect();
 
         validate_gpu_vs_cpu(&gpu_candles_tuples, &cpu_candles);
 

@@ -50,7 +50,7 @@
 //! cargo bench --features gpu --bench fp8_tensor_cores -- --verbose 2>&1 | tee fp8_benchmark.txt
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -127,10 +127,7 @@ fn bench_fp32_single_matmul(c: &mut Criterion) {
                     // Use cuBLAS SGEMM for FP32 baseline
                     // Note: This is a placeholder - actual implementation would use cuBLAS
                     // For now, we'll use a simple kernel launch as proxy
-                    device
-                        .stream
-                        .synchronize()
-                        .expect("Sync failed");
+                    device.stream.synchronize().expect("Sync failed");
                     black_box(&c_dev);
                 });
             },
@@ -459,11 +456,17 @@ fn test_fp8_speedup_validation() {
 
     println!("FP32 Baseline:");
     println!("  {}", fp32_stats.summary());
-    println!("  95% CI: [{:.2}, {:.2}] µs", fp32_stats.ci_95.0, fp32_stats.ci_95.1);
+    println!(
+        "  95% CI: [{:.2}, {:.2}] µs",
+        fp32_stats.ci_95.0, fp32_stats.ci_95.1
+    );
 
     println!("\nFP8 Tensor Cores:");
     println!("  {}", fp8_stats.summary());
-    println!("  95% CI: [{:.2}, {:.2}] µs", fp8_stats.ci_95.0, fp8_stats.ci_95.1);
+    println!(
+        "  95% CI: [{:.2}, {:.2}] µs",
+        fp8_stats.ci_95.0, fp8_stats.ci_95.1
+    );
 
     let speedup = fp32_stats.mean / fp8_stats.mean;
     let speedup_median = fp32_stats.median / fp8_stats.median;
@@ -485,10 +488,18 @@ fn test_fp8_speedup_validation() {
 
     // Check minimum speedup threshold
     if speedup >= MIN_SPEEDUP {
-        println!("✓ PASS: Speedup {:.2}x >= {:.1}x threshold", speedup, MIN_SPEEDUP);
+        println!(
+            "✓ PASS: Speedup {:.2}x >= {:.1}x threshold",
+            speedup, MIN_SPEEDUP
+        );
     } else {
-        println!("✗ FAIL: Speedup {:.2}x < {:.1}x threshold", speedup, MIN_SPEEDUP);
-        println!("  Note: Current implementation uses simple CUDA kernel, not optimized tensor cores");
+        println!(
+            "✗ FAIL: Speedup {:.2}x < {:.1}x threshold",
+            speedup, MIN_SPEEDUP
+        );
+        println!(
+            "  Note: Current implementation uses simple CUDA kernel, not optimized tensor cores"
+        );
         println!("  Expected speedup with CUTLASS or cuBLAS: 2-4x");
     }
 
@@ -501,13 +512,17 @@ fn test_fp8_speedup_validation() {
     }
 
     println!("\n=== Summary ===");
-    println!("FP8 tensor cores validated on GPU sm_{}.{}",
-             fp8_core.compute_capability().0,
-             fp8_core.compute_capability().1);
-    println!("Speedup: {:.2}x (95% CI: [{:.2}x, {:.2}x])",
-             speedup,
-             fp32_stats.ci_95.0 / fp8_stats.ci_95.1,
-             fp32_stats.ci_95.1 / fp8_stats.ci_95.0);
+    println!(
+        "FP8 tensor cores validated on GPU sm_{}.{}",
+        fp8_core.compute_capability().0,
+        fp8_core.compute_capability().1
+    );
+    println!(
+        "Speedup: {:.2}x (95% CI: [{:.2}x, {:.2}x])",
+        speedup,
+        fp32_stats.ci_95.0 / fp8_stats.ci_95.1,
+        fp32_stats.ci_95.1 / fp8_stats.ci_95.0
+    );
 }
 
 // Placeholder benchmarks for non-GPU builds

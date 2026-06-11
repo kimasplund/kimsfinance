@@ -4,7 +4,7 @@
 
 use kimsfinance_core::binance::{Timeframe, Trade};
 use kimsfinance_core::indicators::{
-    calculate_indicator_from_trades, TickIndicatorEngine, RSI, SMA, EMA,
+    EMA, RSI, SMA, TickIndicatorEngine, calculate_indicator_from_trades,
 };
 
 /// Helper to create test trade
@@ -208,7 +208,10 @@ fn test_rsi_strategy_simulation() {
     }
 
     // Should have generated some signals
-    println!("Buy signals: {}, Sell signals: {}", buy_signals, sell_signals);
+    println!(
+        "Buy signals: {}, Sell signals: {}",
+        buy_signals, sell_signals
+    );
     assert!(buy_signals > 0 || sell_signals > 0);
 }
 

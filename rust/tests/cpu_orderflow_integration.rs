@@ -4,7 +4,7 @@
 //! automatic fallback when GPU is unavailable.
 
 use kimsfinance_core::cpu::orderflow::{
-    OrderflowBatchProcessor, OrderflowInput, StrategyConfig, NUM_FEATURES,
+    NUM_FEATURES, OrderflowBatchProcessor, OrderflowInput, StrategyConfig,
 };
 
 #[test]
@@ -22,10 +22,7 @@ fn test_cpu_orderflow_basic_functionality() {
     };
 
     // Configure strategies
-    let strategies = vec![
-        StrategyConfig::momentum(),
-        StrategyConfig::mean_reversion(),
-    ];
+    let strategies = vec![StrategyConfig::momentum(), StrategyConfig::mean_reversion()];
 
     // Process batch
     let result = processor.process_batch(&input, &strategies);

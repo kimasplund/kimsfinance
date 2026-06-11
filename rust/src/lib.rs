@@ -38,7 +38,7 @@
 /// ```
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyDict;
 
 mod batch;
 pub mod binance;
@@ -74,6 +74,9 @@ pub mod data;
 #[cfg(feature = "data-downloaders")]
 pub mod strategy;
 
+// Multi-asset support
+pub mod assets;
+
 #[cfg(feature = "gpu")]
 mod batch_backtest_py;
 
@@ -83,6 +86,11 @@ mod gpu_tick_py;
 mod tick_backtest_py;
 
 mod orderflow_py;
+
+mod patterns_py;
+
+#[cfg(feature = "gpu")]
+mod optimizer_py;
 
 use batch::{IndicatorBatchOutput, IndicatorRequest, OHLCVBatch, calculate_batch};
 use coordinates::calculate_coordinates;
@@ -264,7 +272,7 @@ use indicators::{
     // Volume
     OBV,
     ParabolicSAR,
-    PivotPoints,
+
     ROC,
     // Momentum
     RSI,
@@ -1785,7 +1793,7 @@ fn run_backtest<'py>(
         initial_capital,
         trading_fee,
         slippage,
-        execution_latency_ms: 10,  // 10ms realistic latency
+        execution_latency_ms: 10, // 10ms realistic latency
         use_gpu,
         force_cpu: !use_gpu,
     };
@@ -2019,6 +2027,15 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_class::<batch_backtest_py::PyBacktestResult>()?;
     }
 
+    // GPU Parameter Optimizers (Grid Search + Euler Search)
+    #[cfg(feature = "gpu")]
+    {
+        m.add_class::<optimizer_py::PyGridSearchOptimizer>()?;
+        m.add_class::<optimizer_py::PyGridSearchResult>()?;
+        m.add_class::<optimizer_py::PyEulerSearchOptimizer>()?;
+        m.add_class::<optimizer_py::PyEulerSearchResult>()?;
+    }
+
     // GPU Tick Aggregation (JIT-compiled CUDA kernels)
     #[cfg(feature = "gpu")]
     {
@@ -2039,6 +2056,19 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<orderflow_py::PyOrderflowProcessor>()?;
     m.add_function(wrap_pyfunction!(orderflow_py::orderflow_gpu_available, m)?)?;
 
+    // Candlestick Pattern Recognition (35+ patterns)
+    m.add_function(wrap_pyfunction!(
+        patterns_py::recognize_candlestick_patterns,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(patterns_py::get_candlestick_patterns, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        patterns_py::recognize_candlestick_patterns_batch,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(patterns_py::filter_patterns_by_type, m)?)?;
+    m.add_function(wrap_pyfunction!(patterns_py::get_pattern_statistics, m)?)?;
+
     // Parquet Tick Data Loader (zero-copy Arrow-based)
     #[cfg(feature = "data-downloaders")]
     {
@@ -2050,7 +2080,7 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add(
         "__doc__",
-        "High-performance Rust implementation for kimsfinance (coordinates + 24 technical indicators + batch API + backtesting)"
+        "High-performance Rust implementation for kimsfinance (coordinates + 24 technical indicators + batch API + backtesting + 35 candlestick patterns)"
     )?;
 
     Ok(())

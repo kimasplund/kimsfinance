@@ -6,9 +6,12 @@
 //!
 //! # Stream Classification
 //!
-//! - **Stream 0 (Fast)**: < 5μs/candle - ROC, Williams %R, CCI
-//! - **Stream 1 (Medium)**: 5-15μs/candle - RSI, ATR, Aroon, Bollinger Bands
-//! - **Stream 2 (Slow)**: > 15μs/candle - Stochastic, MACD
+//! - **Stream 0 (Fast)**: < 5μs/candle - ROC, Williams %R, CCI, SMA, WMA, VWMA,
+//!   Donchian, OBV, VWAP, Pivot Points
+//! - **Stream 1 (Medium)**: 5-15μs/candle - RSI, ATR, Aroon, Bollinger Bands,
+//!   EMA, DEMA, TEMA, HMA, Keltner, Elder Ray, CMF, MFI
+//! - **Stream 2 (Slow)**: > 15μs/candle - Stochastic, MACD, TSI, Parabolic SAR,
+//!   Volume Profile
 //!
 //! # Architecture
 //!
@@ -43,7 +46,21 @@
 
 use super::device::GpuDevice;
 use cudarc::driver::CudaStream;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+
+/// Process-wide StreamManager, constructed once on first use.
+///
+/// CUDA stream creation is cheap (~10μs) but the previous batch pipeline
+/// re-created a full `GpuDevice` (including its pinned-memory pool) per chunk
+/// just to obtain streams. Constructing the manager once amortizes that cost
+/// across the process lifetime.
+///
+/// Safety/correctness note: cudarc 0.17 `CudaContext::new()` retains the CUDA
+/// *primary* context (`cuDevicePrimaryCtxRetain`), so every `GpuDevice` handle
+/// for device 0 shares the same underlying context. Streams created here are
+/// therefore valid for kernels/modules loaded through any other `GpuDevice`
+/// handle on device 0.
+static GLOBAL_STREAM_MANAGER: OnceLock<StreamManager> = OnceLock::new();
 
 /// Indicator execution speed classification
 ///
@@ -130,24 +147,64 @@ impl StreamManager {
         })
     }
 
+    /// Get the process-wide StreamManager, creating it on first use
+    ///
+    /// The manager (and its 3 CUDA streams) is constructed exactly once and
+    /// shared for the lifetime of the process. Because cudarc retains the CUDA
+    /// primary context, the streams are valid for any `GpuDevice` handle on
+    /// device 0 (see `GLOBAL_STREAM_MANAGER` docs).
+    ///
+    /// # Concurrency
+    ///
+    /// The streams are shared process-wide: `synchronize_all()` on the global
+    /// manager waits for work submitted by *all* callers. This is safe
+    /// (over-synchronization only), but callers requiring private streams
+    /// should construct their own manager via [`StreamManager::new`].
+    ///
+    /// # Errors
+    ///
+    /// Returns error if no CUDA device is available or stream creation fails.
+    /// Failed initialization is not cached - subsequent calls retry.
+    pub fn global() -> Result<&'static StreamManager, GpuError> {
+        if let Some(manager) = GLOBAL_STREAM_MANAGER.get() {
+            return Ok(manager);
+        }
+
+        // Construct outside get_or_init so initialization errors propagate.
+        // Benign race: if two threads initialize concurrently, one manager
+        // is dropped (its streams are destroyed unused).
+        let device = Arc::new(GpuDevice::new()?);
+        let manager = StreamManager::new(device)?;
+        Ok(GLOBAL_STREAM_MANAGER.get_or_init(|| manager))
+    }
+
     /// Classify indicator by execution speed
     ///
-    /// Based on empirical GPU kernel benchmarks with 10K candles:
+    /// Based on empirical GPU kernel benchmarks with 10K candles plus the
+    /// computational structure of each indicator:
     ///
-    /// **Fast (< 5μs/candle)**:
-    /// - ROC: Embarrassingly parallel (price[i] / price[i-period] - 1)
-    /// - Williams %R: Simple rolling window (no dependencies)
-    /// - CCI: Two-pass but parallel (mean, then deviation)
+    /// **Fast (< 5μs/candle)** - embarrassingly parallel or trivial sequential:
+    /// - ROC: price[i] / price[i-period] - 1
+    /// - Williams %R, Donchian: simple rolling max/min windows
+    /// - CCI: two-pass but fully parallel (mean, then deviation)
+    /// - SMA, WMA, VWMA: independent rolling-window averages
+    /// - OBV, VWAP: single cheap prefix-sum pass
+    /// - PivotPoints: per-candle arithmetic
     ///
-    /// **Medium (5-15μs/candle)**:
-    /// - RSI: Wilder's smoothing (sequential EMA bottleneck)
-    /// - ATR: True Range parallel, smoothing sequential
-    /// - Aroon: Argmax/argmin search (O(n*period))
-    /// - Bollinger: Rolling std dev (two-pass)
+    /// **Medium (5-15μs/candle)** - one smoothing/recursive stage:
+    /// - RSI, ATR: Wilder's smoothing (sequential IIR bottleneck)
+    /// - EMA, DEMA, TEMA, HMA, ElderRay: EMA-family recursions
+    /// - Aroon: argmax/argmin search (O(n*period))
+    /// - Bollinger: rolling std dev (two-pass)
+    /// - Keltner: EMA + ATR combination
+    /// - CMF, MFI: rolling money-flow sums
     ///
-    /// **Slow (> 15μs/candle)**:
-    /// - Stochastic: Complex rolling windows (%K, %D smoothing)
-    /// - MACD: Three sequential EMAs (fast, slow, signal)
+    /// **Slow (> 15μs/candle)** - multi-stage or strongly sequential:
+    /// - Stochastic: %K rolling window + %D smoothing
+    /// - MACD: three sequential EMAs (fast, slow, signal)
+    /// - TSI: cascaded double-EMA on momentum and |momentum|
+    /// - ParabolicSAR: sequential state machine (no parallelism)
+    /// - VolumeProfile: histogram over the full series
     ///
     /// # Arguments
     ///
@@ -164,19 +221,38 @@ impl StreamManager {
             IndicatorRequest::ROC { .. } => IndicatorSpeed::Fast,
             IndicatorRequest::WilliamsR { .. } => IndicatorSpeed::Fast,
             IndicatorRequest::CCI { .. } => IndicatorSpeed::Fast,
+            IndicatorRequest::SMA { .. } => IndicatorSpeed::Fast,
+            IndicatorRequest::WMA { .. } => IndicatorSpeed::Fast,
+            IndicatorRequest::VWMA { .. } => IndicatorSpeed::Fast,
+            IndicatorRequest::DonchianChannels { .. } => IndicatorSpeed::Fast,
+            IndicatorRequest::OBV => IndicatorSpeed::Fast,
+            IndicatorRequest::VWAP => IndicatorSpeed::Fast,
+            IndicatorRequest::PivotPoints => IndicatorSpeed::Fast,
 
             // Medium indicators (5-15μs/candle)
             IndicatorRequest::RSI { .. } => IndicatorSpeed::Medium,
             IndicatorRequest::ATR { .. } => IndicatorSpeed::Medium,
             IndicatorRequest::Aroon { .. } => IndicatorSpeed::Medium,
             IndicatorRequest::BollingerBands { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::EMA { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::DEMA { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::TEMA { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::HMA { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::KeltnerChannels { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::ElderRay { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::CMF { .. } => IndicatorSpeed::Medium,
+            IndicatorRequest::MFI { .. } => IndicatorSpeed::Medium,
 
             // Slow indicators (> 15μs/candle)
             IndicatorRequest::Stochastic { .. } => IndicatorSpeed::Slow,
             IndicatorRequest::MACD { .. } => IndicatorSpeed::Slow,
+            IndicatorRequest::TSI { .. } => IndicatorSpeed::Slow,
+            IndicatorRequest::ParabolicSAR { .. } => IndicatorSpeed::Slow,
+            IndicatorRequest::VolumeProfile { .. } => IndicatorSpeed::Slow,
 
-            // Default to Medium for unclassified indicators
-            // This is conservative - better to slightly underutilize fast stream
+            // Default to Medium for indicators added after this classification.
+            // Conservative: better to slightly underutilize the fast stream.
+            #[allow(unreachable_patterns)]
             _ => IndicatorSpeed::Medium,
         }
     }
@@ -351,11 +427,98 @@ mod tests {
             }),
             IndicatorSpeed::Slow
         );
+    }
 
-        // Default classification (SMA not in GPU list)
+    #[test]
+    fn test_indicator_classification_extended() {
+        // Fast: rolling-window averages and cheap prefix-sum indicators
         assert_eq!(
             StreamManager::classify_indicator(&IndicatorRequest::SMA { period: 20 }),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::WMA { period: 20 }),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::VWMA { period: 20 }),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::DonchianChannels { period: 20 }),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::OBV),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::VWAP),
+            IndicatorSpeed::Fast
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::PivotPoints),
+            IndicatorSpeed::Fast
+        );
+
+        // Medium: single smoothing/recursive stage
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::EMA { period: 20 }),
             IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::DEMA { period: 20 }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::TEMA { period: 20 }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::HMA { period: 20 }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::KeltnerChannels {
+                ema_period: 20,
+                atr_period: 10,
+                atr_multiplier: 2.0
+            }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::ElderRay { ema_period: 13 }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::CMF { period: 20 }),
+            IndicatorSpeed::Medium
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::MFI { period: 14 }),
+            IndicatorSpeed::Medium
+        );
+
+        // Slow: multi-stage or strongly sequential
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::TSI {
+                long_period: 25,
+                short_period: 13,
+                signal_period: 7
+            }),
+            IndicatorSpeed::Slow
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::ParabolicSAR {
+                af_start: 0.02,
+                af_increment: 0.02,
+                af_max: 0.2
+            }),
+            IndicatorSpeed::Slow
+        );
+        assert_eq!(
+            StreamManager::classify_indicator(&IndicatorRequest::VolumeProfile { num_bins: 24 }),
+            IndicatorSpeed::Slow
         );
     }
 

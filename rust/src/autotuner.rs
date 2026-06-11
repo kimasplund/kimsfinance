@@ -87,8 +87,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use ndarray::Array1;
+
 use serde::{Deserialize, Serialize};
+use ndarray::Array1;
 
 #[cfg(feature = "gpu")]
 use crate::gpu::{GpuDevice, GpuError};
@@ -979,7 +980,6 @@ impl AutoTuneProfile {
         Ok(20)
     }
 
-    /// Generate test HLC data for benchmarking
     #[cfg(feature = "gpu")]
     fn generate_test_hlc(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
         let high = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64 * 0.1)).collect());

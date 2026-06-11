@@ -22,9 +22,7 @@
 //! the system falls back to the hybrid CPU-GPU implementation.
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::DevicePtr;
 use ndarray::Array1;
-use std::ffi::c_void;
 use std::sync::Arc;
 
 // FFI declarations for RSI fused kernel launcher
@@ -121,10 +119,10 @@ pub fn is_fused_available() -> bool {
 /// If the fused kernel is not available, this function returns an error.
 /// Use `rsi_gpu()` from the parent module for automatic fallback to hybrid.
 pub fn rsi_fused_gpu(
-    device: &GpuDevice,
+    _device: &GpuDevice,
     close: &Array1<f64>,
     period: usize,
-    stream: Option<&Arc<cudarc::driver::CudaStream>>,
+    _stream: Option<&Arc<cudarc::driver::CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     let n = close.len();
 
@@ -143,48 +141,15 @@ pub fn rsi_fused_gpu(
         )));
     }
 
-    // Check if fused kernel is available
-    if !is_fused_available() {
-        return Err(GpuError::CompilationError(
-            "Fused RSI kernel not available (compilation failed or feature disabled)".to_string(),
-        ));
-    }
-
-    // Select stream: use provided stream or device default
-    let kernel_stream = stream.unwrap_or(&device.stream);
-
-    // === Step 1: H2D - Copy close prices to GPU ===
-    // Acquire pinned buffer for async H2D transfer
-    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
-    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
-
-    // Allocate device buffers
-    let mut d_close = device.alloc_buffer(n)?;
-    let mut d_gains = device.alloc_buffer(n)?;
-    let mut d_losses = device.alloc_buffer(n)?;
-    let mut d_avg_gain = device.alloc_buffer(n)?;
-    let mut d_avg_loss = device.alloc_buffer(n)?;
-    let mut d_scan_input_gain = device.alloc_buffer(n)?;
-    let mut d_scan_input_loss = device.alloc_buffer(n)?;
-    let mut d_rsi = device.alloc_buffer(n)?;
-
-    // Asynchronous H2D copy using pinned memory
-    kernel_stream
-        .memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)
-        .map_err(|e| GpuError::ExecutionError(format!("H2D copy failed: {:?}", e)))?;
-
-    // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_close);
-
-    // === Step 2: Launch fused RSI kernel ===
-    // Temporarily disabled due to FFI being commented out
-    // Suppress unused variable warnings
-    let _ = (d_close, d_gains, d_losses, d_avg_gain, d_avg_loss, d_scan_input_gain, d_scan_input_loss, d_rsi);
-
-    // Return error since fused kernel is disabled
+    // The fused kernel is disabled (CUDA 13.0 CUB compilation issue), so fail
+    // here BEFORE any device allocations or H2D transfers. A previous version
+    // performed 8 device allocations plus a pinned H2D copy and only then
+    // returned this same error.
     // TODO: Re-enable when CUDA 13.0 rsqrt compatibility is fixed
     Err(GpuError::CompilationError(
-        "Fused RSI kernel temporarily disabled due to CUDA 13.0 compilation issues".to_string()
+        "Fused RSI kernel temporarily disabled due to CUDA 13.0 compilation issues. \
+         Use rsi_gpu() from the parent module for the hybrid implementation."
+            .to_string(),
     ))
 }
 
@@ -217,8 +182,8 @@ mod tests {
             49.0, 49.5, 50.0,
         ]);
 
-        let result = rsi_fused_gpu(&device, &close, 14, None)
-            .expect("RSI fused GPU calculation failed");
+        let result =
+            rsi_fused_gpu(&device, &close, 14, None).expect("RSI fused GPU calculation failed");
 
         // Verify RSI is in valid range [0, 100]
         for i in 14..result.len() {
@@ -261,8 +226,7 @@ mod tests {
 
         // Test fused implementation
         let start_fused = std::time::Instant::now();
-        let result_fused =
-            rsi_fused_gpu(&device, &close, 14, None).expect("Fused RSI failed");
+        let result_fused = rsi_fused_gpu(&device, &close, 14, None).expect("Fused RSI failed");
         let elapsed_fused = start_fused.elapsed();
 
         // Test hybrid implementation
@@ -318,8 +282,8 @@ mod tests {
             112.0, 113.0, 114.0, 115.0,
         ]);
 
-        let result = rsi_fused_gpu(&device, &close, 14, None)
-            .expect("RSI fused GPU calculation failed");
+        let result =
+            rsi_fused_gpu(&device, &close, 14, None).expect("RSI fused GPU calculation failed");
 
         // RSI should approach 100 when only gains
         assert!(

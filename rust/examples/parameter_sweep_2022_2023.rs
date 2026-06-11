@@ -60,12 +60,7 @@ fn create_param_combinations() -> Vec<ParameterCombination> {
     let dte_ranges = vec![(21, 35), (30, 45), (35, 50)];
 
     // Delta ranges (4 options)
-    let delta_ranges = vec![
-        (0.10, 0.25),
-        (0.15, 0.30),
-        (0.20, 0.35),
-        (0.25, 0.40),
-    ];
+    let delta_ranges = vec![(0.10, 0.25), (0.15, 0.30), (0.20, 0.35), (0.25, 0.40)];
 
     // Profit targets (4 options)
     let profit_targets = vec![40.0, 50.0, 60.0, 75.0];
@@ -197,7 +192,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Configuration:");
     println!("  Symbols: {:?}", symbols);
-    println!("  Period: {} to {} (post-split clean data)", start_date, end_date);
+    println!(
+        "  Period: {} to {} (post-split clean data)",
+        start_date, end_date
+    );
     println!("  Testing 576 parameter combinations per symbol");
     println!("  Minimum trades: 10");
     println!();
@@ -216,8 +214,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("Total tasks: {} (576 params × {} symbols)", tasks.len(), symbols.len());
-    println!("Running parallel backtests using {} threads...\n", rayon::current_num_threads());
+    println!(
+        "Total tasks: {} (576 params × {} symbols)",
+        tasks.len(),
+        symbols.len()
+    );
+    println!(
+        "Running parallel backtests using {} threads...\n",
+        rayon::current_num_threads()
+    );
 
     // Run all backtests in parallel
     let results: Vec<OptimizationResult> = tasks
@@ -261,8 +266,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Display top 20 results
     println!("=== Top 20 Parameter Combinations ===\n");
     for (i, result) in sorted_results.iter().take(20).enumerate() {
-        println!("Rank #{} - {} (Fitness: {:.2})", i + 1, result.symbol, result.fitness_score);
-        println!("  DTE: {}-{} days", result.params.dte_min, result.params.dte_max);
+        println!(
+            "Rank #{} - {} (Fitness: {:.2})",
+            i + 1,
+            result.symbol,
+            result.fitness_score
+        );
+        println!(
+            "  DTE: {}-{} days",
+            result.params.dte_min, result.params.dte_max
+        );
         println!(
             "  Delta: {:.2}-{:.2}",
             result.params.delta_min, result.params.delta_max
@@ -293,12 +306,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== Summary Statistics ===");
     println!("Total valid backtests: {}", sorted_results.len());
 
-    let avg_roc: f64 = sorted_results.iter().map(|r| r.return_on_capital).sum::<f64>()
+    let avg_roc: f64 = sorted_results
+        .iter()
+        .map(|r| r.return_on_capital)
+        .sum::<f64>()
         / sorted_results.len() as f64;
-    let avg_sharpe: f64 = sorted_results.iter().map(|r| r.sharpe_ratio).sum::<f64>()
-        / sorted_results.len() as f64;
-    let avg_win_rate: f64 = sorted_results.iter().map(|r| r.win_rate).sum::<f64>()
-        / sorted_results.len() as f64;
+    let avg_sharpe: f64 =
+        sorted_results.iter().map(|r| r.sharpe_ratio).sum::<f64>() / sorted_results.len() as f64;
+    let avg_win_rate: f64 =
+        sorted_results.iter().map(|r| r.win_rate).sum::<f64>() / sorted_results.len() as f64;
 
     println!("Average ROC: {:.1}%", avg_roc);
     println!("Average Sharpe: {:.2}", avg_sharpe);
@@ -308,7 +324,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\nBest Parameters (Rank #1):");
     println!("  Symbol: {}", best.symbol);
     println!("  DTE: {}-{}", best.params.dte_min, best.params.dte_max);
-    println!("  Delta: {:.2}-{:.2}", best.params.delta_min, best.params.delta_max);
+    println!(
+        "  Delta: {:.2}-{:.2}",
+        best.params.delta_min, best.params.delta_max
+    );
     println!("  Profit Target: {:.0}%", best.params.profit_target_pct);
     println!("  Stop Loss: {:.0}%", best.params.stop_loss_pct);
     println!("  Max Hold: {}", best.params.max_hold_days);

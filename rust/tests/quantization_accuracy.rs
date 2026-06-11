@@ -31,7 +31,7 @@ fn test_quantization_roundtrip_accuracy() {
 fn test_per_feature_vs_global_quantization() {
     // Test that per-feature quantization is more accurate than global
     let features = vec![
-        vec![0.1, 10.0, 1000.0, 0.0001, 0.5, 50.0],   // Wide range differences
+        vec![0.1, 10.0, 1000.0, 0.0001, 0.5, 50.0], // Wide range differences
         vec![0.9, 90.0, 9000.0, 0.0009, 4.5, 450.0],
         vec![0.5, 50.0, 5000.0, 0.0005, 2.5, 250.0],
     ];
@@ -117,12 +117,12 @@ fn test_large_dataset_accuracy() {
 
     for _ in 0..num_ticks {
         features.push(vec![
-            rng.gen_range(0.0..1.0),         // order_imbalance
-            rng.gen_range(0.0..5000.0),      // volume_delta
-            rng.gen_range(0.0..200.0),       // trade_intensity
-            rng.gen_range(0.0..0.01),        // price_velocity
-            rng.gen_range(0.0..1.0),         // volume_weighted_spread
-            rng.gen_range(0.0..500.0),       // trade_size_distribution
+            rng.gen_range(0.0..1.0),    // order_imbalance
+            rng.gen_range(0.0..5000.0), // volume_delta
+            rng.gen_range(0.0..200.0),  // trade_intensity
+            rng.gen_range(0.0..0.01),   // price_velocity
+            rng.gen_range(0.0..1.0),    // volume_weighted_spread
+            rng.gen_range(0.0..500.0),  // trade_size_distribution
         ]);
     }
 
@@ -151,7 +151,10 @@ fn test_memory_savings() {
     println!("FP32 size: {:.2} GB", fp32_size as f64 / 1e9);
     println!("INT8 size: {:.2} GB", int8_size as f64 / 1e9);
     println!("Compression ratio: {:.2}x", compression_ratio);
-    println!("Memory saved: {:.2} GB", (fp32_size - int8_size) as f64 / 1e9);
+    println!(
+        "Memory saved: {:.2} GB",
+        (fp32_size - int8_size) as f64 / 1e9
+    );
 
     assert!(
         (compression_ratio - 8.0).abs() < 0.1,
@@ -167,9 +170,15 @@ fn test_memory_savings() {
     println!("\n10 strategies:");
     println!("  FP32 total: {:.2} GB", total_fp32 as f64 / 1e9);
     println!("  INT8 total: {:.2} GB", total_int8 as f64 / 1e9);
-    println!("  Savings: {:.2} GB", (total_fp32 - total_int8) as f64 / 1e9);
+    println!(
+        "  Savings: {:.2} GB",
+        (total_fp32 - total_int8) as f64 / 1e9
+    );
 
-    assert!(total_int8 < 3_000_000_000, "Should fit in 3GB (target: 2.4GB)");
+    assert!(
+        total_int8 < 3_000_000_000,
+        "Should fit in 3GB (target: 2.4GB)"
+    );
 }
 
 #[cfg(feature = "gpu")]
@@ -199,8 +208,10 @@ fn test_gpu_quantization_accuracy() {
                                 let mut count = 0;
 
                                 for (tick_idx, tick_features) in features.iter().enumerate() {
-                                    for (feature_idx, &original) in tick_features.iter().enumerate() {
-                                        let reconstructed = dequantized_flat[tick_idx * 6 + feature_idx];
+                                    for (feature_idx, &original) in tick_features.iter().enumerate()
+                                    {
+                                        let reconstructed =
+                                            dequantized_flat[tick_idx * 6 + feature_idx];
                                         let error = original - reconstructed;
                                         total_squared_error += error * error;
                                         count += 1;
@@ -301,8 +312,11 @@ fn test_quantized_features_storage() {
 
     // Verify memory savings
     let saved = quantized.memory_saved();
-    println!("Memory saved: {} bytes ({:.2}x compression)", saved,
-             (saved as f64 + quantized.memory_bytes() as f64) / quantized.memory_bytes() as f64);
+    println!(
+        "Memory saved: {} bytes ({:.2}x compression)",
+        saved,
+        (saved as f64 + quantized.memory_bytes() as f64) / quantized.memory_bytes() as f64
+    );
 
     assert!(saved > 0, "Should save memory");
 }

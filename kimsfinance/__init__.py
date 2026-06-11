@@ -156,6 +156,22 @@ from .ops.batch import (
     calculate_indicators_batch,
 )
 
+# Reporting (optional - requires reportlab and matplotlib)
+try:
+    from .reporting import (
+        BacktestReport,
+        HTMLReport,
+        ReportConfig,
+        calculate_performance_metrics,
+        calculate_trade_statistics,
+        calculate_risk_metrics,
+        calculate_monthly_returns,
+    )
+
+    _REPORTING_AVAILABLE = True
+except ImportError:
+    _REPORTING_AVAILABLE = False
+
 
 # ============================================================================
 # Convenience Functions
@@ -355,6 +371,20 @@ __all__ = [
     # Batch Operations
     "calculate_indicators_batch",
 ]
+
+# Add reporting exports if available
+if _REPORTING_AVAILABLE:
+    __all__.extend(
+        [
+            "BacktestReport",
+            "HTMLReport",
+            "ReportConfig",
+            "calculate_performance_metrics",
+            "calculate_trade_statistics",
+            "calculate_risk_metrics",
+            "calculate_monthly_returns",
+        ]
+    )
 
 
 # ============================================================================

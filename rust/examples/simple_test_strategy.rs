@@ -1,13 +1,12 @@
 /// Simple test strategy for GPU infrastructure validation
 /// Generates predictable signals to ensure trading logic works
-
 use kimsfinance_core::{
     backtest::{
         engine::TickEngine,
         optimizer::GeneticOptimizer,
         tick_strategy::{Signal, TickStrategy},
     },
-    binance::{load_trade_data, Trade},
+    binance::{Trade, load_trade_data},
     strategy::incomplete_candle::IncompleteCandle,
     timeframe::Timeframe,
 };
@@ -68,7 +67,10 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 4 {
-        eprintln!("Usage: {} <mode> <parquet_path> <num_trades_limit>", args[0]);
+        eprintln!(
+            "Usage: {} <mode> <parquet_path> <num_trades_limit>",
+            args[0]
+        );
         eprintln!("Modes:");
         eprintln!("  test     - Run single backtest");
         eprintln!("  optimize - Run genetic optimization");
@@ -83,8 +85,7 @@ fn main() {
 
     // Load data
     println!("Loading data from: {}", parquet_path);
-    let trades = load_trade_data(parquet_path, limit)
-        .expect("Failed to load trade data");
+    let trades = load_trade_data(parquet_path, limit).expect("Failed to load trade data");
     println!("✓ Loaded {} trades", trades.len());
 
     match mode.as_str() {
@@ -105,10 +106,10 @@ fn run_single_test(trades: &[Trade]) {
 
     let timeframe = Timeframe::from_duration(std::time::Duration::from_secs(60));
     let mut engine = TickEngine::new(
-        10_000.0,  // initial capital
-        0.001,     // fee
-        0.0005,    // slippage
-        Some(10),  // 10ms latency
+        10_000.0, // initial capital
+        0.001,    // fee
+        0.0005,   // slippage
+        Some(10), // 10ms latency
         timeframe,
     );
 
@@ -122,8 +123,10 @@ fn run_single_test(trades: &[Trade]) {
 
     println!("\n=== Results ===\n");
     println!("Time:           {:.2}s", elapsed.as_secs_f64());
-    println!("Throughput:     {:.2}M trades/sec",
-             trades.len() as f64 / elapsed.as_secs_f64() / 1_000_000.0);
+    println!(
+        "Throughput:     {:.2}M trades/sec",
+        trades.len() as f64 / elapsed.as_secs_f64() / 1_000_000.0
+    );
     println!("Total Return:   {:.2}%", result.total_return * 100.0);
     println!("Sharpe Ratio:   {:.4}", result.sharpe_ratio);
     println!("Max Drawdown:   {:.2}%", result.max_drawdown * 100.0);
@@ -140,9 +143,7 @@ fn run_optimization(trades: &[Trade]) {
     param_space.insert("window".to_string(), vec![5.0, 10.0, 20.0, 50.0]);
     param_space.insert("threshold".to_string(), vec![0.0001, 0.0005, 0.001, 0.005]);
 
-    let total_combinations: usize = param_space.values()
-        .map(|v| v.len())
-        .product();
+    let total_combinations: usize = param_space.values().map(|v| v.len()).product();
 
     println!("Parameter Space:");
     println!("  window: {:?}", param_space.get("window").unwrap());
@@ -182,7 +183,11 @@ fn run_optimization(trades: &[Trade]) {
     let elapsed = start.elapsed();
 
     println!("\n=== Optimization Complete ===\n");
-    println!("Time: {:.2}s ({:.2} minutes)", elapsed.as_secs_f64(), elapsed.as_secs_f64() / 60.0);
+    println!(
+        "Time: {:.2}s ({:.2} minutes)",
+        elapsed.as_secs_f64(),
+        elapsed.as_secs_f64() / 60.0
+    );
 
     match result {
         Ok((best_params, best_result)) => {

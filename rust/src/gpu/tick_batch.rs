@@ -61,8 +61,7 @@
 
 use super::aggregation::GpuAggregator;
 use super::batch::{
-    BatchIndicatorParams, BatchIndicatorType, IndicatorResult,
-    calculate_single_indicator,
+    BatchIndicatorParams, BatchIndicatorType, IndicatorResult, calculate_single_indicator,
 };
 use super::candles::TradeData;
 use super::device::{GpuDevice, GpuError};
@@ -192,7 +191,9 @@ impl TickBatchProcessor {
     ) -> Result<Vec<f64>, GpuError> {
         // Phase 1: Aggregate ticks to candles
         let binance_trades = self.convert_trade_data_to_binance_trades(trades);
-        let candles = self.aggregator.aggregate_trades(&binance_trades, timeframe)?;
+        let candles = self
+            .aggregator
+            .aggregate_trades(&binance_trades, timeframe)?;
 
         if candles.is_empty() {
             return Ok(Vec::new());
@@ -239,7 +240,9 @@ impl TickBatchProcessor {
     ) -> Result<Vec<f64>, GpuError> {
         // Phase 1: Aggregate
         let binance_trades = self.convert_trade_data_to_binance_trades(trades);
-        let candles = self.aggregator.aggregate_trades(&binance_trades, timeframe)?;
+        let candles = self
+            .aggregator
+            .aggregate_trades(&binance_trades, timeframe)?;
 
         if candles.is_empty() {
             return Ok(Vec::new());
@@ -292,7 +295,9 @@ impl TickBatchProcessor {
         period: usize,
     ) -> Result<Vec<f64>, GpuError> {
         let binance_trades = self.convert_trade_data_to_binance_trades(trades);
-        let candles = self.aggregator.aggregate_trades(&binance_trades, timeframe)?;
+        let candles = self
+            .aggregator
+            .aggregate_trades(&binance_trades, timeframe)?;
 
         if candles.is_empty() {
             return Ok(Vec::new());
@@ -347,7 +352,9 @@ impl TickBatchProcessor {
     ) -> Result<Vec<IndicatorResult>, GpuError> {
         // Phase 1: Aggregate
         let binance_trades = self.convert_trade_data_to_binance_trades(trades);
-        let candles = self.aggregator.aggregate_trades(&binance_trades, timeframe)?;
+        let candles = self
+            .aggregator
+            .aggregate_trades(&binance_trades, timeframe)?;
 
         if candles.is_empty() {
             return Ok(Vec::new());
@@ -425,14 +432,16 @@ impl TickBatchProcessor {
             .zip(&trades.prices)
             .zip(&trades.volumes)
             .enumerate()
-            .map(|(i, ((&timestamp, &price), &volume))| crate::binance::Trade {
-                trade_id: i as u64,
-                price,
-                quantity: volume,
-                quote_quantity: price * volume,
-                timestamp_ms: timestamp,
-                is_buyer_maker: false, // Not relevant for aggregation
-            })
+            .map(
+                |(i, ((&timestamp, &price), &volume))| crate::binance::Trade {
+                    trade_id: i as u64,
+                    price,
+                    quantity: volume,
+                    quote_quantity: price * volume,
+                    timestamp_ms: timestamp,
+                    is_buyer_maker: false, // Not relevant for aggregation
+                },
+            )
             .collect()
     }
 }
@@ -503,7 +512,7 @@ mod tests {
 
         let indicators = vec![
             (
-                BatchIndicatorType::Rsi,
+                BatchIndicatorType::RSI,
                 BatchIndicatorParams {
                     period: Some(14),
                     ..Default::default()

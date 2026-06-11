@@ -133,10 +133,9 @@ impl RegimeDetector {
         let bars = spot_loader.load_symbol(symbol)?;
 
         // Find the index of the date
-        let date_idx = bars
-            .iter()
-            .position(|b| b.date == date)
-            .ok_or_else(|| SpotDataError::NotFound(format!("No data for {} on {}", symbol, date)))?;
+        let date_idx = bars.iter().position(|b| b.date == date).ok_or_else(|| {
+            SpotDataError::NotFound(format!("No data for {} on {}", symbol, date))
+        })?;
 
         // Need at least trend_period bars
         if date_idx < self.trend_period {
@@ -181,10 +180,9 @@ impl RegimeDetector {
         // Get historical ATRs for the lookback period
         // Clone the dates we need to avoid borrowing issues
         let bars = spot_loader.load_symbol(symbol)?;
-        let date_idx = bars
-            .iter()
-            .position(|b| b.date == date)
-            .ok_or_else(|| SpotDataError::NotFound(format!("No data for {} on {}", symbol, date)))?;
+        let date_idx = bars.iter().position(|b| b.date == date).ok_or_else(|| {
+            SpotDataError::NotFound(format!("No data for {} on {}", symbol, date))
+        })?;
 
         // Need at least volatility_lookback + 20 bars (20 for ATR calculation)
         let required_bars = self.volatility_lookback + 20;
@@ -197,10 +195,8 @@ impl RegimeDetector {
 
         // Extract dates we need before borrowing spot_loader again
         let start_idx = date_idx - self.volatility_lookback + 1;
-        let dates_to_check: Vec<NaiveDate> = bars[start_idx..=date_idx]
-            .iter()
-            .map(|b| b.date)
-            .collect();
+        let dates_to_check: Vec<NaiveDate> =
+            bars[start_idx..=date_idx].iter().map(|b| b.date).collect();
 
         // Calculate ATRs for the lookback period
         let mut historical_atrs = Vec::new();
@@ -335,7 +331,9 @@ mod tests {
         let start_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
         let end_date = NaiveDate::from_ymd_opt(2020, 12, 31).unwrap();
 
-        let stats = detector.get_regime_stats(&mut loader, "SPY", start_date, end_date).unwrap();
+        let stats = detector
+            .get_regime_stats(&mut loader, "SPY", start_date, end_date)
+            .unwrap();
         let (bull_low, bull_high, bear_low, bear_high, sideways) = stats.percentages();
 
         println!("2020 Regime Distribution:");

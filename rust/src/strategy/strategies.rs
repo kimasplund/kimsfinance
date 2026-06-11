@@ -344,7 +344,7 @@ pub fn regime_adapted_bull_put_params(regime: MarketRegime) -> StrategyParams {
             params.delta_min = 0.10;
             params.delta_max = 0.20;
             params.profit_target_pct = Some(70.0); // Need more conviction
-            params.stop_loss_pct = Some(100.0);    // Exit quickly
+            params.stop_loss_pct = Some(100.0); // Exit quickly
             params.max_hold_days = Some(21);
             params.min_credit = Some(0.15);
         }

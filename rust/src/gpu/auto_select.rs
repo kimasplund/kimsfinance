@@ -162,13 +162,21 @@ impl EngineSelector {
                 Ok(aggregate_trades_to_candles(trades, timeframe))
             }
             AggregationEngine::GPU => {
-                // GPU aggregation (may fall back to CPU on error)
-                GPU_AGGREGATOR
-                    .aggregate_trades(trades, timeframe)
-                    .or_else(|e| {
-                        eprintln!("GPU aggregation failed: {:?}, falling back to CPU", e);
+                // GPU aggregation (falls back to CPU if the aggregator failed to
+                // initialize or if aggregation itself errors)
+                match GPU_AGGREGATOR.as_ref() {
+                    Some(aggregator) => {
+                        aggregator.aggregate_trades(trades, timeframe).or_else(|e| {
+                            eprintln!("GPU aggregation failed: {:?}, falling back to CPU", e);
+                            Ok(aggregate_trades_to_candles(trades, timeframe))
+                        })
+                    }
+                    None => {
+                        // Aggregator initialization failed earlier (logged once at
+                        // first access); use the CPU path.
                         Ok(aggregate_trades_to_candles(trades, timeframe))
-                    })
+                    }
+                }
             }
         }
     }
@@ -258,8 +266,22 @@ impl EngineSelector {
 }
 
 /// Global GPU aggregator instance (lazily initialized)
-static GPU_AGGREGATOR: LazyLock<GpuAggregator> =
-    LazyLock::new(|| GpuAggregator::new().expect("Failed to initialize GPU aggregator"));
+///
+/// `None` if initialization fails (e.g., driver/context errors even when
+/// `GpuAggregator::is_available()` reported true). Callers fall back to the
+/// CPU path instead of panicking: a previous version used `.expect()` here,
+/// turning any transient GPU init failure into a process abort.
+static GPU_AGGREGATOR: LazyLock<Option<GpuAggregator>> = LazyLock::new(|| {
+    GpuAggregator::new()
+        .map_err(|e| {
+            eprintln!(
+                "GPU aggregator initialization failed: {:?}; using CPU aggregation",
+                e
+            );
+            e
+        })
+        .ok()
+});
 
 /// Generate synthetic test trades for benchmarking
 fn generate_test_trades(n: usize) -> Vec<Trade> {
@@ -370,6 +392,21 @@ mod tests {
             .aggregate_trades(&trades, Timeframe::minutes(1))
             .expect("Aggregation failed");
         assert!(candles.is_empty());
+    }
+
+    #[test]
+    fn test_aggregate_trades_above_threshold_never_panics() {
+        // Regression test: a previous version initialized the global GPU
+        // aggregator with `.expect()`, so selecting the GPU engine on a
+        // machine where initialization fails aborted the process. The
+        // aggregation must now succeed via CPU fallback in every environment
+        // (no GPU, GPU init failure, or working GPU).
+        let selector = EngineSelector::with_threshold(MIN_GPU_THRESHOLD);
+        let trades = generate_test_trades(2 * MIN_GPU_THRESHOLD);
+        let candles = selector
+            .aggregate_trades(&trades, Timeframe::minutes(1))
+            .expect("Aggregation must not fail regardless of GPU availability");
+        assert!(!candles.is_empty());
     }
 
     #[test]

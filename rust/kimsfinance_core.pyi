@@ -1124,6 +1124,287 @@ def batch_backtest_info() -> Dict[str, Any]:
     ...
 
 # ============================================================================
+# GPU PARAMETER OPTIMIZERS (requires 'gpu' feature)
+# ============================================================================
+
+class GridSearchOptimizer:
+    """
+    GPU-accelerated Grid Search optimizer for strategy parameter tuning.
+
+    Exhaustively evaluates all parameter combinations using GPU batch backtesting.
+    Provides guaranteed global optimum with 40x speedup vs sequential CPU.
+
+    Performance:
+        - 1000 combinations × 10K candles: <3 seconds (40x vs sequential)
+        - Accuracy: Match CPU within 0.01% tolerance
+        - GPU Utilization: >90% via batch execution
+
+    Example:
+        >>> optimizer = kimsfinance_core.GridSearchOptimizer(batch_size=1000)
+        >>> param_ranges = {
+        ...     'rsi_period': {'min': 10.0, 'max': 20.0, 'step': 2.0},
+        ...     'buy_threshold': {'min': 20.0, 'max': 40.0, 'step': 5.0}
+        ... }
+        >>> result = optimizer.optimize(
+        ...     timestamps=timestamps,
+        ...     open=open_prices,
+        ...     high=high,
+        ...     low=low,
+        ...     close=close,
+        ...     volume=volume,
+        ...     param_ranges=param_ranges,
+        ...     strategy_type='RSI'
+        ... )
+        >>> print(f"Best Sharpe: {result.best_sharpe:.2f}")
+    """
+
+    def __init__(self, batch_size: int = 500) -> None:
+        """
+        Create new Grid Search optimizer.
+
+        Args:
+            batch_size: Number of parameter sets per GPU batch (default: 500)
+                - 100: Safe for 4GB VRAM
+                - 500: Optimal for 8-12GB VRAM (RTX 3500 Ada)
+                - 1000: For 16GB+ VRAM or small datasets
+        """
+        ...
+
+    def optimize(
+        self,
+        timestamps: npt.NDArray[np.int64],
+        open: npt.NDArray[np.float64],
+        high: npt.NDArray[np.float64],
+        low: npt.NDArray[np.float64],
+        close: npt.NDArray[np.float64],
+        volume: npt.NDArray[np.float64],
+        param_ranges: Dict[str, Dict[str, float]],
+        strategy_type: Literal["RSI", "SMA_CROSS", "MACD", "BOLLINGER"],
+        initial_capital: float = 10000.0,
+        trading_fee: float = 0.001,
+        slippage: float = 0.0005,
+    ) -> "GridSearchResult":
+        """
+        Run grid search optimization.
+
+        Exhaustively evaluates all parameter combinations from the grid.
+
+        Args:
+            timestamps: Unix timestamps (nanoseconds, int64)
+            open, high, low, close, volume: OHLCV data (float64)
+            param_ranges: Dictionary of parameter ranges:
+                {
+                    'param_name': {'min': 10.0, 'max': 20.0, 'step': 2.0},
+                    # OR for discrete values:
+                    'param_name': {'values': [1.0, 2.0, 5.0, 10.0]}
+                }
+            strategy_type: Strategy to optimize ('RSI', 'SMA_CROSS', 'MACD', 'BOLLINGER')
+            initial_capital: Starting capital (default: 10000.0)
+            trading_fee: Fee per trade as fraction (default: 0.001 = 0.1%)
+            slippage: Slippage per trade as fraction (default: 0.0005 = 0.05%)
+
+        Returns:
+            GridSearchResult with best parameters, fitness, and convergence history
+
+        Raises:
+            ValueError: Invalid parameter ranges or strategy type
+            RuntimeError: GPU initialization failed or CUDA error
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class GridSearchResult:
+    """
+    Grid Search optimization result.
+
+    Attributes:
+        best_parameters: Dictionary of best parameter values
+        best_fitness: Fitness score (Sharpe with drawdown penalty)
+        best_sharpe: Sharpe ratio of best parameters
+        best_drawdown: Max drawdown of best parameters
+        total_combinations: Total number of combinations evaluated
+    """
+
+    best_parameters: Dict[str, float]
+    best_fitness: float
+    best_sharpe: float
+    best_drawdown: float
+    total_combinations: int
+
+    def convergence_history(self) -> npt.NDArray[np.float64]:
+        """Get convergence history as NumPy array (best fitness per batch)."""
+        ...
+
+    def __repr__(self) -> str: ...
+
+class EulerSearchOptimizer:
+    """
+    GPU-accelerated Euler Search optimizer for strategy parameter tuning.
+
+    Implements QuantConnect's iterative grid refinement algorithm with GPU batch evaluation.
+    Achieves 90% fewer evaluations than exhaustive grid search while converging to near-optimal.
+
+    Algorithm:
+        1. Test Grid: Evaluate N points across current search space
+        2. Find Best: Identify parameter set with highest fitness
+        3. Refine: Reduce step size and narrow boundaries around best
+        4. Repeat: Until step size falls below minimum threshold
+
+    Performance:
+        - Evaluations: 90% fewer than exhaustive grid search
+        - Convergence: Typical 5-10 iterations
+        - GPU Batch: <250ms per iteration (1000 params)
+        - Target: Sub-second optimization for 3-parameter strategies
+
+    Example:
+        >>> optimizer = kimsfinance_core.EulerSearchOptimizer(
+        ...     segment_amount=4,
+        ...     max_iterations=15,
+        ...     batch_size=1000
+        ... )
+        >>> optimizer.add_parameter('rsi_period', 5.0, 30.0, 5.0, 1.0)
+        >>> optimizer.add_parameter('buy_threshold', 20.0, 40.0, 5.0, 1.0)
+        >>> result = optimizer.optimize(
+        ...     timestamps=timestamps,
+        ...     open=open_prices,
+        ...     high=high,
+        ...     low=low,
+        ...     close=close,
+        ...     volume=volume,
+        ...     strategy_type='RSI'
+        ... )
+        >>> print(f"Converged in {result.iterations} iterations")
+    """
+
+    def __init__(
+        self,
+        segment_amount: int = 4,
+        max_iterations: int = 20,
+        batch_size: int = 1000,
+    ) -> None:
+        """
+        Create new Euler Search optimizer.
+
+        Args:
+            segment_amount: Grid resolution per iteration (default: 4, QuantConnect default)
+                - Higher values = finer grids, slower convergence
+                - Lower values = coarser grids, faster convergence
+            max_iterations: Maximum iterations before forced stop (default: 20)
+            batch_size: GPU batch size (default: 1000)
+        """
+        ...
+
+    def add_parameter(
+        self,
+        name: str,
+        min_value: float,
+        max_value: float,
+        initial_step: float,
+        min_step: float,
+    ) -> None:
+        """
+        Add parameter to optimize.
+
+        Args:
+            name: Parameter name (e.g., 'rsi_period')
+            min_value: Initial minimum value
+            max_value: Initial maximum value
+            initial_step: Initial step size
+            min_step: Minimum step size (convergence threshold)
+
+        Example:
+            >>> optimizer.add_parameter('rsi_period', 5.0, 30.0, 5.0, 1.0)
+            >>> optimizer.add_parameter('buy_threshold', 20.0, 40.0, 5.0, 1.0)
+        """
+        ...
+
+    def optimize(
+        self,
+        timestamps: npt.NDArray[np.int64],
+        open: npt.NDArray[np.float64],
+        high: npt.NDArray[np.float64],
+        low: npt.NDArray[np.float64],
+        close: npt.NDArray[np.float64],
+        volume: npt.NDArray[np.float64],
+        strategy_type: Literal["RSI", "SMA_CROSS", "MACD", "BOLLINGER"],
+        initial_capital: float = 10000.0,
+        trading_fee: float = 0.001,
+        slippage: float = 0.0005,
+    ) -> "EulerSearchResult":
+        """
+        Run Euler Search optimization.
+
+        Args:
+            timestamps: Unix timestamps (nanoseconds, int64)
+            open, high, low, close, volume: OHLCV data (float64)
+            strategy_type: Strategy to optimize ('RSI', 'SMA_CROSS', 'MACD', 'BOLLINGER')
+            initial_capital: Starting capital (default: 10000.0)
+            trading_fee: Fee per trade as fraction (default: 0.001 = 0.1%)
+            slippage: Slippage per trade as fraction (default: 0.0005 = 0.05%)
+
+        Returns:
+            EulerSearchResult with best parameters, convergence history, and refinement details
+
+        Raises:
+            ValueError: No parameters defined or invalid strategy type
+            RuntimeError: GPU initialization failed or CUDA error
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+class EulerSearchResult:
+    """
+    Euler Search optimization result.
+
+    Attributes:
+        best_parameters: Dictionary of best parameter values
+        best_fitness: Fitness score (Sharpe with drawdown penalty)
+        iterations: Number of iterations until convergence
+        total_evaluations: Total parameter sets evaluated
+        total_gpu_time_ms: Total GPU computation time (milliseconds)
+        total_time_ms: Total wall-clock time (milliseconds)
+    """
+
+    best_parameters: Dict[str, float]
+    best_fitness: float
+    iterations: int
+    total_evaluations: int
+    total_gpu_time_ms: float
+    total_time_ms: float
+
+    def convergence_history(self) -> npt.NDArray[np.float64]:
+        """Get convergence history as NumPy array (best fitness per iteration)."""
+        ...
+
+    def is_converged(self) -> bool:
+        """
+        Check if optimization converged to optimum.
+
+        Returns True if final improvement was < 1% over 3 iterations.
+        """
+        ...
+
+    def grid_search_speedup(self, grid_points_per_param: int = 10) -> float:
+        """
+        Calculate speedup vs exhaustive grid search.
+
+        Args:
+            grid_points_per_param: Number of grid points per parameter (default: 10)
+
+        Returns:
+            Estimated speedup factor (e.g., 5.0 = 5x faster than grid search)
+
+        Example:
+            >>> speedup = result.grid_search_speedup(grid_points_per_param=10)
+            >>> print(f"Euler Search was {speedup:.1f}x faster")
+        """
+        ...
+
+    def __repr__(self) -> str: ...
+
+# ============================================================================
 # PARQUET DATA LOADER (requires 'data-downloaders' feature)
 # ============================================================================
 

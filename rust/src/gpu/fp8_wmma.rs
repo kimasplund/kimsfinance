@@ -11,11 +11,13 @@
 //! - Range: ±448
 //! - Precision: ~2 decimal digits (0.01 resolution)
 //!
-//! # Performance
+//! # Status
 //!
-//! - 2-4x speedup vs software FP8 simulation
-//! - 4x throughput vs FP32 on tensor cores
-//! - Ideal for genetic optimizer exploration phase (80% of generations)
+//! Only the **FP16 matmul path is functional**. `matmul_fp8` and
+//! `matmul_tf32` are gated off with explanatory errors because their previous
+//! implementations produced numerically-wrong results (see the function docs).
+//! No speedup figures are quoted here: none have been validated on real
+//! hardware for this module.
 //!
 //! # Hardware Requirements
 //!
@@ -51,7 +53,7 @@
 //! ```
 
 use crate::gpu::{GpuDevice, GpuError};
-use cudarc::driver::{CudaFunction, CudaSlice, CudaModule, LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaFunction, CudaModule, CudaSlice, LaunchConfig, PushKernelArg};
 use std::sync::Arc;
 
 /// FP8 E4M3 format tensor core wrapper
@@ -224,8 +226,8 @@ impl FP8TensorCore {
         const FP8_CONVERSION_KERNELS: &str = include_str!("kernels/fp8_jit_fallback.cu");
 
         // Compile FP8 MMA kernel
-        let ptx_arc = crate::gpu::compile::compile_ptx_optimized_cached(FP8_MMA_KERNELS)
-            .map_err(|e| {
+        let ptx_arc =
+            crate::gpu::compile::compile_ptx_optimized_cached(FP8_MMA_KERNELS).map_err(|e| {
                 FP8Error::ModuleLoadFailed(format!("Failed to compile FP8 MMA kernels: {:?}", e))
             })?;
 
@@ -244,10 +246,12 @@ impl FP8TensorCore {
             })?;
 
         // Compile FP8 conversion kernels
-        let ptx_conv_arc = crate::gpu::compile::compile_ptx_optimized_cached(FP8_CONVERSION_KERNELS)
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to compile FP8 conversion kernels: {:?}", e))
-            })?;
+        let ptx_conv_arc = crate::gpu::compile::compile_ptx_optimized_cached(
+            FP8_CONVERSION_KERNELS,
+        )
+        .map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to compile FP8 conversion kernels: {:?}", e))
+        })?;
 
         let module_conv = self
             .device
@@ -257,17 +261,13 @@ impl FP8TensorCore {
                 FP8Error::ModuleLoadFailed(format!("Failed to load FP8 conversion module: {:?}", e))
             })?;
 
-        let fp32_to_fp8_kernel = module_conv
-            .load_function("fp32_to_fp8_e4m3")
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load fp32_to_fp8_e4m3: {:?}", e))
-            })?;
+        let fp32_to_fp8_kernel = module_conv.load_function("fp32_to_fp8_e4m3").map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to load fp32_to_fp8_e4m3: {:?}", e))
+        })?;
 
-        let fp8_to_fp32_kernel = module_conv
-            .load_function("fp8_e4m3_to_fp32")
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load fp8_e4m3_to_fp32: {:?}", e))
-            })?;
+        let fp8_to_fp32_kernel = module_conv.load_function("fp8_e4m3_to_fp32").map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to load fp8_e4m3_to_fp32: {:?}", e))
+        })?;
 
         // Store modules and kernels
         self.fp8_module = Some(module_mma);
@@ -306,30 +306,34 @@ impl FP8TensorCore {
             })?;
 
         // Compile FP16 conversion kernels
-        let ptx_conv_arc = crate::gpu::compile::compile_ptx_optimized_cached(FP16_CONVERSION_KERNELS)
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to compile FP16 conversion kernels: {:?}", e))
-            })?;
+        let ptx_conv_arc = crate::gpu::compile::compile_ptx_optimized_cached(
+            FP16_CONVERSION_KERNELS,
+        )
+        .map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!(
+                "Failed to compile FP16 conversion kernels: {:?}",
+                e
+            ))
+        })?;
 
         let module_conv = self
             .device
             .context()
             .load_module(std::sync::Arc::unwrap_or_clone(ptx_conv_arc))
             .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load FP16 conversion module: {:?}", e))
+                FP8Error::ModuleLoadFailed(format!(
+                    "Failed to load FP16 conversion module: {:?}",
+                    e
+                ))
             })?;
 
-        let fp32_to_fp16_kernel = module_conv
-            .load_function("fp32_to_fp16")
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load fp32_to_fp16: {:?}", e))
-            })?;
+        let fp32_to_fp16_kernel = module_conv.load_function("fp32_to_fp16").map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to load fp32_to_fp16: {:?}", e))
+        })?;
 
-        let fp16_to_fp32_kernel = module_conv
-            .load_function("fp16_to_fp32")
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load fp16_to_fp32: {:?}", e))
-            })?;
+        let fp16_to_fp32_kernel = module_conv.load_function("fp16_to_fp32").map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to load fp16_to_fp32: {:?}", e))
+        })?;
 
         self.fp16_module = Some(module_mma);
         self.fp16_matmul_kernel = Some(fp16_matmul_kernel);
@@ -344,8 +348,8 @@ impl FP8TensorCore {
         // Load FP32 MMA PTX tensor core kernel (supports TF32 mode on Ampere+)
         const FP32_KERNELS: &str = include_str!("kernels/fp16_mma_ptx.cu");
 
-        let ptx_arc = crate::gpu::compile::compile_ptx_optimized_cached(FP32_KERNELS)
-            .map_err(|e| {
+        let ptx_arc =
+            crate::gpu::compile::compile_ptx_optimized_cached(FP32_KERNELS).map_err(|e| {
                 FP8Error::ModuleLoadFailed(format!("Failed to compile FP32 kernels: {:?}", e))
             })?;
 
@@ -358,11 +362,9 @@ impl FP8TensorCore {
             })?;
 
         // FP16 kernel can be used for TF32 (just using FP32 inputs/outputs)
-        let tf32_matmul_kernel = module
-            .load_function("fp16_matmul_mma_ptx")
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load fp16_matmul_mma_ptx: {:?}", e))
-            })?;
+        let tf32_matmul_kernel = module.load_function("fp16_matmul_mma_ptx").map_err(|e| {
+            FP8Error::ModuleLoadFailed(format!("Failed to load fp16_matmul_mma_ptx: {:?}", e))
+        })?;
 
         self.fp32_module = Some(module);
         self.tf32_matmul_kernel = Some(tf32_matmul_kernel);
@@ -410,7 +412,8 @@ impl FP8TensorCore {
     ) -> Result<CudaSlice<f32>, FP8Error> {
         if !self.is_fp8_supported() {
             return Err(FP8Error::ExecutionFailed(
-                "FP8 kernels not loaded. Use is_fp8_supported() to check before calling.".to_string(),
+                "FP8 kernels not loaded. Use is_fp8_supported() to check before calling."
+                    .to_string(),
             ));
         }
 
@@ -418,13 +421,19 @@ impl FP8TensorCore {
         if a.len() != m * k {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix A size mismatch: expected {} ({}x{}), got {}",
-                m * k, m, k, a.len()
+                m * k,
+                m,
+                k,
+                a.len()
             )));
         }
         if b.len() != k * n {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix B size mismatch: expected {} ({}x{}), got {}",
-                k * n, k, n, b.len()
+                k * n,
+                k,
+                n,
+                b.len()
             )));
         }
 
@@ -454,10 +463,9 @@ impl FP8TensorCore {
         // The kernel will interpret them as FP8 internally
 
         // Allocate output buffer (FP8 stored as FP32)
-        let mut c_fp8 = self
-            .device
-            .allocate_device_buffer(m * n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e)))?;
+        let mut c_fp8 = self.device.allocate_device_buffer(m * n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e))
+        })?;
 
         // FP8 E4M3 tensor cores work on 16x8x32 tiles
         let tile_m = 16;
@@ -498,10 +506,9 @@ impl FP8TensorCore {
     /// Convert FP32 to FP8 E4M3 format
     fn convert_fp32_to_fp8(&self, input: &CudaSlice<f32>) -> Result<CudaSlice<f32>, FP8Error> {
         let n = input.len();
-        let mut output = self
-            .device
-            .allocate_device_buffer(n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate FP8 buffer: {:?}", e)))?;
+        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate FP8 buffer: {:?}", e))
+        })?;
 
         let block_size = 256;
         let n_blocks = (n + block_size - 1) / block_size;
@@ -534,10 +541,9 @@ impl FP8TensorCore {
     /// Convert FP8 E4M3 to FP32 format
     fn convert_fp8_to_fp32(&self, input: &CudaSlice<f32>) -> Result<CudaSlice<f32>, FP8Error> {
         let n = input.len();
-        let mut output = self
-            .device
-            .allocate_device_buffer(n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate FP32 buffer: {:?}", e)))?;
+        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate FP32 buffer: {:?}", e))
+        })?;
 
         let block_size = 256;
         let n_blocks = (n + block_size - 1) / block_size;
@@ -587,7 +593,8 @@ impl FP8TensorCore {
     ) -> Result<CudaSlice<f32>, FP8Error> {
         if !self.is_fp16_supported() {
             return Err(FP8Error::ExecutionFailed(
-                "FP16 kernels not loaded. Use is_fp16_supported() to check before calling.".to_string(),
+                "FP16 kernels not loaded. Use is_fp16_supported() to check before calling."
+                    .to_string(),
             ));
         }
 
@@ -595,13 +602,19 @@ impl FP8TensorCore {
         if a.len() != m * k {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix A size mismatch: expected {} ({}x{}), got {}",
-                m * k, m, k, a.len()
+                m * k,
+                m,
+                k,
+                a.len()
             )));
         }
         if b.len() != k * n {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix B size mismatch: expected {} ({}x{}), got {}",
-                k * n, k, n, b.len()
+                k * n,
+                k,
+                n,
+                b.len()
             )));
         }
 
@@ -628,10 +641,9 @@ impl FP8TensorCore {
         k: usize,
     ) -> Result<CudaSlice<u16>, FP8Error> {
         // Allocate output buffer (FP16 = u16)
-        let mut c_fp16 = self
-            .device
-            .allocate_device_buffer(m * n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e)))?;
+        let mut c_fp16 = self.device.allocate_device_buffer(m * n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e))
+        })?;
 
         // FP16 raw PTX tensor cores work on 16x8x16 tiles
         let tile_m = 16;
@@ -672,10 +684,9 @@ impl FP8TensorCore {
     /// Convert FP32 to FP16 format
     fn convert_fp32_to_fp16(&self, input: &CudaSlice<f32>) -> Result<CudaSlice<u16>, FP8Error> {
         let n = input.len();
-        let mut output = self
-            .device
-            .allocate_device_buffer(n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate FP16 buffer: {:?}", e)))?;
+        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate FP16 buffer: {:?}", e))
+        })?;
 
         let block_size = 256;
         let n_blocks = (n + block_size - 1) / block_size;
@@ -708,10 +719,9 @@ impl FP8TensorCore {
     /// Convert FP16 to FP32 format
     fn convert_fp16_to_fp32(&self, input: &CudaSlice<u16>) -> Result<CudaSlice<f32>, FP8Error> {
         let n = input.len();
-        let mut output = self
-            .device
-            .allocate_device_buffer(n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate FP32 buffer: {:?}", e)))?;
+        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate FP32 buffer: {:?}", e))
+        })?;
 
         let block_size = 256;
         let n_blocks = (n + block_size - 1) / block_size;
@@ -767,7 +777,8 @@ impl FP8TensorCore {
     ) -> Result<CudaSlice<f32>, FP8Error> {
         if !self.is_tf32_supported() {
             return Err(FP8Error::ExecutionFailed(
-                "TF32 kernels not loaded. Use is_tf32_supported() to check before calling.".to_string(),
+                "TF32 kernels not loaded. Use is_tf32_supported() to check before calling."
+                    .to_string(),
             ));
         }
 
@@ -775,13 +786,19 @@ impl FP8TensorCore {
         if a.len() != m * k {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix A size mismatch: expected {} ({}x{}), got {}",
-                m * k, m, k, a.len()
+                m * k,
+                m,
+                k,
+                a.len()
             )));
         }
         if b.len() != k * n {
             return Err(FP8Error::ExecutionFailed(format!(
                 "Matrix B size mismatch: expected {} ({}x{}), got {}",
-                k * n, k, n, b.len()
+                k * n,
+                k,
+                n,
+                b.len()
             )));
         }
 
@@ -789,10 +806,9 @@ impl FP8TensorCore {
         // No conversion needed!
 
         // Allocate output buffer (FP32)
-        let mut c = self
-            .device
-            .allocate_device_buffer(m * n)
-            .map_err(|e| FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e)))?;
+        let mut c = self.device.allocate_device_buffer(m * n).map_err(|e| {
+            FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e))
+        })?;
 
         // TF32 tensor cores work on 16x8x16 tiles (similar to FP16 but K=8)
         let tile_m = 16;
@@ -842,14 +858,14 @@ impl FP8TensorCore {
     /// # Returns
     ///
     /// Device buffer with quantized FP8 values (stored as FP32 for compatibility)
-    pub fn quantize_fp8_batch(
-        &self,
-        values: &CudaSlice<f32>,
-    ) -> Result<CudaSlice<f32>, FP8Error> {
+    pub fn quantize_fp8_batch(&self, values: &CudaSlice<f32>) -> Result<CudaSlice<f32>, FP8Error> {
         // Allocate output buffer (f32 for FP8 values stored in FP32 format)
-        let mut quantized = self.device.allocate_device_buffer::<f32>(values.len()).map_err(|e| {
-            FP8Error::ExecutionFailed(format!("Failed to allocate quantized buffer: {:?}", e))
-        })?;
+        let mut quantized = self
+            .device
+            .allocate_device_buffer::<f32>(values.len())
+            .map_err(|e| {
+                FP8Error::ExecutionFailed(format!("Failed to allocate quantized buffer: {:?}", e))
+            })?;
 
         // Launch quantization kernel
         let block_size = 256;
@@ -892,8 +908,8 @@ extern "C" __global__ void quantize_fp8_kernel(
 }
 "#;
 
-        let ptx = crate::gpu::compile::compile_ptx_optimized_cached(QUANTIZE_KERNEL)
-            .map_err(|e| {
+        let ptx =
+            crate::gpu::compile::compile_ptx_optimized_cached(QUANTIZE_KERNEL).map_err(|e| {
                 FP8Error::CompilationFailed(format!("Quantize kernel compilation failed: {:?}", e))
             })?;
 
@@ -905,14 +921,9 @@ extern "C" __global__ void quantize_fp8_kernel(
                 FP8Error::CompilationFailed(format!("Failed to load quantize module: {:?}", e))
             })?;
 
-        let kernel = module
-            .load_function("quantize_fp8_kernel")
-            .map_err(|e| {
-                FP8Error::CompilationFailed(format!(
-                    "Failed to load quantize_fp8_kernel: {:?}",
-                    e
-                ))
-            })?;
+        let kernel = module.load_function("quantize_fp8_kernel").map_err(|e| {
+            FP8Error::CompilationFailed(format!("Failed to load quantize_fp8_kernel: {:?}", e))
+        })?;
 
         use cudarc::driver::PushKernelArg;
 

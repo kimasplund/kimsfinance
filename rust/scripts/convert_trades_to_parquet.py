@@ -115,6 +115,16 @@ def convert_zip_to_parquet(
     # Write to Parquet (with compression)
     output_file = month_dir / f"{zip_path.stem}.parquet"
 
+    # Skip if already exists and is newer than ZIP file
+    if output_file.exists():
+        parquet_mtime = output_file.stat().st_mtime
+        zip_mtime = zip_path.stat().st_mtime
+        if parquet_mtime >= zip_mtime:
+            # Parquet is up to date, skip conversion
+            num_trades = len(df)
+            file_size_mb = output_file.stat().st_size / (1024 * 1024)
+            return (month, num_trades, file_size_mb)
+
     df.write_parquet(
         output_file,
         compression="zstd",  # Best compression ratio

@@ -72,6 +72,9 @@ pub enum GpuError {
 
     /// Computation error with static message
     ComputationErrorStatic(&'static str),
+
+    /// GPU device unavailable (fallback error)
+    DeviceUnavailable,
 }
 
 #[cfg(not(feature = "gpu"))]
@@ -88,6 +91,7 @@ impl fmt::Display for GpuError {
             GpuError::BacktestError(msg) => write!(f, "Backtest error: {}", msg),
             GpuError::InvalidParameterStatic(msg) => write!(f, "Invalid parameter: {}", msg),
             GpuError::ComputationErrorStatic(msg) => write!(f, "Computation error: {}", msg),
+            GpuError::DeviceUnavailable => write!(f, "GPU device unavailable (feature disabled)"),
         }
     }
 }
@@ -752,7 +756,8 @@ mod tests {
             124.0, 125.0, 126.0, 127.0, 128.0, 129.0, 130.0, 131.0, 132.0, 133.0, 134.0, 135.0,
         ]);
 
-        let (macd, signal, histogram) = macd_cpu(&close, 12, 26, 9).expect("MACD CPU calculation failed");
+        let (macd, signal, histogram) =
+            macd_cpu(&close, 12, 26, 9).expect("MACD CPU calculation failed");
 
         // Verify lengths
         assert_eq!(macd.len(), close.len());
@@ -802,7 +807,7 @@ mod tests {
         let n = 100;
         let close = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64) * 0.5).collect());
 
-        let (macd, signal, histogram) =
+        let (macd, _signal, _histogram) =
             macd_cpu(&close, 12, 26, 9).expect("MACD CPU calculation failed");
 
         // Check that MACD captures uptrend

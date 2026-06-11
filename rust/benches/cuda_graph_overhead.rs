@@ -15,11 +15,10 @@
 //! 3. Amortize graph capture over 1000 replays
 //! 4. Report overhead per indicator
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use kimsfinance_core::gpu::{
-    GpuDevice, IndicatorGraphBuilder, IndicatorSpeed, StreamManager,
-    rsi_gpu, atr_gpu, roc_gpu, williams_r_gpu, cci_gpu,
-    bollinger_bands_gpu, aroon_gpu, stochastic_gpu,
+    GpuDevice, IndicatorGraphBuilder, IndicatorSpeed, StreamManager, aroon_gpu, atr_gpu,
+    bollinger_bands_gpu, cci_gpu, roc_gpu, rsi_gpu, stochastic_gpu, williams_r_gpu,
 };
 use ndarray::Array1;
 use std::sync::Arc;
@@ -81,24 +80,36 @@ fn bench_cuda_graphs(c: &mut Criterion) {
                 .expect("Builder creation failed");
 
             // Capture Fast stream (3 indicators)
-            builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Begin capture failed");
+            builder
+                .begin_capture_stream(IndicatorSpeed::Fast)
+                .expect("Begin capture failed");
             let _ = roc_gpu(&*device, &close, 14, None);
             let _ = williams_r_gpu(&*device, &high, &low, &close, 14, None);
             let _ = cci_gpu(&*device, &high, &low, &close, 14, None);
-            builder.end_capture_stream(IndicatorSpeed::Fast).expect("End capture failed");
+            builder
+                .end_capture_stream(IndicatorSpeed::Fast)
+                .expect("End capture failed");
 
             // Capture Medium stream (4 indicators)
-            builder.begin_capture_stream(IndicatorSpeed::Medium).expect("Begin capture failed");
+            builder
+                .begin_capture_stream(IndicatorSpeed::Medium)
+                .expect("Begin capture failed");
             let _ = rsi_gpu(&*device, &close, 14, None);
             let _ = atr_gpu(&*device, &high, &low, &close, 14, None);
             let _ = bollinger_bands_gpu(&*device, &close, 20, 2.0, None);
             let _ = aroon_gpu(&*device, &high, &low, 25, None);
-            builder.end_capture_stream(IndicatorSpeed::Medium).expect("End capture failed");
+            builder
+                .end_capture_stream(IndicatorSpeed::Medium)
+                .expect("End capture failed");
 
             // Capture Slow stream (2 indicators)
-            builder.begin_capture_stream(IndicatorSpeed::Slow).expect("Begin capture failed");
+            builder
+                .begin_capture_stream(IndicatorSpeed::Slow)
+                .expect("Begin capture failed");
             let _ = stochastic_gpu(&*device, &high, &low, &close, 14, 3, None);
-            builder.end_capture_stream(IndicatorSpeed::Slow).expect("End capture failed");
+            builder
+                .end_capture_stream(IndicatorSpeed::Slow)
+                .expect("End capture failed");
 
             let _graph = builder.build().expect("Graph build failed");
         });
@@ -109,22 +120,34 @@ fn bench_cuda_graphs(c: &mut Criterion) {
         .expect("Builder creation failed");
 
     // Capture graphs once
-    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Begin capture failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Fast)
+        .expect("Begin capture failed");
     let _ = roc_gpu(&*device, &close, 14, None);
     let _ = williams_r_gpu(&*device, &high, &low, &close, 14, None);
     let _ = cci_gpu(&*device, &high, &low, &close, 14, None);
-    builder.end_capture_stream(IndicatorSpeed::Fast).expect("End capture failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Fast)
+        .expect("End capture failed");
 
-    builder.begin_capture_stream(IndicatorSpeed::Medium).expect("Begin capture failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Medium)
+        .expect("Begin capture failed");
     let _ = rsi_gpu(&*device, &close, 14, None);
     let _ = atr_gpu(&*device, &high, &low, &close, 14, None);
     let _ = bollinger_bands_gpu(&*device, &close, 20, 2.0, None);
     let _ = aroon_gpu(&*device, &high, &low, &25, None);
-    builder.end_capture_stream(IndicatorSpeed::Medium).expect("End capture failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Medium)
+        .expect("End capture failed");
 
-    builder.begin_capture_stream(IndicatorSpeed::Slow).expect("Begin capture failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Slow)
+        .expect("Begin capture failed");
     let _ = stochastic_gpu(&*device, &high, &low, &close, 14, 3, None);
-    builder.end_capture_stream(IndicatorSpeed::Slow).expect("End capture failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Slow)
+        .expect("End capture failed");
 
     let graph = builder.build().expect("Graph build failed");
 
@@ -164,17 +187,29 @@ fn bench_launch_overhead_breakdown(c: &mut Criterion) {
         .expect("Builder creation failed");
 
     // Capture empty graphs (just to measure launch overhead)
-    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Begin failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Fast)
+        .expect("Begin failed");
     device.synchronize().expect("Sync failed");
-    builder.end_capture_stream(IndicatorSpeed::Fast).expect("End failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Fast)
+        .expect("End failed");
 
-    builder.begin_capture_stream(IndicatorSpeed::Medium).expect("Begin failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Medium)
+        .expect("Begin failed");
     device.synchronize().expect("Sync failed");
-    builder.end_capture_stream(IndicatorSpeed::Medium).expect("End failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Medium)
+        .expect("End failed");
 
-    builder.begin_capture_stream(IndicatorSpeed::Slow).expect("Begin failed");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Slow)
+        .expect("Begin failed");
     device.synchronize().expect("Sync failed");
-    builder.end_capture_stream(IndicatorSpeed::Slow).expect("End failed");
+    builder
+        .end_capture_stream(IndicatorSpeed::Slow)
+        .expect("End failed");
 
     let graph = builder.build().expect("Graph build failed");
 

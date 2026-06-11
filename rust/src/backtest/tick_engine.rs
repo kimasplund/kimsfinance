@@ -350,8 +350,8 @@ impl TickEngine {
         position.position_size = gross_position_value * direction;
         position.entry_price = price;
         position.entry_timestamp = timestamp;
-        position.position_value = position.cash - total_cost;  // NET value after costs
-        position.cash = 0.0;  // All cash converted to position
+        position.position_value = position.cash - total_cost; // NET value after costs
+        position.cash = 0.0; // All cash converted to position
 
         Ok(())
     }

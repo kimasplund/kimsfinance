@@ -84,7 +84,10 @@ pub fn load_parquet_file<P: AsRef<Path>>(parquet_path: P) -> Result<Vec<Trade>, 
     })?;
 
     let reader = builder.build().map_err(|e| {
-        BinanceError::ParseError(format!("Failed to build Parquet reader for {:?}: {}", path, e))
+        BinanceError::ParseError(format!(
+            "Failed to build Parquet reader for {:?}: {}",
+            path, e
+        ))
     })?;
 
     let mut trades = Vec::new();
@@ -233,7 +236,12 @@ fn extract_uint64_column<'a>(
             BinanceError::InvalidData(format!(
                 "Missing required column '{}'. Available columns: {:?}",
                 name,
-                batch.schema().fields().iter().map(|f| f.name()).collect::<Vec<_>>()
+                batch
+                    .schema()
+                    .fields()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>()
             ))
         })?
         .as_any()
@@ -257,7 +265,12 @@ fn extract_float64_column<'a>(
             BinanceError::InvalidData(format!(
                 "Missing required column '{}'. Available columns: {:?}",
                 name,
-                batch.schema().fields().iter().map(|f| f.name()).collect::<Vec<_>>()
+                batch
+                    .schema()
+                    .fields()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>()
             ))
         })?
         .as_any()
@@ -281,7 +294,12 @@ fn extract_int64_column<'a>(
             BinanceError::InvalidData(format!(
                 "Missing required column '{}'. Available columns: {:?}",
                 name,
-                batch.schema().fields().iter().map(|f| f.name()).collect::<Vec<_>>()
+                batch
+                    .schema()
+                    .fields()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>()
             ))
         })?
         .as_any()
@@ -305,7 +323,12 @@ fn extract_boolean_column<'a>(
             BinanceError::InvalidData(format!(
                 "Missing required column '{}'. Available columns: {:?}",
                 name,
-                batch.schema().fields().iter().map(|f| f.name()).collect::<Vec<_>>()
+                batch
+                    .schema()
+                    .fields()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>()
             ))
         })?
         .as_any()
@@ -329,23 +352,25 @@ mod tests {
     #[test]
     #[ignore] // Requires actual dataset
     fn test_load_parquet_file_btcusdt() {
-        let path =
-            "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
+        let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
 
         let trades = load_parquet_file(path).expect("Failed to load Parquet file");
 
         // Validate non-empty
-        assert!(
-            !trades.is_empty(),
-            "Expected trades, got empty result"
-        );
+        assert!(!trades.is_empty(), "Expected trades, got empty result");
 
         // Validate first trade has realistic data
         let first = &trades[0];
         assert!(first.price > 0.0, "Price should be positive");
         assert!(first.quantity > 0.0, "Quantity should be positive");
-        assert!(first.quote_quantity > 0.0, "Quote quantity should be positive");
-        assert!(first.timestamp_ms > 1_600_000_000_000, "Timestamp should be realistic (2020+)");
+        assert!(
+            first.quote_quantity > 0.0,
+            "Quote quantity should be positive"
+        );
+        assert!(
+            first.timestamp_ms > 1_600_000_000_000,
+            "Timestamp should be realistic (2020+)"
+        );
 
         println!("Loaded {} trades from single file", trades.len());
         println!("First trade: {:?}", first);
@@ -385,7 +410,10 @@ mod tests {
         let trades = load_parquet_month(dir, None).expect("Failed to load month");
 
         // Should load all trades from January 2024
-        assert!(trades.len() > 1_000_000, "Expected >1M trades for full month");
+        assert!(
+            trades.len() > 1_000_000,
+            "Expected >1M trades for full month"
+        );
 
         println!("Loaded {} trades from entire month", trades.len());
     }

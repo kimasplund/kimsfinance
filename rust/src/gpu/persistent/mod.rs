@@ -330,16 +330,19 @@ impl PersistentKernelManager {
         let max_cooperative_blocks = (multiprocessor_count * max_blocks_per_sm) as f32 * 0.8;
         let max_grid_size = max_cooperative_blocks as u32;
 
-        eprintln!("🎯 Cooperative launch limits for this GPU:");
-        eprintln!(
-            "   SMs: {}, Max blocks/SM: {}",
-            multiprocessor_count, max_blocks_per_sm
-        );
-        eprintln!(
-            "   Theoretical max: {} blocks",
-            multiprocessor_count * max_blocks_per_sm
-        );
-        eprintln!("   Safe grid size: {} blocks (80% of max)", max_grid_size);
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("🎯 Cooperative launch limits for this GPU:");
+            eprintln!(
+                "   SMs: {}, Max blocks/SM: {}",
+                multiprocessor_count, max_blocks_per_sm
+            );
+            eprintln!(
+                "   Theoretical max: {} blocks",
+                multiprocessor_count * max_blocks_per_sm
+            );
+            eprintln!("   Safe grid size: {} blocks (80% of max)", max_grid_size);
+        }
 
         Ok(Self {
             _device: Arc::new(GpuDevice::with_device_id(0)?),
@@ -386,6 +389,7 @@ impl PersistentKernelManager {
         let optimal_grid_size =
             occupancy_calc.calculate_optimal_grid_size(&func, self.optimal_block_size, 0)?;
 
+        #[cfg(debug_assertions)]
         eprintln!(
             "🚀 Launching with {} blocks (vs {} conservative)",
             optimal_grid_size,
@@ -406,7 +410,7 @@ impl PersistentKernelManager {
 }
 
 /// GPU buffer set for batch execution
-struct BatchBuffers {
+pub(crate) struct BatchBuffers {
     /// Host pinned memory for input buffers (if available)
     h_inputs: Vec<Option<PinnedBuffer<f64>>>,
     /// Host pinned memory for output buffers (if available) - [task][output_idx]
@@ -429,7 +433,8 @@ struct BatchBuffers {
 }
 
 impl BatchBuffers {
-    /// Get memory usage information for logging
+    /// Get memory usage information for logging (debug builds only)
+    #[cfg_attr(not(debug_assertions), allow(dead_code))]
     pub fn memory_info(&self) -> String {
         if self.using_pinned {
             let total_outputs: usize = self.h_outputs.iter().map(|v| v.len()).sum();
@@ -478,12 +483,15 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
 ) -> Result<BatchBuffers, GpuError> {
     let num_tasks = batch.len();
 
-    eprintln!("DEBUG: allocate_batch_buffers called");
-    eprintln!("DEBUG: num_tasks={}", num_tasks);
-    eprintln!("DEBUG: num_inputs={}", I::num_inputs());
-    eprintln!("DEBUG: num_outputs={}", I::num_outputs());
-    if !batch.is_empty() {
-        eprintln!("DEBUG: Task 0 data length: {}", batch.tasks()[0].data.len());
+    #[cfg(debug_assertions)]
+    {
+        eprintln!("DEBUG: allocate_batch_buffers called");
+        eprintln!("DEBUG: num_tasks={}", num_tasks);
+        eprintln!("DEBUG: num_inputs={}", I::num_inputs());
+        eprintln!("DEBUG: num_outputs={}", I::num_outputs());
+        if !batch.is_empty() {
+            eprintln!("DEBUG: Task 0 data length: {}", batch.tasks()[0].data.len());
+        }
     }
 
     // Try to allocate pinned memory for all input buffers
@@ -495,9 +503,12 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
     for task in batch.tasks() {
         match PinnedBuffer::new(task.data.len()) {
             Ok(pinned) => h_inputs.push(Some(pinned)),
-            Err(e) => {
-                eprintln!("⚠️  Pinned memory allocation failed: {:?}", e);
-                eprintln!("   Falling back to pageable memory (20-30% slower transfers)");
+            Err(_e) => {
+                #[cfg(debug_assertions)]
+                {
+                    eprintln!("⚠️  Pinned memory allocation failed: {:?}", _e);
+                    eprintln!("   Falling back to pageable memory (20-30% slower transfers)");
+                }
                 using_pinned = false;
                 break;
             }
@@ -528,9 +539,12 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
             let output_size = n * num_outputs;
             match PinnedBuffer::new(output_size) {
                 Ok(pinned) => h_outputs.push(vec![Some(pinned)]),
-                Err(e) => {
-                    eprintln!("⚠️  Pinned output buffer allocation failed: {:?}", e);
-                    eprintln!("   Falling back to pageable memory");
+                Err(_e) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!("⚠️  Pinned output buffer allocation failed: {:?}", _e);
+                        eprintln!("   Falling back to pageable memory");
+                    }
                     using_pinned = false;
                     // Clear all and use pageable
                     h_inputs.clear();
@@ -550,7 +564,7 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
     let mut d_outputs = Vec::with_capacity(num_tasks);
 
     let num_inputs = I::num_inputs();
-    for (task_idx, task) in batch.tasks().iter().enumerate() {
+    for (_task_idx, task) in batch.tasks().iter().enumerate() {
         let input_buf = device.allocate_device_buffer(task.data.len())?;
         d_inputs.push(input_buf);
 
@@ -560,9 +574,10 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         // For multi-input indicators, data is concatenated so divide by num_inputs first
         let n = task.data.len() / num_inputs;
         let output_size = n * num_outputs;
+        #[cfg(debug_assertions)]
         eprintln!(
             "DEBUG: Task {} - n={}, output_size={}",
-            task_idx, n, output_size
+            _task_idx, n, output_size
         );
         let output_buf = device.allocate_device_buffer(output_size)?;
         d_outputs.push(vec![output_buf]); // Wrap in vec for consistency
@@ -572,8 +587,10 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
     let mut input_ptrs_host = Vec::with_capacity(num_tasks);
     let mut output_ptrs_host = Vec::with_capacity(num_tasks);
 
+    #[cfg(debug_assertions)]
     eprintln!("DEBUG: Creating pointer arrays...");
-    for (task_idx, (input_buf, task_outputs)) in d_inputs.iter().zip(d_outputs.iter()).enumerate() {
+    for (_task_idx, (input_buf, task_outputs)) in d_inputs.iter().zip(d_outputs.iter()).enumerate()
+    {
         let (input_ptr, _) = input_buf.device_ptr(&device.stream);
         input_ptrs_host.push(input_ptr as u64);
 
@@ -582,9 +599,10 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         let (output_ptr, _) = task_outputs[0].device_ptr(&device.stream);
         output_ptrs_host.push(output_ptr as u64);
 
+        #[cfg(debug_assertions)]
         eprintln!(
             "DEBUG: Task {} - input_ptr={:#x}, output_ptr={:#x}",
-            task_idx, input_ptr as u64, output_ptr as u64
+            _task_idx, input_ptr as u64, output_ptr as u64
         );
     }
 
@@ -619,6 +637,7 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         .iter()
         .map(|t| (t.data.len() as i32) / num_inputs)
         .collect();
+    #[cfg(debug_assertions)]
     eprintln!("DEBUG: sizes array: {:?}", sizes);
     let d_sizes = device.copy_to_device_i32(&sizes)?;
 
@@ -640,6 +659,7 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
             }
         })
         .collect();
+    #[cfg(debug_assertions)]
     eprintln!("DEBUG: periods array: {:?}", periods);
     let d_periods = device.copy_to_device_i32(&periods)?;
 
@@ -655,6 +675,7 @@ pub(crate) fn allocate_batch_buffers<I: PersistentIndicator>(
         d_periods,
     };
 
+    #[cfg(debug_assertions)]
     eprintln!("📊 {}", buffers.memory_info());
 
     Ok(buffers)
@@ -666,6 +687,7 @@ fn upload_batch_data<I: PersistentIndicator>(
     batch: &TaskBatch<I>,
     buffers: &mut BatchBuffers,
 ) -> Result<(), GpuError> {
+    #[cfg(debug_assertions)]
     eprintln!(
         "DEBUG: upload_batch_data called, using_pinned={}",
         buffers.using_pinned
@@ -679,6 +701,7 @@ fn upload_batch_data<I: PersistentIndicator>(
                 pinned.copy_from_slice(&task.data);
                 // DMA transfer from pinned to device (fast!)
                 device.htod_pinned(pinned, &mut buffers.d_inputs[i])?;
+                #[cfg(debug_assertions)]
                 eprintln!(
                     "DEBUG: Task {} uploaded via pinned memory ({} elements)",
                     i,
@@ -689,6 +712,7 @@ fn upload_batch_data<I: PersistentIndicator>(
     } else {
         // Fallback: Use pageable memory (traditional approach)
         for (i, task) in batch.tasks().iter().enumerate() {
+            #[cfg(debug_assertions)]
             eprintln!(
                 "DEBUG: Task {} - uploading {} elements: first few = {:?}",
                 i,
@@ -704,7 +728,10 @@ fn upload_batch_data<I: PersistentIndicator>(
         }
     }
 
-    // Verify data upload by reading back first few elements of first task
+    // Debug builds only: verify data upload by reading back the first task's
+    // input buffer. This is a full-buffer D2H copy and must never run in
+    // release builds (it would more than double the transfer cost per batch).
+    #[cfg(debug_assertions)]
     if !batch.is_empty() {
         let full_size = batch.tasks()[0].data.len();
         let display_size = full_size.min(5);
@@ -743,54 +770,58 @@ fn launch_cooperative_kernel(
 ) -> Result<(), GpuError> {
     use cudarc::driver::PushKernelArg;
 
-    eprintln!("DEBUG: launch_cooperative_kernel called");
-    eprintln!("DEBUG: num_tasks={}, grid_size={}", num_tasks, grid_size);
+    #[cfg(debug_assertions)]
+    {
+        eprintln!("DEBUG: launch_cooperative_kernel called");
+        eprintln!("DEBUG: num_tasks={}, grid_size={}", num_tasks, grid_size);
+
+        // Log pointer information
+        let (input_ptrs_ptr, _) = buffers.d_input_ptrs.device_ptr(&device.stream);
+        let (output_ptrs_ptr, _) = buffers.d_output_ptrs.device_ptr(&device.stream);
+        let (sizes_ptr, _) = buffers.d_sizes.device_ptr(&device.stream);
+        let (periods_ptr, _) = buffers.d_periods.device_ptr(&device.stream);
+
+        eprintln!("DEBUG: d_input_ptrs address: {:#x}", input_ptrs_ptr as u64);
+        eprintln!(
+            "DEBUG: d_output_ptrs address: {:#x}",
+            output_ptrs_ptr as u64
+        );
+        eprintln!("DEBUG: d_sizes address: {:#x}", sizes_ptr as u64);
+        eprintln!("DEBUG: d_periods address: {:#x}", periods_ptr as u64);
+
+        // Read back parameter arrays to verify data was copied correctly.
+        // Debug builds only: these are extra D2H transfers per batch.
+        let mut sizes_readback = vec![0i32; num_tasks as usize];
+        let mut periods_readback = vec![0i32; num_tasks as usize];
+
+        if let Ok(()) = device
+            .stream
+            .memcpy_dtoh(&buffers.d_sizes, &mut sizes_readback)
+        {
+            eprintln!(
+                "DEBUG: d_sizes readback (first few): {:?}",
+                &sizes_readback[0..num_tasks.min(5) as usize]
+            );
+        } else {
+            eprintln!("DEBUG: Failed to read back d_sizes");
+        }
+
+        if let Ok(()) = device
+            .stream
+            .memcpy_dtoh(&buffers.d_periods, &mut periods_readback)
+        {
+            eprintln!(
+                "DEBUG: d_periods readback (first few): {:?}",
+                &periods_readback[0..num_tasks.min(5) as usize]
+            );
+        } else {
+            eprintln!("DEBUG: Failed to read back d_periods");
+        }
+    }
 
     // Launch configuration using GPU-specific limits
     let block_dim = (256u32, 1u32, 1u32);
     let grid_dim = (grid_size, 1u32, 1u32);
-
-    // Log pointer information
-    let (input_ptrs_ptr, _) = buffers.d_input_ptrs.device_ptr(&device.stream);
-    let (output_ptrs_ptr, _) = buffers.d_output_ptrs.device_ptr(&device.stream);
-    let (sizes_ptr, _) = buffers.d_sizes.device_ptr(&device.stream);
-    let (periods_ptr, _) = buffers.d_periods.device_ptr(&device.stream);
-
-    eprintln!("DEBUG: d_input_ptrs address: {:#x}", input_ptrs_ptr as u64);
-    eprintln!(
-        "DEBUG: d_output_ptrs address: {:#x}",
-        output_ptrs_ptr as u64
-    );
-    eprintln!("DEBUG: d_sizes address: {:#x}", sizes_ptr as u64);
-    eprintln!("DEBUG: d_periods address: {:#x}", periods_ptr as u64);
-
-    // Read back first values to verify data was copied correctly
-    let mut sizes_readback = vec![0i32; num_tasks as usize];
-    let mut periods_readback = vec![0i32; num_tasks as usize];
-
-    if let Ok(()) = device
-        .stream
-        .memcpy_dtoh(&buffers.d_sizes, &mut sizes_readback)
-    {
-        eprintln!(
-            "DEBUG: d_sizes readback (first few): {:?}",
-            &sizes_readback[0..num_tasks.min(5) as usize]
-        );
-    } else {
-        eprintln!("DEBUG: Failed to read back d_sizes");
-    }
-
-    if let Ok(()) = device
-        .stream
-        .memcpy_dtoh(&buffers.d_periods, &mut periods_readback)
-    {
-        eprintln!(
-            "DEBUG: d_periods readback (first few): {:?}",
-            &periods_readback[0..num_tasks.min(5) as usize]
-        );
-    } else {
-        eprintln!("DEBUG: Failed to read back d_periods");
-    }
 
     // Launch cooperative kernel using cudarc's safe wrapper
     let cfg = cudarc::driver::LaunchConfig {
@@ -799,6 +830,7 @@ fn launch_cooperative_kernel(
         shared_mem_bytes: 0,
     };
 
+    #[cfg(debug_assertions)]
     eprintln!(
         "DEBUG: Launching kernel with grid_dim=({},{},{}), block_dim=({},{},{})",
         cfg.grid_dim.0,
@@ -820,19 +852,17 @@ fn launch_cooperative_kernel(
             .arg(&num_tasks)
             .launch_cooperative(cfg)
             .map_err(|e| {
-                eprintln!("❌ CUDA launch_cooperative error: {:?}", e);
                 GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e))
             })?;
     }
 
+    #[cfg(debug_assertions)]
     eprintln!("DEBUG: Kernel launched, synchronizing...");
 
     // Synchronize and check errors
-    device.synchronize().map_err(|e| {
-        eprintln!("❌ CUDA synchronization error: {:?}", e);
-        e
-    })?;
+    device.synchronize()?;
 
+    #[cfg(debug_assertions)]
     eprintln!("✅ Kernel synchronized successfully");
 
     Ok(())
@@ -843,6 +873,7 @@ fn download_batch_results(
     device: &GpuDevice,
     buffers: &mut BatchBuffers,
 ) -> Result<Vec<Vec<f64>>, GpuError> {
+    #[cfg(debug_assertions)]
     eprintln!("DEBUG: download_batch_results called");
 
     let mut results = Vec::with_capacity(buffers.d_outputs.len());
@@ -854,6 +885,7 @@ fn download_batch_results(
             if let Some(pinned) = &mut buffers.h_outputs[task_idx][0] {
                 device.dtoh_pinned(&task_outputs[0], pinned)?;
                 let result = pinned.as_slice().to_vec();
+                #[cfg(debug_assertions)]
                 eprintln!(
                     "DEBUG: Task {} downloaded via pinned ({} elements), first few: {:?}",
                     task_idx,
@@ -865,12 +897,13 @@ fn download_batch_results(
         }
     } else {
         // Fallback: Use pageable memory (traditional approach)
-        for (task_idx, task_outputs) in buffers.d_outputs.iter().enumerate() {
+        for (_task_idx, task_outputs) in buffers.d_outputs.iter().enumerate() {
             // Download single contiguous buffer (contains all outputs)
             let result = device.copy_to_host(&task_outputs[0])?;
+            #[cfg(debug_assertions)]
             eprintln!(
                 "DEBUG: Task {} downloaded via pageable ({} elements), first few: {:?}",
-                task_idx,
+                _task_idx,
                 result.len(),
                 &result[0..result.len().min(5)]
             );
@@ -943,6 +976,7 @@ pub fn execute_batch<I: PersistentIndicator>(
     let calculator = OccupancyCalculator::new(device)?;
     let grid_size = calculator.calculate_optimal_grid_size(&func, 256, 0)?;
 
+    #[cfg(debug_assertions)]
     eprintln!(
         "🚀 Launching {} indicator with {} blocks (occupancy-optimized)",
         I::kernel_name(),

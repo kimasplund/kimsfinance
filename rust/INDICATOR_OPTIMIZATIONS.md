@@ -847,7 +847,7 @@ strip = true           # Remove debug symbols
 
 ### SIMD Support
 - **Default**: Auto-vectorization via LLVM
-- **Optional**: Explicit SIMD with `packed_simd_2` feature (future)
+- **Optional**: Explicit SIMD (future)
 - **Target**: x86_64 AVX2/AVX-512
 
 ---

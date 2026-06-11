@@ -52,7 +52,7 @@ parking_lot = "0.12"
 sha2 = "0.10"  # For kernel cache hashing
 
 # Optional SIMD support
-packed_simd_2 = { version = "0.3.8", optional = true }
+
 
 # Optional GPU support with cudarc (v0.17.3 - pinned for stability)
 # CUDA Toolkit Compatibility:
@@ -105,7 +105,7 @@ inherits = "release"
 [features]
 default = ["simd"]
 simd = []
-explicit_simd = ["packed_simd_2"]
+
 gpu = ["cudarc", "half"]
 
 # Options data connectors
@@ -302,6 +302,20 @@ harness = false
 
 [[bench]]
 name = "gpu_tick_batch_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "candlestick_patterns"
+harness = false
+
+[[bench]]
+name = "batch_backtest_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "optimizer_comparison"
 harness = false
 required-features = ["gpu"]
 

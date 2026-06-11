@@ -70,10 +70,7 @@ fn test_no_sync_transfers_in_core_indicators() {
     }
 
     if !violations.is_empty() {
-        panic!(
-            "Sync transfer violations found:\n{}",
-            violations.join("\n")
-        );
+        panic!("Sync transfer violations found:\n{}", violations.join("\n"));
     }
 }
 
@@ -122,7 +119,8 @@ fn test_all_indicators_use_pinned_memory_or_stream_alloc() {
         // 2. Stream-based allocation (stream.alloc_*)
         // Both enable async transfers
         let has_pinned_pool = content.contains("pinned_pool") || content.contains("pinned_");
-        let has_stream_alloc = content.contains("stream.alloc") || content.contains("exec_stream.alloc");
+        let has_stream_alloc =
+            content.contains("stream.alloc") || content.contains("exec_stream.alloc");
 
         if !has_pinned_pool && !has_stream_alloc {
             missing_optimization.push(format!(
@@ -258,7 +256,9 @@ fn test_async_transfer_adoption_rate() {
     assert!(
         adoption_rate >= 97.0,
         "Async transfer adoption rate ({:.1}%) below 97% - {} of {} indicators use async transfers",
-        adoption_rate, async_count, total_count
+        adoption_rate,
+        async_count,
+        total_count
     );
 }
 

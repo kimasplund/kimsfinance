@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     params.stop_loss_pct = Some(200.0);
     params.max_hold_days = Some(42);
     params.position_size_pct = 100.0; // Allow 100% capital per trade
-    params.min_credit = Some(0.10);   // Lower minimum credit (vs 0.20)
+    params.min_credit = Some(0.10); // Lower minimum credit (vs 0.20)
 
     // Transaction costs: standard retail
     params.commission_per_contract = 0.65;
@@ -85,12 +85,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Strategy Parameters (RELAXED):");
     println!("  DTE Range: {} to {} days", params.dte_min, params.dte_max);
-    println!("  Delta Range: {:.2} to {:.2}", params.delta_min, params.delta_max);
-    println!("  Profit Target: {:.0}%", params.profit_target_pct.unwrap_or(0.0));
+    println!(
+        "  Delta Range: {:.2} to {:.2}",
+        params.delta_min, params.delta_max
+    );
+    println!(
+        "  Profit Target: {:.0}%",
+        params.profit_target_pct.unwrap_or(0.0)
+    );
     println!("  Stop Loss: {:.0}%", params.stop_loss_pct.unwrap_or(0.0));
     println!("  Max Hold Days: {}", params.max_hold_days.unwrap_or(0));
-    println!("  Position Size: {:.1}% of capital", params.position_size_pct);
-    println!("  Min Credit: ${:.2} (RELAXED from $0.20)", params.min_credit.unwrap_or(0.0));
+    println!(
+        "  Position Size: {:.1}% of capital",
+        params.position_size_pct
+    );
+    println!(
+        "  Min Credit: ${:.2} (RELAXED from $0.20)",
+        params.min_credit.unwrap_or(0.0)
+    );
     println!();
 
     println!("Risk Limits (RELAXED):");
@@ -115,13 +127,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         80.0, // Max 80% margin utilization (vs 50% default) - VERY RELAXED
     );
 
-    let result_with_costs = engine.run_bull_put_spread(
-        symbol,
-        &strategy,
-        &params,
-        start_date,
-        end_date,
-    )?;
+    let result_with_costs =
+        engine.run_bull_put_spread(symbol, &strategy, &params, start_date, end_date)?;
 
     // Display results
     display_results("WITH COSTS", &result_with_costs, initial_capital);
@@ -160,13 +167,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let strategy2 = BullPutSpread::new(params_no_costs.clone());
 
-    let result_no_costs = engine2.run_bull_put_spread(
-        symbol,
-        &strategy2,
-        &params_no_costs,
-        start_date,
-        end_date,
-    )?;
+    let result_no_costs =
+        engine2.run_bull_put_spread(symbol, &strategy2, &params_no_costs, start_date, end_date)?;
 
     // Display results
     display_results("WITHOUT COSTS", &result_no_costs, initial_capital);
@@ -186,8 +188,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("P&L without costs: ${:.2}", result_no_costs.total_pnl);
     println!("P&L with costs:    ${:.2}", result_with_costs.total_pnl);
-    println!("Cost impact:       ${:.2} ({:.1}% of gross P&L)",
-             cost_impact, cost_impact_pct.abs());
+    println!(
+        "Cost impact:       ${:.2} ({:.1}% of gross P&L)",
+        cost_impact,
+        cost_impact_pct.abs()
+    );
     println!();
 
     if result_with_costs.num_trades > 0 {
@@ -216,22 +221,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let min_trades = 50;
     let trades_ok = result_with_costs.num_trades >= min_trades;
     let strategy_ok = result_no_costs.total_pnl > 0.0; // Strategy logic should be profitable
-    let costs_ok = result_with_costs.total_pnl > 0.0;  // Even with costs
+    let costs_ok = result_with_costs.total_pnl > 0.0; // Even with costs
 
     println!("Test 1: Minimum Trades");
     println!("  Required: {} trades", min_trades);
     println!("  Actual:   {} trades", result_with_costs.num_trades);
-    println!("  Status:   {}", if trades_ok { "✅ PASS" } else { "❌ FAIL" });
+    println!(
+        "  Status:   {}",
+        if trades_ok { "✅ PASS" } else { "❌ FAIL" }
+    );
     println!();
 
     println!("Test 2: Strategy Logic Profitable (no costs)");
     println!("  P&L:      ${:.2}", result_no_costs.total_pnl);
-    println!("  Status:   {}", if strategy_ok { "✅ PASS" } else { "❌ FAIL" });
+    println!(
+        "  Status:   {}",
+        if strategy_ok { "✅ PASS" } else { "❌ FAIL" }
+    );
     println!();
 
     println!("Test 3: Profitable With Transaction Costs");
     println!("  P&L:      ${:.2}", result_with_costs.total_pnl);
-    println!("  Status:   {}", if costs_ok { "✅ PASS" } else { "⚠️  MARGINAL" });
+    println!(
+        "  Status:   {}",
+        if costs_ok {
+            "✅ PASS"
+        } else {
+            "⚠️  MARGINAL"
+        }
+    );
     println!();
 
     // Overall assessment
@@ -239,7 +257,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("✅ VALIDATION PASSED");
         println!();
         println!("   Strategy logic is fundamentally sound!");
-        println!("   - {} trades executed in 2021", result_with_costs.num_trades);
+        println!(
+            "   - {} trades executed in 2021",
+            result_with_costs.num_trades
+        );
         println!("   - {:.1}% win rate", result_with_costs.win_rate);
         println!("   - {:.2} profit factor", result_with_costs.profit_factor);
         println!();
@@ -317,12 +338,18 @@ fn display_results(title: &str, result: &BacktestResult, initial_capital: f64) {
     println!("Performance:");
     println!("  Total P&L: ${:.2}", result.total_pnl);
     println!("  Return on Capital: {:.2}%", result.return_on_capital);
-    println!("  Final Capital: ${:.2}", initial_capital + result.total_pnl);
+    println!(
+        "  Final Capital: ${:.2}",
+        initial_capital + result.total_pnl
+    );
     println!();
 
     println!("Risk Metrics:");
     println!("  Max Drawdown: ${:.2}", result.max_drawdown);
-    println!("  Max Consecutive Losses: {}", result.max_consecutive_losses);
+    println!(
+        "  Max Consecutive Losses: {}",
+        result.max_consecutive_losses
+    );
     println!("  Sharpe Ratio: {:.2}", result.sharpe_ratio);
     println!("  Sortino Ratio: {:.2}", result.sortino_ratio);
     println!();
@@ -339,7 +366,10 @@ fn show_sample_trades(result: &BacktestResult, count: usize) {
         return;
     }
 
-    println!("=== Sample Trades (first {}) ===", count.min(result.positions.len()));
+    println!(
+        "=== Sample Trades (first {}) ===",
+        count.min(result.positions.len())
+    );
     for (i, position) in result.positions.iter().take(count).enumerate() {
         println!("\nTrade #{}:", i + 1);
         println!("  ID: {}", position.id);
@@ -352,12 +382,28 @@ fn show_sample_trades(result: &BacktestResult, count: usize) {
                 let credit = leg1.entry_price - leg2.entry_price;
                 let width = (leg1.contract.strike - leg2.contract.strike).abs();
 
-                println!("  Short PUT: ${:.2} @ ${:.2}", leg1.contract.strike, leg1.entry_price);
-                println!("  Long PUT:  ${:.2} @ ${:.2}", leg2.contract.strike, leg2.entry_price);
-                println!("  Credit: ${:.2}/contract (${:.2} total)", credit, credit * 100.0);
+                println!(
+                    "  Short PUT: ${:.2} @ ${:.2}",
+                    leg1.contract.strike, leg1.entry_price
+                );
+                println!(
+                    "  Long PUT:  ${:.2} @ ${:.2}",
+                    leg2.contract.strike, leg2.entry_price
+                );
+                println!(
+                    "  Credit: ${:.2}/contract (${:.2} total)",
+                    credit,
+                    credit * 100.0
+                );
                 println!("  Width: ${:.2}", width);
-                println!("  Max Profit: ${:.2}", position.max_profit.unwrap_or(0.0) * 100.0);
-                println!("  Max Risk: ${:.2}", -position.max_loss.unwrap_or(0.0) * 100.0);
+                println!(
+                    "  Max Profit: ${:.2}",
+                    position.max_profit.unwrap_or(0.0) * 100.0
+                );
+                println!(
+                    "  Max Risk: ${:.2}",
+                    -position.max_loss.unwrap_or(0.0) * 100.0
+                );
 
                 // Calculate actual P&L
                 if let Some(exit1) = leg1.exit_price {

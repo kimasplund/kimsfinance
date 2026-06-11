@@ -96,7 +96,7 @@
 //! }
 //! ```
 
-use crate::binance::{aggregate_trades_to_candles, Candle, Timeframe, Trade};
+use crate::binance::{Candle, Timeframe, Trade, aggregate_trades_to_candles};
 use crate::indicators::core::{Indicator, IndicatorError, IndicatorResult};
 use ndarray::Array1;
 
@@ -490,7 +490,7 @@ pub fn calculate_indicator_from_trades<T: Indicator>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::indicators::{RSI, SMA, EMA};
+    use crate::indicators::{EMA, RSI, SMA};
 
     /// Helper to create test trade
     fn make_trade(price: f64, timestamp_ms: i64) -> Trade {

@@ -316,8 +316,14 @@ class PolygonOptionsDownloader:
 
 def main():
     """Main entry point"""
-    # API key (from user)
-    API_KEY = "MGM0KVdeloZ7t3RvyOTcsp1j4fB0y4dF"
+    import os
+
+    # API key from environment variable
+    API_KEY = os.environ.get("POLYGON_API_KEY")
+    if not API_KEY:
+        logger.error("POLYGON_API_KEY environment variable not set")
+        logger.info("Set it with: export POLYGON_API_KEY=your_api_key")
+        return
 
     downloader = PolygonOptionsDownloader(API_KEY)
 

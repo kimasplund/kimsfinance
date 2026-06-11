@@ -8,7 +8,10 @@ use std::time::Instant;
 fn main() {
     let n = 100_000;
     println!("\n{:=^80}", " GPU INDICATOR TIMING (100K CANDLES) ");
-    println!("{:<30} {:>15} {:>15}", "Indicator", "Time (μs)", "Time (ms)");
+    println!(
+        "{:<30} {:>15} {:>15}",
+        "Indicator", "Time (μs)", "Time (ms)"
+    );
     println!("{:-^80}", "");
 
     // Generate test data
@@ -138,7 +141,15 @@ fn main() {
     time_it!("Supertrend", {
         use kimsfinance_core::gpu::supertrend::supertrend_gpu;
         use std::sync::Arc;
-        supertrend_gpu(Arc::new(device.clone()), high.as_slice().unwrap(), low.as_slice().unwrap(), close.as_slice().unwrap(), 10, 3.0, None)
+        supertrend_gpu(
+            Arc::new(device.clone()),
+            high.as_slice().unwrap(),
+            low.as_slice().unwrap(),
+            close.as_slice().unwrap(),
+            10,
+            3.0,
+            None,
+        )
     });
 
     println!("\n{:=^80}", " COMPLETE ");

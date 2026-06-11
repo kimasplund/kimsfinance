@@ -111,7 +111,7 @@ impl WalkForwardConfig {
         let mut current_pos = 0;
 
         loop {
-            let train_start = if self.anchored { 0 } else { current_pos };
+            let _train_start = if self.anchored { 0 } else { current_pos };
             let train_end = current_pos + self.train_window;
             let test_end = train_end + self.test_window;
 

@@ -94,7 +94,7 @@ python scripts/download_options_daily_historical.py
 ### 3. Polygon.io
 **Status**: ❌ Free tier insufficient
 **Script**: `scripts/download_polygon_options.py`
-**API Key**: Provided (MGM0KVdeloZ7t3RvyOTcsp1j4fB0y4dF)
+**API Key**: Set via `POLYGON_API_KEY` environment variable
 
 **Free Tier Access**:
 - ✅ Options contracts list

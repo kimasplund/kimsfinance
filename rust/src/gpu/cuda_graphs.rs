@@ -275,11 +275,13 @@ impl IndicatorGraphBuilder {
 
         // End capture and instantiate graph
         // Use AUTO_FREE_ON_LAUNCH flag (value=1) for automatic memory management
-        let graph = stream.end_capture(
-            sys::CUgraphInstantiate_flags_enum::CUDA_GRAPH_INSTANTIATE_FLAG_AUTO_FREE_ON_LAUNCH
-        ).map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to end graph capture: {:?}", e))
-        })?;
+        let graph = stream
+            .end_capture(
+                sys::CUgraphInstantiate_flags_enum::CUDA_GRAPH_INSTANTIATE_FLAG_AUTO_FREE_ON_LAUNCH,
+            )
+            .map_err(|e| {
+                GpuError::ExecutionError(format!("Failed to end graph capture: {:?}", e))
+            })?;
 
         // Store graph
         match speed {
@@ -628,7 +630,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_graph_builder_lifecycle() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
+        let stream_mgr =
+            Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
 
         // Test builder creation
         let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone())
@@ -665,7 +668,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_graph_builder_multi_stream() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
+        let stream_mgr =
+            Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
 
         let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone())
             .expect("Failed to create graph builder");
@@ -704,7 +708,8 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_graph_builder_error_cases() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
+        let stream_mgr =
+            Arc::new(StreamManager::new(device.clone()).expect("StreamManager required"));
 
         // Cannot end capture before beginning
         let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();

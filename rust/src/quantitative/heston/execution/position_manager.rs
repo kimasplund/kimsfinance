@@ -230,7 +230,7 @@ impl PositionManager {
         &mut self,
         position_id: &str,
         exit_price: f64,
-        exit_time: i64,
+        _exit_time: i64,
         fee: f64,
     ) -> Result<f64, ExecutionError> {
         let position = self

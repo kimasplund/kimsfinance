@@ -456,7 +456,7 @@ cargo test --test tick_genetic_integration --features data-downloaders -- --igno
 
 1. **SIMD Optimization**
    - Vectorize tick processing loop (4-8x speedup potential)
-   - Use `packed_simd_2` for batch operations
+   - Use explicit SIMD for batch operations
    - Target: 20-50M ticks/sec
 
 2. **GPU Batch Processing**

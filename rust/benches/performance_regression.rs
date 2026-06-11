@@ -96,11 +96,7 @@ enum TestStatus {
 }
 
 impl TestResult {
-    fn new(
-        name: &str,
-        baseline: &IndicatorBaseline,
-        measured_us: u64,
-    ) -> Self {
+    fn new(name: &str, baseline: &IndicatorBaseline, measured_us: u64) -> Self {
         let baseline_us = baseline.baseline_us;
         let diff_percent = ((measured_us as f64 - baseline_us as f64) / baseline_us as f64) * 100.0;
 
@@ -161,26 +157,32 @@ fn main() {
 
     // Load baseline configuration
     let config_path = "benches/baselines.json";
-    let config_str = fs::read_to_string(config_path)
-        .unwrap_or_else(|e| {
-            eprintln!("ERROR: Failed to read {}: {}", config_path, e);
-            std::process::exit(2);
-        });
+    let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
+        eprintln!("ERROR: Failed to read {}: {}", config_path, e);
+        std::process::exit(2);
+    });
 
-    let config: BaselineConfig = serde_json::from_str(&config_str)
-        .unwrap_or_else(|e| {
-            eprintln!("ERROR: Failed to parse {}: {}", config_path, e);
-            std::process::exit(2);
-        });
+    let config: BaselineConfig = serde_json::from_str(&config_str).unwrap_or_else(|e| {
+        eprintln!("ERROR: Failed to parse {}: {}", config_path, e);
+        std::process::exit(2);
+    });
 
     println!("\nConfiguration:");
     println!("  Version: {}", config.version);
-    println!("  Hardware: {} ({})", config.hardware.gpu, config.hardware.cpu);
-    println!("  CUDA: {} (Compute {})", config.hardware.cuda, config.hardware.compute_capability);
-    println!("  Test: {} candles, {} warmup, {} measurement runs",
-             config.test_config.candles,
-             config.test_config.warmup_runs,
-             config.test_config.measurement_runs);
+    println!(
+        "  Hardware: {} ({})",
+        config.hardware.gpu, config.hardware.cpu
+    );
+    println!(
+        "  CUDA: {} (Compute {})",
+        config.hardware.cuda, config.hardware.compute_capability
+    );
+    println!(
+        "  Test: {} candles, {} warmup, {} measurement runs",
+        config.test_config.candles,
+        config.test_config.warmup_runs,
+        config.test_config.measurement_runs
+    );
 
     // Initialize GPU
     let device = GpuDevice::new().unwrap_or_else(|e| {
@@ -201,8 +203,10 @@ fn main() {
     let mut results = Vec::new();
 
     println!("\n{:-^100}", " RUNNING TESTS ");
-    println!("{:<25} {:>12} {:>12} {:>12} {:>15}",
-             "Indicator", "Baseline", "Measured", "Diff %", "Status");
+    println!(
+        "{:<25} {:>12} {:>12} {:>12} {:>15}",
+        "Indicator", "Baseline", "Measured", "Diff %", "Status"
+    );
     println!("{:-^100}", "");
 
     // ========================================================================
@@ -220,7 +224,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "roc" => {
                 use kimsfinance_core::gpu::roc::roc_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -228,7 +232,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "sma" => {
                 use kimsfinance_core::gpu::sma::sma_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -236,7 +240,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "wma" => {
                 use kimsfinance_core::gpu::wma::wma_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -244,7 +248,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "vwma" => {
                 use kimsfinance_core::gpu::vwma::vwma_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -252,7 +256,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             _ => {
                 eprintln!("WARNING: Unknown indicator: {}", name);
                 continue;
@@ -279,7 +283,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "cci" => {
                 use kimsfinance_core::gpu::cci::cci_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -287,7 +291,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "donchian" => {
                 use kimsfinance_core::gpu::donchian::donchian_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -295,7 +299,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "stochastic" => {
                 use kimsfinance_core::gpu::stochastic::stochastic_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -303,7 +307,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "elder_ray" => {
                 use kimsfinance_core::gpu::elder_ray::elder_ray_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -311,7 +315,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "cmf" => {
                 use kimsfinance_core::gpu::cmf::cmf_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -319,7 +323,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             _ => {
                 eprintln!("WARNING: Unknown indicator: {}", name);
                 continue;
@@ -346,7 +350,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "rsi" => {
                 use kimsfinance_core::gpu::rsi::rsi_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -354,7 +358,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             "rsi_sync" => {
                 use kimsfinance_core::gpu::rsi_sync::rsi_gpu_sync;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -362,7 +366,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             _ => {
                 eprintln!("WARNING: Unknown indicator: {}", name);
                 continue;
@@ -388,7 +392,7 @@ fn main() {
                     let _ = macd_cpu(&close, 12, 26, 9)?;
                     Ok(())
                 })
-            },
+            }
             "obv" => {
                 use kimsfinance_core::gpu::obv::obv_gpu;
                 benchmark_indicator(name, warmup, measurement, || {
@@ -396,7 +400,7 @@ fn main() {
                     device.synchronize()?;
                     Ok(())
                 })
-            },
+            }
             _ => {
                 eprintln!("WARNING: Unknown indicator: {}", name);
                 continue;
@@ -418,10 +422,22 @@ fn main() {
 
     println!("\n{:=^100}", " SUMMARY ");
 
-    let pass_count = results.iter().filter(|r| r.status == TestStatus::Pass).count();
-    let warn_count = results.iter().filter(|r| r.status == TestStatus::Warn).count();
-    let fail_count = results.iter().filter(|r| r.status == TestStatus::Fail).count();
-    let improve_count = results.iter().filter(|r| r.status == TestStatus::Improvement).count();
+    let pass_count = results
+        .iter()
+        .filter(|r| r.status == TestStatus::Pass)
+        .count();
+    let warn_count = results
+        .iter()
+        .filter(|r| r.status == TestStatus::Warn)
+        .count();
+    let fail_count = results
+        .iter()
+        .filter(|r| r.status == TestStatus::Fail)
+        .count();
+    let improve_count = results
+        .iter()
+        .filter(|r| r.status == TestStatus::Improvement)
+        .count();
 
     println!("\nTest Results:");
     println!("  ✅ Pass: {} / {}", pass_count, results.len());
@@ -433,8 +449,10 @@ fn main() {
         println!("\n❌ PERFORMANCE REGRESSION DETECTED");
         println!("\nFailed Tests:");
         for result in results.iter().filter(|r| r.status == TestStatus::Fail) {
-            println!("  - {}: {:.1}% slower than baseline ({} μs -> {} μs)",
-                     result.name, result.diff_percent, result.baseline_us, result.measured_us);
+            println!(
+                "  - {}: {:.1}% slower than baseline ({} μs -> {} μs)",
+                result.name, result.diff_percent, result.baseline_us, result.measured_us
+            );
         }
         std::process::exit(1);
     }
@@ -443,17 +461,24 @@ fn main() {
         println!("\n⚠️  WARNINGS DETECTED");
         println!("\nWarning Tests:");
         for result in results.iter().filter(|r| r.status == TestStatus::Warn) {
-            println!("  - {}: {:.1}% slower than baseline ({} μs -> {} μs)",
-                     result.name, result.diff_percent, result.baseline_us, result.measured_us);
+            println!(
+                "  - {}: {:.1}% slower than baseline ({} μs -> {} μs)",
+                result.name, result.diff_percent, result.baseline_us, result.measured_us
+            );
         }
     }
 
     if improve_count > 0 {
         println!("\n⚡ PERFORMANCE IMPROVEMENTS DETECTED");
         println!("\nImproved Tests:");
-        for result in results.iter().filter(|r| r.status == TestStatus::Improvement) {
-            println!("  - {}: {:.1}% faster than baseline ({} μs -> {} μs)",
-                     result.name, -result.diff_percent, result.baseline_us, result.measured_us);
+        for result in results
+            .iter()
+            .filter(|r| r.status == TestStatus::Improvement)
+        {
+            println!(
+                "  - {}: {:.1}% faster than baseline ({} μs -> {} μs)",
+                result.name, -result.diff_percent, result.baseline_us, result.measured_us
+            );
         }
     }
 
@@ -469,10 +494,8 @@ fn print_result(result: &TestResult) {
         TestStatus::Improvement => "⚡ FASTER",
     };
 
-    println!("{:<25} {:>12} {:>12} {:>11.1}% {:>15}",
-             result.name,
-             result.baseline_us,
-             result.measured_us,
-             result.diff_percent,
-             status_str);
+    println!(
+        "{:<25} {:>12} {:>12} {:>11.1}% {:>15}",
+        result.name, result.baseline_us, result.measured_us, result.diff_percent, status_str
+    );
 }

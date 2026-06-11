@@ -26,10 +26,10 @@
 //! **Dependencies**: CUDA kernels must be implemented first (Task 1)
 //! **Estimated Run Time**: 15-30 minutes (full suite)
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 
 mod test_data_generator;
-use test_data_generator::{generate_realistic_ohlcv, DataGeneratorConfig, OHLCVData};
+use test_data_generator::{DataGeneratorConfig, OHLCVData, generate_realistic_ohlcv};
 
 // NOTE: These imports will be available after Task 1-2 complete
 // Commenting out for now so file compiles in prep stage
@@ -42,16 +42,13 @@ fn benchmark_configurations() -> Vec<(&'static str, usize, usize)> {
         // Small configs (quick validation)
         ("small_10x1k", 10, 1000),
         ("small_10x10k", 10, 10000),
-
         // Medium configs (typical use case)
         ("medium_100x1k", 100, 1000),
         ("medium_100x10k", 100, 10000),
-
         // Large configs (genetic optimization)
         ("large_500x10k", 500, 10000),
         ("large_1000x1k", 1000, 1000),
         ("large_1000x10k", 1000, 10000),
-
         // Stress test (VRAM limits)
         ("stress_1000x50k", 1000, 50000),
         ("stress_2000x10k", 2000, 10000),
@@ -60,17 +57,17 @@ fn benchmark_configurations() -> Vec<(&'static str, usize, usize)> {
 
 /// Generate random strategy parameters for RSI crossover
 fn generate_rsi_parameters(n_strategies: usize, seed: u64) -> Vec<Vec<f64>> {
-    use rand::prelude::*;
     use rand::SeedableRng;
+    use rand::prelude::*;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
     (0..n_strategies)
         .map(|_| {
             vec![
-                rng.gen_range(10.0..20.0),  // RSI period (10-20)
-                rng.gen_range(20.0..40.0),  // Buy threshold (oversold)
-                rng.gen_range(60.0..80.0),  // Sell threshold (overbought)
+                rng.gen_range(10.0..20.0), // RSI period (10-20)
+                rng.gen_range(20.0..40.0), // Buy threshold (oversold)
+                rng.gen_range(60.0..80.0), // Sell threshold (overbought)
             ]
         })
         .collect()
@@ -78,16 +75,16 @@ fn generate_rsi_parameters(n_strategies: usize, seed: u64) -> Vec<Vec<f64>> {
 
 /// Generate random strategy parameters for MA crossover
 fn generate_ma_parameters(n_strategies: usize, seed: u64) -> Vec<Vec<f64>> {
-    use rand::prelude::*;
     use rand::SeedableRng;
+    use rand::prelude::*;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
     (0..n_strategies)
         .map(|_| {
             vec![
-                rng.gen_range(5.0..20.0),   // Fast MA period
-                rng.gen_range(20.0..50.0),  // Slow MA period
+                rng.gen_range(5.0..20.0),  // Fast MA period
+                rng.gen_range(20.0..50.0), // Slow MA period
             ]
         })
         .collect()
@@ -221,9 +218,10 @@ fn bench_batch_backtest_cpu_baseline(c: &mut Criterion) {
                     // black_box(results);
 
                     // Placeholder: Simulate O(N) work
-                    let _result: Vec<f64> = params.iter().map(|p| {
-                        data.close.iter().sum::<f64>() * p[0]
-                    }).collect();
+                    let _result: Vec<f64> = params
+                        .iter()
+                        .map(|p| data.close.iter().sum::<f64>() * p[0])
+                        .collect();
                     black_box(_result);
                 });
             },
@@ -315,27 +313,23 @@ fn bench_throughput(c: &mut Criterion) {
     for (name, n_strategies) in throughput_configs {
         let params = generate_rsi_parameters(n_strategies, 77777);
 
-        group.bench_with_input(
-            BenchmarkId::from_parameter(name),
-            &n_strategies,
-            |b, _| {
-                b.iter(|| {
-                    // TODO: Uncomment after Task 1-2 complete
-                    // let device = GpuDevice::new().expect("GPU not available");
-                    // let sweep = BatchBacktestSweep::new(&device)
-                    //     .strategy_type(StrategyType::RsiCrossover)
-                    //     .data_ohlcv(&data.open, &data.high, &data.low, &data.close, &data.volume)
-                    //     .parameters_batch(&params)
-                    //     .execute()
-                    //     .expect("GPU batch backtest failed");
-                    //
-                    // black_box(sweep.results);
+        group.bench_with_input(BenchmarkId::from_parameter(name), &n_strategies, |b, _| {
+            b.iter(|| {
+                // TODO: Uncomment after Task 1-2 complete
+                // let device = GpuDevice::new().expect("GPU not available");
+                // let sweep = BatchBacktestSweep::new(&device)
+                //     .strategy_type(StrategyType::RsiCrossover)
+                //     .data_ohlcv(&data.open, &data.high, &data.low, &data.close, &data.volume)
+                //     .parameters_batch(&params)
+                //     .execute()
+                //     .expect("GPU batch backtest failed");
+                //
+                // black_box(sweep.results);
 
-                    // Placeholder
-                    black_box(data.close.iter().sum::<f64>());
-                });
-            },
-        );
+                // Placeholder
+                black_box(data.close.iter().sum::<f64>());
+            });
+        });
     }
 
     group.finish();
@@ -360,35 +354,35 @@ criterion_main!(benches);
 // Post-Benchmark Analysis Instructions
 // ============================================================================
 
-/// **After running benchmarks**:
-///
-/// 1. **Generate HTML report**:
-///    ```bash
-///    cargo bench --bench batch_backtest_benchmark
-///    firefox target/criterion/batch_backtest_gpu/report/index.html
-///    ```
-///
-/// 2. **Monitor GPU utilization** (run in parallel terminal):
-///    ```bash
-///    nvidia-smi dmon -s u
-///    ```
-///
-/// 3. **Measure VRAM usage** (run during bench_vram_scaling):
-///    ```bash
-///    watch -n 0.5 nvidia-smi
-///    ```
-///
-/// 4. **Calculate speedup**:
-///    - GPU time: Read from criterion report (e.g., 250ms)
-///    - CPU time: Read from cpu_baseline report (e.g., 10,000ms)
-///    - Speedup: CPU time / GPU time (e.g., 40x)
-///
-/// 5. **Update performance report**:
-///    - Fill in `benchmarks/BATCH_BACKTEST_RESULTS.md`
-///    - Include confidence intervals from criterion
-///    - Document VRAM usage per configuration
-///
-/// 6. **Statistical validation**:
-///    ```bash
-///    python scripts/validate_batch_accuracy.py
-///    ```
+// **After running benchmarks**:
+//
+// 1. **Generate HTML report**:
+//    ```bash
+//    cargo bench --bench batch_backtest_benchmark
+//    firefox target/criterion/batch_backtest_gpu/report/index.html
+//    ```
+//
+// 2. **Monitor GPU utilization** (run in parallel terminal):
+//    ```bash
+//    nvidia-smi dmon -s u
+//    ```
+//
+// 3. **Measure VRAM usage** (run during bench_vram_scaling):
+//    ```bash
+//    watch -n 0.5 nvidia-smi
+//    ```
+//
+// 4. **Calculate speedup**:
+//    - GPU time: Read from criterion report (e.g., 250ms)
+//    - CPU time: Read from cpu_baseline report (e.g., 10,000ms)
+//    - Speedup: CPU time / GPU time (e.g., 40x)
+//
+// 5. **Update performance report**:
+//    - Fill in `benchmarks/BATCH_BACKTEST_RESULTS.md`
+//    - Include confidence intervals from criterion
+//    - Document VRAM usage per configuration
+//
+// 6. **Statistical validation**:
+//    ```bash
+//    python scripts/validate_batch_accuracy.py
+//    ```

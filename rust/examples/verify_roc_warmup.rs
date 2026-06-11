@@ -115,18 +115,12 @@ fn main() {
         (
             "Cold run includes compilation",
             cold_time.as_secs_f64() * 1000.0 > 50.0,
-            format!(
-                "{:.2}ms > 50ms",
-                cold_time.as_secs_f64() * 1000.0
-            ),
+            format!("{:.2}ms > 50ms", cold_time.as_secs_f64() * 1000.0),
         ),
         (
             "Warm run is much faster",
             warm_time.as_secs_f64() * 1000.0 < 5.0,
-            format!(
-                "{:.3}ms < 5ms",
-                warm_time.as_secs_f64() * 1000.0
-            ),
+            format!("{:.3}ms < 5ms", warm_time.as_secs_f64() * 1000.0),
         ),
         (
             "Speedup is significant",
@@ -135,8 +129,7 @@ fn main() {
         ),
         (
             "Compilation overhead ~50-150ms",
-            compilation_overhead * 1000.0 > 50.0
-                && compilation_overhead * 1000.0 < 200.0,
+            compilation_overhead * 1000.0 > 50.0 && compilation_overhead * 1000.0 < 200.0,
             format!(
                 "{:.2}ms in range [50, 200]ms",
                 compilation_overhead * 1000.0
@@ -160,8 +153,14 @@ fn main() {
 
     println!("\nMemory transfers:");
     println!("  Data size: {:.2} MB per array", data_size_mb);
-    println!("  H2D (close): 1 array × {:.2} MB = {:.2} MB", data_size_mb, data_size_mb);
-    println!("  D2H (roc): 1 array × {:.2} MB = {:.2} MB", data_size_mb, data_size_mb);
+    println!(
+        "  H2D (close): 1 array × {:.2} MB = {:.2} MB",
+        data_size_mb, data_size_mb
+    );
+    println!(
+        "  D2H (roc): 1 array × {:.2} MB = {:.2} MB",
+        data_size_mb, data_size_mb
+    );
     println!("  Total transfer: {:.2} MB", total_transfer_mb);
 
     let pcie_bandwidth = 32.0; // GB/s for PCIe 4.0 x16
@@ -174,7 +173,10 @@ fn main() {
     );
     println!("  Kernel execution: ~0.1-0.2ms");
     println!("  Overhead (sync, etc): ~0.1ms");
-    println!("  Total estimated: ~{:.3}ms", (estimated_transfer_time + 0.0003) * 1000.0);
+    println!(
+        "  Total estimated: ~{:.3}ms",
+        (estimated_transfer_time + 0.0003) * 1000.0
+    );
 
     let actual_ms = warm_time.as_secs_f64() * 1000.0;
     let estimated_ms = (estimated_transfer_time + 0.0003) * 1000.0;
@@ -196,8 +198,10 @@ fn main() {
     println!("   - Report both cold (with compilation) and warm (actual) times");
     println!();
     println!("2. UPDATE DOCUMENTATION:");
-    println!("   - Correct ROC time: 135.8ms → {:.3}ms ({:.0}x improvement)",
-             actual_ms, speedup);
+    println!(
+        "   - Correct ROC time: 135.8ms → {:.3}ms ({:.0}x improvement)",
+        actual_ms, speedup
+    );
     println!("   - Add note about compilation overhead to all GPU indicators");
     println!();
     println!("3. CONSIDER AOT COMPILATION:");
@@ -212,8 +216,10 @@ fn main() {
     if speedup > 20.0 {
         println!("✅ HYPOTHESIS CONFIRMED!");
         println!("   ROC's apparent slowness is due to kernel compilation overhead.");
-        println!("   Actual warm performance: {:.3}ms ({:.1}x faster than cold)",
-                 actual_ms, speedup);
+        println!(
+            "   Actual warm performance: {:.3}ms ({:.1}x faster than cold)",
+            actual_ms, speedup
+        );
     } else {
         println!("⚠️  UNEXPECTED RESULT!");
         println!("   Speedup ({:.1}x) is less than expected (>20x).", speedup);

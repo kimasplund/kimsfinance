@@ -1,80 +1,96 @@
-//! GPU-Accelerated VWAP (Volume-Weighted Average Price)
+//! GPU-Accelerated VWAP (Volume-Weighted Average Price) - CPU-GPU Hybrid
 //!
-//! Provides 8-15x speedup over CPU implementation for large datasets.
+//! Provides 8-15x speedup over CPU-only implementation for large datasets.
 //!
 //! VWAP is an intraday benchmark that calculates the cumulative volume-weighted
 //! average price. It's used by traders to compare current price to average traded price.
 //!
+//! # Hybrid Architecture
+//!
+//! - **GPU**: One fused kernel computes TPV = ((high + low + close) / 3) * volume,
+//!   eliminating the materialized typical-price intermediate buffer
+//! - **CPU**: The two cumulative sums (TPV and volume) and the division run in
+//!   f64 on the host
+//!
+//! # Why Hybrid?
+//!
+//! Cumulative sums are sequential (O(n) with loop-carried dependencies). The
+//! previous implementation ran them as a single-thread GPU kernel - one GPU
+//! thread at ~1.2GHz looping over the whole array - which is strictly slower
+//! than a single CPU core (~5GHz, 1ns L1 latency). See `vwap_anchored.rs` for
+//! the same hybrid rationale and measurements. The CPU stage is also exactly
+//! verifiable against the CPU reference (`indicators/volume.rs`).
+//!
 //! # Algorithm
 //!
-//! 1. Typical Price = (high + low + close) / 3
-//! 2. VWAP = cumsum(Typical Price * volume) / cumsum(volume)
+//! 1. **GPU** (parallel): TPV = ((high + low + close) / 3) * volume
+//! 2. **CPU** (sequential): VWAP[i] = cumsum(TPV)[i] / cumsum(volume)[i]
 //!
 //! # Classification
 //!
-//! **MEDIUM** indicator - Two-pass approach (parallel + sequential)
+//! **FAST** indicator - single fused parallel kernel + trivial CPU pass
 
 use super::device::{GpuDevice, GpuError};
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use crate::gpu::compile::compile_ptx_optimized_cached;
+use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 
-/// CUDA kernel source code for VWAP calculation
+/// CUDA kernel source code for the fused TPV calculation.
 ///
-/// Two-step approach:
-/// 1. Calculate typical price in parallel
-/// 2. Calculate cumulative VWAP sequentially (inherent dependency)
+/// NVRTC-compatible: no `#include` directives, extern "C" entry point.
 const VWAP_KERNEL: &str = r#"
-// Define constants directly to avoid header dependencies with NVRTC
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-
-// Kernel 1: Calculate typical price (parallel)
-// Typical Price = (high + low + close) / 3
-extern "C" __global__ void typical_price_kernel(
+// Fused kernel: TPV = typical price * volume in one pass (PARALLEL)
+//
+// Division by 3.0 (not multiplication by a reciprocal constant) matches the
+// CPU reference (indicators/volume.rs, VWAP::calculate_hlcv) per element.
+// FP64 is required: the host accumulates these products into f64 cumulative
+// sums that must agree with the CPU reference; the kernel is memory-bound, so
+// Ada's 1:64 FP64 throughput is not the bottleneck.
+extern "C" __global__ void vwap_tpv_kernel(
     const double* __restrict__ high,
     const double* __restrict__ low,
     const double* __restrict__ close,
-    double* __restrict__ typical_price,
+    const double* __restrict__ volume,
+    double* __restrict__ tpv,
     int n
 ) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < n) {
-        typical_price[idx] = (high[idx] + low[idx] + close[idx]) / 3.0;
-    }
-}
-
-// Kernel 2: Calculate cumulative VWAP (sequential)
-// VWAP[i] = cumsum(typical_price * volume) / cumsum(volume)
-//
-// This kernel is sequential by design - each element depends on previous cumulative sums.
-// Launched with a single thread to handle the sequential dependency.
-extern "C" __global__ void vwap_cumulative_kernel(
-    const double* __restrict__ typical_price,
-    const double* __restrict__ volume,
-    double* __restrict__ vwap,
-    int n
-) {
-    // Only thread 0 does the work (sequential algorithm)
-    if (threadIdx.x != 0 || blockIdx.x != 0) return;
-
-    double cumulative_tpv = 0.0;  // cumulative typical_price * volume
-    double cumulative_vol = 0.0;  // cumulative volume
-
-    for (int i = 0; i < n; i++) {
-        cumulative_tpv += typical_price[i] * volume[i];
-        cumulative_vol += volume[i];
-
-        // Avoid division by zero
-        if (cumulative_vol > 1e-10) {
-            vwap[i] = cumulative_tpv / cumulative_vol;
-        } else {
-            vwap[i] = CUDART_NAN;
-        }
+        tpv[idx] = ((high[idx] + low[idx] + close[idx]) / 3.0) * volume[idx];
     }
 }
 "#;
+
+/// CPU stage of the hybrid VWAP: cumulative sums and division in f64.
+///
+/// `VWAP[i] = Σ tpv[0..=i] / Σ volume[0..=i]`; NaN while the cumulative volume
+/// is effectively zero (`<= 1e-10`, preserving the semantics of the removed
+/// single-thread GPU recurrence kernel).
+///
+/// Sequential O(n) with a loop-carried dependency - a single CPU core finishes
+/// this in tens of microseconds for 100K elements, faster than any 1-thread
+/// GPU loop (see `vwap_anchored.rs` for the measured hybrid rationale).
+fn calculate_vwap_from_tpv_cpu(tpv: &[f64], volume: &[f64]) -> Vec<f64> {
+    debug_assert_eq!(tpv.len(), volume.len());
+
+    let mut vwap = vec![f64::NAN; tpv.len()];
+    let mut cumulative_tpv = 0.0_f64;
+    let mut cumulative_vol = 0.0_f64;
+
+    for i in 0..tpv.len() {
+        cumulative_tpv += tpv[i];
+        cumulative_vol += volume[i];
+
+        // Avoid division by zero (NaN until volume accumulates)
+        if cumulative_vol > 1e-10 {
+            vwap[i] = cumulative_tpv / cumulative_vol;
+        }
+    }
+
+    vwap
+}
 
 /// GPU-accelerated VWAP (Volume-Weighted Average Price)
 ///
@@ -93,16 +109,21 @@ extern "C" __global__ void vwap_cumulative_kernel(
 ///
 /// # Algorithm
 ///
-/// 1. **Typical Price** (parallel): TP = (high + low + close) / 3
-/// 2. **Cumulative VWAP** (sequential): VWAP[i] = Σ(TP * volume) / Σ(volume)
+/// 1. **TPV** (GPU, parallel, fused): TPV = ((high + low + close) / 3) * volume
+/// 2. **Cumulative VWAP** (CPU, sequential): VWAP[i] = Σ TPV / Σ volume
 ///
-/// # Performance (Async v0.2.1)
+/// # Performance
 ///
-/// Expected speedup: **9-17x** over CPU for n > 10,000 (~11% faster with async pinned memory)
+/// Expected speedup: **9-17x** over CPU-only for n > 10,000.
 ///
-/// Stream concurrency: Enables parallel execution with other indicators
+/// The fused kernel removes the materialized typical-price intermediate (one
+/// n*8B device buffer plus a kernel launch), and the CPU cumulative-sum stage
+/// replaces the previous single-thread GPU recurrence, which serialized the
+/// whole pipeline on one GPU thread.
 ///
-/// Classification: **MEDIUM** indicator (two-kernel approach)
+/// Stream concurrency: enables parallel execution with other indicators.
+///
+/// Classification: **FAST** indicator (single fused kernel + CPU pass)
 ///
 /// # Errors
 ///
@@ -160,18 +181,10 @@ pub fn vwap_gpu(
         .load_module(ptx)
         .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
 
-    // Get kernel functions
-    let tp_kernel = module
-        .load_function("typical_price_kernel")
-        .map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to load typical_price kernel: {:?}", e))
-        })?;
-
-    let vwap_kernel = module
-        .load_function("vwap_cumulative_kernel")
-        .map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to load vwap_cumulative kernel: {:?}", e))
-        })?;
+    // Get kernel function
+    let tpv_kernel = module
+        .load_function("vwap_tpv_kernel")
+        .map_err(|e| GpuError::ExecutionError(format!("Failed to load vwap_tpv kernel: {:?}", e)))?;
 
     // Select stream: use provided stream or fallback to device.stream
     let exec_stream = stream.unwrap_or(&device.stream);
@@ -207,72 +220,47 @@ pub fn vwap_gpu(
     pool.release(pinned_volume);
     drop(pool);
 
-    // Allocate output buffers
-    let mut d_typical_price = device.alloc_buffer(n)?;
-    let mut d_vwap = device.alloc_buffer(n)?;
+    // Allocate output buffer
+    let mut d_tpv = device.alloc_buffer(n)?;
 
-    // Launch typical price kernel (parallel) on selected stream
+    // === Step 2: Launch fused TPV kernel (parallel) on selected stream ===
     let n_i32 = n as i32;
 
-    let mut tp_builder = exec_stream.launch_builder(&tp_kernel);
-    tp_builder.arg(&d_high);
-    tp_builder.arg(&d_low);
-    tp_builder.arg(&d_close);
-    tp_builder.arg(&mut d_typical_price);
-    tp_builder.arg(&n_i32);
+    let mut tpv_builder = exec_stream.launch_builder(&tpv_kernel);
+    tpv_builder.arg(&d_high);
+    tpv_builder.arg(&d_low);
+    tpv_builder.arg(&d_close);
+    tpv_builder.arg(&d_volume);
+    tpv_builder.arg(&mut d_tpv);
+    tpv_builder.arg(&n_i32);
 
-    let tp_config = LaunchConfig::for_num_elems(n as u32);
+    let tpv_config = LaunchConfig::for_num_elems(n as u32);
     unsafe {
-        tp_builder.launch(tp_config).map_err(|e| {
-            GpuError::ExecutionError(format!("Typical price kernel launch failed: {:?}", e))
+        tpv_builder.launch(tpv_config).map_err(|e| {
+            GpuError::ExecutionError(format!("TPV kernel launch failed: {:?}", e))
         })?;
     }
 
-    // Synchronize on selected stream before launching VWAP kernel
-    exec_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!(
-            "Typical price kernel synchronization failed: {:?}",
-            e
-        ))
-    })?;
+    // === Step 3: D2H - Asynchronously copy TPV back ===
+    // (the D2H is issued on the same stream as the kernel, so no host sync is
+    // needed between the launch and the copy - same-stream work is ordered)
+    let mut pinned_tpv = device.pinned_pool.lock().acquire(n)?;
 
-    // Launch VWAP cumulative kernel (single thread for sequential) on selected stream
-    let mut vwap_builder = exec_stream.launch_builder(&vwap_kernel);
-    vwap_builder.arg(&d_typical_price);
-    vwap_builder.arg(&d_volume);
-    vwap_builder.arg(&mut d_vwap);
-    vwap_builder.arg(&n_i32);
-
-    // Single thread kernel (sequential algorithm)
-    let vwap_config = LaunchConfig {
-        grid_dim: (1, 1, 1),
-        block_dim: (1, 1, 1),
-        shared_mem_bytes: 0,
-    };
-
-    unsafe {
-        vwap_builder.launch(vwap_config).map_err(|e| {
-            GpuError::ExecutionError(format!("VWAP kernel launch failed: {:?}", e))
-        })?;
-    }
-
-    // === Step 3: D2H - Asynchronously copy results back ===
-    // Acquire pinned buffer for async D2H transfer
-    let mut pinned_vwap = device.pinned_pool.lock().acquire(n)?;
-
-    // Async D2H transfer
-    exec_stream.memcpy_dtoh(&d_vwap, &mut pinned_vwap.as_mut_slice()[..n])?;
+    exec_stream.memcpy_dtoh(&d_tpv, &mut pinned_tpv.as_mut_slice()[..n])?;
 
     // Synchronize stream to ensure D2H copy is complete before CPU access
     exec_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("VWAP kernel synchronization failed: {:?}", e))
+        GpuError::SynchronizationError(format!("TPV D2H synchronization failed: {:?}", e))
     })?;
 
-    // Copy to output array
-    let vwap_vec = pinned_vwap.as_slice()[..n].to_vec();
+    // === Step 4: CPU - cumulative sums and division in f64 ===
+    let vwap_vec = calculate_vwap_from_tpv_cpu(
+        &pinned_tpv.as_slice()[..n],
+        volume.as_slice().unwrap(),
+    );
 
     // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_vwap);
+    device.pinned_pool.lock().release(pinned_tpv);
 
     Ok(Array1::from_vec(vwap_vec))
 }
@@ -281,6 +269,89 @@ pub fn vwap_gpu(
 mod tests {
     use super::*;
     use ndarray::arr1;
+
+    // ====================================================================
+    // Host-side tests (CI-runnable, no GPU required)
+    // ====================================================================
+
+    #[test]
+    fn test_vwap_kernel_source_nvrtc_compatible() {
+        assert!(
+            !VWAP_KERNEL.contains("#include"),
+            "NVRTC source must not contain #include directives"
+        );
+        assert!(
+            !VWAP_KERNEL.contains("NULL"),
+            "NVRTC source must not use NULL (not defined without headers)"
+        );
+        assert!(VWAP_KERNEL.contains("extern \"C\" __global__ void vwap_tpv_kernel"));
+    }
+
+    #[test]
+    fn test_calculate_vwap_from_tpv_cpu_basic() {
+        // tp = 10, 12, 11 with volumes 100, 200, 300
+        let tpv = [10.0 * 100.0, 12.0 * 200.0, 11.0 * 300.0];
+        let volume = [100.0, 200.0, 300.0];
+
+        let vwap = calculate_vwap_from_tpv_cpu(&tpv, &volume);
+
+        assert!((vwap[0] - 10.0).abs() < 1e-12);
+        // (1000 + 2400) / 300 = 11.3333...
+        assert!((vwap[1] - 3400.0 / 300.0).abs() < 1e-12);
+        // (1000 + 2400 + 3300) / 600 = 11.1666...
+        assert!((vwap[2] - 6700.0 / 600.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_calculate_vwap_from_tpv_cpu_zero_volume() {
+        // NaN while cumulative volume is zero, valid once volume appears
+        let tpv = [0.0, 0.0, 1100.0, 1200.0];
+        let volume = [0.0, 0.0, 100.0, 100.0];
+
+        let vwap = calculate_vwap_from_tpv_cpu(&tpv, &volume);
+
+        assert!(vwap[0].is_nan(), "VWAP should be NaN with zero cum volume");
+        assert!(vwap[1].is_nan(), "VWAP should be NaN with zero cum volume");
+        assert!((vwap[2] - 11.0).abs() < 1e-12);
+        assert!((vwap[3] - 2300.0 / 200.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cpu_stage_matches_cpu_reference() {
+        // The hybrid's CPU stage must reproduce the CPU reference
+        // (indicators/volume.rs VWAP::calculate_hlcv) when fed TPV values
+        // computed with the same per-element arithmetic as the fused kernel.
+        use crate::indicators::volume::VWAP;
+
+        let high = arr1(&[101.0, 102.0, 103.0, 102.5, 104.0]);
+        let low = arr1(&[99.0, 100.0, 101.0, 100.5, 102.0]);
+        let close = arr1(&[100.0, 101.0, 102.0, 101.5, 103.0]);
+        let volume = arr1(&[1000.0, 1200.0, 1100.0, 1300.0, 1050.0]);
+
+        // Same arithmetic as vwap_tpv_kernel: ((h + l + c) / 3.0) * v
+        let tpv: Vec<f64> = (0..high.len())
+            .map(|i| ((high[i] + low[i] + close[i]) / 3.0) * volume[i])
+            .collect();
+
+        let hybrid = calculate_vwap_from_tpv_cpu(&tpv, volume.as_slice().unwrap());
+        let reference = VWAP::new()
+            .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
+            .expect("CPU reference VWAP failed");
+
+        for i in 0..high.len() {
+            assert!(
+                (hybrid[i] - reference[i]).abs() < 1e-12,
+                "Hybrid CPU stage diverges from CPU reference at {}: {} vs {}",
+                i,
+                hybrid[i],
+                reference[i]
+            );
+        }
+    }
+
+    // ====================================================================
+    // GPU tests (require a CUDA device)
+    // ====================================================================
 
     #[test]
     #[ignore] // Requires GPU

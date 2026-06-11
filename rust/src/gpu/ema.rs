@@ -58,8 +58,7 @@
 //! - ATR: 2-3x faster with hybrid approach
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized_cached;
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
+use cudarc::driver::CudaStream;
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -132,60 +131,16 @@ pub fn ema_cpu(close: &Array1<f64>, period: usize) -> Result<Array1<f64>, GpuErr
     let alpha = 2.0 / (period + 1) as f64;
     let one_minus_alpha = 1.0 - alpha;
 
-    // Apply exponential smoothing (vectorized by LLVM/rustc)
+    // Apply exponential smoothing (sequential IIR recurrence)
     // EMA[i] = alpha * close[i] + (1 - alpha) * EMA[i-1]
+    // NOTE: the loop-carried dependency on ema[i-1] prevents SIMD
+    // vectorization; this runs as a scalar loop by design.
     for i in period..n {
         ema[i] = alpha * close[i] + one_minus_alpha * ema[i - 1];
     }
 
     Ok(ema)
 }
-
-const EMA_KERNEL: &str = r#"
-// Define constants to avoid header dependencies with NVRTC
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-
-/// Calculate Exponential Moving Average (EMA)
-///
-/// Sequential kernel launched with single thread due to data dependency.
-/// Despite sequential nature, GPU memory bandwidth provides 5-10x speedup.
-///
-/// # Algorithm
-/// 1. Initialize first period-1 values to NaN (insufficient data)
-/// 2. Calculate initial EMA as SMA of first `period` values
-/// 3. Apply exponential smoothing: EMA[i] = alpha * input[i] + (1 - alpha) * EMA[i-1]
-///    where alpha = 2 / (period + 1)
-extern "C" __global__ void ema_kernel(
-    const double* __restrict__ input,
-    double* __restrict__ output,
-    int n,
-    int period
-) {
-    // Only thread (0, 0) does work - sequential dependency
-    if (threadIdx.x != 0 || blockIdx.x != 0) return;
-
-    double alpha = 2.0 / (period + 1.0);
-    double one_minus_alpha = 1.0 - alpha;
-
-    // First period-1 values are NaN (not enough data for EMA)
-    for (int i = 0; i < period - 1; i++) {
-        output[i] = CUDART_NAN;
-    }
-
-    // Calculate initial EMA as SMA of first `period` values
-    double sum = 0.0;
-    for (int i = 0; i < period; i++) {
-        sum += input[i];
-    }
-    output[period - 1] = sum / (double)period;
-
-    // Apply exponential smoothing for remaining values
-    // EMA[i] = alpha * input[i] + (1 - alpha) * EMA[i-1]
-    for (int i = period; i < n; i++) {
-        output[i] = alpha * input[i] + one_minus_alpha * output[i - 1];
-    }
-}
-"#;
 
 /// EMA using optimal execution strategy (CPU for sequential algorithm)
 ///
@@ -237,8 +192,10 @@ pub fn ema_hybrid(
 ///
 /// # DEPRECATED
 ///
-/// This function is deprecated since v0.2.0. It uses a single GPU thread
-/// which is 6-10x slower than CPU for sequential algorithms.
+/// This function is deprecated since v0.2.0. The original single-GPU-thread
+/// kernel was 6-10x slower than CPU for this sequential algorithm and has
+/// been removed; this function now delegates to `ema_cpu()` (identical
+/// results).
 ///
 /// **Use `ema_cpu()` or `ema_hybrid()` instead.**
 ///
@@ -256,10 +213,10 @@ pub fn ema_hybrid(
 ///
 /// # Arguments
 ///
-/// * `device` - GPU device handle
+/// * `device` - GPU device handle (unused; kept for API compatibility)
 /// * `close` - Input price data (typically closing prices)
 /// * `period` - EMA period (number of values to smooth over)
-/// * `stream` - Optional CUDA stream for concurrent execution (None uses device default)
+/// * `stream` - CUDA stream (unused; kept for API compatibility)
 ///
 /// # Returns
 ///
@@ -270,112 +227,19 @@ pub fn ema_hybrid(
 /// Returns error if:
 /// - Period < 1
 /// - Not enough data (n < period)
-/// - GPU operations fail (allocation, compilation, execution)
 #[deprecated(
     since = "0.2.0",
     note = "Single-thread GPU is 6-10x slower than CPU. Use ema_cpu() from kimsfinance_core::cpu::sequential or ema_hybrid() for API compatibility"
 )]
 pub fn ema_gpu(
-    device: &GpuDevice,
+    _device: &GpuDevice,
     close: &Array1<f64>,
     period: usize,
-    stream: Option<&Arc<CudaStream>>,
+    _stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
-    let n = close.len();
-
-    // Validate inputs
-    if period < 1 {
-        return Err(GpuError::InvalidParameter(
-            "Period must be >= 1".to_string(),
-        ));
-    }
-
-    if n < period {
-        return Err(GpuError::InvalidParameter(format!(
-            "Not enough data: need {} points, got {}",
-            period, n
-        )));
-    }
-
-    // Compile PTX from CUDA source
-    let ptx_arc = compile_ptx_optimized_cached(EMA_KERNEL).map_err(|e| {
-        GpuError::CompilationError(format!("Failed to compile EMA kernel: {:?}", e))
-    })?;
-    let ptx = Arc::unwrap_or_clone(ptx_arc);
-
-    // Load compiled module into GPU context
-    let module = device
-        .context()
-        .load_module(ptx)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX module: {:?}", e)))?;
-
-    // Get kernel function handle
-    let kernel = module.load_function("ema_kernel").map_err(|e| {
-        GpuError::ExecutionError(format!("Failed to load EMA kernel function: {:?}", e))
-    })?;
-
-    // Select stream: use provided stream or device default
-    let kernel_stream = stream.unwrap_or(&device.stream);
-
-    // === H2D: Async pinned memory transfer (~11% faster) ===
-    // Acquire pinned buffer and copy data
-    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
-    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
-
-    // Allocate device buffer and async transfer
-    let mut d_close = device.alloc_buffer(n)?;
-    kernel_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
-
-    // Release pinned buffer back to pool
-    device.pinned_pool.lock().release(pinned_close);
-
-    // Allocate output buffer on GPU
-    let mut d_ema = device.alloc_buffer(n)?;
-
-    // Prepare kernel arguments
-    let n_i32 = n as i32;
-    let period_i32 = period as i32;
-
-    // Build and launch kernel on specified stream
-    let mut builder = kernel_stream.launch_builder(&kernel);
-    builder.arg(&d_close);
-    builder.arg(&mut d_ema);
-    builder.arg(&n_i32);
-    builder.arg(&period_i32);
-
-    // Single thread kernel (sequential algorithm)
-    // Despite using only one thread, GPU memory bandwidth provides speedup
-    let config = LaunchConfig {
-        grid_dim: (1, 1, 1),
-        block_dim: (1, 1, 1),
-        shared_mem_bytes: 0,
-    };
-
-    unsafe {
-        builder
-            .launch(config)
-            .map_err(|e| GpuError::ExecutionError(format!("EMA kernel launch failed: {:?}", e)))?;
-    }
-
-    // === D2H: Async pinned memory transfer (~11% faster) ===
-    // Acquire pinned buffer for output
-    let mut pinned_ema = device.pinned_pool.lock().acquire(n)?;
-
-    // Async D2H transfer
-    kernel_stream.memcpy_dtoh(&d_ema, &mut pinned_ema.as_mut_slice()[..n])?;
-
-    // Synchronize before CPU access
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
-    })?;
-
-    // Copy to output vec
-    let ema_vec = pinned_ema.as_slice()[..n].to_vec();
-
-    // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_ema);
-
-    Ok(Array1::from_vec(ema_vec))
+    // The single-GPU-thread kernel has been removed (sequential IIR filter,
+    // no parallelism to exploit). Delegate to the CPU implementation.
+    ema_cpu(close, period)
 }
 
 #[cfg(test)]

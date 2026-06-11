@@ -41,7 +41,16 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Generate synthetic OHLCV data for testing
-fn generate_synthetic_ohlcv(n_candles: usize) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_synthetic_ohlcv(
+    n_candles: usize,
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
@@ -82,12 +91,15 @@ fn generate_synthetic_ohlcv(n_candles: usize) -> (Vec<i64>, Array1<f64>, Array1<
 }
 
 /// Benchmark FP8 vs FP32 matrix multiplication
-fn benchmark_fp8_matmul(device: &Arc<GpuDevice>, fp8_core: &FP8TensorCore) -> Result<(), Box<dyn std::error::Error>> {
+fn benchmark_fp8_matmul(
+    device: &Arc<GpuDevice>,
+    fp8_core: &FP8TensorCore,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n=== FP8 vs FP32 Matrix Multiplication Benchmark ===\n");
 
     let sizes = vec![
-        (256, 256, 256),   // Small
-        (512, 512, 512),   // Medium
+        (256, 256, 256),    // Small
+        (512, 512, 512),    // Medium
         (1024, 1024, 1024), // Large
     ];
 
@@ -116,7 +128,10 @@ fn benchmark_fp8_matmul(device: &Arc<GpuDevice>, fp8_core: &FP8TensorCore) -> Re
         let fp8_time = start.elapsed().as_secs_f64() / n_iterations as f64;
 
         println!("  FP8 tensor cores: {:.3} ms", fp8_time * 1000.0);
-        println!("  Throughput: {:.2} GFLOPS", (2.0 * m as f64 * n as f64 * k as f64) / fp8_time / 1e9);
+        println!(
+            "  Throughput: {:.2} GFLOPS",
+            (2.0 * m as f64 * n as f64 * k as f64) / fp8_time / 1e9
+        );
         println!();
     }
 
@@ -174,9 +189,16 @@ fn benchmark_genetic_optimizer_fp8(
     let quantize_time = start.elapsed().as_secs_f64() / n_iterations as f64;
 
     println!("FP8 Quantization Performance:");
-    println!("  Parameters: {} sets × 3 params = {} values", n_individuals, n_individuals * 3);
+    println!(
+        "  Parameters: {} sets × 3 params = {} values",
+        n_individuals,
+        n_individuals * 3
+    );
     println!("  Quantization time: {:.3} ms", quantize_time * 1000.0);
-    println!("  Throughput: {:.2} M params/sec", (n_individuals * 3) as f64 / quantize_time / 1e6);
+    println!(
+        "  Throughput: {:.2} M params/sec",
+        (n_individuals * 3) as f64 / quantize_time / 1e6
+    );
     println!();
 
     // 2. Accuracy validation
@@ -198,7 +220,10 @@ fn benchmark_genetic_optimizer_fp8(
         }
     }
     println!("  Max error: {:.6}", max_error);
-    println!("  Avg error: {:.6}", total_error / (n_individuals * 3).min(10) as f32);
+    println!(
+        "  Avg error: {:.6}",
+        total_error / (n_individuals * 3).min(10) as f32
+    );
     println!("  Precision: ~2 decimal digits ✓");
     println!();
 

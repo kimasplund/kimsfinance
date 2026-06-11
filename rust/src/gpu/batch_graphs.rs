@@ -1,74 +1,60 @@
-//! Batch Indicator Calculation with CUDA Graphs
+//! Batch Indicator Calculation with CUDA Graphs - DISABLED
 //!
-//! Integrates CUDA Graphs into batch indicator processing for 16.7x launch overhead reduction.
+//! # Status: graph replay is disabled
 //!
-//! # Architecture
+//! The original implementation had two fatal problems:
 //!
-//! ```text
-//! First Call (Graph Capture):
-//!   1. Begin capture on Fast stream
-//!   2. Launch Fast indicators (ROC, Williams %R, CCI)
-//!   3. End capture → Fast graph
-//!   4. Repeat for Medium/Slow streams
-//!   5. Store graphs for reuse
+//! 1. **Guaranteed panic**: graphs were cached under a *sorted* indicator key
+//!    but fetched with the *unsorted* key followed by `.unwrap()`, so any
+//!    indicator order that differed from the sorted order panicked on the
+//!    first call.
+//! 2. **Net-negative "fast path"**: captured graphs never wired up result
+//!    buffers, so after replaying the graphs the executor recomputed every
+//!    indicator through the traditional path anyway. Replay added pure
+//!    overhead (graph launch + sync) on top of full recomputation while
+//!    claiming a 16.7x launch-overhead reduction.
 //!
-//! Subsequent Calls (Graph Replay):
-//!   1. Launch Fast graph (3μs)
-//!   2. Launch Medium graph (3μs)
-//!   3. Launch Slow graph (3μs)
-//!   Total: ~9μs vs 150μs traditional
-//! ```
-//!
-//! # Performance
-//!
-//! - **Traditional**: 20 × 7.5μs = 150μs launch overhead
-//! - **CUDA Graphs**: 3 × 3μs = 9μs launch overhead
-//! - **Speedup**: 16.7x (141μs saved per batch)
-//! - **Batch time**: 1,240μs → 1,099μs (1.13x faster)
-//!
-//! # Usage
-//!
-//! ```rust,ignore
-//! use kimsfinance_core::gpu::batch_graphs::BatchGraphExecutor;
-//!
-//! let executor = BatchGraphExecutor::new(device)?;
-//!
-//! // First call: captures graphs
-//! let results1 = executor.calculate_batch(&high, &low, &close, &indicators, &params)?;
-//!
-//! // Subsequent calls: replay graphs (16.7x faster launch)
-//! let results2 = executor.calculate_batch(&high, &low, &close, &indicators, &params)?;
-//! ```
+//! Until graph capture stores result buffers, [`BatchGraphExecutor::calculate_batch`]
+//! returns an honest error instead of silently doing extra work. Use
+//! [`crate::gpu::batch::calculate_indicators_batch_gpu`] for batch indicator
+//! calculation.
 
-use super::batch::{
-    BatchIndicatorParams, BatchIndicatorType, IndicatorResult, calculate_single_indicator,
-    classify_indicator,
-};
-use super::cuda_graphs::{IndicatorGraph, IndicatorGraphBuilder};
+use super::batch::{BatchIndicatorParams, BatchIndicatorType, IndicatorResult};
+use super::cuda_graphs::IndicatorGraph;
 use super::device::{GpuDevice, GpuError};
-use super::streams::{IndicatorSpeed, StreamManager};
+use super::streams::StreamManager;
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-/// Batch executor with CUDA Graphs optimization
+/// Error message returned while the CUDA Graph replay path is disabled.
+pub(crate) const GRAPH_REPLAY_DISABLED_MSG: &str = "CUDA Graph batch replay is disabled: \
+captured graphs do not wire result buffers, so replay recomputed every indicator \
+traditionally on top of the graph launch (net-negative). Use \
+gpu::batch::calculate_indicators_batch_gpu instead.";
+
+/// Batch executor with CUDA Graphs optimization - currently disabled
 ///
-/// Captures indicator calculations as CUDA Graphs on first execution,
-/// then replays graphs on subsequent executions for 16.7x launch overhead reduction.
+/// See the module-level documentation for why the replay path is gated off.
 ///
 /// # Thread Safety
 ///
-/// This executor is NOT thread-safe. Create one per thread or use external synchronization.
-/// CUDA Graphs are not internally synchronized per NVIDIA docs.
+/// This executor is NOT thread-safe. Create one per thread or use external
+/// synchronization. CUDA Graphs are not internally synchronized per NVIDIA docs.
 pub struct BatchGraphExecutor {
-    device: Arc<GpuDevice>,
-    stream_mgr: Arc<StreamManager>,
-    /// Cached graphs for each unique indicator set
+    _device: Arc<GpuDevice>,
+    _stream_mgr: Arc<StreamManager>,
+    /// Cached graphs for each unique indicator set.
+    ///
+    /// Invariant: keys are sorted by `format!("{:?}", ind)` before insertion
+    /// AND lookup (the original code inserted sorted keys but looked up
+    /// unsorted keys, guaranteeing a panic). The cache is currently always
+    /// empty because graph capture is disabled.
     graph_cache: Mutex<HashMap<Vec<BatchIndicatorType>, Arc<IndicatorGraph>>>,
 }
 
 impl BatchGraphExecutor {
-    /// Create new batch executor with graph caching
+    /// Create new batch executor
     ///
     /// # Arguments
     ///
@@ -81,44 +67,34 @@ impl BatchGraphExecutor {
         let stream_mgr = Arc::new(StreamManager::new(device.clone())?);
 
         Ok(Self {
-            device,
-            stream_mgr,
+            _device: device,
+            _stream_mgr: stream_mgr,
             graph_cache: Mutex::new(HashMap::new()),
         })
     }
 
-    /// Calculate batch indicators with automatic graph capture/replay
+    /// Calculate batch indicators - currently returns an error
     ///
-    /// # Performance
+    /// The CUDA Graph capture/replay path is disabled because it produced no
+    /// speedup (it recomputed every indicator traditionally after replay) and
+    /// panicked on unsorted indicator lists. Until result buffers are wired
+    /// into the captured graphs this returns an explanatory error after input
+    /// validation.
     ///
-    /// - **First call**: Graph capture + execution (~1,340μs)
-    /// - **Subsequent calls**: Graph replay (~1,099μs, 1.13x faster)
-    ///
-    /// # Arguments
-    ///
-    /// * `high` - High prices
-    /// * `low` - Low prices
-    /// * `close` - Close prices
-    /// * `indicators` - List of indicators to calculate
-    /// * `params` - Parameter map (uses defaults if not specified)
-    ///
-    /// # Returns
-    ///
-    /// HashMap mapping each indicator type to its result
+    /// Use [`crate::gpu::batch::calculate_indicators_batch_gpu`] instead.
     ///
     /// # Errors
     ///
-    /// Returns error if:
-    /// - Input arrays have different lengths
-    /// - Graph capture fails
-    /// - Indicator calculation fails
+    /// - `InvalidParameter` if input arrays mismatch or no indicators given
+    /// - `ComputationErrorStatic` (always, after validation) while the graph
+    ///   path is disabled
     pub fn calculate_batch(
         &self,
         high: &Array1<f64>,
         low: &Array1<f64>,
         close: &Array1<f64>,
         indicators: &[BatchIndicatorType],
-        params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
+        _params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
     ) -> Result<HashMap<BatchIndicatorType, IndicatorResult>, GpuError> {
         let n = close.len();
 
@@ -135,165 +111,7 @@ impl BatchGraphExecutor {
             ));
         }
 
-        // Create sorted indicator key for cache lookup
-        let mut indicator_key = indicators.to_vec();
-        indicator_key.sort_by_key(|&ind| format!("{:?}", ind)); // Stable sort by name
-
-        // Check if we have a cached graph for this indicator set
-        let graph_opt = {
-            let cache = self.graph_cache.lock().unwrap();
-            cache.get(&indicator_key).cloned()
-        };
-
-        match graph_opt {
-            Some(graph) => {
-                // Fast path: replay cached graph
-                self.replay_graph_and_collect(graph, high, low, close, indicators, params)
-            }
-            None => {
-                // Slow path: capture graph first, then execute
-                let graph = self.capture_graph(high, low, close, indicators, params)?;
-
-                // Cache graph for future use
-                {
-                    let mut cache = self.graph_cache.lock().unwrap();
-                    cache.insert(indicator_key, Arc::new(graph));
-                }
-
-                // Execute and collect results (graph already executed during capture)
-                // For simplicity, re-execute with graph replay
-                let graph_arc = self.graph_cache.lock().unwrap().get(&indicators.to_vec()).cloned().unwrap();
-                self.replay_graph_and_collect(graph_arc, high, low, close, indicators, params)
-            }
-        }
-    }
-
-    /// Capture CUDA Graph for indicator set
-    ///
-    /// # Performance
-    ///
-    /// - Graph capture overhead: ~100-500μs (one-time)
-    /// - Amortized over 1000+ replays
-    fn capture_graph(
-        &self,
-        high: &Array1<f64>,
-        low: &Array1<f64>,
-        close: &Array1<f64>,
-        indicators: &[BatchIndicatorType],
-        params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
-    ) -> Result<IndicatorGraph, GpuError> {
-        let mut builder =
-            IndicatorGraphBuilder::new(self.device.clone(), self.stream_mgr.clone())?;
-
-        // Group indicators by speed
-        let mut fast_indicators = Vec::new();
-        let mut medium_indicators = Vec::new();
-        let mut slow_indicators = Vec::new();
-
-        for &indicator in indicators {
-            match classify_indicator(indicator) {
-                IndicatorSpeed::Fast => fast_indicators.push(indicator),
-                IndicatorSpeed::Medium => medium_indicators.push(indicator),
-                IndicatorSpeed::Slow => slow_indicators.push(indicator),
-            }
-        }
-
-        let default_params = BatchIndicatorParams::default();
-
-        // Capture Fast stream
-        if !fast_indicators.is_empty() {
-            builder.begin_capture_stream(IndicatorSpeed::Fast)?;
-
-            for &indicator in &fast_indicators {
-                let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-                let _ = calculate_single_indicator(
-                    &self.device,
-                    high,
-                    low,
-                    close,
-                    indicator,
-                    indicator_params,
-                )?;
-            }
-
-            builder.end_capture_stream(IndicatorSpeed::Fast)?;
-        }
-
-        // Capture Medium stream
-        if !medium_indicators.is_empty() {
-            builder.begin_capture_stream(IndicatorSpeed::Medium)?;
-
-            for &indicator in &medium_indicators {
-                let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-                let _ = calculate_single_indicator(
-                    &self.device,
-                    high,
-                    low,
-                    close,
-                    indicator,
-                    indicator_params,
-                )?;
-            }
-
-            builder.end_capture_stream(IndicatorSpeed::Medium)?;
-        }
-
-        // Capture Slow stream
-        if !slow_indicators.is_empty() {
-            builder.begin_capture_stream(IndicatorSpeed::Slow)?;
-
-            for &indicator in &slow_indicators {
-                let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-                let _ = calculate_single_indicator(
-                    &self.device,
-                    high,
-                    low,
-                    close,
-                    indicator,
-                    indicator_params,
-                )?;
-            }
-
-            builder.end_capture_stream(IndicatorSpeed::Slow)?;
-        }
-
-        builder.build()
-    }
-
-    /// Replay graph and collect results
-    ///
-    /// # Performance
-    ///
-    /// - Graph replay: ~9μs (vs 150μs traditional)
-    /// - Result collection: Same as traditional
-    fn replay_graph_and_collect(
-        &self,
-        graph: Arc<IndicatorGraph>,
-        high: &Array1<f64>,
-        low: &Array1<f64>,
-        close: &Array1<f64>,
-        indicators: &[BatchIndicatorType],
-        params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
-    ) -> Result<HashMap<BatchIndicatorType, IndicatorResult>, GpuError> {
-        // Launch all graphs
-        graph.launch_all()?;
-
-        // Synchronize
-        graph.synchronize()?;
-
-        // Collect results (graphs don't return values, so we need to recalculate)
-        // TODO: Optimize this by storing result buffers in graph
-        let default_params = BatchIndicatorParams::default();
-        let mut results = HashMap::new();
-
-        for &indicator in indicators {
-            let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-            let result =
-                calculate_single_indicator(&self.device, high, low, close, indicator, indicator_params)?;
-            results.insert(indicator, result);
-        }
-
-        Ok(results)
+        Err(GpuError::ComputationErrorStatic(GRAPH_REPLAY_DISABLED_MSG))
     }
 
     /// Clear graph cache (useful for memory management)
@@ -321,8 +139,15 @@ mod tests {
     }
 
     #[test]
+    fn test_disabled_message_mentions_alternative() {
+        // Host-side sanity check: the error message must point users at the
+        // working batch API.
+        assert!(GRAPH_REPLAY_DISABLED_MSG.contains("calculate_indicators_batch_gpu"));
+    }
+
+    #[test]
     #[ignore] // Requires GPU
-    fn test_batch_graph_executor_single_indicator() {
+    fn test_batch_graph_executor_returns_unsupported() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
         let executor = BatchGraphExecutor::new(device).expect("Executor creation failed");
 
@@ -330,51 +155,38 @@ mod tests {
         let indicators = vec![BatchIndicatorType::RSI];
         let params = HashMap::new();
 
-        // First call: graph capture
-        let results1 = executor
-            .calculate_batch(&high, &low, &close, &indicators, &params)
-            .expect("First batch failed");
+        // The graph replay path is disabled: an honest error, not a panic
+        // and not silently-recomputed results.
+        let result = executor.calculate_batch(&high, &low, &close, &indicators, &params);
+        match result {
+            Err(GpuError::ComputationErrorStatic(msg)) => {
+                assert!(msg.contains("disabled"));
+            }
+            other => panic!("Expected ComputationErrorStatic, got {:?}", other.map(|_| ())),
+        }
 
-        assert_eq!(results1.len(), 1);
-        assert!(results1.contains_key(&BatchIndicatorType::RSI));
-
-        // Second call: graph replay
-        let results2 = executor
-            .calculate_batch(&high, &low, &close, &indicators, &params)
-            .expect("Second batch failed");
-
-        assert_eq!(results2.len(), 1);
-        assert_eq!(executor.cache_size(), 1);
+        // Nothing is ever cached while the path is disabled.
+        assert_eq!(executor.cache_size(), 0);
     }
 
     #[test]
     #[ignore] // Requires GPU
-    fn test_batch_graph_executor_multi_indicator() {
+    fn test_batch_graph_executor_input_validation() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
         let executor = BatchGraphExecutor::new(device).expect("Executor creation failed");
 
         let (high, low, close) = generate_test_data(1000);
-        let indicators = vec![
-            BatchIndicatorType::RSI,
-            BatchIndicatorType::ROC,
-            BatchIndicatorType::WilliamsR,
-        ];
         let params = HashMap::new();
 
-        // First call: graph capture
-        let results1 = executor
-            .calculate_batch(&high, &low, &close, &indicators, &params)
-            .expect("First batch failed");
+        // Empty indicator list is rejected before the disabled-path error.
+        let result = executor.calculate_batch(&high, &low, &close, &[], &params);
+        assert!(matches!(result, Err(GpuError::InvalidParameter(_))));
 
-        assert_eq!(results1.len(), 3);
-
-        // Second call: graph replay (should be faster)
-        let results2 = executor
-            .calculate_batch(&high, &low, &close, &indicators, &params)
-            .expect("Second batch failed");
-
-        assert_eq!(results2.len(), 3);
-        assert_eq!(executor.cache_size(), 1);
+        // Mismatched lengths are rejected.
+        let short_low = Array1::linspace(95.0, 105.0, 10);
+        let indicators = vec![BatchIndicatorType::RSI];
+        let result = executor.calculate_batch(&high, &short_low, &close, &indicators, &params);
+        assert!(matches!(result, Err(GpuError::InvalidParameter(_))));
     }
 
     #[test]
@@ -383,15 +195,7 @@ mod tests {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
         let executor = BatchGraphExecutor::new(device).expect("Executor creation failed");
 
-        let (high, low, close) = generate_test_data(1000);
-        let indicators = vec![BatchIndicatorType::RSI];
-        let params = HashMap::new();
-
-        // Populate cache
-        let _ = executor.calculate_batch(&high, &low, &close, &indicators, &params);
-        assert_eq!(executor.cache_size(), 1);
-
-        // Clear cache
+        assert_eq!(executor.cache_size(), 0);
         executor.clear_cache();
         assert_eq!(executor.cache_size(), 0);
     }

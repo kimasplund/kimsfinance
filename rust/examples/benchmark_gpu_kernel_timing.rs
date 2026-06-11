@@ -60,7 +60,11 @@ fn generate_ohlcv_data(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Arra
     let high = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64 % 10.0)).collect());
     let low = Array1::from_vec((0..n).map(|i| 98.0 + (i as f64 % 10.0)).collect());
     let close = Array1::from_vec((0..n).map(|i| 99.0 + (i as f64 % 10.0)).collect());
-    let volume = Array1::from_vec((0..n).map(|i| 1_000_000.0 + (i as f64 % 100_000.0)).collect());
+    let volume = Array1::from_vec(
+        (0..n)
+            .map(|i| 1_000_000.0 + (i as f64 % 100_000.0))
+            .collect(),
+    );
     (high, low, close, volume)
 }
 
@@ -112,7 +116,10 @@ where
     }
     device.synchronize()?;
 
-    println!("     Measuring GPU-only time ({} iterations)...", timing_iterations);
+    println!(
+        "     Measuring GPU-only time ({} iterations)...",
+        timing_iterations
+    );
 
     // GPU-only timing using CUDA events
     let timer = GpuTimer::new(device)?;
@@ -125,7 +132,10 @@ where
         gpu_times.push(elapsed);
     }
 
-    println!("     Measuring end-to-end time ({} iterations)...", timing_iterations);
+    println!(
+        "     Measuring end-to-end time ({} iterations)...",
+        timing_iterations
+    );
 
     // End-to-end timing using CPU clock
     let mut e2e_times = Vec::with_capacity(timing_iterations);
@@ -299,9 +309,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╔══════════════════════════════════════════════════════════════════════════════╗");
     println!("║                              Benchmark Results                               ║");
     println!("╠══════════════════════════════════════════════════════════════════════════════╣");
-    println!("║ Indicator    │ GPU-Only │  StdDev  │   E2E    │  StdDev  │  CPU OH │  Throughput  ║");
-    println!("║              │   (μs)   │   (μs)   │   (μs)   │   (μs)   │    (%)  │  (candles/s) ║");
-    println!("╟──────────────┼──────────┼──────────┼──────────┼──────────┼─────────┼──────────────╢");
+    println!(
+        "║ Indicator    │ GPU-Only │  StdDev  │   E2E    │  StdDev  │  CPU OH │  Throughput  ║"
+    );
+    println!(
+        "║              │   (μs)   │   (μs)   │   (μs)   │   (μs)   │    (%)  │  (candles/s) ║"
+    );
+    println!(
+        "╟──────────────┼──────────┼──────────┼──────────┼──────────┼─────────┼──────────────╢"
+    );
 
     for result in &results {
         result.print_row();
@@ -322,7 +338,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Jules' claim:         145 μs (GPU-only, PR #8)");
     println!("   Measured (GPU-only):  {} μs", atr_result.gpu_only_us);
     println!("   Measured (E2E):       {} μs", atr_result.end_to_end_us);
-    println!("   CPU overhead:         {:.1}%", atr_result.cpu_overhead_pct);
+    println!(
+        "   CPU overhead:         {:.1}%",
+        atr_result.cpu_overhead_pct
+    );
     println!();
 
     if atr_result.gpu_only_us >= 130 && atr_result.gpu_only_us <= 160 {
@@ -341,7 +360,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 2. CPU overhead analysis
-    let avg_overhead = results.iter().map(|r| r.cpu_overhead_pct).sum::<f64>() / results.len() as f64;
+    let avg_overhead =
+        results.iter().map(|r| r.cpu_overhead_pct).sum::<f64>() / results.len() as f64;
     let max_overhead = results
         .iter()
         .max_by(|a, b| a.cpu_overhead_pct.partial_cmp(&b.cpu_overhead_pct).unwrap())
@@ -357,8 +377,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "   Range:                {:.1}% - {:.1}%",
         min_overhead.cpu_overhead_pct, max_overhead.cpu_overhead_pct
     );
-    println!("   Highest overhead:     {} ({:.1}%)", max_overhead.name, max_overhead.cpu_overhead_pct);
-    println!("   Lowest overhead:      {} ({:.1}%)", min_overhead.name, min_overhead.cpu_overhead_pct);
+    println!(
+        "   Highest overhead:     {} ({:.1}%)",
+        max_overhead.name, max_overhead.cpu_overhead_pct
+    );
+    println!(
+        "   Lowest overhead:      {} ({:.1}%)",
+        min_overhead.name, min_overhead.cpu_overhead_pct
+    );
     println!();
 
     println!("💡 Insight:");
@@ -406,7 +432,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for result in &results {
         let with_async = (result.gpu_only_us as f64 * 0.89) as u64; // 11% faster
-        let speedup_pct = ((result.gpu_only_us as f64 - with_async as f64) / result.gpu_only_us as f64) * 100.0;
+        let speedup_pct =
+            ((result.gpu_only_us as f64 - with_async as f64) / result.gpu_only_us as f64) * 100.0;
         println!(
             "   │ {:<12} │ {:>8} │ {:>8} │ {:>7.1}% │",
             result.name, result.gpu_only_us, with_async, speedup_pct
@@ -425,7 +452,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🎯 Optimization Priorities:");
     println!();
     println!("1. **Reduce CPU Overhead** (biggest impact):");
-    println!("   - Current: {:.1}% of total time is CPU overhead", avg_overhead);
+    println!(
+        "   - Current: {:.1}% of total time is CPU overhead",
+        avg_overhead
+    );
     println!("   - Use async memory allocation (cudaMallocAsync)");
     println!("   - Batch multiple indicators to amortize allocation");
     println!("   - Reuse GPU buffers across calls");
@@ -439,7 +469,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("3. **Focus on slowest indicators** (highest absolute time):");
     let slowest = results.iter().max_by_key(|r| r.gpu_only_us).unwrap();
-    println!("   - {} is slowest at {} μs GPU-only", slowest.name, slowest.gpu_only_us);
+    println!(
+        "   - {} is slowest at {} μs GPU-only",
+        slowest.name, slowest.gpu_only_us
+    );
     println!("   - Profile with Nsight Compute for bottlenecks");
     println!("   - Consider kernel fusion to reduce overhead");
     println!();

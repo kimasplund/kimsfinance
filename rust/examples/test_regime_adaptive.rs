@@ -39,21 +39,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut regime_spot_loader = SpotDataLoader::new(spot_dir)?;
     let regime_detector = RegimeDetector::default();
 
-    let stats = regime_detector.get_regime_stats(
-        &mut regime_spot_loader,
-        symbol,
-        start_date,
-        end_date,
-    )?;
+    let stats =
+        regime_detector.get_regime_stats(&mut regime_spot_loader, symbol, start_date, end_date)?;
 
     let (bull_low, bull_high, bear_low, bear_high, sideways) = stats.percentages();
 
     println!("2020 Market Regime Distribution:");
-    println!("  Bull/LowVol:  {:3} days ({:5.1}%) - Ideal conditions", stats.bull_low_vol, bull_low);
-    println!("  Bull/HighVol: {:3} days ({:5.1}%) - Reduce risk", stats.bull_high_vol, bull_high);
-    println!("  Bear/LowVol:  {:3} days ({:5.1}%) - Avoid trading", stats.bear_low_vol, bear_low);
-    println!("  Bear/HighVol: {:3} days ({:5.1}%) - Avoid trading", stats.bear_high_vol, bear_high);
-    println!("  Sideways:     {:3} days ({:5.1}%) - Moderate approach", stats.sideways, sideways);
+    println!(
+        "  Bull/LowVol:  {:3} days ({:5.1}%) - Ideal conditions",
+        stats.bull_low_vol, bull_low
+    );
+    println!(
+        "  Bull/HighVol: {:3} days ({:5.1}%) - Reduce risk",
+        stats.bull_high_vol, bull_high
+    );
+    println!(
+        "  Bear/LowVol:  {:3} days ({:5.1}%) - Avoid trading",
+        stats.bear_low_vol, bear_low
+    );
+    println!(
+        "  Bear/HighVol: {:3} days ({:5.1}%) - Avoid trading",
+        stats.bear_high_vol, bear_high
+    );
+    println!(
+        "  Sideways:     {:3} days ({:5.1}%) - Moderate approach",
+        stats.sideways, sideways
+    );
     println!("  Total:        {:3} days", stats.total_days);
     println!();
 
@@ -69,10 +80,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let static_params = default_bull_put_params();
     println!("Strategy: {}", static_params.name);
-    println!("DTE: {}-{} days", static_params.dte_min, static_params.dte_max);
-    println!("Delta: {:.2}-{:.2}", static_params.delta_min, static_params.delta_max);
-    println!("Profit Target: {:.0}%", static_params.profit_target_pct.unwrap_or(0.0));
-    println!("Stop Loss: {:.0}%", static_params.stop_loss_pct.unwrap_or(0.0));
+    println!(
+        "DTE: {}-{} days",
+        static_params.dte_min, static_params.dte_max
+    );
+    println!(
+        "Delta: {:.2}-{:.2}",
+        static_params.delta_min, static_params.delta_max
+    );
+    println!(
+        "Profit Target: {:.0}%",
+        static_params.profit_target_pct.unwrap_or(0.0)
+    );
+    println!(
+        "Stop Loss: {:.0}%",
+        static_params.stop_loss_pct.unwrap_or(0.0)
+    );
     println!();
 
     let static_strategy = BullPutSpread::new(static_params.clone());
@@ -105,7 +128,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!("  {} ({})", regime, if trade { "TRADE" } else { "SKIP" });
         println!("    Delta: {:.2}-{:.2}", params.delta_min, params.delta_max);
-        println!("    Profit Target: {:.0}%", params.profit_target_pct.unwrap_or(0.0));
+        println!(
+            "    Profit Target: {:.0}%",
+            params.profit_target_pct.unwrap_or(0.0)
+        );
         println!("    Stop Loss: {:.0}%", params.stop_loss_pct.unwrap_or(0.0));
         println!("    Max Hold: {} days", params.max_hold_days.unwrap_or(0));
     }
@@ -113,13 +139,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let data_loader_adaptive = OptionsDataLoader::new(data_dir)?;
     let spot_loader_adaptive = SpotDataLoader::new(spot_dir)?;
-    let mut engine_adaptive = BacktestEngine::new(data_loader_adaptive, spot_loader_adaptive, 10000.0);
+    let mut engine_adaptive =
+        BacktestEngine::new(data_loader_adaptive, spot_loader_adaptive, 10000.0);
 
-    let adaptive_result = engine_adaptive.run_bull_put_spread_adaptive(
-        symbol,
-        start_date,
-        end_date,
-    )?;
+    let adaptive_result =
+        engine_adaptive.run_bull_put_spread_adaptive(symbol, start_date, end_date)?;
 
     // Part 4: Comparison
     println!("\n");
@@ -128,7 +152,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", "=".repeat(80));
     println!();
 
-    println!("{:30} {:>15} {:>15} {:>15}", "Metric", "Static", "Adaptive", "Improvement");
+    println!(
+        "{:30} {:>15} {:>15} {:>15}",
+        "Metric", "Static", "Adaptive", "Improvement"
+    );
     println!("{:-<80}", "");
 
     let pnl_diff = adaptive_result.total_pnl - static_result.total_pnl;
@@ -177,7 +204,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let dd_pct = if static_result.max_drawdown.abs() > 0.1 {
-        ((adaptive_result.max_drawdown - static_result.max_drawdown) / static_result.max_drawdown.abs()) * 100.0
+        ((adaptive_result.max_drawdown - static_result.max_drawdown)
+            / static_result.max_drawdown.abs())
+            * 100.0
     } else {
         0.0
     };
@@ -211,7 +240,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let roc_diff = adaptive_result.return_on_capital - static_result.return_on_capital;
     println!(
         "{:30} {:>14.1}% {:>14.1}% {:>+14.1}pp",
-        "Return on Capital", static_result.return_on_capital, adaptive_result.return_on_capital, roc_diff
+        "Return on Capital",
+        static_result.return_on_capital,
+        adaptive_result.return_on_capital,
+        roc_diff
     );
 
     println!();
@@ -220,21 +252,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Summary
     if adaptive_result.total_pnl > static_result.total_pnl {
-        println!("✓ ADAPTIVE strategy outperformed STATIC by ${:.2} ({:.1}%)",
-            pnl_diff, pnl_pct);
+        println!(
+            "✓ ADAPTIVE strategy outperformed STATIC by ${:.2} ({:.1}%)",
+            pnl_diff, pnl_pct
+        );
     } else {
-        println!("✗ STATIC strategy outperformed ADAPTIVE by ${:.2} ({:.1}%)",
-            -pnl_diff, -pnl_pct);
+        println!(
+            "✗ STATIC strategy outperformed ADAPTIVE by ${:.2} ({:.1}%)",
+            -pnl_diff, -pnl_pct
+        );
     }
 
     if adaptive_result.sharpe_ratio > static_result.sharpe_ratio {
-        println!("✓ ADAPTIVE strategy has better risk-adjusted returns (Sharpe: {:.2} vs {:.2})",
-            adaptive_result.sharpe_ratio, static_result.sharpe_ratio);
+        println!(
+            "✓ ADAPTIVE strategy has better risk-adjusted returns (Sharpe: {:.2} vs {:.2})",
+            adaptive_result.sharpe_ratio, static_result.sharpe_ratio
+        );
     }
 
     if adaptive_result.max_drawdown.abs() < static_result.max_drawdown.abs() {
-        println!("✓ ADAPTIVE strategy has lower drawdown (${:.2} vs ${:.2})",
-            adaptive_result.max_drawdown.abs(), static_result.max_drawdown.abs());
+        println!(
+            "✓ ADAPTIVE strategy has lower drawdown (${:.2} vs ${:.2})",
+            adaptive_result.max_drawdown.abs(),
+            static_result.max_drawdown.abs()
+        );
     }
 
     println!();

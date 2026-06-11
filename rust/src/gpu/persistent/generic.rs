@@ -3,6 +3,13 @@
 //! This module provides a type-safe, generic interface for executing persistent kernels
 //! with arbitrary numbers of inputs and outputs.
 //!
+//! # Status: execution not implemented
+//!
+//! The batch/task containers below work, but [`execute_generic_batch`]
+//! currently returns an error because the generic kernel launch was never
+//! implemented (see its documentation). The examples in this header describe
+//! the intended API once a launch path exists.
+//!
 //! # Key Features
 //!
 //! - **Type-safe**: Generic over `PersistentIndicator` trait
@@ -59,8 +66,8 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+use super::PinnedBuffer;
 use super::traits::PersistentIndicator;
-use super::{OccupancyCalculator, PinnedBuffer};
 use crate::gpu::device::{GpuDevice, GpuError};
 use cudarc::driver::{CudaSlice, DevicePtr};
 use std::marker::PhantomData;
@@ -165,6 +172,11 @@ impl<I: PersistentIndicator> Default for GenericBatch<I> {
 }
 
 /// GPU buffer set for multi-input/multi-output batch execution
+///
+/// Retained for the future generic launch implementation; currently unused
+/// because `execute_generic_batch` returns an error before allocating
+/// (see that function's documentation).
+#[allow(dead_code)]
 struct GenericBatchBuffers<I: PersistentIndicator> {
     /// Multi-input support: [task_idx][input_idx] -> buffer
     d_inputs: Vec<Vec<CudaSlice<f64>>>,
@@ -194,6 +206,9 @@ struct GenericBatchBuffers<I: PersistentIndicator> {
 }
 
 /// Allocate GPU buffers for generic multi-input/multi-output batch
+///
+/// Retained for the future generic launch implementation (currently unused).
+#[allow(dead_code)]
 fn allocate_generic_buffers<I: PersistentIndicator>(
     device: &GpuDevice,
     batch: &GenericBatch<I>,
@@ -315,6 +330,9 @@ fn allocate_generic_buffers<I: PersistentIndicator>(
 }
 
 /// Upload input data to GPU buffers
+///
+/// Retained for the future generic launch implementation (currently unused).
+#[allow(dead_code)]
 fn upload_generic_data<I: PersistentIndicator>(
     device: &GpuDevice,
     batch: &GenericBatch<I>,
@@ -351,6 +369,9 @@ fn upload_generic_data<I: PersistentIndicator>(
 }
 
 /// Download results from GPU
+///
+/// Retained for the future generic launch implementation (currently unused).
+#[allow(dead_code)]
 fn download_generic_results<I: PersistentIndicator>(
     device: &GpuDevice,
     buffers: &GenericBatchBuffers<I>,
@@ -387,55 +408,43 @@ fn download_generic_results<I: PersistentIndicator>(
     Ok(results)
 }
 
-/// Execute generic batch using persistent kernel
+/// Error message returned while the generic kernel launch is unimplemented.
+pub(crate) const GENERIC_BATCH_NOT_IMPLEMENTED_MSG: &str = "execute_generic_batch is not \
+implemented: the generic multi-input/multi-output kernel launch was never wired up, so the \
+previous version uploaded inputs, launched nothing, and returned zero-filled output buffers \
+presented as results. Use gpu::persistent::execute_batch for single-output indicators.";
+
+/// Execute generic batch using persistent kernel - NOT IMPLEMENTED
 ///
-/// # Type Parameters
+/// # Status
 ///
-/// - `I`: Indicator type implementing `PersistentIndicator`
+/// The generic kernel launch has never been implemented. The previous version
+/// of this function allocated buffers, uploaded inputs, skipped the launch
+/// entirely, and then downloaded the (zero-initialized) output buffers,
+/// returning all-zero arrays as if they were indicator results. It now
+/// returns an honest error instead of silently-wrong data.
 ///
-/// # Returns
+/// Use [`crate::gpu::persistent::execute_batch`] for the supported
+/// single-pointer-array indicator path.
 ///
-/// Vector of results: `results[task_idx][output_idx] = Vec<f64>`
+/// # Errors
 ///
-/// - Single-output: `results[i][0]` is the output array
-/// - Multi-output (MACD): `results[i][0..3]` are [macd_line, signal_line, histogram]
+/// - `InvalidParameter` for an empty batch
+/// - `ComputationErrorStatic` (always, after validation) until the generic
+///   launch is implemented
 pub fn execute_generic_batch<I: PersistentIndicator>(
-    device: &GpuDevice,
+    _device: &GpuDevice,
     batch: &GenericBatch<I>,
 ) -> Result<Vec<Vec<Vec<f64>>>, GpuError> {
     if batch.is_empty() {
         return Err(GpuError::InvalidParameter("Empty task batch".to_string()));
     }
 
-    // Compile kernel
-    let func = I::compile_kernel(device)?;
-
-    // Calculate optimal grid size using occupancy calculator
-    let occupancy_calc = OccupancyCalculator::new(device)?;
-    let optimal_block_size = 256u32;
-    let optimal_grid_size =
-        occupancy_calc.calculate_optimal_grid_size(&func, optimal_block_size, 0)?;
-
-    eprintln!(
-        "🚀 Generic batch: {} tasks, {} inputs, {} outputs, grid size: {} blocks",
-        batch.len(),
-        I::num_inputs(),
-        I::num_outputs(),
-        optimal_grid_size
-    );
-
-    // Allocate buffers
-    let mut buffers = allocate_generic_buffers(device, batch)?;
-
-    // Upload data
-    upload_generic_data(device, batch, &mut buffers)?;
-
-    // Launch kernel (indicator-specific implementation needed)
-    // For now, this is a placeholder - each indicator will need custom launch logic
-    eprintln!("⚠️  Generic kernel launch not yet implemented - indicator-specific required");
-
-    // Download results
-    download_generic_results(device, &buffers)
+    // Fail before any compilation, allocation, or transfer work: there is no
+    // kernel launch to feed, so any GPU work here would be pure waste.
+    Err(GpuError::ComputationErrorStatic(
+        GENERIC_BATCH_NOT_IMPLEMENTED_MSG,
+    ))
 }
 
 #[cfg(test)]
@@ -478,6 +487,14 @@ mod tests {
 
         batch.add_task(vec![high, low, close], 14);
         assert_eq!(batch.len(), 1);
+    }
+
+    #[test]
+    fn test_generic_batch_error_message_mentions_alternative() {
+        // Host-side sanity check: the not-implemented error must point users
+        // at the supported batch API.
+        assert!(GENERIC_BATCH_NOT_IMPLEMENTED_MSG.contains("execute_batch"));
+        assert!(GENERIC_BATCH_NOT_IMPLEMENTED_MSG.contains("not"));
     }
 
     #[test]

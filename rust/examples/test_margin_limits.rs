@@ -41,7 +41,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     params.stop_loss_pct = Some(200.0);
 
     println!("Strategy Parameters:");
-    println!("  Position Size: {:.1}% (unlimited)", params.position_size_pct);
+    println!(
+        "  Position Size: {:.1}% (unlimited)",
+        params.position_size_pct
+    );
     println!();
 
     let strategy = BullPutSpread::new(params.clone());

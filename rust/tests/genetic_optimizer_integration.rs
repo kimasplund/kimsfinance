@@ -158,9 +158,18 @@ fn test_large_scale_optimization() {
     println!("  Max drawdown: {:.2}%", result.best_result.max_drawdown);
 
     println!("\nBest parameters:");
-    println!("  RSI period: {:.0}", result.best_parameters.get("rsi_period").unwrap());
-    println!("  Buy threshold: {:.1}", result.best_parameters.get("buy_threshold").unwrap());
-    println!("  Sell threshold: {:.1}", result.best_parameters.get("sell_threshold").unwrap());
+    println!(
+        "  RSI period: {:.0}",
+        result.best_parameters.get("rsi_period").unwrap()
+    );
+    println!(
+        "  Buy threshold: {:.1}",
+        result.best_parameters.get("buy_threshold").unwrap()
+    );
+    println!(
+        "  Sell threshold: {:.1}",
+        result.best_parameters.get("sell_threshold").unwrap()
+    );
 
     println!("\nPrecision breakdown:");
     println!("  FP8 generations: {}", result.fp8_generations);
@@ -169,8 +178,14 @@ fn test_large_scale_optimization() {
     // Performance analysis
     let avg_time_per_gen = elapsed.as_secs_f64() / result.convergence_history.len() as f64;
     println!("\nPerformance:");
-    println!("  Avg time per generation: {:.2?}", std::time::Duration::from_secs_f64(avg_time_per_gen));
-    println!("  Total evaluations: {}", 500 * result.convergence_history.len());
+    println!(
+        "  Avg time per generation: {:.2?}",
+        std::time::Duration::from_secs_f64(avg_time_per_gen)
+    );
+    println!(
+        "  Total evaluations: {}",
+        500 * result.convergence_history.len()
+    );
 
     // Verify no mutex deadlocks or panics occurred
     assert!(result.best_fitness.is_finite());
@@ -205,9 +220,7 @@ fn test_parallel_speedup_measurement() {
 
     // Test 1: Sequential (population < 20)
     println!("Test 1: Sequential execution (10 individuals)");
-    let optimizer_seq = GeneticOptimizer::new()
-        .population_size(10)
-        .generations(20);
+    let optimizer_seq = GeneticOptimizer::new().population_size(10).generations(20);
 
     let start = Instant::now();
     let result_seq = optimizer_seq.optimize(
@@ -229,9 +242,7 @@ fn test_parallel_speedup_measurement() {
 
     // Test 2: Parallel (population >= 20)
     println!("\nTest 2: Parallel execution (100 individuals)");
-    let optimizer_par = GeneticOptimizer::new()
-        .population_size(100)
-        .generations(20);
+    let optimizer_par = GeneticOptimizer::new().population_size(100).generations(20);
 
     let start = Instant::now();
     let result_par = optimizer_par.optimize(
@@ -257,8 +268,14 @@ fn test_parallel_speedup_measurement() {
     let time_per_eval_seq = time_seq.as_secs_f64() / (10.0 * 20.0);
     let time_per_eval_par = time_par.as_secs_f64() / (100.0 * 20.0);
 
-    println!("  Sequential: {:.2?} per evaluation", std::time::Duration::from_secs_f64(time_per_eval_seq));
-    println!("  Parallel: {:.2?} per evaluation", std::time::Duration::from_secs_f64(time_per_eval_par));
+    println!(
+        "  Sequential: {:.2?} per evaluation",
+        std::time::Duration::from_secs_f64(time_per_eval_seq)
+    );
+    println!(
+        "  Parallel: {:.2?} per evaluation",
+        std::time::Duration::from_secs_f64(time_per_eval_par)
+    );
 
     let speedup = time_per_eval_seq / time_per_eval_par;
     println!("  Parallel speedup: {:.1}x", speedup);
@@ -353,16 +370,29 @@ fn test_convergence_quality() {
     println!("\n✅ Convergence quality analysis:");
 
     let avg_fitness = results.iter().map(|r| r.best_fitness).sum::<f64>() / 3.0;
-    let min_fitness = results.iter().map(|r| r.best_fitness).fold(f64::INFINITY, f64::min);
-    let max_fitness = results.iter().map(|r| r.best_fitness).fold(f64::NEG_INFINITY, f64::max);
+    let min_fitness = results
+        .iter()
+        .map(|r| r.best_fitness)
+        .fold(f64::INFINITY, f64::min);
+    let max_fitness = results
+        .iter()
+        .map(|r| r.best_fitness)
+        .fold(f64::NEG_INFINITY, f64::max);
 
     println!("  Average fitness: {:.4}", avg_fitness);
     println!("  Min fitness: {:.4}", min_fitness);
     println!("  Max fitness: {:.4}", max_fitness);
     println!("  Range: {:.4}", max_fitness - min_fitness);
-    println!("  Coefficient of variation: {:.2}%", ((max_fitness - min_fitness) / avg_fitness) * 100.0);
+    println!(
+        "  Coefficient of variation: {:.2}%",
+        ((max_fitness - min_fitness) / avg_fitness) * 100.0
+    );
 
-    let avg_generations = results.iter().map(|r| r.convergence_history.len()).sum::<usize>() as f64 / 3.0;
+    let avg_generations = results
+        .iter()
+        .map(|r| r.convergence_history.len())
+        .sum::<usize>() as f64
+        / 3.0;
     println!("  Average generations: {:.1}", avg_generations);
 
     // Verify all runs produced reasonable results
@@ -399,9 +429,7 @@ fn test_memory_stability() {
     );
 
     // Long run to detect memory issues
-    let optimizer = GeneticOptimizer::new()
-        .population_size(50)
-        .generations(200); // Many generations
+    let optimizer = GeneticOptimizer::new().population_size(50).generations(200); // Many generations
 
     println!("Running 200 generations with cloned strategies...");
     println!("This validates no memory leaks from strategy cloning\n");

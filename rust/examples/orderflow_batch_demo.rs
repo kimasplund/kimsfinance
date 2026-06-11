@@ -8,16 +8,16 @@
 //! - Eliminates 48-60MB intermediate memory transfer
 //! - Generates 1B+ signals/sec
 
-use kimsfinance_core::gpu::orderflow_batch::{
-    OrderflowBatchProcessor, OrderflowInput, StrategyConfig, Signal,
-};
 use kimsfinance_core::gpu::device::GpuDevice;
+use kimsfinance_core::gpu::orderflow_batch::{
+    OrderflowBatchProcessor, OrderflowInput, Signal, StrategyConfig,
+};
 use std::sync::Arc;
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Agent 2: Orderflow + Signals (Fused Kernel) Demo");
-    println!("=" .repeat(60));
+    println!("=".repeat(60));
 
     // Initialize GPU
     println!("\n[1/5] Initializing GPU...");
@@ -34,7 +34,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n[3/5] Initializing orderflow processor...");
     let start = Instant::now();
     let mut processor = OrderflowBatchProcessor::new(device.clone())?;
-    println!("✅ Processor initialized in {:.2}ms", start.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "✅ Processor initialized in {:.2}ms",
+        start.elapsed().as_secs_f64() * 1000.0
+    );
 
     // Calibrate quantization ranges (optional, can use defaults)
     println!("\n[4/5] Calibrating feature quantization ranges...");
@@ -44,7 +47,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Calibration complete in {:.2}ms", calibration_ms);
     println!("   Feature ranges:");
     for i in 0..6 {
-        println!("     Feature {}: [{:.4}, {:.4}]", i, ranges[i * 2], ranges[i * 2 + 1]);
+        println!(
+            "     Feature {}: [{:.4}, {:.4}]",
+            i,
+            ranges[i * 2],
+            ranges[i * 2 + 1]
+        );
     }
 
     // Configure strategies
@@ -77,28 +85,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✅ Processing complete in {:.2}ms", processing_ms);
     println!("\n📊 Performance Metrics:");
-    println!("   Total time: {:.2}ms (calibration: {:.2}ms + processing: {:.2}ms)",
-             calibration_ms + processing_ms, calibration_ms, processing_ms);
+    println!(
+        "   Total time: {:.2}ms (calibration: {:.2}ms + processing: {:.2}ms)",
+        calibration_ms + processing_ms,
+        calibration_ms,
+        processing_ms
+    );
     println!("   Strategies: {}", strategies.len());
     println!("   Ticks: {}", num_ticks);
     println!("   Total features computed: {:.2}M", total_features / 1e6);
     println!("   Total signals generated: {:.2}M", total_signals / 1e6);
-    println!("   Feature throughput: {:.2}B features/sec", feature_throughput / 1e9);
-    println!("   Signal throughput: {:.2}B signals/sec", signal_throughput / 1e9);
+    println!(
+        "   Feature throughput: {:.2}B features/sec",
+        feature_throughput / 1e9
+    );
+    println!(
+        "   Signal throughput: {:.2}B signals/sec",
+        signal_throughput / 1e9
+    );
 
     // Analyze signals
     println!("\n📈 Signal Analysis:");
     for (i, strategy_signals) in results.signals.iter().enumerate() {
-        let buy_count = strategy_signals.iter().filter(|&&s| s == Signal::Buy as i8).count();
-        let sell_count = strategy_signals.iter().filter(|&&s| s == Signal::Sell as i8).count();
-        let hold_count = strategy_signals.iter().filter(|&&s| s == Signal::Hold as i8).count();
+        let buy_count = strategy_signals
+            .iter()
+            .filter(|&&s| s == Signal::Buy as i8)
+            .count();
+        let sell_count = strategy_signals
+            .iter()
+            .filter(|&&s| s == Signal::Sell as i8)
+            .count();
+        let hold_count = strategy_signals
+            .iter()
+            .filter(|&&s| s == Signal::Hold as i8)
+            .count();
 
         let buy_pct = (buy_count as f64 / num_ticks as f64) * 100.0;
         let sell_pct = (sell_count as f64 / num_ticks as f64) * 100.0;
         let hold_pct = (hold_count as f64 / num_ticks as f64) * 100.0;
 
-        println!("   Strategy {:2}: Buy={:6} ({:5.2}%), Sell={:6} ({:5.2}%), Hold={:6} ({:5.2}%)",
-                 i, buy_count, buy_pct, sell_count, sell_pct, hold_count, hold_pct);
+        println!(
+            "   Strategy {:2}: Buy={:6} ({:5.2}%), Sell={:6} ({:5.2}%), Hold={:6} ({:5.2}%)",
+            i, buy_count, buy_pct, sell_count, sell_pct, hold_count, hold_pct
+        );
     }
 
     // Memory efficiency
@@ -109,11 +138,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let intermediate_avoided = strategies.len() * num_ticks * 6 * 8; // 6 features × 8 bytes (f64) - NOT written!
 
     println!("   Input OHLCV: {:.2}MB", input_size as f64 / 1e6);
-    println!("   Output signals: {:.2}MB", output_signals_size as f64 / 1e6);
-    println!("   Output features (quantized): {:.2}MB", output_features_size as f64 / 1e6);
-    println!("   Intermediate avoided (fusion): {:.2}MB ✨", intermediate_avoided as f64 / 1e6);
-    println!("   Memory traffic reduction: {:.1}%",
-             (intermediate_avoided as f64 / (intermediate_avoided + output_signals_size + output_features_size) as f64) * 100.0);
+    println!(
+        "   Output signals: {:.2}MB",
+        output_signals_size as f64 / 1e6
+    );
+    println!(
+        "   Output features (quantized): {:.2}MB",
+        output_features_size as f64 / 1e6
+    );
+    println!(
+        "   Intermediate avoided (fusion): {:.2}MB ✨",
+        intermediate_avoided as f64 / 1e6
+    );
+    println!(
+        "   Memory traffic reduction: {:.1}%",
+        (intermediate_avoided as f64
+            / (intermediate_avoided + output_signals_size + output_features_size) as f64)
+            * 100.0
+    );
 
     println!("\n✅ Demo complete!");
     println!("\n💡 Next steps:");
@@ -143,17 +185,17 @@ fn generate_synthetic_data(num_ticks: usize) -> OrderflowInput {
 
     for _ in 0..num_ticks {
         // Simulate price movement (random walk with trend)
-        let trend = (rng.gen::<f32>() - 0.5) * 2.0; // -1 to +1
-        let noise = (rng.gen::<f32>() - 0.5) * 10.0; // ±5
+        let trend = (rng.r#gen::<f32>() - 0.5) * 2.0; // -1 to +1
+        let noise = (rng.r#gen::<f32>() - 0.5) * 10.0; // ±5
         price += trend + noise;
         price = price.max(1000.0); // Floor at $1k
 
         // Simulate volume (lognormal distribution)
-        let base_volume = rng.gen::<f32>() * 100.0 + 10.0; // 10-110
+        let base_volume = rng.r#gen::<f32>() * 100.0 + 10.0; // 10-110
         let total_volume = base_volume;
 
         // Simulate buy/sell split (with some imbalance)
-        let imbalance = (rng.gen::<f32>() - 0.5) * 0.4 + 0.5; // 0.3-0.7
+        let imbalance = (rng.r#gen::<f32>() - 0.5) * 0.4 + 0.5; // 0.3-0.7
         let buy_vol = total_volume * imbalance;
         let sell_vol = total_volume * (1.0 - imbalance);
 

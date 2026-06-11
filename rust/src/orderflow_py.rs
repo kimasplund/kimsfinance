@@ -37,16 +37,16 @@
 //! print(f"First strategy signals: {result.signals[0]}")
 //! ```
 
-use numpy::{PyArray2, PyReadonlyArray1};
+
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use numpy::{PyArray2, PyReadonlyArray1};
 use std::sync::Arc;
 
 #[cfg(feature = "gpu")]
 use crate::gpu::orderflow_batch::{
-    OrderflowBatchProcessor, OrderflowInput,
-    StrategyConfig as RustStrategyConfig, StrategyType,
+    OrderflowBatchProcessor, OrderflowInput, StrategyConfig as RustStrategyConfig, StrategyType,
 };
 
 #[cfg(feature = "gpu")]
@@ -102,11 +102,7 @@ impl PyStrategyConfig {
     /// Strategy configuration ready for batch processing
     #[new]
     #[pyo3(signature = (strategy_type, feature_mins, feature_maxs))]
-    fn new(
-        strategy_type: &str,
-        feature_mins: [f32; 6],
-        feature_maxs: [f32; 6],
-    ) -> PyResult<Self> {
+    fn new(strategy_type: &str, feature_mins: [f32; 6], feature_maxs: [f32; 6]) -> PyResult<Self> {
         let strategy_type_enum = match strategy_type.to_lowercase().as_str() {
             "momentum" => StrategyType::Momentum,
             "mean_reversion" | "meanreversion" => StrategyType::MeanReversion,
@@ -117,7 +113,7 @@ impl PyStrategyConfig {
                 return Err(PyRuntimeError::new_err(format!(
                     "Unknown strategy type: {}. Valid types: momentum, mean_reversion, breakout, scalping, trend_following",
                     strategy_type
-                )))
+                )));
             }
         };
 
@@ -382,10 +378,10 @@ impl PyOrderflowProcessor {
     /// ```
     #[new]
     fn new() -> PyResult<Self> {
-        let device = Arc::new(
-            GpuDevice::new()
-                .map_err(|e| PyRuntimeError::new_err(format!("GPU initialization failed: {:?}", e)))?,
-        );
+        let device =
+            Arc::new(GpuDevice::new().map_err(|e| {
+                PyRuntimeError::new_err(format!("GPU initialization failed: {:?}", e))
+            })?);
 
         let processor = OrderflowBatchProcessor::new(device.clone())
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to create processor: {:?}", e)))?;

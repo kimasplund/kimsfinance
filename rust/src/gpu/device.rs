@@ -4,10 +4,14 @@
 
 use super::async_alloc::AsyncAllocator;
 use super::persistent::pinned_memory::PinnedBufferPool;
-use cudarc::driver::{CudaContext, CudaSlice, CudaStream, result::DriverError, PushKernelArg};
+use cudarc::driver::{
+    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, PushKernelArg,
+    result::DriverError,
+};
 use cudarc::nvrtc::CompileError;
+use dashmap::DashMap;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 // Tunable constants for pinned memory pool
 const PINNED_BUFFER_COUNT: usize = 16; // Number of reusable buffers
@@ -24,6 +28,15 @@ pub struct GpuDevice {
     pub(crate) pinned_pool: Mutex<PinnedBufferPool<f64>>,
     /// Async memory allocator for 1.2-1.5x faster allocation (CUDA 11.2+)
     pub(crate) async_allocator: Option<Arc<AsyncAllocator>>,
+    /// Per-device cache of loaded CUDA modules, keyed by
+    /// `compile::kernel_source_hash_u64(kernel_src)` (first 8 bytes of the same
+    /// SHA-256 digest that keys the process-wide PTX cache).
+    ///
+    /// `context.load_module()` (cuModuleLoadData + driver JIT) costs ~0.1-1ms per
+    /// call; caching the `Arc<CudaModule>` makes repeat indicator invocations a
+    /// lock-free map lookup + cuModuleGetFunction (sub-microsecond). See
+    /// `get_or_load_function`.
+    pub(crate) module_cache: DashMap<u64, Arc<CudaModule>>,
 }
 
 impl GpuDevice {
@@ -85,6 +98,112 @@ impl GpuDevice {
             device_id,
             pinned_pool: Mutex::new(pinned_pool),
             async_allocator,
+            module_cache: DashMap::new(),
+        })
+    }
+
+    /// Get the process-wide shared GPU device (device 0), initializing it on first call
+    ///
+    /// Constructing a `GpuDevice` is expensive: CUDA context creation plus eager
+    /// allocation of a ~128MB pinned-memory pool. Several call sites currently
+    /// construct a fresh device per operation (`batch.rs`, `triple_buffer.rs`,
+    /// `persistent/mod.rs`), repeating that cost on every call. This singleton
+    /// amortizes it to once per process.
+    ///
+    /// The first call's outcome (success or failure) is cached: on a host without
+    /// a usable GPU, subsequent calls return the same `InitializationError`
+    /// without retrying driver initialization.
+    ///
+    /// # Errors
+    ///
+    /// Returns `GpuError::InitializationError` if device 0 could not be
+    /// initialized (no CUDA GPU, driver missing, context creation failed).
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// let device = GpuDevice::global()?;
+    /// let rsi = device.get_or_load_function(RSI_KERNEL, "calculate_rsi_kernel")?;
+    /// ```
+    pub fn global() -> Result<Arc<GpuDevice>, GpuError> {
+        static GLOBAL_DEVICE: OnceLock<Result<Arc<GpuDevice>, String>> = OnceLock::new();
+
+        GLOBAL_DEVICE
+            .get_or_init(|| GpuDevice::new().map(Arc::new).map_err(|e| e.to_string()))
+            .clone()
+            .map_err(GpuError::InitializationError)
+    }
+
+    /// Get a compiled kernel function, loading and caching its module on first use
+    ///
+    /// Replaces the per-call pattern
+    /// `Arc::unwrap_or_clone(compile_ptx_optimized_cached(src)?)` +
+    /// `context.load_module(ptx)` (deep-clones the multi-KB PTX string and pays
+    /// cuModuleLoadData + driver JIT, ~0.1-1ms, on **every** invocation) with a
+    /// per-device module cache:
+    ///
+    /// - **First call** per (device, kernel source): NVRTC compile (process-wide
+    ///   PTX cache), one PTX clone, one module load. Module cached.
+    /// - **Subsequent calls**: SHA-256 of source + lock-free map lookup +
+    ///   cuModuleGetFunction (sub-microsecond).
+    ///
+    /// # Arguments
+    ///
+    /// * `kernel_src` - CUDA C source string (NVRTC-compatible: no `#include`,
+    ///   `extern "C" __global__` entry points)
+    /// * `fn_name` - Name of the `extern "C" __global__` function to load
+    ///
+    /// # Thread Safety
+    ///
+    /// Safe to call concurrently. If two threads race on the same uncached
+    /// kernel, both load a module but only the first insert wins; the loser's
+    /// module is dropped (unloaded) and its function is taken from the winner.
+    ///
+    /// # Errors
+    ///
+    /// - `GpuError::CompilationError` if NVRTC compilation or module load fails
+    /// - `GpuError::ExecutionError` if `fn_name` is not found in the module
+    pub fn get_or_load_function(
+        &self,
+        kernel_src: &str,
+        fn_name: &str,
+    ) -> Result<CudaFunction, GpuError> {
+        let key = super::compile::kernel_source_hash_u64(kernel_src);
+
+        // Fast path: module already loaded on this device
+        if let Some(entry) = self.module_cache.get(&key) {
+            let module = Arc::clone(entry.value());
+            drop(entry); // Release shard lock before driver call
+            return module.load_function(fn_name).map_err(|e| {
+                GpuError::ExecutionError(format!(
+                    "Failed to load kernel function '{}': {:?}",
+                    fn_name, e
+                ))
+            });
+        }
+
+        // Slow path: compile (PTX itself is cached process-wide) and load once.
+        let ptx_arc = super::compile::compile_ptx_cached_ref(kernel_src).map_err(|e| {
+            GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e))
+        })?;
+
+        // load_module takes Ptx by value; this clone happens at most once per
+        // (device, kernel) thanks to the module cache — unlike the per-call
+        // Arc::unwrap_or_clone pattern this API replaces.
+        let loaded = self.context.load_module((*ptx_arc).clone()).map_err(|e| {
+            GpuError::CompilationError(format!("Failed to load PTX module: {:?}", e))
+        })?;
+
+        // entry().or_insert keeps the first-inserted module if another thread won
+        // the race; our `loaded` is then dropped (module unloaded) safely because
+        // no CudaFunction was created from it.
+        let module = Arc::clone(self.module_cache.entry(key).or_insert(loaded).value());
+
+        module.load_function(fn_name).map_err(|e| {
+            GpuError::ExecutionError(format!(
+                "Failed to load kernel function '{}': {:?}",
+                fn_name, e
+            ))
         })
     }
 
@@ -101,6 +220,51 @@ impl GpuDevice {
     pub fn alloc_buffer(&self, len: usize) -> Result<CudaSlice<f64>, GpuError> {
         self.stream.alloc_zeros::<f64>(len).map_err(|e| {
             GpuError::AllocationError(format!("Failed to allocate {} elements: {:?}", len, e))
+        })
+    }
+
+    /// Allocate GPU memory **without** zero-initialization
+    ///
+    /// `alloc_buffer`/`allocate_device_buffer` use `alloc_zeros`, which issues a
+    /// `cudaMemsetAsync` over the entire buffer — a full extra VRAM write pass.
+    /// For kernel *output* buffers whose every element is overwritten before any
+    /// read, that memset is pure waste; this method skips it.
+    ///
+    /// # Contract (caller responsibility)
+    ///
+    /// The buffer contents are **garbage** until written. The caller MUST ensure
+    /// every element is overwritten by a kernel (or explicit NaN-fill for warmup
+    /// regions) before it is read or copied back to host.
+    ///
+    /// **Counter-examples — keep `alloc_zeros` for these:**
+    /// - `rsi.rs`: `calculate_gains_losses_kernel` writes `gains[idx + 1]` /
+    ///   `losses[idx + 1]` only, leaving element 0 untouched — it relies on the
+    ///   implicit zero from `alloc_buffer`.
+    /// - `ichimoku.rs`: `shift_forward_kernel` writes `output[idx + displacement]`
+    ///   only, leaving the first `displacement` elements unwritten (zeroed
+    ///   explicitly via `memset_zeros` before launch).
+    ///
+    /// # Arguments
+    ///
+    /// * `len` - Number of `T` elements to allocate
+    ///
+    /// # Errors
+    ///
+    /// Returns `GpuError::AllocationError` if device allocation fails.
+    pub fn alloc_uninit<T: cudarc::driver::DeviceRepr + cudarc::driver::ValidAsZeroBits>(
+        &self,
+        len: usize,
+    ) -> Result<CudaSlice<T>, GpuError> {
+        // SAFETY: cudarc marks `alloc` unsafe because the memory is unset. The
+        // contract above shifts initialization responsibility to the caller; for
+        // the POD numeric types used in this crate (f64/f32/i64/i32/i8/u8) any
+        // bit pattern is a valid value, so reading garbage yields wrong numbers,
+        // not undefined behavior.
+        unsafe { self.stream.alloc::<T>(len) }.map_err(|e| {
+            GpuError::AllocationError(format!(
+                "Failed to allocate {} uninitialized elements: {:?}",
+                len, e
+            ))
         })
     }
 
@@ -303,12 +467,6 @@ impl GpuDevice {
 
         // PLACEHOLDER: Fall back to traditional allocation
         // This maintains API compatibility for future optimization
-        eprintln!(
-            "INFO: Stream-ordered allocation requested but not yet available in cudarc 0.17.3"
-        );
-        eprintln!("      Falling back to traditional allocation (no performance change)");
-        eprintln!("      Expected improvement when implemented: 10-20% for memory-bound kernels");
-
         self.alloc_buffer(len)
     }
 
@@ -459,9 +617,9 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_f32(&self, buffer: &CudaSlice<f32>) -> Result<Vec<f32>, GpuError> {
-        self.stream
-            .memcpy_dtov(buffer)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy f32 from device: {:?}", e)))
+        self.stream.memcpy_dtov(buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy f32 from device: {:?}", e))
+        })
     }
 
     /// Copy i8 data from host to device
@@ -497,9 +655,9 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_i8(&self, buffer: &CudaSlice<i8>) -> Result<Vec<i8>, GpuError> {
-        self.stream
-            .memcpy_dtov(buffer)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy i8 from device: {:?}", e)))
+        self.stream.memcpy_dtov(buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy i8 from device: {:?}", e))
+        })
     }
 
     /// Copy u8 data from device to host
@@ -508,9 +666,9 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_u8(&self, buffer: &CudaSlice<u8>) -> Result<Vec<u8>, GpuError> {
-        self.stream
-            .memcpy_dtov(buffer)
-            .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy u8 from device: {:?}", e)))
+        self.stream.memcpy_dtov(buffer).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy u8 from device: {:?}", e))
+        })
     }
 
     /// Copy data from device to host
@@ -623,6 +781,13 @@ impl GpuDevice {
         &self.context
     }
 
+    /// Get reference to CUDA stream
+    ///
+    /// Required for launching custom kernels or custom stream operations
+    pub fn stream(&self) -> &Arc<CudaStream> {
+        &self.stream
+    }
+
     /// Query kernel occupancy to determine optimal grid size
     ///
     /// Uses CUDA occupancy API to calculate maximum active blocks per multiprocessor
@@ -689,16 +854,16 @@ impl GpuDevice {
 
             // Query compute capability from device
             let result_major = sys::cuDeviceGetAttribute(
-                    &mut major,
-                    sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
-                    self.context.cu_device(),
-                );
+                &mut major,
+                sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                self.context.cu_device(),
+            );
 
             let result_minor = sys::cuDeviceGetAttribute(
-                    &mut minor,
-                    sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
-                    self.context.cu_device(),
-                );
+                &mut minor,
+                sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                self.context.cu_device(),
+            );
 
             // Check if both results succeeded
             if result_major == sys::cudaError_enum::CUDA_SUCCESS
@@ -712,6 +877,50 @@ impl GpuDevice {
             }
         }
     }
+}
+
+/// Query GPU compute capability via the CUDA driver, without creating a context
+///
+/// Standalone variant of `GpuDevice::compute_capability` for use before any
+/// `GpuDevice` exists — notably by `compile::detect_gpu_arch()` to pick the
+/// NVRTC target architecture. Performs `cuInit` (idempotent, cheap after the
+/// first call) + `cuDeviceGet` + `cuDeviceGetAttribute`; this replaces the
+/// previous nvidia-smi subprocess query (~10-50ms process spawn + CSV parsing).
+///
+/// # Arguments
+///
+/// * `device_ordinal` - CUDA device ordinal (0 for first GPU)
+///
+/// # Returns
+///
+/// `Some((major, minor))` on success (e.g. `(8, 9)` for RTX 3500 Ada), or
+/// `None` if the driver is unavailable, the ordinal is invalid, or any query
+/// fails. Callers choose their own fallback (e.g. compute_89).
+pub fn query_compute_capability(device_ordinal: i32) -> Option<(u32, u32)> {
+    use cudarc::driver::{result, sys};
+
+    result::init().ok()?;
+    let dev = result::device::get(device_ordinal).ok()?;
+
+    // SAFETY: `dev` was just returned by cuDeviceGet (result::device::get).
+    let major = unsafe {
+        result::device::get_attribute(
+            dev,
+            sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+        )
+    }
+    .ok()?;
+
+    // SAFETY: same `dev` as above.
+    let minor = unsafe {
+        result::device::get_attribute(
+            dev,
+            sys::CUdevice_attribute::CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+        )
+    }
+    .ok()?;
+
+    Some((major as u32, minor as u32))
 }
 
 /// GPU operation errors
@@ -801,7 +1010,11 @@ impl std::fmt::Display for GpuError {
                 )
             }
             GpuError::InvalidDimensions { expected, found } => {
-                write!(f, "Invalid dimensions: expected {}, found {}", expected, found)
+                write!(
+                    f,
+                    "Invalid dimensions: expected {}, found {}",
+                    expected, found
+                )
             }
         }
     }
@@ -849,5 +1062,114 @@ mod tests {
             .expect("Failed to copy to host");
 
         assert_eq!(data, result);
+    }
+
+    /// NVRTC-compatible test kernel: no #include, extern "C" __global__ entry point
+    const MODULE_CACHE_TEST_KERNEL: &str = r#"
+    extern "C" __global__ void module_cache_test_kernel(double* out, int n) {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx < n) {
+            out[idx] = (double)idx;
+        }
+    }
+    "#;
+
+    #[test]
+    fn test_module_cache_test_kernel_is_nvrtc_compatible() {
+        // Host-side guard (no GPU needed): the test kernel source must stay
+        // NVRTC-JIT-compatible.
+        assert!(
+            !MODULE_CACHE_TEST_KERNEL.contains("#include"),
+            "NVRTC kernels must not use #include directives"
+        );
+        assert!(
+            MODULE_CACHE_TEST_KERNEL.contains("extern \"C\" __global__"),
+            "NVRTC kernels must use extern \"C\" __global__ entry points"
+        );
+    }
+
+    #[test]
+    fn test_global_device_consistent_across_calls() {
+        // Runs with or without a GPU: the OnceLock must cache the first outcome,
+        // so two calls always agree (same Arc on success, error again on failure).
+        let first = GpuDevice::global();
+        let second = GpuDevice::global();
+
+        match (first, second) {
+            (Ok(a), Ok(b)) => {
+                assert!(
+                    Arc::ptr_eq(&a, &b),
+                    "global() must return the same Arc<GpuDevice> on every call"
+                );
+            }
+            (Err(_), Err(_)) => {
+                // Cached initialization failure (no GPU on this host) — consistent.
+            }
+            _ => panic!("global() must be consistent across calls (Ok/Ok or Err/Err)"),
+        }
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_global_device_singleton() {
+        let a = GpuDevice::global().expect("Failed to initialize global GPU device");
+        let b = GpuDevice::global().expect("Failed to get global GPU device");
+        assert!(Arc::ptr_eq(&a, &b), "global() must return the same Arc");
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_get_or_load_function_caches_module() {
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        assert_eq!(device.module_cache.len(), 0, "Module cache starts empty");
+
+        let _f1 = device
+            .get_or_load_function(MODULE_CACHE_TEST_KERNEL, "module_cache_test_kernel")
+            .expect("First load should compile, load, and cache the module");
+        assert_eq!(
+            device.module_cache.len(),
+            1,
+            "Module should be cached after first load"
+        );
+
+        let _f2 = device
+            .get_or_load_function(MODULE_CACHE_TEST_KERNEL, "module_cache_test_kernel")
+            .expect("Second load should hit the module cache");
+        assert_eq!(
+            device.module_cache.len(),
+            1,
+            "Repeat load of the same source must reuse the cached module"
+        );
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_get_or_load_function_unknown_name_fails() {
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let result = device.get_or_load_function(MODULE_CACHE_TEST_KERNEL, "no_such_kernel");
+        assert!(
+            result.is_err(),
+            "Loading a non-existent function name must fail"
+        );
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_alloc_uninit_roundtrip() {
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+
+        let data: Vec<f64> = (0..1024).map(|i| i as f64).collect();
+        let mut buffer = device
+            .alloc_uninit::<f64>(data.len())
+            .expect("alloc_uninit failed");
+        assert_eq!(buffer.len(), data.len());
+
+        // Fulfill the alloc_uninit contract: overwrite every element before reading.
+        device
+            .stream
+            .memcpy_htod(&data, &mut buffer)
+            .expect("H2D copy failed");
+        let result = device.copy_to_host(&buffer).expect("D2H copy failed");
+        assert_eq!(result, data);
     }
 }

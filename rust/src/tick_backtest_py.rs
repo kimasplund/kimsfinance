@@ -342,13 +342,13 @@ fn run_signal_based_backtest(
         cash = position_size * exit_price;
         let pnl = cash - config.initial_capital;
         trade_pnls.push(pnl);
-        total_pnl += pnl;
+        // total_pnl += pnl; // Unused assignment
 
         if pnl > 0.0 {
             winning_trades += 1;
             gross_profit += pnl;
         } else {
-            losing_trades += 1;
+            // losing_trades += 1; // Unused assignment
             gross_loss += pnl.abs();
         }
 

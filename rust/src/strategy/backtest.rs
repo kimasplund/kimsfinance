@@ -34,9 +34,9 @@ impl BacktestEngine {
             data_loader,
             spot_loader,
             initial_capital,
-            max_risk_per_trade_pct: 5.0,        // 5% max risk per trade
-            max_concurrent_positions: 10,        // Max 10 open positions
-            max_margin_utilization_pct: 50.0,   // Use max 50% of capital as margin
+            max_risk_per_trade_pct: 5.0,      // 5% max risk per trade
+            max_concurrent_positions: 10,     // Max 10 open positions
+            max_margin_utilization_pct: 50.0, // Use max 50% of capital as margin
         }
     }
 
@@ -111,7 +111,11 @@ impl BacktestEngine {
     }
 
     /// Get current margin utilization percentage
-    pub fn get_margin_utilization_pct(&self, current_capital: f64, positions: &[OptionsPosition]) -> f64 {
+    pub fn get_margin_utilization_pct(
+        &self,
+        current_capital: f64,
+        positions: &[OptionsPosition],
+    ) -> f64 {
         let used_margin: f64 = positions
             .iter()
             .map(|p| self.calculate_required_margin(p))
@@ -364,7 +368,6 @@ impl BacktestEngine {
 
             // Only proceed with entry checks if we haven't hit max positions
             if positions.len() < self.max_concurrent_positions {
-
                 // Debug: show first day stats
                 if trading_dates.iter().position(|d| d == current_date) == Some(0) {
                     println!("  First day - Total puts: {}", puts.len());
@@ -449,11 +452,25 @@ impl BacktestEngine {
                         println!("    Required margin: ${:.2}", required_margin);
                         println!("    Position size limit: {:.2}%", params.position_size_pct);
 
-                        let current_margin_util = self.get_margin_utilization_pct(capital, &positions);
-                        println!("    Current margin utilization: {:.1}%", current_margin_util);
-                        println!("    Max margin utilization: {:.1}%", self.max_margin_utilization_pct);
-                        println!("    Max risk per trade: {:.1}%", self.max_risk_per_trade_pct);
-                        println!("    Open positions: {}/{}", positions.len(), self.max_concurrent_positions);
+                        let current_margin_util =
+                            self.get_margin_utilization_pct(capital, &positions);
+                        println!(
+                            "    Current margin utilization: {:.1}%",
+                            current_margin_util
+                        );
+                        println!(
+                            "    Max margin utilization: {:.1}%",
+                            self.max_margin_utilization_pct
+                        );
+                        println!(
+                            "    Max risk per trade: {:.1}%",
+                            self.max_risk_per_trade_pct
+                        );
+                        println!(
+                            "    Open positions: {}/{}",
+                            positions.len(),
+                            self.max_concurrent_positions
+                        );
                     }
 
                     // Check all risk limits
@@ -607,8 +624,14 @@ impl BacktestEngine {
         println!("Return on Capital: {:.1}%", result.return_on_capital);
         println!("\n=== Risk Management ===");
         println!("Max Risk Per Trade: {:.1}%", self.max_risk_per_trade_pct);
-        println!("Max Concurrent Positions: {}", self.max_concurrent_positions);
-        println!("Max Margin Utilization: {:.1}%\n", self.max_margin_utilization_pct);
+        println!(
+            "Max Concurrent Positions: {}",
+            self.max_concurrent_positions
+        );
+        println!(
+            "Max Margin Utilization: {:.1}%\n",
+            self.max_margin_utilization_pct
+        );
 
         Ok(result)
     }
@@ -655,22 +678,29 @@ impl BacktestEngine {
         // Walk forward through each trading day
         for current_date in trading_dates.iter() {
             // Detect market regime for this day
-            let regime = match regime_detector.detect_regime(&mut self.spot_loader, symbol, *current_date) {
-                Ok(r) => r,
-                Err(SpotDataError::InsufficientData(_)) => {
-                    // Skip days without enough data for regime detection
-                    continue;
-                }
-                Err(e) => {
-                    println!("  {} - Warning: Could not detect regime: {}", current_date, e);
-                    continue;
-                }
-            };
+            let regime =
+                match regime_detector.detect_regime(&mut self.spot_loader, symbol, *current_date) {
+                    Ok(r) => r,
+                    Err(SpotDataError::InsufficientData(_)) => {
+                        // Skip days without enough data for regime detection
+                        continue;
+                    }
+                    Err(e) => {
+                        println!(
+                            "  {} - Warning: Could not detect regime: {}",
+                            current_date, e
+                        );
+                        continue;
+                    }
+                };
 
             // Log regime changes
             if current_regime.is_none() || current_regime.unwrap() != regime {
                 if let Some(prev_regime) = current_regime {
-                    println!("  {} - REGIME CHANGE: {} -> {}", current_date, prev_regime, regime);
+                    println!(
+                        "  {} - REGIME CHANGE: {} -> {}",
+                        current_date, prev_regime, regime
+                    );
                 } else {
                     println!("  {} - INITIAL REGIME: {}", current_date, regime);
                 }
@@ -719,7 +749,8 @@ impl BacktestEngine {
                 let pos_params = self.get_params_from_position_name(&position.strategy);
                 let pos_strategy = BullPutSpread::new(pos_params);
 
-                if let Some(reason) = pos_strategy.should_close(position, *current_date, &price_map) {
+                if let Some(reason) = pos_strategy.should_close(position, *current_date, &price_map)
+                {
                     positions_to_close.push(idx);
 
                     // Calculate P&L
@@ -813,8 +844,10 @@ impl BacktestEngine {
                     );
 
                     if can_enter {
-                        let short_entry_price = cost_model.entry_price(short_put.bid, short_put.ask, true);
-                        let long_entry_price = cost_model.entry_price(long_put.bid, long_put.ask, false);
+                        let short_entry_price =
+                            cost_model.entry_price(short_put.bid, short_put.ask, true);
+                        let long_entry_price =
+                            cost_model.entry_price(long_put.bid, long_put.ask, false);
                         let realistic_credit = short_entry_price - long_entry_price;
                         let entry_costs = cost_model.entry_cost(2);
                         capital -= entry_costs;
@@ -906,7 +939,8 @@ impl BacktestEngine {
         }
 
         // Calculate metrics
-        let metrics = PerformanceMetrics::calculate(&closed_positions, &daily_capital, self.initial_capital);
+        let metrics =
+            PerformanceMetrics::calculate(&closed_positions, &daily_capital, self.initial_capital);
 
         // Use default params for result (since we used multiple param sets)
         let mut result_params = default_bull_put_params();

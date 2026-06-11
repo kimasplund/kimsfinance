@@ -68,7 +68,7 @@
 //! cargo bench --features gpu --bench tensor_core_benchmark -- --verbose 2>&1 | tee tensor_core_results.txt
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -293,9 +293,7 @@ fn bench_fp8_tensor_cores(c: &mut Criterion) {
 
     if !fp8_core.is_fp8_supported() {
         println!("⚠️  FP8 tensor cores not supported on this GPU, skipping");
-        println!(
-            "   Required: Compute capability >= 8.9 (Ada Lovelace or newer)"
-        );
+        println!("   Required: Compute capability >= 8.9 (Ada Lovelace or newer)");
         return;
     }
 
@@ -538,14 +536,11 @@ fn bench_conversion_fp16(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     // Convert FP32 → FP16
-                    let data_f16: Vec<half::f16> = data_f32
-                        .iter()
-                        .map(|&x| half::f16::from_f32(x))
-                        .collect();
+                    let data_f16: Vec<half::f16> =
+                        data_f32.iter().map(|&x| half::f16::from_f32(x)).collect();
 
                     // Convert FP16 → FP32
-                    let _data_back: Vec<f32> =
-                        data_f16.iter().map(|&x| x.to_f32()).collect();
+                    let _data_back: Vec<f32> = data_f16.iter().map(|&x| x.to_f32()).collect();
 
                     black_box(&_data_back);
                 });
@@ -660,9 +655,7 @@ fn test_fp8_accuracy() {
     if max_rel_error < 0.10 {
         println!("  ✓ PASS: Acceptable for genetic optimizer (< 10%)");
     } else {
-        println!(
-            "  ⚠️  WARNING: May degrade genetic optimizer quality (> 10%)"
-        );
+        println!("  ⚠️  WARNING: May degrade genetic optimizer quality (> 10%)");
     }
 }
 

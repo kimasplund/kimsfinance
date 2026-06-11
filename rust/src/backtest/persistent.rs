@@ -132,7 +132,9 @@ pub fn execute_persistent(
     pinned_ohlcv.as_mut_slice()[..ohlcv_len].copy_from_slice(&ohlcv_flat);
 
     let mut d_ohlcv = device.alloc_buffer(ohlcv_len)?;
-    device.stream.memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_ohlcv.as_slice()[..ohlcv_len], &mut d_ohlcv)?;
 
     // Release pinned buffer
     device.pinned_pool.lock().release(pinned_ohlcv);
@@ -150,7 +152,9 @@ pub fn execute_persistent(
     pinned_params.as_mut_slice()[..params_len].copy_from_slice(&params_flat);
 
     let mut d_params = device.alloc_buffer(params_len)?;
-    device.stream.memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_params.as_slice()[..params_len], &mut d_params)?;
 
     // Release pinned buffer
     device.pinned_pool.lock().release(pinned_params);
@@ -178,7 +182,9 @@ pub fn execute_persistent(
     pinned_close.as_mut_slice()[..close_len].copy_from_slice(&close_prices);
 
     let mut d_close = device.alloc_buffer(close_len)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..close_len], &mut d_close)?;
 
     // Release pinned buffer
     device.pinned_pool.lock().release(pinned_close);
@@ -274,10 +280,18 @@ pub fn execute_persistent(
     let equity_len = n_strategies * n_candles;
     let mut pinned_equity = device.pinned_pool.lock().acquire(equity_len)?;
 
-    device.stream.memcpy_dtoh(&d_sharpe, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
-    device.stream.memcpy_dtoh(&d_drawdown, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
-    device.stream.memcpy_dtoh(&d_win_rate, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
-    device.stream.memcpy_dtoh(&d_equity, &mut pinned_equity.as_mut_slice()[..equity_len])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_sharpe, &mut pinned_sharpe.as_mut_slice()[..n_strategies])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_drawdown, &mut pinned_dd.as_mut_slice()[..n_strategies])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_win_rate, &mut pinned_wr.as_mut_slice()[..n_strategies])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_equity, &mut pinned_equity.as_mut_slice()[..equity_len])?;
 
     // Synchronize stream to ensure D2H copies are complete before CPU access
     device.synchronize()?;

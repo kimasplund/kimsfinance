@@ -5,9 +5,9 @@
 
 #![cfg(feature = "gpu")]
 
-use kimsfinance_core::backtest::tick_batch::{BatchTickBacktest, BatchBacktestResults};
-use kimsfinance_core::backtest::{BacktestConfig, TickEngine};
+use kimsfinance_core::backtest::tick_batch::{BatchBacktestResults, BatchTickBacktest};
 use kimsfinance_core::backtest::tick_strategy::OrderFlowStrategy;
+use kimsfinance_core::backtest::{BacktestConfig, TickEngine};
 use kimsfinance_core::binance::{Timeframe, Trade};
 use kimsfinance_core::gpu::device::GpuDevice;
 use std::sync::Arc;
@@ -74,7 +74,11 @@ fn test_gpu_vs_cpu_identical() {
         "Result count mismatch"
     );
 
-    for (i, (cpu, gpu)) in cpu_results.iter().zip(gpu_results.results.iter()).enumerate() {
+    for (i, (cpu, gpu)) in cpu_results
+        .iter()
+        .zip(gpu_results.results.iter())
+        .enumerate()
+    {
         // Check total return within 0.01% (0.0001 absolute)
         let return_diff = (cpu.total_return - gpu.total_return).abs();
         assert!(
@@ -258,7 +262,10 @@ fn test_large_batch_processing() {
         );
     }
 
-    println!("✅ Large batch processing test passed: {} strategies", params.len());
+    println!(
+        "✅ Large batch processing test passed: {} strategies",
+        params.len()
+    );
 }
 
 /// Test 7: Performance summary printing

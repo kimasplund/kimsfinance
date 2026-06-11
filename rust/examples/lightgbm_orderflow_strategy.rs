@@ -323,10 +323,7 @@ fn run_single_backtest(args: &Args) -> Result<(), Box<dyn std::error::Error>> {
 
     // Print results
     println!("\n=== Backtest Results ===");
-    println!(
-        "Processing time: {:.2}s",
-        elapsed.as_secs_f64()
-    );
+    println!("Processing time: {:.2}s", elapsed.as_secs_f64());
     println!(
         "Throughput: {:.2}M ticks/sec\n",
         trades.len() as f64 / elapsed.as_secs_f64() / 1_000_000.0
@@ -459,7 +456,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(not(feature = "data-downloaders"))]
     {
         eprintln!("Error: This example requires the 'data-downloaders' feature");
-        eprintln!("Run with: cargo run --features data-downloaders --example lightgbm_orderflow_strategy");
+        eprintln!(
+            "Run with: cargo run --features data-downloaders --example lightgbm_orderflow_strategy"
+        );
         std::process::exit(1);
     }
 

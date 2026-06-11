@@ -25,7 +25,7 @@
 //! - 2: Numerical accuracy failure
 //! - 3: Statistical significance not achieved
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use kimsfinance_core::gpu::device::GpuDevice;
 use ndarray::Array1;
 use serde::{Deserialize, Serialize};
@@ -84,7 +84,15 @@ pub struct AccuracyValidation {
 // Test Data Generation
 // ============================================================================
 
-fn generate_ohlcv(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+fn generate_ohlcv(
+    n: usize,
+) -> (
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     // Generate realistic price data with some volatility
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
@@ -133,12 +141,14 @@ impl BenchmarkMetrics {
         let mean_us = samples.iter().sum::<u64>() as f64 / n as f64;
         let median_us = sorted[n / 2] as f64;
 
-        let variance = samples.iter()
+        let variance = samples
+            .iter()
             .map(|&x| {
                 let diff = x as f64 - mean_us;
                 diff * diff
             })
-            .sum::<f64>() / (n - 1) as f64;
+            .sum::<f64>()
+            / (n - 1) as f64;
         let std_dev_us = variance.sqrt();
 
         let p95_idx = (n as f64 * 0.95) as usize;
@@ -164,11 +174,8 @@ impl StatisticalComparison {
         let speedup_median = baseline.median_us / optimized.median_us;
 
         // Welch's t-test for confidence interval
-        let (ci_lower, ci_upper) = Self::welch_confidence_interval(
-            &baseline.samples,
-            &optimized.samples,
-            0.95,
-        );
+        let (ci_lower, ci_upper) =
+            Self::welch_confidence_interval(&baseline.samples, &optimized.samples, 0.95);
 
         // Mann-Whitney U test for p-value
         let p_value = Self::mann_whitney_u(&baseline.samples, &optimized.samples);
@@ -205,15 +212,23 @@ impl StatisticalComparison {
         let mean1 = a.iter().sum::<u64>() as f64 / n1;
         let mean2 = b.iter().sum::<u64>() as f64 / n2;
 
-        let var1 = a.iter().map(|&x| {
-            let diff = x as f64 - mean1;
-            diff * diff
-        }).sum::<f64>() / (n1 - 1.0);
+        let var1 = a
+            .iter()
+            .map(|&x| {
+                let diff = x as f64 - mean1;
+                diff * diff
+            })
+            .sum::<f64>()
+            / (n1 - 1.0);
 
-        let var2 = b.iter().map(|&x| {
-            let diff = x as f64 - mean2;
-            diff * diff
-        }).sum::<f64>() / (n2 - 1.0);
+        let var2 = b
+            .iter()
+            .map(|&x| {
+                let diff = x as f64 - mean2;
+                diff * diff
+            })
+            .sum::<f64>()
+            / (n2 - 1.0);
 
         let se = ((var1 / n1) + (var2 / n2)).sqrt();
         let diff = mean1 - mean2;
@@ -236,7 +251,8 @@ impl StatisticalComparison {
         combined.sort_by_key(|&(val, _)| val);
 
         // Calculate rank sum for group 0 (baseline)
-        let rank_sum: f64 = combined.iter()
+        let rank_sum: f64 = combined
+            .iter()
             .enumerate()
             .filter(|(_, (_, group))| *group == 0)
             .map(|(rank, _)| (rank + 1) as f64)

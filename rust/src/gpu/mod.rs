@@ -76,7 +76,7 @@ pub use aggregation::GpuAggregator;
 pub use auto_select::{AggregationEngine, EngineSelector};
 
 #[cfg(feature = "gpu")]
-pub use tick_aggregation::{TickAggregator, AggregatedCandles};
+pub use tick_aggregation::{AggregatedCandles, TickAggregator};
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
@@ -155,6 +155,9 @@ pub use keltner::keltner_channels_gpu;
 
 #[cfg(feature = "gpu")]
 pub mod rsi;
+
+#[cfg(feature = "gpu")]
+pub mod scan;
 
 #[cfg(feature = "gpu")]
 pub mod rsi_sync;
@@ -370,8 +373,8 @@ pub mod orderflow_batch;
 
 #[cfg(feature = "gpu")]
 pub use orderflow_batch::{
-    OrderflowBatchProcessor, OrderflowInput, OrderflowOutput,
-    StrategyConfig, StrategyType, Signal, NUM_FEATURES,
+    NUM_FEATURES, OrderflowBatchProcessor, OrderflowInput, OrderflowOutput, Signal, StrategyConfig,
+    StrategyType,
 };
 
 #[cfg(feature = "gpu")]
@@ -590,7 +593,10 @@ pub fn batch_backtest_genetic(
     let kernel_metrics = module
         .load_function("metrics_calculation_kernel")
         .map_err(|e| {
-            GpuError::ExecutionError(format!("Failed to load metrics_calculation_kernel: {:?}", e))
+            GpuError::ExecutionError(format!(
+                "Failed to load metrics_calculation_kernel: {:?}",
+                e
+            ))
         })?;
 
     // ====== PHASE 3: LAUNCH KERNEL 1 - BATCH INDICATORS ======
@@ -599,7 +605,11 @@ pub fn batch_backtest_genetic(
     let n_blocks_candles = (n_candles + block_size - 1) / block_size;
 
     let config_indicators = LaunchConfig {
-        grid_dim: (n_strategies as u32, n_indicators as u32, n_blocks_candles as u32),
+        grid_dim: (
+            n_strategies as u32,
+            n_indicators as u32,
+            n_blocks_candles as u32,
+        ),
         block_dim: (block_size as u32, 1, 1),
         shared_mem_bytes: 0,
     };
@@ -717,9 +727,8 @@ pub fn batch_backtest_genetic(
 
     let results: Vec<BacktestResult> = (0..n_strategies)
         .map(|i| {
-            let equity_curve: Vec<f64> = equity_curves_flat
-                [i * n_candles..(i + 1) * n_candles]
-                .to_vec();
+            let equity_curve: Vec<f64> =
+                equity_curves_flat[i * n_candles..(i + 1) * n_candles].to_vec();
 
             let final_equity = equity_curve.last().copied().unwrap_or(initial_capital);
             let total_return = ((final_equity - initial_capital) / initial_capital) * 100.0;
@@ -732,9 +741,9 @@ pub fn batch_backtest_genetic(
                 sharpe_ratio: sharpe_ratios[i],
                 max_drawdown: max_drawdowns[i] * 100.0, // Convert to percentage
                 win_rate: win_rates[i] * 100.0,         // Convert to percentage
-                num_trades: 0, // TODO: Extract from d_num_trades
-                profit_factor: 1.0, // TODO: Calculate from trades
-                trades: Vec::new(), // TODO: Extract from d_trades
+                num_trades: 0,                          // TODO: Extract from d_num_trades
+                profit_factor: 1.0,                     // TODO: Calculate from trades
+                trades: Vec::new(),                     // TODO: Extract from d_trades
             }
         })
         .collect();

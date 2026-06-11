@@ -15,8 +15,10 @@
 
 use super::device::{GpuDevice, GpuError};
 use super::compile::compile_ptx_optimized_cached;
-use cudarc::driver::{CudaStream, LaunchConfig};
+use crate::cpu::sequential::wilders_smoothing_cpu;
+use cudarc::driver::{LaunchConfig, PushKernelArg};
 use ndarray::Array1;
+use rayon::prelude::*;
 use std::sync::Arc;
 
 /// CUDA kernel source for 2D batch processing
@@ -190,7 +192,13 @@ extern "C" __global__ void stochastic_batch_2d_kernel(
 
 // Kernel 5: Momentum Fusion (RSI + Stochastic %K + Williams %R)
 // Grid: ((n_candles + 255) / 256, 1, 1)
-// Block: (256, 3, 1) - threadIdx.y selects indicator
+// Block: (256, 1, 1) - each thread emits all three indicator outputs
+//
+// Stochastic %K and Williams %R are affine transforms of the SAME window
+// extrema (highest high / lowest low over `period` bars), so the rolling
+// max/min scan runs once per element and both outputs derive from the same
+// registers. The previous blockDim=(256, 3) layout duplicated that scan in
+// two of the three thread groups and left the RSI group idle during it.
 extern "C" __global__ void momentum_fusion_2d_kernel(
     const double* __restrict__ high,
     const double* __restrict__ low,
@@ -203,75 +211,48 @@ extern "C" __global__ void momentum_fusion_2d_kernel(
     int n,
     int period
 ) {
-    int chunk_idx = blockIdx.x;
-    int indicator_type = threadIdx.y;  // 0=RSI, 1=Stochastic, 2=Williams
-    int local_idx = threadIdx.x;
-
-    int idx = chunk_idx * blockDim.x + local_idx;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx >= n) return;
 
-    // RSI computation (indicator_type == 0)
-    if (indicator_type == 0) {
-        if (idx < period) {
-            rsi_out[idx] = CUDART_NAN;
-        } else {
-            double gain = avg_gain[idx];
-            double loss = avg_loss[idx];
+    // --- RSI from pre-smoothed Wilder averages ---
+    if (idx < period) {
+        rsi_out[idx] = CUDART_NAN;
+    } else {
+        double gain = avg_gain[idx];
+        double loss = avg_loss[idx];
 
-            if (loss < 1e-10) {
-                rsi_out[idx] = 100.0;
-            } else {
-                double rs = gain / loss;
-                rsi_out[idx] = 100.0 - (100.0 / (1.0 + rs));
-            }
+        if (loss < 1e-10) {
+            rsi_out[idx] = 100.0;
+        } else {
+            double rs = gain / loss;
+            rsi_out[idx] = 100.0 - (100.0 / (1.0 + rs));
         }
     }
 
-    // Stochastic %K computation (indicator_type == 1)
-    else if (indicator_type == 1) {
-        if (idx >= period - 1) {
-            double highest_high = -CUDART_INF;
-            double lowest_low = CUDART_INF;
+    // --- Window extrema computed once; %K and %R derived from the same registers ---
+    if (idx >= period - 1) {
+        double highest_high = -CUDART_INF;
+        double lowest_low = CUDART_INF;
 
-            for (int i = 0; i < period; i++) {
-                int window_idx = idx - i;
-                highest_high = fmax(highest_high, high[window_idx]);
-                lowest_low = fmin(lowest_low, low[window_idx]);
-            }
-
-            double range = highest_high - lowest_low;
-            if (range > 1e-10) {
-                stoch_k_out[idx] = 100.0 * (close[idx] - lowest_low) / range;
-            } else {
-                stoch_k_out[idx] = 50.0;
-            }
-        } else {
-            stoch_k_out[idx] = CUDART_NAN;
+        for (int i = 0; i < period; i++) {
+            int window_idx = idx - i;
+            highest_high = fmax(highest_high, high[window_idx]);
+            lowest_low = fmin(lowest_low, low[window_idx]);
         }
-    }
 
-    // Williams %R computation (indicator_type == 2)
-    else if (indicator_type == 2) {
-        if (idx >= period - 1) {
-            double highest_high = -CUDART_INF;
-            double lowest_low = CUDART_INF;
-
-            for (int i = 0; i < period; i++) {
-                int window_idx = idx - i;
-                highest_high = fmax(highest_high, high[window_idx]);
-                lowest_low = fmin(lowest_low, low[window_idx]);
-            }
-
-            double range = highest_high - lowest_low;
-            if (range > 1e-10) {
-                williams_out[idx] = -100.0 * (highest_high - close[idx]) / range;
-            } else {
-                williams_out[idx] = -50.0;
-            }
+        double range = highest_high - lowest_low;
+        if (range > 1e-10) {
+            double c = close[idx];
+            stoch_k_out[idx] = 100.0 * (c - lowest_low) / range;
+            williams_out[idx] = -100.0 * (highest_high - c) / range;
         } else {
-            williams_out[idx] = CUDART_NAN;
+            stoch_k_out[idx] = 50.0;
+            williams_out[idx] = -50.0;
         }
+    } else {
+        stoch_k_out[idx] = CUDART_NAN;
+        williams_out[idx] = CUDART_NAN;
     }
 }
 
@@ -338,6 +319,54 @@ extern "C" __global__ void volatility_fusion_2d_kernel(
     }
 }
 "#;
+
+/// CPU Wilder's smoothing stage for the 2D batch RSI.
+///
+/// `gains`/`losses` are laid out as [n_assets, n_candles]; each asset is an
+/// independent series, so assets are smoothed in parallel across all cores
+/// with rayon. Numerical semantics are exactly
+/// `crate::cpu::sequential::wilders_smoothing_cpu` per asset.
+fn wilder_smooth_batch(
+    gains: &[f64],
+    losses: &[f64],
+    n_assets: usize,
+    n_candles: usize,
+    period: usize,
+) -> Result<(Vec<f64>, Vec<f64>), GpuError> {
+    // par_chunks_mut panics on a zero chunk size
+    if n_candles == 0 {
+        return Err(GpuError::InvalidParameter(
+            "n_candles must be > 0".to_string(),
+        ));
+    }
+
+    let batch_size = n_assets * n_candles;
+
+    let mut avg_gain_batch = vec![0.0f64; batch_size];
+    let mut avg_loss_batch = vec![0.0f64; batch_size];
+
+    // Chunk index == asset_idx ([n_assets, n_candles] row-major layout)
+    avg_gain_batch
+        .par_chunks_mut(n_candles)
+        .zip(avg_loss_batch.par_chunks_mut(n_candles))
+        .enumerate()
+        .try_for_each(|(asset_idx, (gain_out, loss_out))| -> Result<(), GpuError> {
+            let start = asset_idx * n_candles;
+            let end = start + n_candles;
+
+            let gains_arr = Array1::from_vec(gains[start..end].to_vec());
+            let losses_arr = Array1::from_vec(losses[start..end].to_vec());
+
+            let avg_gain = wilders_smoothing_cpu(&gains_arr, period)?;
+            let avg_loss = wilders_smoothing_cpu(&losses_arr, period)?;
+
+            gain_out.copy_from_slice(avg_gain.as_slice().unwrap());
+            loss_out.copy_from_slice(avg_loss.as_slice().unwrap());
+            Ok(())
+        })?;
+
+    Ok((avg_gain_batch, avg_loss_batch))
+}
 
 /// 2D Batch RSI calculation (multiple assets in parallel)
 ///
@@ -442,12 +471,18 @@ pub fn rsi_batch_2d_gpu(
         shared_mem_bytes: 0,
     };
 
+    // Scalar kernel args must outlive the launch builder (PushKernelArg
+    // borrows until launch), so bind them to locals instead of temporaries.
+    let n_assets_i32 = n_assets as i32;
+    let n_candles_i32 = n_candles as i32;
+    let period_i32 = period as i32;
+
     let mut builder = device.stream.launch_builder(&gains_losses_kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_gains);
     builder.arg(&mut d_losses);
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
 
     unsafe {
         builder.launch(config).map_err(|e| {
@@ -479,25 +514,9 @@ pub fn rsi_batch_2d_gpu(
     device.pinned_pool.lock().release(pinned_gains);
     device.pinned_pool.lock().release(pinned_losses);
 
-    // === Step 3: CPU - Wilder's smoothing per asset (sequential per asset, parallel across assets) ===
-    use crate::cpu::sequential::wilders_smoothing_cpu;
-
-    let mut avg_gain_batch = Vec::with_capacity(n_assets * n_candles);
-    let mut avg_loss_batch = Vec::with_capacity(n_assets * n_candles);
-
-    for asset_idx in 0..n_assets {
-        let start = asset_idx * n_candles;
-        let end = start + n_candles;
-
-        let gains = Array1::from_vec(gains_vec[start..end].to_vec());
-        let losses = Array1::from_vec(losses_vec[start..end].to_vec());
-
-        let avg_gain = wilders_smoothing_cpu(&gains, period)?;
-        let avg_loss = wilders_smoothing_cpu(&losses, period)?;
-
-        avg_gain_batch.extend_from_slice(avg_gain.as_slice().unwrap());
-        avg_loss_batch.extend_from_slice(avg_loss.as_slice().unwrap());
-    }
+    // === Step 3: CPU - Wilder's smoothing per asset (rayon-parallel across assets) ===
+    let (avg_gain_batch, avg_loss_batch) =
+        wilder_smooth_batch(&gains_vec, &losses_vec, n_assets, n_candles, period)?;
 
     // === Step 4: H2D - Copy avg_gain/avg_loss back to GPU ===
     // Async H2D transfer for avg_gain
@@ -523,9 +542,9 @@ pub fn rsi_batch_2d_gpu(
     builder.arg(&d_avg_gain);
     builder.arg(&d_avg_loss);
     builder.arg(&mut d_rsi);
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
-    builder.arg(&(period as i32));
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
+    builder.arg(&period_i32);
 
     unsafe {
         builder.launch(config).map_err(|e| {
@@ -590,12 +609,18 @@ pub fn sma_batch_2d_gpu(
         shared_mem_bytes: 0,
     };
 
+    // Scalar kernel args must outlive the launch builder (PushKernelArg
+    // borrows until launch), so bind them to locals instead of temporaries.
+    let n_assets_i32 = n_assets as i32;
+    let n_candles_i32 = n_candles as i32;
+    let period_i32 = period as i32;
+
     let mut builder = device.stream.launch_builder(&kernel);
     builder.arg(&d_close);
     builder.arg(&mut d_sma);
-    builder.arg(&(n_assets as i32));
-    builder.arg(&(n_candles as i32));
-    builder.arg(&(period as i32));
+    builder.arg(&n_assets_i32);
+    builder.arg(&n_candles_i32);
+    builder.arg(&period_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
@@ -644,8 +669,6 @@ pub fn momentum_fusion_2d_gpu(
 
     // Step 1: CPU - Calculate gains/losses and Wilder's smoothing for RSI
     // (Sequential bottleneck, cannot be fused)
-    use crate::cpu::sequential::wilders_smoothing_cpu;
-
     let mut gains = Array1::zeros(n);
     let mut losses = Array1::zeros(n);
 
@@ -699,12 +722,17 @@ pub fn momentum_fusion_2d_gpu(
     let mut d_stoch_k = device.alloc_buffer(n)?;
     let mut d_williams = device.alloc_buffer(n)?;
 
-    // 2D launch: 256 threads × 3 indicators = 768 threads per block
+    // Flattened 1D launch: each thread emits RSI + Stochastic %K + Williams %R
     let config = LaunchConfig {
         grid_dim: (((n + 255) / 256) as u32, 1, 1),
-        block_dim: (256, 3, 1),  // threadIdx.y selects indicator
+        block_dim: (256, 1, 1),
         shared_mem_bytes: 0,
     };
+
+    // Scalar kernel args must outlive the launch builder (PushKernelArg
+    // borrows until launch), so bind them to locals instead of temporaries.
+    let n_i32 = n as i32;
+    let period_i32 = period as i32;
 
     let mut builder = device.stream.launch_builder(&kernel);
     builder.arg(&d_high);
@@ -715,8 +743,8 @@ pub fn momentum_fusion_2d_gpu(
     builder.arg(&mut d_williams);
     builder.arg(&d_avg_gain);
     builder.arg(&d_avg_loss);
-    builder.arg(&(n as i32));
-    builder.arg(&(period as i32));
+    builder.arg(&n_i32);
+    builder.arg(&period_i32);
 
     unsafe { builder.launch(config)? };
     device.stream.synchronize()?;
@@ -912,5 +940,120 @@ mod tests {
                 assert!((williams_ind[i] - williams_fused[i]).abs() < 1e-9);
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Host-side tests (no GPU required)
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn test_batch_2d_kernel_source_nvrtc_compatible() {
+        assert!(
+            !BATCH_2D_KERNELS.contains("#include"),
+            "NVRTC kernel source must not use #include directives"
+        );
+
+        for name in [
+            "rsi_batch_2d_kernel",
+            "rsi_batch_final_2d_kernel",
+            "sma_batch_2d_kernel",
+            "stochastic_batch_2d_kernel",
+            "momentum_fusion_2d_kernel",
+            "volatility_fusion_2d_kernel",
+        ] {
+            let signature = format!("extern \"C\" __global__ void {}", name);
+            assert!(
+                BATCH_2D_KERNELS.contains(&signature),
+                "missing kernel entry point: {}",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_momentum_fusion_kernel_is_flattened() {
+        let start = BATCH_2D_KERNELS
+            .find("momentum_fusion_2d_kernel")
+            .expect("momentum fusion kernel present");
+        let end = BATCH_2D_KERNELS
+            .find("volatility_fusion_2d_kernel")
+            .expect("volatility fusion kernel present");
+        let fusion_src = &BATCH_2D_KERNELS[start..end];
+
+        // Flattened to a single 256-thread mapping: no threadIdx.y indicator
+        // selection (must match the (256, 1, 1) block_dim at the launch site).
+        assert!(
+            !fusion_src.contains("threadIdx.y"),
+            "momentum fusion kernel must not branch on threadIdx.y"
+        );
+
+        // Window extrema computed exactly once; Stochastic %K and Williams %R
+        // both derive from the same highest_high/lowest_low registers.
+        assert_eq!(fusion_src.matches("highest_high = fmax").count(), 1);
+        assert_eq!(fusion_src.matches("lowest_low = fmin").count(), 1);
+    }
+
+    #[test]
+    fn test_wilder_smooth_batch_matches_sequential_reference() {
+        let n_assets = 4;
+        let n_candles = 96;
+        let period = 14;
+
+        // Deterministic non-negative gains/losses, [n_assets, n_candles]
+        let gains: Vec<f64> = (0..n_assets * n_candles)
+            .map(|i| (i as f64 * 0.7).sin().abs() * 2.0)
+            .collect();
+        let losses: Vec<f64> = (0..n_assets * n_candles)
+            .map(|i| (i as f64 * 1.3).cos().abs() * 1.5)
+            .collect();
+
+        let (avg_gain_batch, avg_loss_batch) =
+            wilder_smooth_batch(&gains, &losses, n_assets, n_candles, period)
+                .expect("smoothing failed");
+
+        assert_eq!(avg_gain_batch.len(), n_assets * n_candles);
+        assert_eq!(avg_loss_batch.len(), n_assets * n_candles);
+
+        for asset_idx in 0..n_assets {
+            let start = asset_idx * n_candles;
+            let g = Array1::from_vec(gains[start..start + n_candles].to_vec());
+            let l = Array1::from_vec(losses[start..start + n_candles].to_vec());
+            let expected_gain = wilders_smoothing_cpu(&g, period).unwrap();
+            let expected_loss = wilders_smoothing_cpu(&l, period).unwrap();
+
+            for i in 0..n_candles {
+                for (actual, expected) in [
+                    (avg_gain_batch[start + i], expected_gain[i]),
+                    (avg_loss_batch[start + i], expected_loss[i]),
+                ] {
+                    if expected.is_nan() {
+                        assert!(
+                            actual.is_nan(),
+                            "asset {}, candle {}: expected NaN",
+                            asset_idx,
+                            i
+                        );
+                    } else {
+                        assert_eq!(
+                            actual.to_bits(),
+                            expected.to_bits(),
+                            "asset {}, candle {}: {} vs {}",
+                            asset_idx,
+                            i,
+                            actual,
+                            expected
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_wilder_smooth_batch_propagates_errors() {
+        // period > n_candles must surface the wilders_smoothing_cpu error
+        let gains = vec![1.0; 8];
+        let losses = vec![1.0; 8];
+        assert!(wilder_smooth_batch(&gains, &losses, 1, 8, 20).is_err());
     }
 }

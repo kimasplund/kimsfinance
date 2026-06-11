@@ -22,10 +22,10 @@
 
 #[cfg(feature = "gpu")]
 mod gpu_tick_orderflow_tests {
+    use approx::assert_abs_diff_eq;
+    use kimsfinance_core::backtest::core::Signal;
     use kimsfinance_core::binance::Trade;
     use kimsfinance_core::gpu::device::GpuDevice;
-    use kimsfinance_core::backtest::core::Signal;
-    use approx::assert_abs_diff_eq;
     use std::sync::Arc;
 
     // ========================================================================
@@ -40,8 +40,8 @@ mod gpu_tick_orderflow_tests {
     // ========================================================================
 
     fn generate_test_trades(n: usize) -> Vec<Trade> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(42);
         let base_price = 45000.0;
@@ -49,7 +49,7 @@ mod gpu_tick_orderflow_tests {
 
         (0..n)
             .map(|i| {
-                let price_change = (rng.gen::<f64>() - 0.5) * 0.002;
+                let price_change = (rng.r#gen::<f64>() - 0.5) * 0.002;
                 let price = base_price * (1.0 + price_change);
                 let quantity = rng.gen_range(0.001..1.0);
 
@@ -90,11 +90,7 @@ mod gpu_tick_orderflow_tests {
             }
 
             let total = buy_volume + sell_volume;
-            let imbalance = if total > 0.0 {
-                buy_volume / total
-            } else {
-                0.5
-            };
+            let imbalance = if total > 0.0 { buy_volume / total } else { 0.5 };
 
             imbalances.push(imbalance);
         }
@@ -194,7 +190,10 @@ mod gpu_tick_orderflow_tests {
         //         "Imbalance mismatch at index {}", i);
         // }
 
-        println!("✅ CPU orderflow imbalance calculated: {} values", cpu_imbalances.len());
+        println!(
+            "✅ CPU orderflow imbalance calculated: {} values",
+            cpu_imbalances.len()
+        );
     }
 
     #[test]
@@ -213,7 +212,10 @@ mod gpu_tick_orderflow_tests {
         //         "Volume delta mismatch at index {}", i);
         // }
 
-        println!("✅ CPU volume delta calculated: {} values", cpu_deltas.len());
+        println!(
+            "✅ CPU volume delta calculated: {} values",
+            cpu_deltas.len()
+        );
     }
 
     // ========================================================================
@@ -276,7 +278,11 @@ mod gpu_tick_orderflow_tests {
         // Validate all strategies
         assert_eq!(gpu_signals_batch.len(), cpu_signals_batch.len());
 
-        for (i, (gpu, cpu)) in gpu_signals_batch.iter().zip(cpu_signals_batch.iter()).enumerate() {
+        for (i, (gpu, cpu)) in gpu_signals_batch
+            .iter()
+            .zip(cpu_signals_batch.iter())
+            .enumerate()
+        {
             assert_eq!(gpu.len(), cpu.len(), "Strategy {} length mismatch", i);
 
             let matches = gpu.iter().zip(cpu.iter()).filter(|(g, c)| g == c).count();
@@ -341,11 +347,21 @@ mod gpu_tick_orderflow_tests {
             .expect("Should handle all-buy scenario");
 
         // All should be Buy signals (imbalance = 1.0 > 0.6)
-        let cpu_buy_count = cpu_signals.iter().filter(|s| matches!(s, Signal::Buy)).count();
-        let gpu_buy_count = gpu_signals[0].iter().filter(|s| matches!(s, Signal::Buy)).count();
+        let cpu_buy_count = cpu_signals
+            .iter()
+            .filter(|s| matches!(s, Signal::Buy))
+            .count();
+        let gpu_buy_count = gpu_signals[0]
+            .iter()
+            .filter(|s| matches!(s, Signal::Buy))
+            .count();
 
         assert_eq!(cpu_buy_count, gpu_buy_count);
-        println!("All-buy scenario: {}/{} Buy signals", cpu_buy_count, trades.len());
+        println!(
+            "All-buy scenario: {}/{} Buy signals",
+            cpu_buy_count,
+            trades.len()
+        );
     }
 
     // ========================================================================

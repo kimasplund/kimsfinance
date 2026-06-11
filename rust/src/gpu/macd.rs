@@ -52,150 +52,9 @@
 
 use super::device::{GpuDevice, GpuError};
 use crate::cpu::sequential::macd_cpu;
-use crate::gpu::compile::compile_ptx_optimized_cached;
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
+use cudarc::driver::CudaStream;
 use ndarray::Array1;
 use std::sync::Arc;
-
-/// CUDA kernel source code for MACD calculation
-const MACD_KERNEL: &str = r#"
-// Define constants to avoid header dependencies with NVRTC
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-
-// Kernel 1: Calculate single EMA (sequential but optimized)
-extern "C" __global__ void ema_kernel(
-    const double* __restrict__ input,
-    double* __restrict__ output,
-    int n,
-    int period
-) {
-    // Only one thread computes the EMA due to sequential dependency
-    // This is unavoidable but we still benefit from GPU memory bandwidth
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        double alpha = 2.0 / (period + 1.0);
-
-        // Initialize with SMA for the first valid point
-        double sum = 0.0;
-        for (int i = 0; i < period; i++) {
-            sum += input[i];
-            output[i] = CUDART_NAN;
-        }
-
-        // First EMA value (using SMA)
-        output[period - 1] = sum / period;
-
-        // Calculate subsequent EMA values
-        for (int i = period; i < n; i++) {
-            output[i] = alpha * input[i] + (1.0 - alpha) * output[i - 1];
-        }
-    }
-}
-
-// Kernel 2: Parallel subtraction to compute MACD line
-extern "C" __global__ void subtract_kernel(
-    const double* __restrict__ fast_ema,
-    const double* __restrict__ slow_ema,
-    double* __restrict__ macd,
-    int n
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx < n) {
-        // Check if both EMAs are valid (not NaN)
-        if (!isnan(fast_ema[idx]) && !isnan(slow_ema[idx])) {
-            macd[idx] = fast_ema[idx] - slow_ema[idx];
-        } else {
-            macd[idx] = CUDART_NAN;
-        }
-    }
-}
-
-// Kernel 3: Combined MACD calculation (optimized single-pass)
-// This kernel computes all three EMAs and MACD/Signal/Histogram in one pass
-extern "C" __global__ void macd_combined_kernel(
-    const double* __restrict__ close,
-    double* __restrict__ fast_ema,
-    double* __restrict__ slow_ema,
-    double* __restrict__ macd_line,
-    double* __restrict__ signal_line,
-    double* __restrict__ histogram,
-    int n,
-    int fast_period,
-    int slow_period,
-    int signal_period
-) {
-    // Use only first thread for sequential EMA calculations
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        double fast_alpha = 2.0 / (fast_period + 1.0);
-        double slow_alpha = 2.0 / (slow_period + 1.0);
-        double signal_alpha = 2.0 / (signal_period + 1.0);
-
-        // Initialize all outputs to NaN
-        for (int i = 0; i < n; i++) {
-            fast_ema[i] = CUDART_NAN;
-            slow_ema[i] = CUDART_NAN;
-            macd_line[i] = CUDART_NAN;
-            signal_line[i] = CUDART_NAN;
-            histogram[i] = CUDART_NAN;
-        }
-
-        // Step 1: Calculate Fast EMA
-        double fast_sum = 0.0;
-        for (int i = 0; i < fast_period; i++) {
-            fast_sum += close[i];
-        }
-        fast_ema[fast_period - 1] = fast_sum / fast_period;
-
-        for (int i = fast_period; i < n; i++) {
-            fast_ema[i] = fast_alpha * close[i] + (1.0 - fast_alpha) * fast_ema[i - 1];
-        }
-
-        // Step 2: Calculate Slow EMA
-        double slow_sum = 0.0;
-        for (int i = 0; i < slow_period; i++) {
-            slow_sum += close[i];
-        }
-        slow_ema[slow_period - 1] = slow_sum / slow_period;
-
-        for (int i = slow_period; i < n; i++) {
-            slow_ema[i] = slow_alpha * close[i] + (1.0 - slow_alpha) * slow_ema[i - 1];
-        }
-
-        // Step 3: Calculate MACD Line (Fast EMA - Slow EMA)
-        // MACD starts when slow EMA is available
-        for (int i = slow_period - 1; i < n; i++) {
-            macd_line[i] = fast_ema[i] - slow_ema[i];
-        }
-
-        // Step 4: Calculate Signal Line (EMA of MACD)
-        // First, we need to find the first valid MACD value
-        int macd_start = slow_period - 1;
-
-        // Calculate SMA of first signal_period MACD values
-        double signal_sum = 0.0;
-        int signal_start = macd_start + signal_period - 1;
-
-        if (signal_start < n) {
-            for (int i = macd_start; i < signal_start; i++) {
-                signal_sum += macd_line[i];
-            }
-            signal_line[signal_start] = signal_sum / signal_period;
-
-            // Calculate subsequent Signal values as EMA of MACD
-            for (int i = signal_start + 1; i < n; i++) {
-                signal_line[i] = signal_alpha * macd_line[i] + (1.0 - signal_alpha) * signal_line[i - 1];
-            }
-        }
-
-        // Step 5: Calculate Histogram (MACD - Signal)
-        for (int i = signal_start; i < n; i++) {
-            if (!isnan(macd_line[i]) && !isnan(signal_line[i])) {
-                histogram[i] = macd_line[i] - signal_line[i];
-            }
-        }
-    }
-}
-"#;
 
 /// MACD using optimal execution strategy (CPU for sequential algorithms)
 ///
@@ -251,8 +110,9 @@ pub fn macd_hybrid(
 ///
 /// # DEPRECATED
 ///
-/// This function is deprecated since v0.2.0. It uses a single GPU thread
-/// which is 1,647x slower than CPU for sequential algorithms.
+/// This function is deprecated since v0.2.0. The original single-GPU-thread
+/// kernel was 1,647x slower than CPU for sequential algorithms and has been
+/// removed; this function now delegates to `macd_cpu()` (identical results).
 ///
 /// **Use `macd_cpu()` or `macd_hybrid()` instead.**
 ///
@@ -270,12 +130,12 @@ pub fn macd_hybrid(
 ///
 /// # Arguments
 ///
-/// * `device` - GPU device handle
+/// * `device` - GPU device handle (unused; kept for API compatibility)
 /// * `close` - Close prices
 /// * `fast_period` - Fast EMA period (typically 12)
 /// * `slow_period` - Slow EMA period (typically 26)
 /// * `signal_period` - Signal line EMA period (typically 9)
-/// * `stream` - Optional CUDA stream for concurrent execution
+/// * `stream` - CUDA stream (unused; kept for API compatibility)
 ///
 /// # Returns
 ///
@@ -288,147 +148,22 @@ pub fn macd_hybrid(
 /// - Period < 1
 /// - Fast period >= Slow period
 /// - Not enough data (n < slow_period + signal_period - 1)
-/// - GPU operations fail (allocation, compilation, execution)
 #[deprecated(
     since = "0.2.0",
     note = "Single-thread GPU is 1,647x slower than CPU. Use macd_cpu() from kimsfinance_core::cpu::sequential or macd_hybrid() for API compatibility"
 )]
 pub fn macd_gpu(
-    device: &GpuDevice,
+    _device: &GpuDevice,
     close: &Array1<f64>,
     fast_period: usize,
     slow_period: usize,
     signal_period: usize,
-    stream: Option<&Arc<CudaStream>>,
+    _stream: Option<&Arc<CudaStream>>,
 ) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>), GpuError> {
-    let n = close.len();
-
-    // Validate inputs
-    if fast_period < 1 || slow_period < 1 || signal_period < 1 {
-        return Err(GpuError::InvalidParameter(
-            "All periods must be >= 1".to_string(),
-        ));
-    }
-
-    if fast_period >= slow_period {
-        return Err(GpuError::InvalidParameter(
-            "Fast period must be less than slow period".to_string(),
-        ));
-    }
-
-    let min_required = slow_period + signal_period - 1;
-    if n < min_required {
-        return Err(GpuError::InvalidParameter(format!(
-            "Not enough data: need {} points, got {}",
-            min_required, n
-        )));
-    }
-
-    // Compile PTX
-    let ptx_arc = compile_ptx_optimized_cached(MACD_KERNEL)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to compile kernel: {:?}", e)))?;
-    let ptx = Arc::unwrap_or_clone(ptx_arc);
-
-    // Load module
-    let module = device
-        .context()
-        .load_module(ptx)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
-
-    // Get combined kernel function
-    let kernel = module.load_function("macd_combined_kernel").map_err(|e| {
-        GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
-    })?;
-
-    // Select stream: use provided stream or device default
-    let kernel_stream = stream.unwrap_or(&device.stream);
-
-    // === Step 1: H2D - Asynchronously copy data to device ===
-    // Acquire pinned buffer
-    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
-    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
-
-    // Allocate device buffer
-    let mut d_close = device.alloc_buffer(n)?;
-
-    // Async H2D transfer
-    kernel_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
-
-    // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_close);
-
-    // Allocate output buffers on GPU
-    let mut d_fast_ema = device.alloc_buffer(n)?;
-    let mut d_slow_ema = device.alloc_buffer(n)?;
-    let mut d_macd_line = device.alloc_buffer(n)?;
-    let mut d_signal_line = device.alloc_buffer(n)?;
-    let mut d_histogram = device.alloc_buffer(n)?;
-
-    // Launch kernel with builder pattern on specified stream
-    let n_i32 = n as i32;
-    let fast_period_i32 = fast_period as i32;
-    let slow_period_i32 = slow_period as i32;
-    let signal_period_i32 = signal_period as i32;
-
-    let mut builder = kernel_stream.launch_builder(&kernel);
-    builder.arg(&d_close);
-    builder.arg(&mut d_fast_ema);
-    builder.arg(&mut d_slow_ema);
-    builder.arg(&mut d_macd_line);
-    builder.arg(&mut d_signal_line);
-    builder.arg(&mut d_histogram);
-    builder.arg(&n_i32);
-    builder.arg(&fast_period_i32);
-    builder.arg(&slow_period_i32);
-    builder.arg(&signal_period_i32);
-
-    // Use single block since we have sequential dependency
-    // The kernel itself uses only one thread for EMA calculations
-    let config = LaunchConfig {
-        grid_dim: (1, 1, 1),
-        block_dim: (1, 1, 1),
-        shared_mem_bytes: 0,
-    };
-
-    unsafe {
-        builder
-            .launch(config)
-            .map_err(|e| GpuError::ExecutionError(format!("Kernel launch failed: {:?}", e)))?;
-    }
-
-    // === Step 3: D2H - Asynchronously copy results back ===
-    // Acquire pinned buffers for async D2H transfers
-    let mut pinned_macd = device.pinned_pool.lock().acquire(n)?;
-    let mut pinned_signal = device.pinned_pool.lock().acquire(n)?;
-    let mut pinned_histogram = device.pinned_pool.lock().acquire(n)?;
-
-    // Async D2H transfers
-    kernel_stream.memcpy_dtoh(&d_macd_line, &mut pinned_macd.as_mut_slice()[..n])?;
-    kernel_stream.memcpy_dtoh(&d_signal_line, &mut pinned_signal.as_mut_slice()[..n])?;
-    kernel_stream.memcpy_dtoh(&d_histogram, &mut pinned_histogram.as_mut_slice()[..n])?;
-
-    // Synchronize stream to ensure D2H copies are complete before CPU access
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
-    })?;
-
-    // Copy to output arrays
-    let macd_vec = pinned_macd.as_slice()[..n].to_vec();
-    let signal_vec = pinned_signal.as_slice()[..n].to_vec();
-    let histogram_vec = pinned_histogram.as_slice()[..n].to_vec();
-
-    // Release pinned buffers
-    let mut pool = device.pinned_pool.lock();
-    pool.release(pinned_macd);
-    pool.release(pinned_signal);
-    pool.release(pinned_histogram);
-    drop(pool);
-
-    Ok((
-        Array1::from_vec(macd_vec),
-        Array1::from_vec(signal_vec),
-        Array1::from_vec(histogram_vec),
-    ))
+    // The single-GPU-thread kernel has been removed (it was 1,647x slower
+    // than CPU). Delegate to the CPU implementation, which has identical
+    // warmup/NaN semantics (validated by the tests below).
+    macd_cpu(close, fast_period, slow_period, signal_period)
 }
 
 #[cfg(test)]

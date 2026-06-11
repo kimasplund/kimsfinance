@@ -87,12 +87,7 @@ fn generate_parameter_combinations() -> Vec<StrategyParams> {
     // Phase 4 parameter ranges (from requirements)
     let dte_ranges = vec![(21, 35), (30, 45), (35, 50)];
 
-    let delta_ranges = vec![
-        (0.10, 0.25),
-        (0.15, 0.30),
-        (0.20, 0.35),
-        (0.25, 0.40),
-    ];
+    let delta_ranges = vec![(0.10, 0.25), (0.15, 0.30), (0.20, 0.35), (0.25, 0.40)];
 
     let profit_targets = vec![40.0, 50.0, 60.0, 75.0];
     let stop_losses = vec![150.0, 200.0, 250.0];
@@ -249,10 +244,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Loading historical spot price data...");
     let mut spot_loader = SpotDataLoader::new(spot_dir)?;
     let (min_date, max_date) = spot_loader.get_date_range(symbol)?;
-    println!(
-        "  {} spot data: {} to {}",
-        symbol, min_date, max_date
-    );
+    println!("  {} spot data: {} to {}", symbol, min_date, max_date);
     println!();
 
     // Generate all parameter combinations
@@ -361,7 +353,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("    Profit Factor: {:.2}", result.profit_factor);
         println!("    Avg Win: ${:.2}", result.avg_win);
         println!("    Avg Loss: ${:.2}", result.avg_loss);
-        println!("    Max Consecutive Losses: {}", result.max_consecutive_losses);
+        println!(
+            "    Max Consecutive Losses: {}",
+            result.max_consecutive_losses
+        );
         println!("    Avg Days in Trade: {:.1}", result.avg_days_in_trade);
         println!();
     }
@@ -468,9 +463,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let meets_roc = best.return_on_capital >= 200.0;
         let meets_sharpe = best.sharpe_ratio >= 2.0;
         let meets_winrate = best.win_rate >= 60.0 && best.win_rate <= 70.0;
-        println!("  ROC >= 200%: {} ({:.2}%)", if meets_roc { "✓" } else { "✗" }, best.return_on_capital);
-        println!("  Sharpe >= 2.0: {} ({:.2})", if meets_sharpe { "✓" } else { "✗" }, best.sharpe_ratio);
-        println!("  Win Rate 60-70%: {} ({:.1}%)", if meets_winrate { "✓" } else { "✗" }, best.win_rate);
+        println!(
+            "  ROC >= 200%: {} ({:.2}%)",
+            if meets_roc { "✓" } else { "✗" },
+            best.return_on_capital
+        );
+        println!(
+            "  Sharpe >= 2.0: {} ({:.2})",
+            if meets_sharpe { "✓" } else { "✗" },
+            best.sharpe_ratio
+        );
+        println!(
+            "  Win Rate 60-70%: {} ({:.1}%)",
+            if meets_winrate { "✓" } else { "✗" },
+            best.win_rate
+        );
 
         if meets_roc && meets_sharpe && meets_winrate {
             println!("\n  Result: All targets met!");

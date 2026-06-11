@@ -16,7 +16,10 @@ fn main() {
     // Test various data sizes
     let sizes = vec![1_000, 10_000, 100_000, 500_000];
 
-    println!("{:<12} | {:>10} | {:>12} | {:>15}", "Size", "Time (ms)", "μs/candle", "Candles/sec");
+    println!(
+        "{:<12} | {:>10} | {:>12} | {:>15}",
+        "Size", "Time (ms)", "μs/candle", "Candles/sec"
+    );
     println!("{}", "-".repeat(60));
 
     for n in sizes {
@@ -45,7 +48,8 @@ fn main() {
         let mut times = Vec::new();
         for _ in 0..5 {
             let start = Instant::now();
-            let _obv = obv_gpu(&device, &close_arr, &volume_arr, None).expect("OBV calculation failed");
+            let _obv =
+                obv_gpu(&device, &close_arr, &volume_arr, None).expect("OBV calculation failed");
             let elapsed = start.elapsed();
             times.push(elapsed.as_secs_f64());
         }

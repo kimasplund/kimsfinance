@@ -45,10 +45,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("   ✓ Generated {} trades", n_trades);
-    println!("   - Timestamp range: {} to {}", timestamps[0], timestamps[n_trades - 1]);
-    println!("   - Price range: {:.2} to {:.2}",
-             prices.iter().copied().fold(f32::INFINITY, f32::min),
-             prices.iter().copied().fold(f32::NEG_INFINITY, f32::max));
+    println!(
+        "   - Timestamp range: {} to {}",
+        timestamps[0],
+        timestamps[n_trades - 1]
+    );
+    println!(
+        "   - Price range: {:.2} to {:.2}",
+        prices.iter().copied().fold(f32::INFINITY, f32::min),
+        prices.iter().copied().fold(f32::NEG_INFINITY, f32::max)
+    );
 
     // Aggregate to 5-minute candles
     let timeframe_ms = 300_000; // 5 minutes
@@ -62,13 +68,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✓ Aggregation complete in {:?}", duration);
     println!("   - Trades processed: {}", n_trades);
     println!("   - Candles generated: {}", candles.num_candles);
-    println!("   - Throughput: {:.2} M trades/sec",
-             (n_trades as f64) / duration.as_secs_f64() / 1_000_000.0);
+    println!(
+        "   - Throughput: {:.2} M trades/sec",
+        (n_trades as f64) / duration.as_secs_f64() / 1_000_000.0
+    );
 
     // Display first 10 candles
     println!("\n5. Sample candles (first 10):");
-    println!("   {:>19} | {:>8} | {:>8} | {:>8} | {:>8} | {:>8} | {:>6}",
-             "Timestamp", "Open", "High", "Low", "Close", "Volume", "Trades");
+    println!(
+        "   {:>19} | {:>8} | {:>8} | {:>8} | {:>8} | {:>8} | {:>6}",
+        "Timestamp", "Open", "High", "Low", "Close", "Volume", "Trades"
+    );
     println!("   {}", "-".repeat(90));
 
     for i in 0..std::cmp::min(10, candles.num_candles) {
@@ -77,14 +87,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap()
             .format("%Y-%m-%d %H:%M:%S");
 
-        println!("   {} | {:8.2} | {:8.2} | {:8.2} | {:8.2} | {:8.2} | {:6}",
-                 dt,
-                 candles.open[i],
-                 candles.high[i],
-                 candles.low[i],
-                 candles.close[i],
-                 candles.volume[i],
-                 candles.num_trades[i]);
+        println!(
+            "   {} | {:8.2} | {:8.2} | {:8.2} | {:8.2} | {:8.2} | {:6}",
+            dt,
+            candles.open[i],
+            candles.high[i],
+            candles.low[i],
+            candles.close[i],
+            candles.volume[i],
+            candles.num_trades[i]
+        );
     }
 
     // Validate OHLC consistency
@@ -114,10 +126,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Performance extrapolation to 106M trades
     let extrapolated_time_106m = (duration.as_secs_f64() / (n_trades as f64)) * 106_000_000.0;
     println!("\n7. Performance extrapolation:");
-    println!("   - Current throughput: {:.2} M trades/sec",
-             (n_trades as f64) / duration.as_secs_f64() / 1_000_000.0);
-    println!("   - Estimated time for 106M trades: {:.2} seconds",
-             extrapolated_time_106m);
+    println!(
+        "   - Current throughput: {:.2} M trades/sec",
+        (n_trades as f64) / duration.as_secs_f64() / 1_000_000.0
+    );
+    println!(
+        "   - Estimated time for 106M trades: {:.2} seconds",
+        extrapolated_time_106m
+    );
 
     if extrapolated_time_106m < 0.1 {
         println!("   ✓ Target achieved: <100ms for 106M trades");

@@ -327,7 +327,8 @@ impl SpotDataLoader {
         // Get volume (could be Long or Double depending on the parquet file)
         let volume_idx = find_column_index("Volume")
             .ok_or_else(|| SpotDataError::Parse("Missing field: Volume".to_string()))?;
-        let volume = record.get_double(volume_idx)
+        let volume = record
+            .get_double(volume_idx)
             .or_else(|_| record.get_long(volume_idx).map(|v| v as f64))
             .map_err(|e| SpotDataError::Parse(format!("Error reading Volume: {}", e)))?;
 

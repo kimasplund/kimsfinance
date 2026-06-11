@@ -599,10 +599,20 @@ impl HestonGpuPricer {
         let mut d_spot_prices = self.device.alloc_buffer(n_options)?;
         let mut d_risk_free_rates = self.device.alloc_buffer(n_options)?;
 
-        self.device.stream.memcpy_htod(&pinned_strikes.as_slice()[..n_options], &mut d_strikes)?;
-        self.device.stream.memcpy_htod(&pinned_expirations.as_slice()[..n_options], &mut d_expirations)?;
-        self.device.stream.memcpy_htod(&pinned_spot.as_slice()[..n_options], &mut d_spot_prices)?;
-        self.device.stream.memcpy_htod(&pinned_rates.as_slice()[..n_options], &mut d_risk_free_rates)?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_strikes.as_slice()[..n_options], &mut d_strikes)?;
+        self.device.stream.memcpy_htod(
+            &pinned_expirations.as_slice()[..n_options],
+            &mut d_expirations,
+        )?;
+        self.device
+            .stream
+            .memcpy_htod(&pinned_spot.as_slice()[..n_options], &mut d_spot_prices)?;
+        self.device.stream.memcpy_htod(
+            &pinned_rates.as_slice()[..n_options],
+            &mut d_risk_free_rates,
+        )?;
 
         // Release pinned buffers
         let mut pool = self.device.pinned_pool.lock();
@@ -639,8 +649,14 @@ impl HestonGpuPricer {
         let mut pinned_real = self.device.pinned_pool.lock().acquire(total_elements)?;
         let mut pinned_imag = self.device.pinned_pool.lock().acquire(total_elements)?;
 
-        self.device.stream.memcpy_dtoh(d_char_func_real, &mut pinned_real.as_mut_slice()[..total_elements])?;
-        self.device.stream.memcpy_dtoh(d_char_func_imag, &mut pinned_imag.as_mut_slice()[..total_elements])?;
+        self.device.stream.memcpy_dtoh(
+            d_char_func_real,
+            &mut pinned_real.as_mut_slice()[..total_elements],
+        )?;
+        self.device.stream.memcpy_dtoh(
+            d_char_func_imag,
+            &mut pinned_imag.as_mut_slice()[..total_elements],
+        )?;
 
         // Synchronize stream to ensure D2H copies are complete before CPU access
         self.device.stream.synchronize().map_err(|e| {

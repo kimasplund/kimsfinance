@@ -29,7 +29,7 @@ struct TradeOpportunity {
     symbol: String,
     short_strike: f64,
     long_strike: f64,
-    expiration: String,  // Changed to String for JSON serialization
+    expiration: String, // Changed to String for JSON serialization
     dte: i32,
     short_delta: f64,
     credit: f64,
@@ -82,8 +82,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !json_output {
         println!("\n=== Strategy Parameters (Proven Profitable) ===");
         println!("  DTE Range: {} to {} days", params.dte_min, params.dte_max);
-        println!("  Delta Range: {:.2} to {:.2}", params.delta_min, params.delta_max);
-        println!("  Profit Target: {:.0}%", params.profit_target_pct.unwrap_or(0.0));
+        println!(
+            "  Delta Range: {:.2} to {:.2}",
+            params.delta_min, params.delta_max
+        );
+        println!(
+            "  Profit Target: {:.0}%",
+            params.profit_target_pct.unwrap_or(0.0)
+        );
         println!("  Stop Loss: {:.0}%", params.stop_loss_pct.unwrap_or(0.0));
         println!("  Max Hold: {} days", params.max_hold_days.unwrap_or(0));
         println!("  Min Credit: ${:.2}\n", params.min_credit.unwrap_or(0.0));
@@ -214,7 +220,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     all_opportunities.sort_by(|a, b| {
         let score_a = (a.credit / a.max_risk) * (1.0 - a.risk_pct / 100.0);
         let score_b = (b.credit / b.max_risk) * (1.0 - b.risk_pct / 100.0);
-        score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+        score_b
+            .partial_cmp(&score_a)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     // If JSON output requested, print JSON and exit
@@ -238,42 +246,89 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     for (i, opp) in all_opportunities.iter().enumerate() {
-        println!("┌─ Opportunity #{} - {} ─────────────────────────", i + 1, opp.symbol);
+        println!(
+            "┌─ Opportunity #{} - {} ─────────────────────────",
+            i + 1,
+            opp.symbol
+        );
         println!("│");
         println!("│ POSITION DETAILS:");
-        println!("│   Short PUT: ${:.2} (delta: {:.3})", opp.short_strike, opp.short_delta);
+        println!(
+            "│   Short PUT: ${:.2} (delta: {:.3})",
+            opp.short_strike, opp.short_delta
+        );
         println!("│   Long PUT:  ${:.2}", opp.long_strike);
         println!("│   Width:     ${:.2}", opp.width);
         println!("│   DTE:       {} days", opp.dte);
         println!("│   Expiration: {}", opp.expiration);
         println!("│");
         println!("│ FINANCIALS:");
-        println!("│   Credit Received:    ${:.2} (${:.0} per contract)", opp.credit, opp.credit * 100.0);
-        println!("│   Max Profit:         ${:.0} per contract", opp.credit * 100.0);
-        println!("│   Max Risk:           ${:.0} per contract", opp.max_risk * 100.0);
-        println!("│   Margin Required:    ${:.0} per contract", opp.margin_required);
+        println!(
+            "│   Credit Received:    ${:.2} (${:.0} per contract)",
+            opp.credit,
+            opp.credit * 100.0
+        );
+        println!(
+            "│   Max Profit:         ${:.0} per contract",
+            opp.credit * 100.0
+        );
+        println!(
+            "│   Max Risk:           ${:.0} per contract",
+            opp.max_risk * 100.0
+        );
+        println!(
+            "│   Margin Required:    ${:.0} per contract",
+            opp.margin_required
+        );
         println!("│");
         println!("│ RISK METRICS:");
         println!("│   Risk/Capital:       {:.2}%", opp.risk_pct);
         println!("│   Margin/Capital:     {:.2}%", opp.margin_pct);
-        println!("│   Credit/Width:       {:.1}%", (opp.credit / opp.width) * 100.0);
+        println!(
+            "│   Credit/Width:       {:.1}%",
+            (opp.credit / opp.width) * 100.0
+        );
         println!("│");
         println!("│ EXIT TARGETS:");
-        println!("│   Profit Target (50%): Close at ${:.2} debit", opp.profit_target);
-        println!("│   Stop Loss (200%):    Close at ${:.2} debit", opp.stop_loss);
-        println!("│   Max Hold:            {} days (from entry)", params.max_hold_days.unwrap_or(42));
+        println!(
+            "│   Profit Target (50%): Close at ${:.2} debit",
+            opp.profit_target
+        );
+        println!(
+            "│   Stop Loss (200%):    Close at ${:.2} debit",
+            opp.stop_loss
+        );
+        println!(
+            "│   Max Hold:            {} days (from entry)",
+            params.max_hold_days.unwrap_or(42)
+        );
         println!("│");
         println!("│ IBKR ORDER ENTRY:");
         println!("│   1. Create vertical spread");
-        println!("│   2. Sell 1 {} {} PUT ${:.2}", opp.expiration, opp.symbol, opp.short_strike);
-        println!("│   3. Buy 1 {} {} PUT ${:.2}", opp.expiration, opp.symbol, opp.long_strike);
+        println!(
+            "│   2. Sell 1 {} {} PUT ${:.2}",
+            opp.expiration, opp.symbol, opp.short_strike
+        );
+        println!(
+            "│   3. Buy 1 {} {} PUT ${:.2}",
+            opp.expiration, opp.symbol, opp.long_strike
+        );
         println!("│   4. Limit Order: ${:.2} CREDIT (or better)", opp.credit);
         println!("│   5. Time in Force: DAY ORDER");
         println!("│");
         println!("│ ALERTS TO SET:");
-        println!("│   - Profit target: Spread value drops to ${:.2}", opp.profit_target);
-        println!("│   - Stop loss: Spread value rises to ${:.2}", opp.stop_loss);
-        println!("│   - Time exit: {} days from entry", params.max_hold_days.unwrap_or(42));
+        println!(
+            "│   - Profit target: Spread value drops to ${:.2}",
+            opp.profit_target
+        );
+        println!(
+            "│   - Stop loss: Spread value rises to ${:.2}",
+            opp.stop_loss
+        );
+        println!(
+            "│   - Time exit: {} days from entry",
+            params.max_hold_days.unwrap_or(42)
+        );
         println!("│");
 
         // Risk warnings
@@ -304,10 +359,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Total Opportunities: {}", all_opportunities.len());
     println!("Symbols Scanned: {}", symbols.len());
 
-    let avg_credit: f64 = all_opportunities.iter().map(|o| o.credit).sum::<f64>()
-        / all_opportunities.len() as f64;
-    let avg_risk_pct: f64 = all_opportunities.iter().map(|o| o.risk_pct).sum::<f64>()
-        / all_opportunities.len() as f64;
+    let avg_credit: f64 =
+        all_opportunities.iter().map(|o| o.credit).sum::<f64>() / all_opportunities.len() as f64;
+    let avg_risk_pct: f64 =
+        all_opportunities.iter().map(|o| o.risk_pct).sum::<f64>() / all_opportunities.len() as f64;
 
     println!("Average Credit: ${:.2}", avg_credit);
     println!("Average Risk: {:.2}%", avg_risk_pct);

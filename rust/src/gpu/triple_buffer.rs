@@ -424,7 +424,9 @@ where
                 pinned.copy_from_slice(data);
                 stream
                     .memcpy_htod(pinned.as_slice(), &mut buffer_set.d_input)
-                    .map_err(|e| GpuError::MemoryCopyError(format!("H2D transfer failed: {:?}", e)))?;
+                    .map_err(|e| {
+                        GpuError::MemoryCopyError(format!("H2D transfer failed: {:?}", e))
+                    })?;
                 let event = CudaEvent::new_no_timing()?;
                 event.record(stream)?;
                 self.events[idx].h2d_complete = Some(event);
@@ -482,7 +484,9 @@ where
             if let Some(ref mut pinned) = buffer_set.h_output {
                 stream
                     .memcpy_dtoh(&buffer_set.d_output, pinned.as_mut_slice())
-                    .map_err(|e| GpuError::MemoryCopyError(format!("D2H transfer failed: {:?}", e)))?;
+                    .map_err(|e| {
+                        GpuError::MemoryCopyError(format!("D2H transfer failed: {:?}", e))
+                    })?;
                 let event = CudaEvent::new_no_timing()?;
                 event.record(stream)?;
                 self.events[idx].d2h_complete = Some(event);

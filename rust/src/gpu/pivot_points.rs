@@ -229,9 +229,15 @@ pub fn pivot_points_gpu(
     let mut d_low = device.alloc_buffer(n)?;
     let mut d_close = device.alloc_buffer(n)?;
 
-    device.stream.memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
-    device.stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
 
     // Release pinned buffers
     let mut pool = device.pinned_pool.lock();
@@ -281,13 +287,27 @@ pub fn pivot_points_gpu(
     let mut pinned_r2 = device.pinned_pool.lock().acquire(n)?;
     let mut pinned_r3 = device.pinned_pool.lock().acquire(n)?;
 
-    device.stream.memcpy_dtoh(&d_pp, &mut pinned_pp.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_s1, &mut pinned_s1.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_s2, &mut pinned_s2.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_s3, &mut pinned_s3.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_r1, &mut pinned_r1.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_r2, &mut pinned_r2.as_mut_slice()[..n])?;
-    device.stream.memcpy_dtoh(&d_r3, &mut pinned_r3.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_pp, &mut pinned_pp.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_s1, &mut pinned_s1.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_s2, &mut pinned_s2.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_s3, &mut pinned_s3.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_r1, &mut pinned_r1.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_r2, &mut pinned_r2.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_r3, &mut pinned_r3.as_mut_slice()[..n])?;
 
     // Synchronize stream to ensure all D2H copies are complete before CPU access
     device.stream.synchronize().map_err(|e| {

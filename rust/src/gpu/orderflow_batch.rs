@@ -193,7 +193,9 @@ impl OrderflowInput {
         }
 
         if self.close_prices.len() != n {
-            return Err(GpuError::InvalidParameter("close_prices length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "close_prices length mismatch".into(),
+            ));
         }
 
         if self.volumes.len() != n {
@@ -201,11 +203,15 @@ impl OrderflowInput {
         }
 
         if self.buy_volumes.len() != n {
-            return Err(GpuError::InvalidParameter("buy_volumes length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "buy_volumes length mismatch".into(),
+            ));
         }
 
         if self.sell_volumes.len() != n {
-            return Err(GpuError::InvalidParameter("sell_volumes length mismatch".into()));
+            return Err(GpuError::InvalidParameter(
+                "sell_volumes length mismatch".into(),
+            ));
         }
 
         Ok(())
@@ -271,7 +277,10 @@ impl OrderflowBatchProcessor {
         let ptx_unwrapped = Arc::unwrap_or_clone(ptx);
 
         // Load module
-        let module = self.device.context().load_module(ptx_unwrapped)
+        let module = self
+            .device
+            .context()
+            .load_module(ptx_unwrapped)
             .map_err(|e| GpuError::CompilationError(format!("Failed to load module: {:?}", e)))?;
 
         self.module = Some(module.clone());
@@ -291,7 +300,10 @@ impl OrderflowBatchProcessor {
     /// # Returns
     ///
     /// Array of [min, max] pairs for each of the 6 features
-    pub fn calibrate_ranges(&mut self, input: &OrderflowInput) -> Result<[f32; NUM_FEATURES * 2], GpuError> {
+    pub fn calibrate_ranges(
+        &mut self,
+        input: &OrderflowInput,
+    ) -> Result<[f32; NUM_FEATURES * 2], GpuError> {
         input.validate()?;
         let module = self.ensure_module()?;
 
@@ -305,14 +317,23 @@ impl OrderflowBatchProcessor {
         let d_sell_volumes = self.device.copy_to_device_f32(&input.sell_volumes)?;
 
         // Allocate output buffers for min/max
-        let mut d_mins = self.device.stream.alloc_zeros::<f32>(NUM_FEATURES)
+        let mut d_mins = self
+            .device
+            .stream
+            .alloc_zeros::<f32>(NUM_FEATURES)
             .map_err(|e| GpuError::AllocationError(format!("Failed to allocate mins: {:?}", e)))?;
-        let mut d_maxs = self.device.stream.alloc_zeros::<f32>(NUM_FEATURES)
+        let mut d_maxs = self
+            .device
+            .stream
+            .alloc_zeros::<f32>(NUM_FEATURES)
             .map_err(|e| GpuError::AllocationError(format!("Failed to allocate maxs: {:?}", e)))?;
 
         // Load calibration kernel
-        let func = module.load_function("calibrate_feature_ranges_kernel")
-            .map_err(|e| GpuError::ExecutionError(format!("Failed to load calibration kernel: {:?}", e)))?;
+        let func = module
+            .load_function("calibrate_feature_ranges_kernel")
+            .map_err(|e| {
+                GpuError::ExecutionError(format!("Failed to load calibration kernel: {:?}", e))
+            })?;
 
         // Launch configuration
         let block_size = 256;
@@ -396,9 +417,7 @@ impl OrderflowBatchProcessor {
         let num_ticks = input.len();
 
         // Flatten strategy configuration
-        let strategy_ids: Vec<i32> = strategies.iter()
-            .map(|s| s.strategy_type as i32)
-            .collect();
+        let strategy_ids: Vec<i32> = strategies.iter().map(|s| s.strategy_type as i32).collect();
 
         let mut feature_mins = Vec::with_capacity(num_strategies * NUM_FEATURES);
         let mut feature_maxs = Vec::with_capacity(num_strategies * NUM_FEATURES);
@@ -422,23 +441,39 @@ impl OrderflowBatchProcessor {
         let signals_len = num_strategies * num_ticks;
         let features_len = num_strategies * num_ticks * NUM_FEATURES;
 
-        let mut d_signals = self.device.stream.alloc_zeros::<i8>(signals_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate signals: {:?}", e)))?;
-        let mut d_features = self.device.stream.alloc_zeros::<i8>(features_len)
-            .map_err(|e| GpuError::AllocationError(format!("Failed to allocate features: {:?}", e)))?;
+        let mut d_signals = self
+            .device
+            .stream
+            .alloc_zeros::<i8>(signals_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate signals: {:?}", e))
+            })?;
+        let mut d_features = self
+            .device
+            .stream
+            .alloc_zeros::<i8>(features_len)
+            .map_err(|e| {
+                GpuError::AllocationError(format!("Failed to allocate features: {:?}", e))
+            })?;
 
         // Load fused kernel
-        let func = module.load_function("orderflow_signals_fused_kernel")
-            .map_err(|e| GpuError::ExecutionError(format!("Failed to load fused kernel: {:?}", e)))?;
+        let func = module
+            .load_function("orderflow_signals_fused_kernel")
+            .map_err(|e| {
+                GpuError::ExecutionError(format!("Failed to load fused kernel: {:?}", e))
+            })?;
 
         // Launch configuration: warp-per-strategy
         let strategies_per_block = 10u32; // 10 strategies per block (320 threads)
         let threads_per_block = strategies_per_block * WARP_SIZE;
-        let num_blocks = ((num_strategies as u32) + strategies_per_block - 1) / strategies_per_block;
+        let num_blocks =
+            ((num_strategies as u32) + strategies_per_block - 1) / strategies_per_block;
 
         // Shared memory: circular buffers per strategy
         // 3 buffers × WINDOW_SIZE × sizeof(CircularBuffer) per strategy
-        let shared_mem_bytes = (strategies_per_block * 3 * (std::mem::size_of::<CircularBufferLayout>() as u32)) as u32;
+        let shared_mem_bytes =
+            (strategies_per_block * 3 * (std::mem::size_of::<CircularBufferLayout>() as u32))
+                as u32;
 
         let config = LaunchConfig {
             grid_dim: (num_blocks as u32, 1, 1),
@@ -496,7 +531,8 @@ impl OrderflowBatchProcessor {
             .collect();
 
         // Extract feature ranges
-        let feature_ranges: Vec<[f32; NUM_FEATURES * 2]> = strategies.iter()
+        let feature_ranges: Vec<[f32; NUM_FEATURES * 2]> = strategies
+            .iter()
             .map(|s| {
                 let mut ranges = [0.0f32; NUM_FEATURES * 2];
                 for i in 0..NUM_FEATURES {

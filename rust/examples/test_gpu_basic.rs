@@ -56,17 +56,24 @@ fn main() {
 
                     // Verify data integrity
                     let mut errors = 0;
-                    for (i, (&expected, &actual)) in test_data.iter().zip(result.iter()).enumerate() {
+                    for (i, (&expected, &actual)) in test_data.iter().zip(result.iter()).enumerate()
+                    {
                         if (expected - actual).abs() > 1e-6 {
                             errors += 1;
                             if errors <= 5 {
-                                eprintln!("  Mismatch at index {}: expected {}, got {}", i, expected, actual);
+                                eprintln!(
+                                    "  Mismatch at index {}: expected {}, got {}",
+                                    i, expected, actual
+                                );
                             }
                         }
                     }
 
                     if errors == 0 {
-                        println!("✓ Data integrity verified (all {} elements match)", result.len());
+                        println!(
+                            "✓ Data integrity verified (all {} elements match)",
+                            result.len()
+                        );
                     } else {
                         eprintln!("✗ Data integrity check failed ({} mismatches)", errors);
                         std::process::exit(1);

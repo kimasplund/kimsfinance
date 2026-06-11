@@ -1,51 +1,66 @@
 //! Batch GPU Indicator Calculation System
 //!
-//! Calculates multiple indicators concurrently using 3 CUDA streams for 4-6x speedup
-//! over sequential GPU calls.
+//! Calculates multiple indicators on a shared set of CUDA streams, processing
+//! large inputs in L2-sized chunks with overlap-and-discard stitching.
 //!
 //! # Architecture
 //!
-//! 1. **Single Data Load**: OHLCV data loaded to GPU once via GpuMemoryPool
-//! 2. **L2 Cache Optimization**: Data kept resident in L2 across indicators (Phase 2)
-//! 3. **Concurrent Execution**: Indicators run in parallel across 3 streams (StreamManager)
-//! 4. **Stream Classification**: Fast/Medium/Slow based on computational complexity
-//! 5. **Single Transfer Back**: All results copied in one GPU→CPU transfer
+//! 1. **Overlap-and-discard chunking**: Inputs larger than the L2 budget are
+//!    split into chunks. Each chunk after the first is prefixed with enough
+//!    warmup candles (see [`warmup_candles`]) that windowed indicators
+//!    reconstruct exactly and recursive (Wilder/EMA) indicators converge to
+//!    within a documented tolerance; the warmup prefix is discarded before
+//!    concatenation, so no warmup NaNs or diverged values leak into results.
+//! 2. **Temporal locality**: All indicators run on a chunk before moving to
+//!    the next, keeping the chunk's HLC data hot in L2 (32 MB on Ada).
+//! 3. **Shared streams**: Kernels dispatch on the process-wide
+//!    [`StreamManager`] streams (created once, see `StreamManager::global`).
+//!    Multi-stream concurrent dispatch is gated behind
+//!    [`ENABLE_MULTI_STREAM_DISPATCH`] until the pinned-buffer pool is
+//!    event-gated; the interim mode dispatches sequentially on a single
+//!    non-default stream.
 //!
-//! # Performance
+//! # Chunk-boundary correctness
 //!
-//! - Sequential: 9 separate GPU calls = ~450μs overhead
-//! - Batch (Phase 1): 1 load + concurrent execution + 1 copy = ~75μs overhead
-//! - **Phase 1 speedup: 4-6x** for multi-indicator calculations
-//! - **Phase 2 (L2 cache):** +10-20% additional (OHLCV stays in L2, 60-80% hit rate)
-//! - **Async pinned memory:** +11% additional speedup for memory transfers
-//!
-//! # L2 Cache Optimization (Phase 2)
-//!
-//! RTX 3500 Ada has 32 MB L2 cache (4x Ampere). Phase 2 implements:
-//!
-//! - **Chunked processing**: Process data in L2-sized chunks (10K-600K candles)
-//! - **Data locality**: Keep OHLCV buffers resident in L2 across indicators
-//! - **Temporal locality**: Process all indicators on chunk before moving to next chunk
-//!
-//! **Expected L2 hit rate**: 60-80% (vs 30-50% baseline)
-//!
-//! # Integration
-//!
-//! Uses existing `GpuMemoryPool` (pre-allocated buffers) and `StreamManager` (concurrent execution)
-//! for optimal performance. Phase 2 adds `l2_cache` module for cache policy hints.
+//! Naive chunking (compute per chunk, concatenate) re-emits warmup NaNs and
+//! re-seeds Wilder/EMA state at every chunk boundary, silently corrupting
+//! results for >1M-candle inputs. The overlap-and-discard chunker fixes this;
+//! the stitching logic is pure host code and covered by CPU-only unit tests
+//! comparing chunked vs unchunked output.
 
 use super::device::{GpuDevice, GpuError};
-use super::l2_cache::{
-    L2CachePolicy, calculate_l2_chunk_size, clear_l2_persist_policy, set_l2_persist_policy,
-};
+use super::l2_cache::calculate_l2_chunk_size_with_overlap;
 use super::streams::{IndicatorSpeed, StreamManager};
 use super::{
-    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, macd_hybrid, roc_gpu, rsi_gpu, stochastic_gpu,
-    williams_r_gpu,
+    aroon_gpu, atr_gpu, bollinger_bands_gpu, cci_gpu, macd_hybrid, roc_gpu, rsi_gpu,
+    stochastic_gpu, williams_r_gpu,
 };
+use cudarc::driver::CudaStream;
 use ndarray::Array1;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Warmup multiplier for recursive (Wilder/EMA) indicators.
+///
+/// After `RECURSIVE_WARMUP_FACTOR * period` candles of overlap, the residual
+/// influence of the chunk-local seed is `(1 - 1/p)^(4p) ≈ e^-4 < 2%`
+/// (validated empirically in `test_stitch_chunked_rsi_within_tolerance`:
+/// max observed RSI deviation ≈ 0.8 points on a 0-100 scale).
+pub(crate) const RECURSIVE_WARMUP_FACTOR: usize = 4;
+
+/// Gate for dispatching indicators concurrently across the 3 speed-classified
+/// CUDA streams.
+///
+/// **Must remain `false` until the pinned-buffer pool is event-gated**
+/// (kf-pinned-pool-hardening): indicator functions release pinned staging
+/// buffers back to the shared pool immediately after enqueueing async copies.
+/// With a single stream, a subsequent acquire+overwrite of that buffer is
+/// ordered behind the in-flight copy; across *different* streams it is not,
+/// so concurrent dispatch could corrupt in-flight transfers.
+///
+/// Interim behavior (`false`): all indicators dispatch sequentially on one
+/// non-default stream (the Medium stream of the shared `StreamManager`).
+const ENABLE_MULTI_STREAM_DISPATCH: bool = false;
 
 /// Indicator request types for batch calculation
 #[derive(Debug, Clone, PartialEq)]
@@ -205,8 +220,11 @@ impl BatchIndicatorParams {
 pub(crate) fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpeed {
     match indicator {
         // Fast: Simple arithmetic operations (< 5μs/candle)
-        BatchIndicatorType::ROC | BatchIndicatorType::WilliamsR | BatchIndicatorType::CCI | BatchIndicatorType::MACD => {
-            IndicatorSpeed::Fast  // MACD now uses CPU (75μs for 100K candles = 0.75μs/candle)
+        BatchIndicatorType::ROC
+        | BatchIndicatorType::WilliamsR
+        | BatchIndicatorType::CCI
+        | BatchIndicatorType::MACD => {
+            IndicatorSpeed::Fast // MACD now uses CPU (75μs for 100K candles = 0.75μs/candle)
         }
 
         // Medium: Smoothing operations (5-15μs/candle)
@@ -220,10 +238,209 @@ pub(crate) fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpee
     }
 }
 
-/// Helper function to calculate a single indicator
+/// Number of warmup candles required ahead of a chunk so that values computed
+/// at the chunk's first kept index match the unchunked computation.
 ///
-/// Extracted for cleaner code organization and future stream parameter support.
-/// Public for use by batch_graphs module.
+/// Two classes of indicator, with per-indicator rationale:
+///
+/// **Pure-window (exact)** - the value at index `i` depends only on a fixed
+/// lookback window, so an overlap equal to the lookback reconstructs results
+/// bit-for-bit:
+/// - Williams %R, CCI, Bollinger Bands, Aroon: window of `period` candles
+///   including the current one → lookback `period - 1`
+/// - ROC: `roc[i]` references `close[i - period]` → lookback `period`
+/// - Stochastic: %K window of `k_period`, then %D smooths `d_period` %K
+///   values → lookback `(k_period - 1) + (d_period - 1)`
+///
+/// **Recursive (approximate)** - Wilder/EMA state carries influence from the
+/// entire history, so chunked values converge rather than match exactly:
+/// - RSI, ATR: Wilder smoothing with `alpha = 1/period`; after
+///   `RECURSIVE_WARMUP_FACTOR * period` candles the chunk-local seed retains
+///   `(1 - 1/p)^(4p) ≈ e^-4 < 2%` influence
+/// - MACD: cascaded EMAs (slow feeds the signal EMA), so the factor applies
+///   to `slow_period + signal_period`
+///
+/// Defaults mirror `calculate_single_indicator` exactly (Bollinger 20,
+/// Aroon 25, MACD 12/26/9, all others 14/3).
+pub(crate) fn warmup_candles(
+    indicator: BatchIndicatorType,
+    params: &BatchIndicatorParams,
+) -> usize {
+    match indicator {
+        BatchIndicatorType::Stochastic => {
+            let k_period = params.k_period.unwrap_or(14);
+            let d_period = params.d_period.unwrap_or(3);
+            k_period.saturating_sub(1) + d_period.saturating_sub(1)
+        }
+        BatchIndicatorType::WilliamsR | BatchIndicatorType::CCI => {
+            params.period.unwrap_or(14).saturating_sub(1)
+        }
+        BatchIndicatorType::BollingerBands => params.period.unwrap_or(20).saturating_sub(1),
+        BatchIndicatorType::Aroon => params.period.unwrap_or(25).saturating_sub(1),
+        BatchIndicatorType::ROC => params.period.unwrap_or(14),
+        BatchIndicatorType::RSI | BatchIndicatorType::ATR => {
+            let period = params.period.unwrap_or(14);
+            (period * RECURSIVE_WARMUP_FACTOR).max(4 * period)
+        }
+        BatchIndicatorType::MACD => {
+            let slow = params.slow_period.unwrap_or(26);
+            let signal = params.signal_period.unwrap_or(9);
+            (slow + signal) * RECURSIVE_WARMUP_FACTOR
+        }
+    }
+}
+
+/// Maximum warmup over all requested indicators (the shared chunk overlap)
+///
+/// A single overlap is used for the whole batch: it is exact-or-larger than
+/// every pure-window lookback (extra overlap is simply discarded) and meets
+/// the recursive convergence bound for every Wilder/EMA indicator.
+fn batch_overlap_candles(
+    indicators: &[BatchIndicatorType],
+    params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
+) -> usize {
+    let default_params = BatchIndicatorParams::default();
+    indicators
+        .iter()
+        .map(|&indicator| {
+            let indicator_params = params.get(&indicator).unwrap_or(&default_params);
+            warmup_candles(indicator, indicator_params)
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// One chunk of the overlap-and-discard plan
+///
+/// The chunk computes over `[start, end)` of the full series; the first
+/// `discard` output elements (the warmup overlap) are dropped before
+/// concatenation, leaving exactly the logical range `[start + discard, end)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ChunkSpan {
+    /// Extended start index (includes the warmup overlap)
+    pub start: usize,
+    /// Exclusive end index
+    pub end: usize,
+    /// Leading output elements to discard (== logical_start - start)
+    pub discard: usize,
+}
+
+impl ChunkSpan {
+    /// Number of elements computed for this chunk (kept + discarded)
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+}
+
+/// Plan overlap-and-discard chunks covering `[0, n)`
+///
+/// Invariants (covered by unit tests):
+/// - kept regions `[start + discard, end)` are contiguous and cover `[0, n)`
+/// - the first chunk has `discard == 0` (its prefix IS the series start, so
+///   its warmup NaNs are the correct global warmup NaNs)
+/// - overlap is clipped at the series start; a clipped chunk computes from
+///   index 0 and is therefore exact even for recursive indicators
+pub(crate) fn plan_chunks(n: usize, chunk_size: usize, overlap: usize) -> Vec<ChunkSpan> {
+    debug_assert!(chunk_size > 0, "chunk_size must be positive");
+    let chunk_size = chunk_size.max(1);
+
+    let mut spans = Vec::with_capacity(n.div_ceil(chunk_size));
+    let mut offset = 0;
+    while offset < n {
+        let end = (offset + chunk_size).min(n);
+        let start = offset.saturating_sub(overlap);
+        spans.push(ChunkSpan {
+            start,
+            end,
+            discard: offset - start,
+        });
+        offset = end;
+    }
+    spans
+}
+
+/// Drop the leading `discard` warmup elements from a chunk result
+///
+/// Validates that every output array has exactly `expected_len` elements
+/// (the indicator contract: output length == input length) before trimming.
+fn trim_leading(
+    result: IndicatorResult,
+    discard: usize,
+    expected_len: usize,
+) -> Result<IndicatorResult, GpuError> {
+    fn trim_array(
+        arr: Array1<f64>,
+        discard: usize,
+        expected_len: usize,
+    ) -> Result<Array1<f64>, GpuError> {
+        if arr.len() != expected_len {
+            return Err(GpuError::ExecutionError(format!(
+                "Chunk result length {} does not match chunk input length {}",
+                arr.len(),
+                expected_len
+            )));
+        }
+        Ok(arr.slice(ndarray::s![discard..]).to_owned())
+    }
+
+    match result {
+        IndicatorResult::Single(a) => Ok(IndicatorResult::Single(trim_array(
+            a,
+            discard,
+            expected_len,
+        )?)),
+        IndicatorResult::Double(a, b) => Ok(IndicatorResult::Double(
+            trim_array(a, discard, expected_len)?,
+            trim_array(b, discard, expected_len)?,
+        )),
+        IndicatorResult::Triple(a, b, c) => Ok(IndicatorResult::Triple(
+            trim_array(a, discard, expected_len)?,
+            trim_array(b, discard, expected_len)?,
+            trim_array(c, discard, expected_len)?,
+        )),
+    }
+}
+
+/// Overlap-and-discard chunk driver (pure host logic)
+///
+/// Plans chunks, invokes `compute_chunk` for each extended span, discards the
+/// warmup prefix of every result, and concatenates the kept regions. Generic
+/// over the compute function so the GPU pipeline and the CPU-only unit tests
+/// exercise the *same* stitching code.
+pub(crate) fn stitch_chunked_results<F>(
+    n: usize,
+    chunk_size: usize,
+    overlap: usize,
+    mut compute_chunk: F,
+) -> Result<HashMap<BatchIndicatorType, IndicatorResult>, GpuError>
+where
+    F: FnMut(&ChunkSpan) -> Result<HashMap<BatchIndicatorType, IndicatorResult>, GpuError>,
+{
+    let spans = plan_chunks(n, chunk_size, overlap);
+
+    let mut accumulated: HashMap<BatchIndicatorType, Vec<IndicatorResult>> = HashMap::new();
+    for span in &spans {
+        let chunk_results = compute_chunk(span)?;
+        for (indicator, result) in chunk_results {
+            let trimmed = trim_leading(result, span.discard, span.len())?;
+            accumulated.entry(indicator).or_default().push(trimmed);
+        }
+    }
+
+    let mut final_results = HashMap::new();
+    for (indicator, chunk_results) in accumulated {
+        let concatenated = concatenate_indicator_results(chunk_results)?;
+        final_results.insert(indicator, concatenated);
+    }
+
+    Ok(final_results)
+}
+
+/// Helper function to calculate a single indicator on the default stream
+///
+/// Kept signature-stable for the batch_graphs module; the batch pipeline uses
+/// [`calculate_single_indicator_on_stream`] to dispatch on StreamManager
+/// streams.
 pub(crate) fn calculate_single_indicator(
     device: &GpuDevice,
     high: &Array1<f64>,
@@ -232,56 +449,73 @@ pub(crate) fn calculate_single_indicator(
     indicator: BatchIndicatorType,
     params: &BatchIndicatorParams,
 ) -> Result<IndicatorResult, GpuError> {
+    calculate_single_indicator_on_stream(device, high, low, close, indicator, params, None)
+}
+
+/// Calculate a single indicator on an explicit CUDA stream
+///
+/// `stream = None` uses the device default stream. All H2D copies, kernel
+/// launches, and D2H copies inside the indicator functions are issued on the
+/// selected stream, and each indicator synchronizes that stream before
+/// returning host results.
+pub(crate) fn calculate_single_indicator_on_stream(
+    device: &GpuDevice,
+    high: &Array1<f64>,
+    low: &Array1<f64>,
+    close: &Array1<f64>,
+    indicator: BatchIndicatorType,
+    params: &BatchIndicatorParams,
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<IndicatorResult, GpuError> {
     match indicator {
         BatchIndicatorType::Stochastic => {
             let k_period = params.k_period.unwrap_or(14);
             let d_period = params.d_period.unwrap_or(3);
-            // TODO: Add stream parameter when batch concurrency is implemented
-            let (k, d) = stochastic_gpu(device, high, low, close, k_period, d_period, None)?;
+            let (k, d) = stochastic_gpu(device, high, low, close, k_period, d_period, stream)?;
             Ok(IndicatorResult::Double(k, d))
         }
 
         BatchIndicatorType::WilliamsR => {
             let period = params.period.unwrap_or(14);
-            let result = williams_r_gpu(device, high, low, close, period, None)?;
+            let result = williams_r_gpu(device, high, low, close, period, stream)?;
             Ok(IndicatorResult::Single(result))
         }
 
         BatchIndicatorType::ATR => {
             let period = params.period.unwrap_or(14);
-            let result = atr_gpu(device, high, low, close, period, None)?;
+            let result = atr_gpu(device, high, low, close, period, stream)?;
             Ok(IndicatorResult::Single(result))
         }
 
         BatchIndicatorType::RSI => {
             let period = params.period.unwrap_or(14);
-            let result = rsi_gpu(device, close, period, None)?;
+            let result = rsi_gpu(device, close, period, stream)?;
             Ok(IndicatorResult::Single(result))
         }
 
         BatchIndicatorType::BollingerBands => {
             let period = params.period.unwrap_or(20);
             let num_std = params.num_std.unwrap_or(2.0);
-            // TODO: Add stream parameter when batch concurrency is implemented
-            let (upper, middle, lower) = bollinger_bands_gpu(device, close, period, num_std, None)?;
+            let (upper, middle, lower) =
+                bollinger_bands_gpu(device, close, period, num_std, stream)?;
             Ok(IndicatorResult::Triple(upper, middle, lower))
         }
 
         BatchIndicatorType::ROC => {
             let period = params.period.unwrap_or(14);
-            let result = roc_gpu(device, close, period, None)?;
+            let result = roc_gpu(device, close, period, stream)?;
             Ok(IndicatorResult::Single(result))
         }
 
         BatchIndicatorType::CCI => {
             let period = params.period.unwrap_or(14);
-            let result = cci_gpu(device, high, low, close, period, None)?;
+            let result = cci_gpu(device, high, low, close, period, stream)?;
             Ok(IndicatorResult::Single(result))
         }
 
         BatchIndicatorType::Aroon => {
             let period = params.period.unwrap_or(25);
-            let (up, down) = aroon_gpu(device, high, low, period, None)?;
+            let (up, down) = aroon_gpu(device, high, low, period, stream)?;
             Ok(IndicatorResult::Double(up, down))
         }
 
@@ -289,8 +523,9 @@ pub(crate) fn calculate_single_indicator(
             let fast = params.fast_period.unwrap_or(12);
             let slow = params.slow_period.unwrap_or(26);
             let signal = params.signal_period.unwrap_or(9);
+            // macd_hybrid executes on CPU; stream is accepted for uniformity
             let (macd_line, signal_line, histogram) =
-                macd_hybrid(device, close, fast, slow, signal, None)?;
+                macd_hybrid(device, close, fast, slow, signal, stream)?;
             Ok(IndicatorResult::Triple(macd_line, signal_line, histogram))
         }
     }
@@ -388,11 +623,15 @@ pub fn calculate_indicators_batch_gpu(
         ));
     }
 
-    // Phase 2: L2 Cache Optimization
-    // Calculate optimal chunk size for L2 cache (32 MB on RTX 3500 Ada)
-    // OHLCV = 5 buffers (if we had open/volume), but currently using HLC = 3 buffers
+    // L2 cache optimization: chunk inputs larger than the L2 budget.
+    // Each chunk after the first is prefixed with `overlap` warmup candles
+    // (recomputed and discarded) so chunk boundaries do not corrupt windowed
+    // or recursive indicator state. The extended chunk (kept + overlap) is
+    // what must fit in L2, hence the overlap-aware sizing.
+    // Currently using HLC = 3 buffers (open/volume unused).
     let num_buffers = 3; // high, low, close
-    let chunk_size = calculate_l2_chunk_size(n, num_buffers, 32, 0.75);
+    let overlap = batch_overlap_candles(indicators, params);
+    let chunk_size = calculate_l2_chunk_size_with_overlap(n, num_buffers, 32, 0.75, overlap);
 
     // If data fits in single chunk, use fast path (no chunking overhead)
     if chunk_size >= n {
@@ -401,60 +640,45 @@ pub fn calculate_indicators_batch_gpu(
         );
     }
 
-    // Data is larger than L2 - process in chunks for better cache locality
+    // Data is larger than L2 - process in overlap-and-discard chunks
     eprintln!(
-        "INFO: L2 cache optimization enabled - processing {} candles in chunks of {}",
-        n, chunk_size
+        "INFO: L2 cache optimization enabled - processing {} candles in chunks of {} \
+         (+{} warmup overlap per chunk, discarded)",
+        n, chunk_size, overlap
     );
 
-    let mut results: HashMap<BatchIndicatorType, Vec<IndicatorResult>> = HashMap::new();
-
-    // Process data in L2-sized chunks
-    let mut offset = 0;
-    while offset < n {
-        let chunk_end = (offset + chunk_size).min(n);
-
-        // Extract chunk slices
-        let high_chunk = high.slice(ndarray::s![offset..chunk_end]);
-        let low_chunk = low.slice(ndarray::s![offset..chunk_end]);
-        let close_chunk = close.slice(ndarray::s![offset..chunk_end]);
-
-        // Convert to owned arrays for GPU transfer
-        let high_chunk_owned = high_chunk.to_owned();
-        let low_chunk_owned = low_chunk.to_owned();
-        let close_chunk_owned = close_chunk.to_owned();
+    stitch_chunked_results(n, chunk_size, overlap, |span| {
+        // Extract extended chunk (overlap + kept region) as owned arrays
+        let high_chunk = high.slice(ndarray::s![span.start..span.end]).to_owned();
+        let low_chunk = low.slice(ndarray::s![span.start..span.end]).to_owned();
+        let close_chunk = close.slice(ndarray::s![span.start..span.end]).to_owned();
 
         // Process all indicators on this chunk (temporal locality!)
-        let chunk_results = calculate_indicators_batch_gpu_single_chunk(
+        calculate_indicators_batch_gpu_single_chunk(
             device,
-            &high_chunk_owned,
-            &low_chunk_owned,
-            &close_chunk_owned,
+            &high_chunk,
+            &low_chunk,
+            &close_chunk,
             indicators,
             params,
-        )?;
-
-        // Accumulate results
-        for (indicator, result) in chunk_results {
-            results.entry(indicator).or_default().push(result);
-        }
-
-        offset = chunk_end;
-    }
-
-    // Concatenate chunk results into final arrays
-    let mut final_results = HashMap::new();
-    for (indicator, chunk_results) in results {
-        let concatenated = concatenate_indicator_results(chunk_results)?;
-        final_results.insert(indicator, concatenated);
-    }
-
-    Ok(final_results)
+        )
+    })
 }
 
 /// Calculate indicators on a single chunk (helper for L2 optimization)
 ///
 /// This is the core computation that processes data assumed to fit in L2 cache.
+///
+/// Dispatches every indicator on a non-default stream from the process-wide
+/// [`StreamManager`] (created once, not per chunk). Until the pinned-buffer
+/// pool is event-gated (see [`ENABLE_MULTI_STREAM_DISPATCH`]), all indicators
+/// share a single stream and execute sequentially; afterwards, flipping the
+/// gate dispatches each indicator on its speed-classified stream.
+///
+/// Note: indicators upload their own input copies internally, so no shared
+/// H2D staging is performed here. Device-resident input sharing via
+/// `GpuMemoryPool` is deferred - it requires signature changes across all
+/// indicator implementations.
 fn calculate_indicators_batch_gpu_single_chunk(
     device: &GpuDevice,
     high: &Array1<f64>,
@@ -463,96 +687,38 @@ fn calculate_indicators_batch_gpu_single_chunk(
     indicators: &[BatchIndicatorType],
     params: &HashMap<BatchIndicatorType, BatchIndicatorParams>,
 ) -> Result<HashMap<BatchIndicatorType, IndicatorResult>, GpuError> {
-    // Create StreamManager for concurrent execution
-    let device_arc = Arc::new(GpuDevice::with_device_id(0)?);
-    let stream_manager = StreamManager::new(device_arc.clone())?;
-
-    // Phase 2: Set L2 cache persist policy for OHLCV data
-    // === H2D: Async pinned memory transfers (~11% faster) ===
-    let n = high.len();
-
-    // Transfer high data
-    let mut pinned_high = device.pinned_pool.lock().acquire(n)?;
-    pinned_high.as_mut_slice()[..n].copy_from_slice(high.as_slice().unwrap());
-    let mut d_high = device.alloc_buffer(n)?;
-    device_arc.stream.memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
-    device.pinned_pool.lock().release(pinned_high);
-
-    // Transfer low data
-    let mut pinned_low = device.pinned_pool.lock().acquire(n)?;
-    pinned_low.as_mut_slice()[..n].copy_from_slice(low.as_slice().unwrap());
-    let mut d_low = device.alloc_buffer(n)?;
-    device_arc.stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
-    device.pinned_pool.lock().release(pinned_low);
-
-    // Transfer close data
-    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
-    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
-    let mut d_close = device.alloc_buffer(n)?;
-    device_arc.stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
-    device.pinned_pool.lock().release(pinned_close);
-
-    // Configure L2 cache policy (placeholder - FFI not yet implemented)
-    let l2_policy = L2CachePolicy::new()
-        .with_persisting_buffer(&d_high, &device_arc.stream, 0.8)? // 80% hit rate expected
-        .with_persisting_buffer(&d_low, &device_arc.stream, 0.8)?
-        .with_persisting_buffer(&d_close, &device_arc.stream, 0.8)?;
-
-    set_l2_persist_policy(&device_arc.stream, l2_policy)?;
+    let stream_manager = StreamManager::global()?;
 
     let default_params = BatchIndicatorParams::default();
     let mut results = HashMap::new();
 
-    // Group indicators by speed classification for optimal stream assignment
-    let mut fast_indicators = Vec::new(); // ROC, Williams %R, CCI
-    let mut medium_indicators = Vec::new(); // RSI, ATR, Bollinger, Aroon
-    let mut slow_indicators = Vec::new(); // Stochastic, MACD
-
     for &indicator in indicators {
-        match classify_indicator(indicator) {
-            IndicatorSpeed::Fast => fast_indicators.push(indicator),
-            IndicatorSpeed::Medium => medium_indicators.push(indicator),
-            IndicatorSpeed::Slow => slow_indicators.push(indicator),
-        }
-    }
-
-    // Note: Current indicator GPU functions don't accept custom stream parameters yet.
-    // This implementation prepares the infrastructure for concurrent execution.
-    // Once indicator functions are updated to accept `Option<&Arc<CudaStream>>`,
-    // we can pass stream_manager.get_stream(speed) for true concurrent execution.
-    //
-    // Performance improvement:
-    // - Current: Sequential execution on default stream
-    // - Future: Concurrent execution across 3 streams (4-6x speedup expected)
-
-    // Calculate fast indicators (would use fast stream in future)
-    for &indicator in &fast_indicators {
         let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result =
-            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
+
+        let speed = if ENABLE_MULTI_STREAM_DISPATCH {
+            classify_indicator(indicator)
+        } else {
+            // Interim: single non-default stream for every indicator. Safe
+            // with the un-gated pinned pool because all async transfers are
+            // ordered on one stream.
+            IndicatorSpeed::Medium
+        };
+        let stream = stream_manager.get_stream(speed);
+
+        let result = calculate_single_indicator_on_stream(
+            device,
+            high,
+            low,
+            close,
+            indicator,
+            indicator_params,
+            Some(stream),
+        )?;
         results.insert(indicator, result);
     }
 
-    // Calculate medium indicators (would use medium stream in future)
-    for &indicator in &medium_indicators {
-        let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result =
-            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
-        results.insert(indicator, result);
-    }
-
-    // Calculate slow indicators (would use slow stream in future)
-    for &indicator in &slow_indicators {
-        let indicator_params = params.get(&indicator).unwrap_or(&default_params);
-        let result =
-            calculate_single_indicator(device, high, low, close, indicator, indicator_params)?;
-        results.insert(indicator, result);
-    }
-
-    // Clear L2 persist policy
-    clear_l2_persist_policy(&device_arc.stream)?;
-
-    // Synchronize all streams before returning
+    // Single synchronization point: waits for any work still pending on the
+    // shared streams (cheap when indicators already synchronized internally).
     stream_manager.synchronize_all()?;
 
     Ok(results)

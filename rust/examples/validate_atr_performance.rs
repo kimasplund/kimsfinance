@@ -36,8 +36,8 @@
 //! - `src/gpu/atr.rs` - ATR implementation with performance notes
 //! - `docs/GPU_PROFILING_RESULTS.md` - Understanding compilation overhead
 
-use kimsfinance_core::gpu::device::GpuDevice;
 use kimsfinance_core::gpu::atr::atr_gpu;
+use kimsfinance_core::gpu::device::GpuDevice;
 use ndarray::Array1;
 use std::time::Instant;
 
@@ -181,7 +181,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Warmup complete");
     println!();
     println!("   Total time:   {} μs", warmup_total);
-    println!("   Per iteration: {} μs", warmup_total / warmup_iterations as u128);
+    println!(
+        "   Per iteration: {} μs",
+        warmup_total / warmup_iterations as u128
+    );
     println!();
 
     // === PHASE 3: Warm Performance Measurement ===
@@ -189,7 +192,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║  Phase 3: Warm Performance (actual runtime)               ║");
     println!("╚════════════════════════════════════════════════════════════╝");
     println!();
-    println!("⏱️  Measuring warm performance ({} iterations)...", timing_iterations);
+    println!(
+        "⏱️  Measuring warm performance ({} iterations)...",
+        timing_iterations
+    );
 
     let (mean, stddev, min, max, times) =
         measure_warm_average(&device, &high, &low, &close, period, timing_iterations);
@@ -202,18 +208,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║  Performance Results                                       ║");
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║  Cold Start (includes compilation):                       ║");
-    println!("║    First run:      {:>10.2} ms                       ║", cold_ms);
+    println!(
+        "║    First run:      {:>10.2} ms                       ║",
+        cold_ms
+    );
     println!("╠════════════════════════════════════════════════════════════╣");
-    println!("║  Warm Performance (n={}):                             ║", timing_iterations);
-    println!("║    Mean:           {:>10} μs                       ║", mean);
-    println!("║    Std Dev:        {:>10} μs                       ║", stddev);
-    println!("║    Min:            {:>10} μs                       ║", min);
-    println!("║    Max:            {:>10} μs                       ║", max);
-    println!("║    Range:          {:>10} μs                       ║", max - min);
+    println!(
+        "║  Warm Performance (n={}):                             ║",
+        timing_iterations
+    );
+    println!(
+        "║    Mean:           {:>10} μs                       ║",
+        mean
+    );
+    println!(
+        "║    Std Dev:        {:>10} μs                       ║",
+        stddev
+    );
+    println!(
+        "║    Min:            {:>10} μs                       ║",
+        min
+    );
+    println!(
+        "║    Max:            {:>10} μs                       ║",
+        max
+    );
+    println!(
+        "║    Range:          {:>10} μs                       ║",
+        max - min
+    );
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║  Performance per Candle:                                   ║");
-    println!("║    Time/candle:    {:>10.3} μs                       ║", mean as f64 / n as f64);
-    println!("║    Throughput:     {:>10.0} candles/sec            ║", n as f64 / (mean as f64 / 1_000_000.0));
+    println!(
+        "║    Time/candle:    {:>10.3} μs                       ║",
+        mean as f64 / n as f64
+    );
+    println!(
+        "║    Throughput:     {:>10.0} candles/sec            ║",
+        n as f64 / (mean as f64 / 1_000_000.0)
+    );
     println!("╚════════════════════════════════════════════════════════════╝");
     println!();
 
@@ -226,7 +259,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║    Range:     130-160 μs (±10% tolerance)                  ║");
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║  Actual Performance:                                       ║");
-    println!("║    Mean:      {} μs                                     ║", mean);
+    println!(
+        "║    Mean:      {} μs                                     ║",
+        mean
+    );
     println!("╠════════════════════════════════════════════════════════════╣");
 
     let target = 145;
@@ -237,15 +273,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("║  Status:      ✅ VALIDATED                                 ║");
         println!("║               Performance matches expected range           ║");
         let deviation = ((mean as f64 - target as f64) / target as f64 * 100.0).abs();
-        println!("║               Deviation: {:.1}% from target                ║", deviation);
+        println!(
+            "║               Deviation: {:.1}% from target                ║",
+            deviation
+        );
     } else if mean < lower_bound {
         println!("║  Status:      🚀 EXCEEDS EXPECTATIONS                      ║");
         let speedup = target as f64 / mean as f64;
-        println!("║               {:.2}x faster than target!                 ║", speedup);
+        println!(
+            "║               {:.2}x faster than target!                 ║",
+            speedup
+        );
     } else {
         println!("║  Status:      ⚠️  NEEDS INVESTIGATION                      ║");
         let slowdown = mean as f64 / target as f64;
-        println!("║               {:.2}x slower than expected                ║", slowdown);
+        println!(
+            "║               {:.2}x slower than expected                ║",
+            slowdown
+        );
         println!("║                                                            ║");
         println!("║  Possible causes:                                          ║");
         println!("║  - System under load (check GPU utilization)              ║");
@@ -262,7 +307,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╠════════════════════════════════════════════════════════════╣");
 
     let coefficient_of_variation = (stddev as f64 / mean as f64) * 100.0;
-    println!("║  Coefficient of Variation: {:.2}%                        ║", coefficient_of_variation);
+    println!(
+        "║  Coefficient of Variation: {:.2}%                        ║",
+        coefficient_of_variation
+    );
 
     if coefficient_of_variation < 5.0 {
         println!("║    ✅ Excellent stability (<5%)                            ║");
@@ -338,9 +386,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║  Key Takeaways                                             ║");
     println!("╠════════════════════════════════════════════════════════════╣");
     println!("║  1. Cold Start vs Warm Performance:                        ║");
-    println!("║     - Cold: {:.1}ms (includes compilation)             ║", cold_ms);
-    println!("║     - Warm: {} μs (actual runtime)                      ║", mean);
-    println!("║     - Ratio: {:.0}x slower without warmup               ║", cold_ms * 1000.0 / mean as f64);
+    println!(
+        "║     - Cold: {:.1}ms (includes compilation)             ║",
+        cold_ms
+    );
+    println!(
+        "║     - Warm: {} μs (actual runtime)                      ║",
+        mean
+    );
+    println!(
+        "║     - Ratio: {:.0}x slower without warmup               ║",
+        cold_ms * 1000.0 / mean as f64
+    );
     println!("║                                                            ║");
     println!("║  2. Why Warmup Matters:                                    ║");
     println!("║     - First run includes PTX → SASS compilation            ║");

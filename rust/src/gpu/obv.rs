@@ -1,68 +1,25 @@
 //! GPU-Accelerated OBV (On-Balance Volume)
 //!
-//! Provides 10-20x speedup over CPU implementation for large datasets.
+//! Public OBV GPU entry point. Delegates to the parallel multi-level prefix-sum
+//! implementation in [`super::obv_optimized`].
+//!
 //! OBV is a cumulative momentum indicator that relates volume to price changes.
+//!
+//! # History
+//!
+//! The original implementation in this file ran the cumulative sum as a
+//! single-thread O(n) FP64 GPU loop (measured 4.70ms for 100K candles vs ~50us
+//! on CPU) and inserted a host `synchronize()` between two same-stream kernel
+//! launches (which are already ordered). Both were removed: `obv_gpu` now
+//! delegates to [`obv_gpu_optimized`], whose multi-level scan handles any
+//! dataset size. The volume-delta kernel source is defined once, in
+//! `super::obv_optimized::OBV_DELTAS_KERNEL_SRC`.
 
 use super::device::{GpuDevice, GpuError};
-use crate::gpu::compile::compile_ptx_optimized_cached;
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
+use super::obv_optimized::obv_gpu_optimized;
+use cudarc::driver::CudaStream;
 use ndarray::Array1;
 use std::sync::Arc;
-
-/// CUDA kernel source code for OBV calculation
-const OBV_KERNEL: &str = r#"
-// Define constants to avoid header dependencies with NVRTC
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-
-// Kernel 1: Calculate volume deltas based on price changes
-// This kernel determines whether to add, subtract, or keep volume constant
-extern "C" __global__ void obv_deltas_kernel(
-    const double* __restrict__ close,
-    const double* __restrict__ volume,
-    double* __restrict__ deltas,
-    int n
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (idx == 0) {
-        // OBV starts at 0 (no previous price to compare)
-        deltas[0] = 0.0;
-    } else if (idx < n) {
-        // Use small epsilon for floating-point comparison tolerance
-        const double EPSILON = 1e-10;
-        double price_change = close[idx] - close[idx - 1];
-
-        if (price_change > EPSILON) {
-            // Price up: add volume
-            deltas[idx] = volume[idx];
-        } else if (price_change < -EPSILON) {
-            // Price down: subtract volume
-            deltas[idx] = -volume[idx];
-        } else {
-            // Price unchanged: no volume change
-            deltas[idx] = 0.0;
-        }
-    }
-}
-
-// Kernel 2: Cumulative sum (sequential prefix sum)
-// This kernel must run single-threaded due to data dependencies
-extern "C" __global__ void obv_cumsum_kernel(
-    const double* __restrict__ deltas,
-    double* __restrict__ obv,
-    int n
-) {
-    // Only one thread computes the cumulative sum
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
-        obv[0] = deltas[0];
-
-        // Sequential cumulative sum
-        for (int i = 1; i < n; i++) {
-            obv[i] = obv[i - 1] + deltas[i];
-        }
-    }
-}
-"#;
 
 /// GPU-accelerated OBV (On-Balance Volume)
 ///
@@ -79,7 +36,9 @@ extern "C" __global__ void obv_cumsum_kernel(
 ///
 /// # Performance
 ///
-/// Expected speedup: **10-22x** over CPU for n > 10,000 (with async pinned memory: +11%)
+/// Delegates to [`obv_gpu_optimized`] (parallel multi-level prefix sum):
+/// expected **40-50x** over CPU for n > 10,000, with no dataset-size cap
+/// (the previous parallel scan errored above 65,536 elements).
 ///
 /// # Stream Concurrency
 ///
@@ -87,7 +46,7 @@ extern "C" __global__ void obv_cumsum_kernel(
 /// concurrent execution with other operations on different streams. This is used
 /// in the batch pipeline for 4-6x speedup across Fast/Medium/Slow indicator groups.
 ///
-/// Classification: **MEDIUM** indicator (two-kernel approach with sequential cumsum)
+/// Classification: **FAST** indicator (fully parallel deltas + scan kernels)
 ///
 /// # Algorithm
 ///
@@ -95,7 +54,8 @@ extern "C" __global__ void obv_cumsum_kernel(
 ///    - If close[i] > close[i-1]: delta = +volume[i]
 ///    - If close[i] < close[i-1]: delta = -volume[i]
 ///    - If close[i] == close[i-1]: delta = 0
-/// 2. Cumulative sum of deltas to get OBV
+/// 2. Parallel prefix sum of deltas to get OBV (Hillis-Steele block scans with
+///    recursive inter-block propagation)
 ///
 /// # Errors
 ///
@@ -109,135 +69,7 @@ pub fn obv_gpu(
     volume: &Array1<f64>,
     stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
-    let n = close.len();
-
-    // Validate inputs
-    if n == 0 {
-        return Err(GpuError::InvalidParameter(
-            "Close array cannot be empty".to_string(),
-        ));
-    }
-
-    if volume.len() != n {
-        return Err(GpuError::InvalidParameter(format!(
-            "Close and volume arrays must have same length: close={}, volume={}",
-            n,
-            volume.len()
-        )));
-    }
-
-    // Compile PTX
-    let ptx_arc = compile_ptx_optimized_cached(OBV_KERNEL).map_err(|e| {
-        GpuError::CompilationError(format!("Failed to compile OBV kernel: {:?}", e))
-    })?;
-    let ptx = Arc::unwrap_or_clone(ptx_arc);
-
-    // Load module
-    let module = device
-        .context()
-        .load_module(ptx)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
-
-    // Get kernel functions
-    let deltas_kernel = module
-        .load_function("obv_deltas_kernel")
-        .map_err(|e| GpuError::ExecutionError(format!("Failed to load deltas kernel: {:?}", e)))?;
-
-    let cumsum_kernel = module
-        .load_function("obv_cumsum_kernel")
-        .map_err(|e| GpuError::ExecutionError(format!("Failed to load cumsum kernel: {:?}", e)))?;
-
-    // Select stream: use provided stream or device default
-    let kernel_stream = stream.unwrap_or(&device.stream);
-
-    // === H2D: Async pinned memory transfers (~11% faster) ===
-    // Transfer close data
-    let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
-    pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
-    let mut d_close = device.alloc_buffer(n)?;
-    kernel_stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
-    device.pinned_pool.lock().release(pinned_close);
-
-    // Transfer volume data
-    let mut pinned_volume = device.pinned_pool.lock().acquire(n)?;
-    pinned_volume.as_mut_slice()[..n].copy_from_slice(volume.as_slice().unwrap());
-    let mut d_volume = device.alloc_buffer(n)?;
-    kernel_stream.memcpy_htod(&pinned_volume.as_slice()[..n], &mut d_volume)?;
-    device.pinned_pool.lock().release(pinned_volume);
-
-    // Allocate GPU buffers
-    let mut d_deltas = device.alloc_buffer(n)?;
-    let mut d_obv = device.alloc_buffer(n)?;
-
-    let n_i32 = n as i32;
-
-    // Launch Kernel 1: Calculate volume deltas (parallel)
-    {
-        let mut builder = kernel_stream.launch_builder(&deltas_kernel);
-        builder.arg(&d_close);
-        builder.arg(&d_volume);
-        builder.arg(&mut d_deltas);
-        builder.arg(&n_i32);
-
-        // Launch with n threads (one per element)
-        let config = LaunchConfig::for_num_elems(n as u32);
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                GpuError::ExecutionError(format!("Deltas kernel launch failed: {:?}", e))
-            })?;
-        }
-    }
-
-    // Synchronize stream before cumsum kernel (cumsum depends on deltas)
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!(
-            "Stream synchronization failed after deltas kernel: {:?}",
-            e
-        ))
-    })?;
-
-    // Launch Kernel 2: Cumulative sum (sequential - single thread)
-    {
-        let mut builder = kernel_stream.launch_builder(&cumsum_kernel);
-        builder.arg(&d_deltas);
-        builder.arg(&mut d_obv);
-        builder.arg(&n_i32);
-
-        // Single thread for sequential operation
-        let config = LaunchConfig {
-            grid_dim: (1, 1, 1),
-            block_dim: (1, 1, 1),
-            shared_mem_bytes: 0,
-        };
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                GpuError::ExecutionError(format!("Cumsum kernel launch failed: {:?}", e))
-            })?;
-        }
-    }
-
-    // === D2H: Async pinned memory transfer (~11% faster) ===
-    // Acquire pinned buffer for output
-    let mut pinned_obv = device.pinned_pool.lock().acquire(n)?;
-
-    // Async D2H transfer
-    kernel_stream.memcpy_dtoh(&d_obv, &mut pinned_obv.as_mut_slice()[..n])?;
-
-    // Synchronize stream before CPU access
-    kernel_stream.synchronize().map_err(|e| {
-        GpuError::SynchronizationError(format!(
-            "Stream synchronization failed after cumsum kernel: {:?}",
-            e
-        ))
-    })?;
-
-    // Copy to output vec
-    let obv_vec = pinned_obv.as_slice()[..n].to_vec();
-
-    // Release pinned buffer
-    device.pinned_pool.lock().release(pinned_obv);
-
-    Ok(Array1::from_vec(obv_vec))
+    obv_gpu_optimized(device, close, volume, stream)
 }
 
 #[cfg(test)]
@@ -369,7 +201,8 @@ mod tests {
     fn test_obv_gpu_large_dataset() {
         let device = GpuDevice::new().expect("Failed to initialize GPU");
 
-        // Generate large dataset with sine wave pattern
+        // Generate large dataset with sine wave pattern.
+        // 100K elements requires the multi-level scan (391 blocks -> 2 blocks -> 1).
         let n = 100_000;
         let close: Vec<f64> = (0..n)
             .map(|i| {

@@ -309,7 +309,11 @@ impl BatchTickBacktest {
         let n_strategies = parameters.len();
 
         eprintln!("🚀 GPU batch tick backtest starting...");
-        eprintln!("   Trades: {} ({:.2} GB)", n_trades, n_trades as f64 * 32.0 / 1e9);
+        eprintln!(
+            "   Trades: {} ({:.2} GB)",
+            n_trades,
+            n_trades as f64 * 32.0 / 1e9
+        );
         eprintln!("   Strategies: {}", n_strategies);
 
         // Auto-tune batch size if not specified
@@ -461,7 +465,11 @@ impl BatchTickBacktest {
             });
 
             if (idx + 1) % 10 == 0 {
-                eprintln!("      CPU: {}/{} strategies completed", idx + 1, params.len());
+                eprintln!(
+                    "      CPU: {}/{} strategies completed",
+                    idx + 1,
+                    params.len()
+                );
             }
         }
 
@@ -576,13 +584,9 @@ impl BatchTickBacktest {
 
         // Allocate GPU memory and copy data
         // Note: cudarc 0.17.3 uses memcpy_stod (sync transfer with allocation)
-        let d_trades = self
-            .device
-            .stream
-            .memcpy_stod(&buffer)
-            .map_err(|e| {
-                GpuError::AllocationError(format!("Failed to allocate/copy trades to GPU: {:?}", e))
-            })?;
+        let d_trades = self.device.stream.memcpy_stod(&buffer).map_err(|e| {
+            GpuError::AllocationError(format!("Failed to allocate/copy trades to GPU: {:?}", e))
+        })?;
 
         // Synchronize to ensure transfer is complete
         self.device.synchronize()?;

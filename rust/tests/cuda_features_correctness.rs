@@ -34,18 +34,42 @@ fn test_fp8_vs_fp64_metrics_accuracy() {
     let simulated_fp8_win_rate = quantize_fp8(fp64_win_rate);
 
     println!("\nSimulated FP8 Results:");
-    println!("  Sharpe: {:.6} (diff: {:.6})", simulated_fp8_sharpe, fp64_sharpe - simulated_fp8_sharpe);
-    println!("  Max DD: {:.6}% (diff: {:.6})", simulated_fp8_dd, fp64_dd - simulated_fp8_dd);
-    println!("  Win Rate: {:.6}% (diff: {:.6})", simulated_fp8_win_rate, fp64_win_rate - simulated_fp8_win_rate);
+    println!(
+        "  Sharpe: {:.6} (diff: {:.6})",
+        simulated_fp8_sharpe,
+        fp64_sharpe - simulated_fp8_sharpe
+    );
+    println!(
+        "  Max DD: {:.6}% (diff: {:.6})",
+        simulated_fp8_dd,
+        fp64_dd - simulated_fp8_dd
+    );
+    println!(
+        "  Win Rate: {:.6}% (diff: {:.6})",
+        simulated_fp8_win_rate,
+        fp64_win_rate - simulated_fp8_win_rate
+    );
 
     // Validate accuracy (FP8 should be within ~0.01 of FP64)
     let sharpe_diff = (fp64_sharpe - simulated_fp8_sharpe).abs();
     let dd_diff = (fp64_dd - simulated_fp8_dd).abs();
     let wr_diff = (fp64_win_rate - simulated_fp8_win_rate).abs();
 
-    assert!(sharpe_diff < 0.01, "FP8 Sharpe accuracy loss too large: {}", sharpe_diff);
-    assert!(dd_diff < 0.01, "FP8 drawdown accuracy loss too large: {}", dd_diff);
-    assert!(wr_diff < 0.01, "FP8 win rate accuracy loss too large: {}", wr_diff);
+    assert!(
+        sharpe_diff < 0.01,
+        "FP8 Sharpe accuracy loss too large: {}",
+        sharpe_diff
+    );
+    assert!(
+        dd_diff < 0.01,
+        "FP8 drawdown accuracy loss too large: {}",
+        dd_diff
+    );
+    assert!(
+        wr_diff < 0.01,
+        "FP8 win rate accuracy loss too large: {}",
+        wr_diff
+    );
 
     println!("✓ FP8 accuracy within tolerance (< 0.01)");
 }
@@ -65,8 +89,22 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
 
     let engine = BacktestEngine::default();
     let mut grid = ParameterGrid::new();
-    grid.add_range("rsi_period", ParameterRange::Int { min: 10, max: 20, step: 2 });
-    grid.add_range("buy_threshold", ParameterRange::Float { min: 25.0, max: 35.0, step: 5.0 });
+    grid.add_range(
+        "rsi_period",
+        ParameterRange::Int {
+            min: 10,
+            max: 20,
+            step: 2,
+        },
+    );
+    grid.add_range(
+        "buy_threshold",
+        ParameterRange::Float {
+            min: 25.0,
+            max: 35.0,
+            step: 5.0,
+        },
+    );
 
     // Test 1: FP8 optimizer
     let optimizer_fp8 = GeneticOptimizer::new()
@@ -75,7 +113,17 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
         .fp8_exploration_ratio(0.8);
 
     let result_fp8 = optimizer_fp8
-        .optimize(&engine, &mut strategy.clone(), &timestamps, &open, &high, &low, &close, &volume, &grid)
+        .optimize(
+            &engine,
+            &mut strategy.clone(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+            &grid,
+        )
         .expect("FP8 optimization failed");
 
     // Test 2: FP64 optimizer
@@ -85,19 +133,34 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
         .fp8_exploration_ratio(0.0);
 
     let result_fp64 = optimizer_fp64
-        .optimize(&engine, &mut strategy.clone(), &timestamps, &open, &high, &low, &close, &volume, &grid)
+        .optimize(
+            &engine,
+            &mut strategy.clone(),
+            &timestamps,
+            &open,
+            &high,
+            &low,
+            &close,
+            &volume,
+            &grid,
+        )
         .expect("FP64 optimization failed");
 
     println!("\nFP8 Best Fitness: {:.4}", result_fp8.best_fitness);
     println!("FP64 Best Fitness: {:.4}", result_fp64.best_fitness);
 
     // FP8 should converge to similar optimum (within 10%)
-    let fitness_diff_pct = ((result_fp8.best_fitness - result_fp64.best_fitness).abs() / result_fp64.best_fitness.abs()) * 100.0;
+    let fitness_diff_pct = ((result_fp8.best_fitness - result_fp64.best_fitness).abs()
+        / result_fp64.best_fitness.abs())
+        * 100.0;
 
     println!("Fitness difference: {:.2}%", fitness_diff_pct);
 
-    assert!(fitness_diff_pct < 15.0,
-        "FP8 convergence differs too much from FP64: {:.2}%", fitness_diff_pct);
+    assert!(
+        fitness_diff_pct < 15.0,
+        "FP8 convergence differs too much from FP64: {:.2}%",
+        fitness_diff_pct
+    );
 
     println!("✓ FP8 optimizer converges within 15% of FP64");
 }
@@ -152,20 +215,24 @@ fn test_cuda_graph_vs_sequential_identical_results() {
 fn test_async_allocator_vs_standard_same_behavior() {
     println!("\n=== Correctness Test: Async Allocator vs Standard ===");
 
-    use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
+    use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
 
     // Test 1: Standard allocation via device
     println!("Standard allocation...");
-    let buffer_std = device.alloc_buffer(10_000).expect("Standard allocation failed");
+    let buffer_std = device
+        .alloc_buffer(10_000)
+        .expect("Standard allocation failed");
     assert_eq!(buffer_std.len(), 10_000);
 
     // Test 2: Async allocation
     println!("Async allocation...");
     let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
         .expect("Failed to create allocator");
-    let buffer_async = allocator.alloc::<f64>(10_000).expect("Async allocation failed");
+    let buffer_async = allocator
+        .alloc::<f64>(10_000)
+        .expect("Async allocation failed");
     assert_eq!(buffer_async.len(), 10_000);
 
     // Both should allocate same size successfully
@@ -185,22 +252,33 @@ fn test_async_allocator_vs_standard_same_behavior() {
     // Test 4: Copy data to/from GPU (verify buffers are usable)
     let host_data: Vec<f64> = (0..1000).map(|i| i as f64).collect();
 
-    device.stream.htod_sync_copy_into(&host_data, &buffers_std[0])
+    device
+        .stream
+        .htod_sync_copy_into(&host_data, &buffers_std[0])
         .expect("Standard H2D copy failed");
 
-    let readback_std = device.stream.dtoh_sync_copy(&buffers_std[0])
+    let readback_std = device
+        .stream
+        .dtoh_sync_copy(&buffers_std[0])
         .expect("Standard D2H copy failed");
 
-    device.stream.htod_sync_copy_into(&host_data, &buffers_async[0])
+    device
+        .stream
+        .htod_sync_copy_into(&host_data, &buffers_async[0])
         .expect("Async H2D copy failed");
 
-    let readback_async = device.stream.dtoh_sync_copy(&buffers_async[0])
+    let readback_async = device
+        .stream
+        .dtoh_sync_copy(&buffers_async[0])
         .expect("Async D2H copy failed");
 
     // Data should be identical
     for i in 0..1000 {
-        assert_eq!(readback_std[i], readback_async[i],
-            "Data mismatch at index {}: std={}, async={}", i, readback_std[i], readback_async[i]);
+        assert_eq!(
+            readback_std[i], readback_async[i],
+            "Data mismatch at index {}: std={}, async={}",
+            i, readback_std[i], readback_async[i]
+        );
     }
 
     println!("✓ Async and standard allocators produce functionally identical buffers");
@@ -214,7 +292,14 @@ fn test_async_allocator_vs_standard_same_behavior() {
 fn generate_test_data_deterministic(
     n: usize,
     seed: u64,
-) -> (Vec<i64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>, Array1<f64>) {
+) -> (
+    Vec<i64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+    Array1<f64>,
+) {
     use std::collections::hash_map::RandomState;
     use std::hash::{BuildHasher, Hash, Hasher};
 
@@ -231,10 +316,8 @@ fn generate_test_data_deterministic(
         i.hash(&mut hasher);
         let random_factor = (hasher.finish() % 100) as f64 / 100.0;
 
-        let price = base
-            + (t * 0.05).sin() * 1000.0
-            + (t * 0.2).cos() * 200.0
-            + random_factor * 100.0;
+        let price =
+            base + (t * 0.05).sin() * 1000.0 + (t * 0.2).cos() * 200.0 + random_factor * 100.0;
         prices.push(price);
     }
 
@@ -335,7 +418,11 @@ fn test_fp8_numerical_stability() {
     println!("  a + (b + c) = {:.2}", a_bc);
 
     let assoc_diff = (ab_c - a_bc).abs();
-    assert!(assoc_diff < 0.05, "FP8 associativity error too large: {}", assoc_diff);
+    assert!(
+        assoc_diff < 0.05,
+        "FP8 associativity error too large: {}",
+        assoc_diff
+    );
 
     println!("✓ FP8 numerical stability validated");
 }
@@ -363,7 +450,10 @@ fn test_fp8_overflow_underflow() {
     // Test near-zero precision
     let tiny = 0.001;
     let quantized_tiny = quantize_fp8(tiny);
-    assert_eq!(quantized_tiny, 0.0, "Very small values should round to zero");
+    assert_eq!(
+        quantized_tiny, 0.0,
+        "Very small values should round to zero"
+    );
 
     println!("✓ FP8 overflow/underflow handling correct");
 }
@@ -381,7 +471,7 @@ fn test_fp8_known_values() {
         (1.234567, 1.23),
         (100.456, 100.46),
         (-50.789, -50.79),
-        (500.0, 448.0), // Clamped
+        (500.0, 448.0),   // Clamped
         (-500.0, -448.0), // Clamped
         (0.0, 0.0),
         (1.0, 1.0),
@@ -389,9 +479,11 @@ fn test_fp8_known_values() {
 
     for (input, expected) in test_cases {
         let result = quantize_fp8(input);
-        assert_eq!(result, expected,
+        assert_eq!(
+            result, expected,
             "FP8 quantization regression: quantize_fp8({}) = {} (expected {})",
-            input, result, expected);
+            input, result, expected
+        );
     }
 
     // NaN test
@@ -406,7 +498,7 @@ fn test_fp8_known_values() {
 fn test_async_allocator_stats_accuracy() {
     println!("\n=== Regression Test: Async Allocator Stats Accuracy ===");
 
-    use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
+    use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
     let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
@@ -423,8 +515,16 @@ fn test_async_allocator_stats_accuracy() {
 
     // Validate stats
     assert_eq!(stats.allocations, 10, "Should have 10 allocations");
-    assert_eq!(stats.total_bytes_allocated, 10 * 1000 * 8, "Total bytes mismatch");
-    assert_eq!(stats.current_bytes_used, 10 * 1000 * 8, "Current bytes mismatch");
+    assert_eq!(
+        stats.total_bytes_allocated,
+        10 * 1000 * 8,
+        "Total bytes mismatch"
+    );
+    assert_eq!(
+        stats.current_bytes_used,
+        10 * 1000 * 8,
+        "Current bytes mismatch"
+    );
     assert_eq!(stats.peak_bytes_used, 10 * 1000 * 8, "Peak bytes mismatch");
 
     // Free 5 buffers

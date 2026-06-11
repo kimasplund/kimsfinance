@@ -16,8 +16,10 @@ fn main() {
     // Test sizes
     let sizes = vec![10_000, 50_000, 100_000, 200_000];
 
-    println!("{:<12} | {:>12} | {:>12} | {:>10} | {:>15}", 
-             "Size", "Naive (ms)", "Optimized (ms)", "Speedup", "Status");
+    println!(
+        "{:<12} | {:>12} | {:>12} | {:>10} | {:>15}",
+        "Size", "Naive (ms)", "Optimized (ms)", "Speedup", "Status"
+    );
     println!("{}", "-".repeat(75));
 
     for n in sizes {
@@ -47,8 +49,7 @@ fn main() {
         let mut naive_times = Vec::new();
         for _ in 0..5 {
             let start = Instant::now();
-            let _obv = obv_gpu(&device, &close_arr, &volume_arr, None)
-                .expect("Naive OBV failed");
+            let _obv = obv_gpu(&device, &close_arr, &volume_arr, None).expect("Naive OBV failed");
             naive_times.push(start.elapsed().as_secs_f64());
         }
         let naive_avg = naive_times.iter().sum::<f64>() / naive_times.len() as f64;
@@ -85,8 +86,8 @@ fn main() {
 
         // Verify correctness for first size
         if n == 10_000 {
-            let naive_result = obv_gpu(&device, &close_arr, &volume_arr, None)
-                .expect("Naive verification failed");
+            let naive_result =
+                obv_gpu(&device, &close_arr, &volume_arr, None).expect("Naive verification failed");
             let opt_result = obv_gpu_optimized(&device, &close_arr, &volume_arr, None)
                 .expect("Optimized verification failed");
 
