@@ -23,10 +23,10 @@
 
 #[cfg(feature = "gpu")]
 mod gpu_tick_backtest_tests {
+    use approx::assert_abs_diff_eq;
+    use kimsfinance_core::backtest::{BacktestConfig, BacktestResult, Signal};
     use kimsfinance_core::binance::Trade;
     use kimsfinance_core::gpu::device::GpuDevice;
-    use kimsfinance_core::backtest::{BacktestConfig, BacktestResult, Signal};
-    use approx::assert_abs_diff_eq;
     use std::sync::Arc;
 
     // ========================================================================
@@ -43,8 +43,8 @@ mod gpu_tick_backtest_tests {
     // ========================================================================
 
     fn generate_test_trades(n: usize) -> Vec<Trade> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(42);
         let base_price = 45000.0;
@@ -52,7 +52,7 @@ mod gpu_tick_backtest_tests {
 
         (0..n)
             .map(|i| {
-                let price_change = (rng.gen::<f64>() - 0.5) * 0.002;
+                let price_change = (rng.r#gen::<f64>() - 0.5) * 0.002;
                 let price = base_price * (1.0 + price_change);
                 let quantity = rng.gen_range(0.001..1.0);
 
@@ -69,14 +69,14 @@ mod gpu_tick_backtest_tests {
     }
 
     fn generate_test_signals(n: usize) -> Vec<Signal> {
-        use rand::{Rng, SeedableRng};
         use rand::rngs::StdRng;
+        use rand::{Rng, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(123);
 
         (0..n)
             .map(|_| {
-                let val = rng.gen::<f64>();
+                let val = rng.r#gen::<f64>();
                 if val < 0.1 {
                     Signal::Buy
                 } else if val < 0.2 {
@@ -107,7 +107,7 @@ mod gpu_tick_backtest_tests {
         let mut winning_trades = 0;
         let mut equity_curve = Vec::with_capacity(trades.len());
 
-        for (i, (&trade, &signal)) in trades.iter().zip(signals.iter()).enumerate() {
+        for (i, (trade, &signal)) in trades.iter().zip(signals.iter()).enumerate() {
             // Execute pending orders (latency simulation)
             // ... implementation details ...
 
@@ -120,7 +120,8 @@ mod gpu_tick_backtest_tests {
                     num_trades += 1;
                 }
                 Signal::Sell if position_size > 0.0 => {
-                    capital = position_size * trade.price * (1.0 - config.trading_fee - config.slippage);
+                    capital =
+                        position_size * trade.price * (1.0 - config.trading_fee - config.slippage);
                     if capital > config.initial_capital {
                         winning_trades += 1;
                     }
@@ -140,8 +141,8 @@ mod gpu_tick_backtest_tests {
         }
 
         // Calculate metrics
-        let total_return = (equity_curve.last().unwrap() - config.initial_capital)
-            / config.initial_capital;
+        let total_return =
+            (equity_curve.last().unwrap() - config.initial_capital) / config.initial_capital;
 
         let win_rate = if num_trades > 0 {
             winning_trades as f64 / num_trades as f64
@@ -150,12 +151,16 @@ mod gpu_tick_backtest_tests {
         };
 
         BacktestResult {
+            parameters: std::collections::HashMap::new(),
+            final_equity: *equity_curve.last().unwrap_or(&0.0),
             total_return,
-            sharpe_ratio: 1.5, // Placeholder
+            sharpe_ratio: 1.5,   // Placeholder
             max_drawdown: -0.15, // Placeholder
             win_rate,
             num_trades,
+            profit_factor: 0.0,
             equity_curve: equity_curve.into(),
+            trades: Vec::new(),
         }
     }
 
@@ -179,11 +184,7 @@ mod gpu_tick_backtest_tests {
     // Validation Helpers
     // ========================================================================
 
-    fn validate_backtest_results(
-        gpu: &BacktestResult,
-        cpu: &BacktestResult,
-        name: &str,
-    ) {
+    fn validate_backtest_results(gpu: &BacktestResult, cpu: &BacktestResult, name: &str) {
         // Total return deviation
         let return_diff = (gpu.total_return - cpu.total_return).abs();
         let return_pct_diff = if cpu.total_return.abs() > 1e-9 {
@@ -193,8 +194,12 @@ mod gpu_tick_backtest_tests {
         };
 
         println!("{} validation:", name);
-        println!("  Total return: GPU={:.4}, CPU={:.4}, diff={:.4}%",
-            gpu.total_return, cpu.total_return, return_pct_diff * 100.0);
+        println!(
+            "  Total return: GPU={:.4}, CPU={:.4}, diff={:.4}%",
+            gpu.total_return,
+            cpu.total_return,
+            return_pct_diff * 100.0
+        );
 
         assert!(
             return_pct_diff < EQUITY_TOLERANCE,
@@ -207,8 +212,10 @@ mod gpu_tick_backtest_tests {
 
         // Sharpe ratio
         let sharpe_diff = (gpu.sharpe_ratio - cpu.sharpe_ratio).abs();
-        println!("  Sharpe ratio: GPU={:.4}, CPU={:.4}, diff={:.4}",
-            gpu.sharpe_ratio, cpu.sharpe_ratio, sharpe_diff);
+        println!(
+            "  Sharpe ratio: GPU={:.4}, CPU={:.4}, diff={:.4}",
+            gpu.sharpe_ratio, cpu.sharpe_ratio, sharpe_diff
+        );
 
         assert!(
             sharpe_diff < SHARPE_TOLERANCE,
@@ -219,8 +226,10 @@ mod gpu_tick_backtest_tests {
 
         // Max drawdown
         let dd_diff = (gpu.max_drawdown - cpu.max_drawdown).abs();
-        println!("  Max drawdown: GPU={:.4}, CPU={:.4}, diff={:.4}",
-            gpu.max_drawdown, cpu.max_drawdown, dd_diff);
+        println!(
+            "  Max drawdown: GPU={:.4}, CPU={:.4}, diff={:.4}",
+            gpu.max_drawdown, cpu.max_drawdown, dd_diff
+        );
 
         assert!(
             dd_diff < DRAWDOWN_TOLERANCE,
@@ -231,8 +240,10 @@ mod gpu_tick_backtest_tests {
 
         // Win rate
         let winrate_diff = (gpu.win_rate - cpu.win_rate).abs();
-        println!("  Win rate: GPU={:.4}, CPU={:.4}, diff={:.4}",
-            gpu.win_rate, cpu.win_rate, winrate_diff);
+        println!(
+            "  Win rate: GPU={:.4}, CPU={:.4}, diff={:.4}",
+            gpu.win_rate, cpu.win_rate, winrate_diff
+        );
 
         assert!(
             winrate_diff < WINRATE_TOLERANCE,
@@ -447,9 +458,8 @@ mod gpu_tick_backtest_tests {
     fn test_gpu_backtest_vram_usage() {
         use std::sync::LazyLock;
 
-        static DEVICE: LazyLock<Arc<GpuDevice>> = LazyLock::new(|| {
-            Arc::new(GpuDevice::new().expect("GPU required"))
-        });
+        static DEVICE: LazyLock<Arc<GpuDevice>> =
+            LazyLock::new(|| Arc::new(GpuDevice::new().expect("GPU required")));
 
         let trades = generate_test_trades(100_000);
         let config = BacktestConfig::default();
