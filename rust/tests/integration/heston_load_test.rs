@@ -47,6 +47,8 @@ mod heston_load_tests {
                 initial_capital: 100_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .heston_params(params_heston)
             .options_data(options)
@@ -115,6 +117,8 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
+            ..Default::default()
+        
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())
@@ -158,6 +162,8 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
+            ..Default::default()
+        
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())
@@ -207,6 +213,8 @@ mod heston_load_tests {
                 initial_capital: 100_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .heston_params(params_heston)
             .options_data(options)
@@ -267,6 +275,8 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
+            ..Default::default()
+        
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())

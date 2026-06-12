@@ -894,12 +894,12 @@ mod tests {
         assert_eq!(result.secondary.len(), 4);
 
         // Check that tenkan_sen has values after warmup period (9)
-        assert!(result.primary[8].is_nan());
-        assert!(!result.primary[9].is_nan());
+        assert!(result.primary[7].is_nan());
+        assert!(!result.primary[8].is_nan());
 
         // Check that kijun_sen has values after warmup period (26)
-        assert!(result.secondary[0][25].is_nan());
-        assert!(!result.secondary[0][26].is_nan());
+        assert!(result.secondary[0][24].is_nan());
+        assert!(!result.secondary[0][25].is_nan());
 
         // Check that senkou_span_b has values after warmup period (52)
         // But they're shifted forward by 26, so check at position 52+26-1

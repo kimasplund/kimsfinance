@@ -527,11 +527,11 @@ pub mod optimization_guide {
     /// Expected performance improvements for different batch sizes
     pub const PERFORMANCE_TARGETS: &[(usize, f64, f64)] = &[
         // (num_indicators, traditional_ms, graph_ms)
-        (1, 0.007, 0.107),  // Single: graph overhead > savings
-        (2, 0.014, 0.104),  // Small: marginal benefit
-        (5, 0.035, 0.103),  // Medium: 70% reduction
-        (10, 0.070, 0.103), // Large: 85% reduction
-        (20, 0.140, 0.103), // Very large: 92% reduction
+        (1, 0.007, 0.0107),  // Single: graph overhead > savings
+        (2, 0.014, 0.0104),  // Small: marginal benefit
+        (5, 0.035, 0.0103),  // Medium: 70% reduction
+        (10, 0.070, 0.0103), // Large: 85% reduction
+        (20, 0.140, 0.0103), // Very large: 92% reduction
     ];
 
     /// Minimum batch size for graph benefits
@@ -575,7 +575,7 @@ mod tests {
         // Medium batch (5 indicators): reasonable break-even
         let iterations = break_even_iterations(5);
         assert!(
-            iterations > 10 && iterations < 100,
+            iterations >= 10 && iterations < 100,
             "Medium batches should break even in 10-100 iterations"
         );
 

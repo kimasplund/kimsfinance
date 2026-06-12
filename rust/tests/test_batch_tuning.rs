@@ -13,10 +13,8 @@ use std::sync::Arc;
 
 #[test]
 fn test_dynamic_threshold_small_dataset() {
-    let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
-
     // Small dataset: 10 strategies × 1000 candles = ~0.4MB
-    let threshold = calculate_optimal_threshold(10, 1000, &device);
+    let threshold = calculate_optimal_threshold(10, 1000);
 
     // Should use conservative threshold (150)
     assert_eq!(threshold, 150, "Small datasets should use threshold=150");
@@ -24,10 +22,8 @@ fn test_dynamic_threshold_small_dataset() {
 
 #[test]
 fn test_dynamic_threshold_medium_dataset() {
-    let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
-
-    // Medium dataset: 500 strategies × 5000 candles = ~100MB
-    let threshold = calculate_optimal_threshold(500, 5000, &device);
+    // Medium dataset: 200 strategies × 5000 candles = ~38MB (10-50MB range)
+    let threshold = calculate_optimal_threshold(200, 5000);
 
     // Should use balanced threshold (100)
     assert_eq!(threshold, 100, "Medium datasets should use threshold=100");
@@ -35,10 +31,8 @@ fn test_dynamic_threshold_medium_dataset() {
 
 #[test]
 fn test_dynamic_threshold_large_dataset() {
-    let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
-
     // Large dataset: 1000 strategies × 10000 candles = ~400MB
-    let threshold = calculate_optimal_threshold(1000, 10000, &device);
+    let threshold = calculate_optimal_threshold(1000, 10000);
 
     // Should use aggressive threshold (50)
     assert_eq!(threshold, 50, "Large datasets should use threshold=50");
@@ -46,17 +40,15 @@ fn test_dynamic_threshold_large_dataset() {
 
 #[test]
 fn test_dynamic_threshold_edge_cases() {
-    let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
-
     // Edge case: 0 strategies (should still return valid threshold)
-    let threshold = calculate_optimal_threshold(0, 1000, &device);
+    let threshold = calculate_optimal_threshold(0, 1000);
     assert!(
         threshold > 0,
         "Should return valid threshold even for 0 strategies"
     );
 
     // Edge case: 0 candles (should still return valid threshold)
-    let threshold = calculate_optimal_threshold(100, 0, &device);
+    let threshold = calculate_optimal_threshold(100, 0);
     assert!(
         threshold > 0,
         "Should return valid threshold even for 0 candles"
@@ -65,12 +57,10 @@ fn test_dynamic_threshold_edge_cases() {
 
 #[test]
 fn test_threshold_progression() {
-    let device = Arc::new(unsafe { std::mem::zeroed() }); // Dummy device
-
     // Thresholds should decrease as data size increases
-    let small = calculate_optimal_threshold(10, 1000, &device); // <10MB
-    let medium = calculate_optimal_threshold(500, 5000, &device); // 10-50MB
-    let large = calculate_optimal_threshold(1000, 10000, &device); // >50MB
+    let small = calculate_optimal_threshold(10, 1000); // <10MB
+    let medium = calculate_optimal_threshold(200, 5000); // 10-50MB
+    let large = calculate_optimal_threshold(1000, 10000); // >50MB
 
     assert!(
         large < medium && medium < small,
@@ -186,12 +176,12 @@ fn test_threshold_and_block_size_consistency() {
     // Test various dataset sizes
     let test_cases = vec![
         (10, 1000, 150),   // Small → threshold 150
-        (500, 5000, 100),  // Medium → threshold 100
+        (200, 5000, 100),  // Medium → threshold 100
         (1000, 10000, 50), // Large → threshold 50
     ];
 
     for (num_strategies, num_candles, expected_threshold) in test_cases {
-        let threshold = calculate_optimal_threshold(num_strategies, num_candles, &device);
+        let threshold = calculate_optimal_threshold(num_strategies, num_candles);
         assert_eq!(
             threshold, expected_threshold,
             "Threshold mismatch for {}×{} dataset",

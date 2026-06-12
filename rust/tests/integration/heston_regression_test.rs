@@ -43,6 +43,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("RSI backtest failed");
@@ -93,6 +95,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("MA backtest failed");
@@ -133,6 +137,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("Bollinger backtest failed");
@@ -178,6 +184,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("Performance test failed");
@@ -223,6 +231,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("Equity baseline failed");
@@ -238,6 +248,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .heston_params(params_heston)
             .options_data(options)
@@ -290,6 +302,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             // No .heston_params() or .options_data() calls - should still work
             .execute()
@@ -347,6 +361,8 @@ mod heston_regression_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
+            ..Default::default()
+        
             })
             .execute()
             .expect("Results test failed");

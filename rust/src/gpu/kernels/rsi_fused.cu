@@ -39,8 +39,10 @@
 //! - Output: rsi (n elements)
 //! - Total: 6n f64 = 48n bytes (4.8 MB for 100K candles)
 
-// NVRTC provides all CUDA built-in functions and types automatically
-// No includes needed - NVRTC has built-in support for CUDA runtime functions
+// This file is compiled by nvcc at build time (not NVRTC), so we include
+// CUDA runtime and CUB headers explicitly.
+#include <cuda_runtime.h>
+#include <cub/device/device_scan.cuh>
 
 // Define NaN for CUDA (compatible with NVRTC)
 #ifndef CUDART_NAN
@@ -91,7 +93,7 @@ struct WildersOp {
     double alpha;
     double one_minus_alpha;
 
-    __device__ __forceinline__ WildersOp(double alpha_)
+    __host__ __device__ __forceinline__ WildersOp(double alpha_)
         : alpha(alpha_), one_minus_alpha(1.0 - alpha_) {}
 
     __device__ __forceinline__

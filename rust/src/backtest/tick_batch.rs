@@ -488,7 +488,14 @@ impl BatchTickBacktest {
         eprintln!("   Trades: {}", trades.len());
         eprintln!("   Strategies: {}", parameters.len());
 
-        let results = self.execute_batch_cpu(trades, parameters)?;
+        let mut results = self.execute_batch_cpu(trades, parameters)?;
+
+        // Sort by fitness (Sharpe ratio with drawdown penalty)
+        results.sort_by(|a, b| {
+            b.fitness()
+                .partial_cmp(&a.fitness())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let total_ms = start_total.elapsed().as_secs_f64() * 1000.0;
 
@@ -518,7 +525,7 @@ impl BatchTickBacktest {
     /// # Returns
     ///
     /// Optimal batch size (1-20 strategies)
-    fn auto_tune_batch_size(&self, n_trades: usize) -> usize {
+    pub fn auto_tune_batch_size(&self, n_trades: usize) -> usize {
         // Query available VRAM (placeholder - actual implementation would query GPU)
         // For RTX 3500 Ada: 12GB
         let total_vram_bytes: usize = 12_000_000_000;

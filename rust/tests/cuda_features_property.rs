@@ -122,7 +122,7 @@ proptest! {
         use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
 
         let device = GpuDevice::new().expect("GPU required");
-        let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+        let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
             .expect("Failed to create allocator");
 
         // Should either succeed or return error (not panic)
@@ -148,7 +148,7 @@ proptest! {
         use kimsfinance_core::gpu::{GpuDevice, AsyncAllocator};
 
         let device = GpuDevice::new().expect("GPU required");
-        let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+        let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
             .expect("Failed to create allocator");
 
         let mut buffers = Vec::new();
@@ -253,20 +253,22 @@ proptest! {
     #[test]
     #[ignore] // Requires GPU
     fn prop_cuda_graph_deterministic_execution(_seed in 0..1000u64) {
-        use kimsfinance_core::gpu::{GpuDevice, IndicatorGraphBuilder};
+        use kimsfinance_core::gpu::{GpuDevice, IndicatorGraphBuilder, IndicatorSpeed, StreamManager};
         use std::sync::Arc;
 
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
+        let stream_mgr = Arc::new(StreamManager::new(device.clone()).unwrap());
 
         // Build graph
-        let mut builder = IndicatorGraphBuilder::new(&device).unwrap();
-        builder.begin_capture().unwrap();
+        let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
+        builder.begin_capture_stream(IndicatorSpeed::Fast).unwrap();
         // TODO: Add kernel launches when cudarc supports graphs
-        let graph = builder.end_capture().unwrap();
+        builder.end_capture_stream(IndicatorSpeed::Fast).unwrap();
+        let graph = builder.build().unwrap();
 
         // Launch graph multiple times
         for _ in 0..10 {
-            graph.launch().expect("Graph launch failed");
+            graph.launch_all().expect("Graph launch failed");
             graph.synchronize().expect("Sync failed");
         }
 
@@ -397,7 +399,7 @@ fn test_async_allocator_zero_size() {
     use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create allocator");
 
     // Zero-size allocation should either succeed with empty buffer or error
@@ -420,7 +422,7 @@ fn test_async_allocator_huge_size() {
     use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create allocator");
 
     // Huge allocation (1TB) should fail gracefully with OOM

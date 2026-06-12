@@ -38,7 +38,7 @@
 /// ```
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyList};
 
 mod batch;
 pub mod binance;

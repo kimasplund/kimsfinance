@@ -546,11 +546,11 @@ impl HestonGpuPricer {
         let mut pinned_imag = self.device.pinned_pool.lock().acquire(total_elements)?;
 
         self.device.stream.memcpy_dtoh(
-            d_char_func_real,
+            &d_char_func_real.slice(..total_elements),
             &mut pinned_real.as_mut_slice()[..total_elements],
         )?;
         self.device.stream.memcpy_dtoh(
-            d_char_func_imag,
+            &d_char_func_imag.slice(..total_elements),
             &mut pinned_imag.as_mut_slice()[..total_elements],
         )?;
 

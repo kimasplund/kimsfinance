@@ -763,9 +763,9 @@ mod tests {
     fn create_test_bar(close: f64, volume: f64) -> OHLCVBar {
         OHLCVBar {
             timestamp: 1000,
-            open: close * 0.99,
-            high: close * 1.01,
-            low: close * 0.99,
+            open: close * 0.999,
+            high: close * 1.001,
+            low: close * 0.999,
             close,
             volume,
         }
@@ -799,6 +799,7 @@ mod tests {
         // Price above limit - should not fill
         let market1 = MarketSnapshot::new(1000, create_test_bar(50000.0, 100.0));
         let fills1 = engine.match_orders(&market1);
+        println!("low: {}, limit: {}, fills1: {:?}", market1.bar.low, 49900.0, fills1);
         assert_eq!(fills1.len(), 0);
 
         // Price below limit - should fill

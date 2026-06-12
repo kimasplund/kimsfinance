@@ -39,7 +39,9 @@ mod heston_e2e_tests {
             initial_capital: 100_000.0,
             trading_fee: 0.001, // 0.1%
             slippage: 0.0005,   // 0.05%
-        }
+        },
+            ..Default::default()
+        
     }
 
     // ========== Baseline: Equity Strategy (No Heston) ==========

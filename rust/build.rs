@@ -250,6 +250,10 @@ fn compile_rsi_fused_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
         .arg("-std=c++17") // C++17 for CUB
         .arg(format!("-I{}", cuda_include.display())) // CUDA + CUB headers
         .arg(format!("-I{}", cuda_targets_include.display())) // CUDA target headers
+        // Avoid glibc C23 rsqrt()/rsqrtf() host prototypes colliding with CUDA math declarations.
+        // Keep X/Open interfaces enabled so libstdc++ headers (e.g., <cwchar>) still see fwide.
+        .arg("-U_GNU_SOURCE")
+        .arg("-D_XOPEN_SOURCE=700")
         .arg("-O3") // Maximum optimization
         .arg("-use_fast_math") // Fast math operations
         .arg("--expt-relaxed-constexpr") // Relaxed constexpr for CUB

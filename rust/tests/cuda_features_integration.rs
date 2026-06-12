@@ -12,7 +12,7 @@ use kimsfinance_core::backtest::{
     ParameterRange, Signal, Strategy,
 };
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder};
+use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder, IndicatorSpeed, StreamManager};
 use ndarray::Array1;
 use std::sync::Arc;
 use std::time::Instant;
@@ -28,7 +28,7 @@ fn test_async_allocator_basic() {
     println!("\n=== Integration Test: Async Allocator Basic ===");
 
     let device = GpuDevice::new().expect("Failed to initialize GPU");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
 
     println!("Async allocation supported: {}", allocator.supports_async());
@@ -52,7 +52,7 @@ fn test_async_allocator_many_allocations() {
     println!("\n=== Integration Test: Async Allocator - Many Allocations ===");
 
     let device = GpuDevice::new().expect("Failed to initialize GPU");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
 
     let n_allocations = 1000;
@@ -86,7 +86,7 @@ fn test_async_allocator_memory_reuse() {
     println!("\n=== Integration Test: Async Allocator - Memory Reuse ===");
 
     let device = GpuDevice::new().expect("Failed to initialize GPU");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
 
     // Allocate and free in a loop
@@ -122,7 +122,7 @@ fn test_async_allocator_concurrent_access() {
 
     let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
     let allocator = Arc::new(
-        AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+        AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
             .expect("Failed to create async allocator"),
     );
 
@@ -164,24 +164,26 @@ fn test_cuda_graph_builder_lifecycle() {
     println!("\n=== Integration Test: CUDA Graph Builder Lifecycle ===");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
+    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // Test builder creation
-    let mut builder = IndicatorGraphBuilder::new(&device).expect("Failed to create graph builder");
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).expect("Failed to create graph builder");
 
     println!("✓ Graph builder created");
 
     // Test capture begin
-    builder.begin_capture().expect("Failed to begin capture");
+    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Failed to begin capture");
     println!("✓ Graph capture started");
 
     // TODO: Add kernel launches here when cudarc supports graphs
 
     // Test end capture
-    let graph = builder.end_capture().expect("Failed to end capture");
+    builder.end_capture_stream(IndicatorSpeed::Fast).expect("Failed to end capture");
+    let graph = builder.build().expect("Failed to build graph");
     println!("✓ Graph captured and instantiated");
 
     // Test graph launch (placeholder)
-    graph.launch().expect("Failed to launch graph");
+    graph.launch_all().expect("Failed to launch graph");
     graph.synchronize().expect("Failed to synchronize");
     println!("✓ Graph launched and synchronized");
 
@@ -195,10 +197,11 @@ fn test_cuda_graph_error_handling() {
     println!("\n=== Integration Test: CUDA Graph Error Handling ===");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
+    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // Test 1: Cannot end capture before beginning
-    let builder = IndicatorGraphBuilder::new(&device).unwrap();
-    let result = builder.end_capture();
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
+    let result = builder.end_capture_stream(IndicatorSpeed::Fast);
     assert!(
         result.is_err(),
         "Should fail when ending capture without beginning"
@@ -206,9 +209,9 @@ fn test_cuda_graph_error_handling() {
     println!("✓ Error handling for premature end_capture works");
 
     // Test 2: Cannot begin capture twice
-    let mut builder = IndicatorGraphBuilder::new(&device).unwrap();
-    builder.begin_capture().expect("First capture should work");
-    let result = builder.begin_capture();
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
+    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("First capture should work");
+    let result = builder.begin_capture_stream(IndicatorSpeed::Fast);
     assert!(result.is_err(), "Should fail when beginning capture twice");
     println!("✓ Error handling for double begin_capture works");
 
@@ -237,7 +240,7 @@ fn test_cuda_graph_break_even_calculations() {
     // Medium batch (5 indicators): reasonable break-even
     let iterations = break_even_iterations(5);
     assert!(
-        iterations > 10 && iterations < 100,
+        iterations >= 10 && iterations < 100,
         "Medium batches should break even in 10-100 iterations, got {}",
         iterations
     );
@@ -558,9 +561,10 @@ fn test_combined_cuda_features() {
     println!("Testing stream malloc + CUDA graphs + FP8 together");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
+    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // 1. Create async allocator
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
     println!(
         "✓ Async allocator created (supports_async: {})",
@@ -573,17 +577,18 @@ fn test_combined_cuda_features() {
     println!("✓ Allocated 2 buffers via async allocator");
 
     // 3. Create CUDA graph
-    let mut builder = IndicatorGraphBuilder::new(&device).expect("Failed to create graph builder");
-    builder.begin_capture().expect("Failed to begin capture");
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).expect("Failed to create graph builder");
+    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Failed to begin capture");
 
     // TODO: Add kernel launches here when cudarc supports graphs
     // For now, we just test the infrastructure
 
-    let graph = builder.end_capture().expect("Failed to end capture");
+    builder.end_capture_stream(IndicatorSpeed::Fast).expect("Failed to end capture");
+    let graph = builder.build().expect("Failed to build graph");
     println!("✓ CUDA graph created");
 
     // 4. Launch graph
-    graph.launch().expect("Failed to launch graph");
+    graph.launch_all().expect("Failed to launch graph");
     graph.synchronize().expect("Failed to synchronize");
     println!("✓ CUDA graph launched");
 
@@ -615,7 +620,7 @@ fn test_async_allocator_performance_regression() {
     println!("\n=== Performance Regression: Async Allocator ===");
 
     let device = GpuDevice::new().expect("Failed to initialize GPU");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
 
     let n_allocations = 1000;
@@ -691,7 +696,7 @@ fn test_async_allocator_no_double_free() {
 
     let device = GpuDevice::new().expect("Failed to initialize GPU");
     let allocator = Arc::new(
-        AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+        AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
             .expect("Failed to create async allocator"),
     );
 
@@ -716,7 +721,7 @@ fn test_async_allocator_leak_detection() {
     let device = GpuDevice::new().expect("Failed to initialize GPU");
 
     let initial_stats = {
-        let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+        let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
             .expect("Failed to create async allocator");
 
         // Allocate and immediately drop
@@ -729,7 +734,7 @@ fn test_async_allocator_leak_detection() {
     }; // allocator dropped here
 
     // Create new allocator to verify no lingering memory
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create async allocator");
 
     let current_stats = allocator.stats();

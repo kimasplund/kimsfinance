@@ -799,6 +799,10 @@ impl BacktestEngine {
         _open: &Array1<f64>,
         _volume: &Array1<f64>,
     ) -> Result<HashMap<String, Vec<f64>>, GpuError> {
+        if configs.is_empty() {
+            return Ok(HashMap::new());
+        }
+
         #[cfg(feature = "gpu")]
         if let Some(device) = &self.gpu_device {
             // Use GPU batch processing

@@ -76,7 +76,7 @@ fn test_parabolic_sar_custom_parameters() {
         .iter()
         .skip(1)
         .zip(result2.iter().skip(1))
-        .filter(|(&a, &b)| (a - b).abs() > 1e-10)
+        .filter(|&(&a, &b)| (a - b).abs() > 1e-10)
         .count();
 
     assert!(
@@ -87,8 +87,8 @@ fn test_parabolic_sar_custom_parameters() {
 
 #[test]
 fn test_parabolic_sar_parameter_validation() {
-    let high = arr1(&[110.0, 115.0, 120.0]);
-    let low = arr1(&[105.0, 110.0, 115.0]);
+    let _high = arr1(&[110.0, 115.0, 120.0]);
+    let _low = arr1(&[105.0, 110.0, 115.0]);
 
     // Invalid af_start (negative)
     assert!(ParabolicSAR::new(-0.02, 0.02, 0.2).is_err());
@@ -135,7 +135,7 @@ fn test_parabolic_sar_uptrend_behavior() {
         .iter()
         .skip(3) // Skip first few for convergence
         .zip(low.iter().skip(3))
-        .filter(|(&sar_val, &low_val)| sar_val < low_val)
+        .filter(|&(&sar_val, &low_val)| sar_val < low_val)
         .count();
 
     let total_count = sar.len() - 3;
@@ -167,7 +167,7 @@ fn test_parabolic_sar_downtrend_behavior() {
         .iter()
         .skip(3) // Skip first few for convergence
         .zip(high.iter().skip(3))
-        .filter(|(&sar_val, &high_val)| sar_val > high_val)
+        .filter(|&(&sar_val, &high_val)| sar_val > high_val)
         .count();
 
     let total_count = sar.len() - 3;

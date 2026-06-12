@@ -110,8 +110,12 @@ impl ADX {
             }
         }
 
-        // ADX is Wilder's smoothing of DX
-        let adx = wilders_smoothing(dx.view(), self.period);
+        // ADX is Wilder's smoothing of DX. Since DX is only valid from index self.period,
+        // we slice it to avoid smoothing the initial dummy/zero values.
+        let mut adx = Array1::from_elem(n, f64::NAN);
+        let dx_sliced = dx.slice(s![self.period..]);
+        let smoothed_dx = wilders_smoothing(dx_sliced, self.period);
+        adx.slice_mut(s![self.period..]).assign(&smoothed_dx);
 
         use super::core::IndicatorOutput;
         Ok(IndicatorOutput {

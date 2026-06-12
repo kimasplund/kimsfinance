@@ -360,7 +360,6 @@ pub struct OhlcvData {
 pub fn calculate_optimal_threshold(
     num_strategies: usize,
     num_candles: usize,
-    _device: &Arc<GpuDevice>,
 ) -> usize {
     // Calculate data size in MB (OHLCV = 5 arrays × 8 bytes per f64)
     let data_size_mb = (num_strategies * num_candles * 5 * 8) / (1024 * 1024);
@@ -694,7 +693,7 @@ impl BatchBacktestSweep {
         let num_strategies = self.parameters.len();
 
         // Calculate optimal threshold dynamically based on workload
-        let threshold = calculate_optimal_threshold(num_strategies, num_candles, &self.device);
+        let threshold = calculate_optimal_threshold(num_strategies, num_candles);
 
         // Determine execution mode based on batch size
         let selected_mode = match self.execution_mode {

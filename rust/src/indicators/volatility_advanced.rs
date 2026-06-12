@@ -41,7 +41,7 @@ impl Indicator for StandardDeviation {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let window = prices.slice(s![(i - self.period + 1)..=i]);
+            let window = prices.slice(s![i + 1 - self.period..=i]);
 
             // Calculate mean
             let mean: f64 = window.sum() / self.period as f64;
@@ -192,8 +192,11 @@ impl MassIndex {
         // Single EMA
         let single_ema = ema(hl_range.view(), self.ema_period);
 
-        // Double EMA
-        let double_ema = ema(single_ema.view(), self.ema_period);
+        // Double EMA (calculate on the non-NaN slice of single_ema to prevent NaN propagation)
+        let mut double_ema = Array1::from_elem(n, f64::NAN);
+        let single_ema_sliced = single_ema.slice(s![self.ema_period - 1..]);
+        let double_ema_sliced = ema(single_ema_sliced, self.ema_period);
+        double_ema.slice_mut(s![self.ema_period - 1..]).assign(&double_ema_sliced);
 
         // EMA ratio
         let mut ema_ratio = Array1::zeros(n);
@@ -208,7 +211,7 @@ impl MassIndex {
         // Sum over period
         let mut result = Array1::from_elem(n, f64::NAN);
         for i in (self.sum_period - 1)..n {
-            result[i] = ema_ratio.slice(s![(i - self.sum_period + 1)..=i]).sum();
+            result[i] = ema_ratio.slice(s![i + 1 - self.sum_period..=i]).sum();
         }
 
         Ok(result)
@@ -284,7 +287,7 @@ impl Indicator for StandardError {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let window = &prices.slice(s![(i - self.period + 1)..=i]).to_vec();
+            let window = &prices.slice(s![i + 1 - self.period..=i]).to_vec();
             result[i] = self.calculate_stderr(window);
         }
 
@@ -417,18 +420,22 @@ mod tests {
         let high = arr1(&[
             105.0, 108.0, 106.0, 110.0, 107.0, 112.0, 109.0, 115.0, 111.0, 118.0, 114.0, 120.0,
             116.0, 122.0, 118.0, 125.0, 121.0, 128.0, 124.0, 130.0, 126.0, 132.0, 128.0, 135.0,
-            131.0, 138.0, 134.0, 140.0, 136.0, 142.0,
+            131.0, 138.0, 134.0, 140.0, 136.0, 142.0, 138.0, 144.0, 140.0, 146.0, 142.0, 148.0,
+            144.0, 150.0, 146.0, 152.0, 148.0, 154.0, 150.0, 156.0, 152.0, 158.0, 154.0, 160.0,
+            156.0, 162.0,
         ]);
         let low = arr1(&[
             100.0, 103.0, 101.0, 105.0, 102.0, 107.0, 104.0, 110.0, 106.0, 113.0, 109.0, 115.0,
             111.0, 117.0, 113.0, 120.0, 116.0, 123.0, 119.0, 125.0, 121.0, 127.0, 123.0, 130.0,
-            126.0, 133.0, 129.0, 135.0, 131.0, 137.0,
+            126.0, 133.0, 129.0, 135.0, 131.0, 137.0, 133.0, 139.0, 135.0, 141.0, 137.0, 143.0,
+            139.0, 145.0, 141.0, 147.0, 143.0, 149.0, 145.0, 151.0, 147.0, 153.0, 149.0, 155.0,
+            151.0, 157.0,
         ]);
 
         let mi = MassIndex::new(9, 25).unwrap();
         let result = mi.calculate_hl(high.view(), low.view()).unwrap();
 
-        assert_eq!(result.len(), 30);
+        assert_eq!(result.len(), 50);
         // Should have values after warmup
         assert!(result[result.len() - 1].is_finite());
     }

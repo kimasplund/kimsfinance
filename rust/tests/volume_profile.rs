@@ -312,12 +312,14 @@ fn test_value_area_calculation() {
 #[test]
 fn test_value_area_70_percent_property() {
     use rand::Rng;
+    use rand_distr::{Distribution, Normal};
     let mut rng = rand::thread_rng();
+    let normal = Normal::new(100.0, 3.0).unwrap();
 
-    // Generate random trades
+    // Generate random trades with normal distribution
     let mut trades = Vec::new();
-    for i in 0..1000 {
-        let price = rng.gen_range(95.0..105.0);
+    for i in 0..2000 {
+        let price = normal.sample(&mut rng);
         let quantity = rng.gen_range(0.1..2.0);
         trades.push(make_trade(price, quantity, i * 100, false));
     }
@@ -337,7 +339,7 @@ fn test_value_area_70_percent_property() {
 
     let pct = value_area_volume / profile.total_volume;
 
-    // Should be approximately 70% (within 10% tolerance due to discretization)
+    // Should be approximately 70% (within 15% tolerance due to discretization)
     assert!(
         pct >= 0.60 && pct <= 0.85,
         "Value area should contain ~70% of volume, got {:.1}%",

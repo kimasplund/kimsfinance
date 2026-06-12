@@ -111,6 +111,8 @@ mod tests {
             initial_capital: 10_000.0,
             trading_fee: 0.001,
             slippage: 0.0005,
+            ..Default::default()
+        
         };
 
         // Warmup (5 iterations)
@@ -172,6 +174,8 @@ mod tests {
             initial_capital: 10_000.0,
             trading_fee: 0.001,
             slippage: 0.0005,
+            ..Default::default()
+        
         };
 
         // Warmup (5 iterations)

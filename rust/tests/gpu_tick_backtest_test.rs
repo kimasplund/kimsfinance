@@ -394,6 +394,8 @@ mod gpu_tick_backtest_tests {
             execution_latency_ms: 0,
             use_gpu: true,
             force_cpu: false,
+            ..Default::default()
+        
         };
 
         let gpu_results = gpu_tick_backtest_batch(&device, &trades, &[signals], &config)
