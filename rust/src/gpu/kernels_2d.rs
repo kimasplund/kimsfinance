@@ -463,7 +463,7 @@ pub fn rsi_batch_2d_gpu(
 
     let threads_per_block = 256;
     let blocks_x = n_assets as u32;
-    let blocks_y = ((n_candles + 255) / 256) as u32;
+    let blocks_y = n_candles.div_ceil(256) as u32;
 
     let config = LaunchConfig {
         grid_dim: (blocks_x, blocks_y, 1),
@@ -604,7 +604,7 @@ pub fn sma_batch_2d_gpu(
     let mut d_sma = device.alloc_buffer(batch_size)?;
 
     let config = LaunchConfig {
-        grid_dim: (n_assets as u32, ((n_candles + 255) / 256) as u32, 1),
+        grid_dim: (n_assets as u32, n_candles.div_ceil(256) as u32, 1),
         block_dim: (256, 1, 1),
         shared_mem_bytes: 0,
     };
@@ -654,6 +654,7 @@ pub fn sma_batch_2d_gpu(
 /// # Returns
 ///
 /// Tuple of (RSI, Stochastic %K, Williams %R)
+#[allow(clippy::type_complexity)] // (RSI, Stochastic %K, Williams %R) tuple is the public API
 pub fn momentum_fusion_2d_gpu(
     device: &GpuDevice,
     high: &Array1<f64>,
@@ -724,7 +725,7 @@ pub fn momentum_fusion_2d_gpu(
 
     // Flattened 1D launch: each thread emits RSI + Stochastic %K + Williams %R
     let config = LaunchConfig {
-        grid_dim: (((n + 255) / 256) as u32, 1, 1),
+        grid_dim: (n.div_ceil(256) as u32, 1, 1),
         block_dim: (256, 1, 1),
         shared_mem_bytes: 0,
     };

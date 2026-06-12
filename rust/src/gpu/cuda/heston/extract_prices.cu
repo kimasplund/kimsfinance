@@ -110,10 +110,11 @@ extern "C" __global__ void extract_prices(
         }
     }
 
-    // Extract FFT value at best bin
+    // Extract FFT value at best bin. Only the real part enters the
+    // Carr-Madan price formula; fft_output_imag is kept as a parameter for
+    // launch ABI compatibility but is not read.
     int fft_idx = option_idx * n_fft + best_idx;
     double fft_real = fft_output_real[fft_idx];
-    double fft_imag = fft_output_imag[fft_idx];
 
     // Compute call price using Carr-Madan formula
     // C = S · exp(-α·k) / π · Re[FFT(k)]
@@ -138,11 +139,4 @@ extern "C" __global__ void extract_prices(
 
     // Store result
     prices[option_idx] = final_price;
-
-    // DEBUG: Print first few results
-    if (option_idx < 2) {
-        double k_best = -b + lambda * (double)best_idx / (double)n_fft;
-        printf("PRICE_EXTRACT_DEBUG [opt=%d]: K=%.2f, S=%.2f, k=%.6f, best_bin=%d, k_best=%.6f, fft=(%.6f,%.6f), call=%.4f, type=%d, final=%.4f\n",
-               option_idx, K, S, k, best_idx, k_best, fft_real, fft_imag, call_price, opt_type, final_price);
-    }
 }

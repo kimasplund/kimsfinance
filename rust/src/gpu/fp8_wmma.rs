@@ -43,36 +43,89 @@
 //! let device = GpuDevice::new()?;
 //! let fp8_core = FP8TensorCore::new(&device)?;
 //!
-//! if fp8_core.is_fp8_supported() {
-//!     // Use hardware FP8 tensor cores (kernels loaded from cache)
-//!     let result = fp8_core.matmul_fp8(&a, &b, m, n, k)?;
-//! } else {
-//!     // Fallback to software simulation
-//!     let result = quantize_fp8_batch(&values);
+//! if fp8_core.is_fp16_supported() {
+//!     // FP16 tensor core matmul (the validated path)
+//!     let result = fp8_core.matmul_fp16(&a, &b, m, n, k)?;
 //! }
 //! ```
 
 use crate::gpu::{GpuDevice, GpuError};
-use cudarc::driver::{CudaFunction, CudaModule, CudaSlice, LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaFunction, CudaModule, CudaSlice, LaunchConfig};
 use std::sync::Arc;
+
+/// Error message returned by [`FP8TensorCore::matmul_fp8`] while the FP8 path
+/// is disabled.
+pub(crate) const FP8_MATMUL_UNSUPPORTED_MSG: &str = "matmul_fp8 is disabled: the previous \
+implementation quantized FP32 values in place (still stored as f32) and fed them to a \
+byte-oriented FP8 MMA kernel, producing garbage results. A correct implementation needs real \
+E4M3 byte packing plus runtime numerical validation. Use matmul_fp16 instead.";
+
+/// Error message returned by [`FP8TensorCore::matmul_tf32`] while the TF32
+/// path is disabled.
+pub(crate) const TF32_MATMUL_UNSUPPORTED_MSG: &str = "matmul_tf32 is disabled: no TF32 kernel \
+exists; the previous implementation aliased the FP16 (u16 half) MMA kernel and fed it f32 \
+buffers, producing garbage results. Use matmul_fp16 instead.";
+
+/// Whether a compute capability supports FP8 E4M3 tensor cores
+///
+/// FP8 MMA instructions exist on Ada Lovelace (8.9) and on every newer major
+/// architecture (Hopper 9.x, Blackwell 10.x/12.x). A previous version used
+/// `major >= 8 && minor >= 9`, which wrongly excluded e.g. 9.0 and 10.0.
+pub(crate) const fn supports_fp8_hardware(major: u32, minor: u32) -> bool {
+    major > 8 || (major == 8 && minor >= 9)
+}
+
+/// Software FP8 quantization kernel (element-wise, NVRTC-compatible)
+///
+/// Mirrors [`quantize_fp8_cpu`]: clamp to ±448 and round to 0.01 steps.
+/// Values stay in `float` storage — this simulates FP8 precision, it does
+/// NOT produce packed E4M3 bytes.
+const QUANTIZE_KERNEL: &str = r#"
+extern "C" __global__ void quantize_fp8_kernel(
+    const float* input,
+    float* output,
+    int n
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= n) return;
+
+    float value = input[idx];
+
+    // Handle special values
+    if (isnan(value) || isinf(value)) {
+        output[idx] = value;
+        return;
+    }
+
+    // FP8 E4M3 range: ±448
+    const float MAX_FP8 = 448.0f;
+    if (fabsf(value) > MAX_FP8) {
+        output[idx] = copysignf(MAX_FP8, value);
+        return;
+    }
+
+    // Quantize to ~2 decimal digits (100 steps)
+    const float SCALE = 100.0f;
+    output[idx] = roundf(value * SCALE) / SCALE;
+}
+"#;
 
 /// FP8 E4M3 format tensor core wrapper
 ///
-/// Provides hardware-accelerated FP8 matrix multiplication using NVIDIA tensor cores
-/// on Ada Lovelace GPUs (Compute Capability 8.9+).
-///
-/// Uses embedded CUDA source with cached JIT compilation for:
+/// Provides tensor core matrix multiplication using embedded CUDA source with
+/// cached NVRTC JIT compilation:
 /// - Zero build-time dependencies (no nvcc required at build time)
-/// - Fast initialization after first compilation (50-200x faster via caching)
+/// - Fast initialization after first compilation (PTX cached per process)
 /// - Automatic architecture optimization (via compile_ptx_optimized_cached)
 ///
-/// # Supported Precision Modes
+/// # Precision Modes
 ///
-/// - **FP8 E4M3** (Ada sm_89+): 4x speedup, ±448 range, 2 decimal digit precision
-/// - **FP16** (Volta sm_70+): 2x speedup, ±65,504 range, 3-4 decimal digit precision
-/// - **TF32** (Ampere sm_80+): 8-10x speedup, FP32 range, mantissa truncated to 10 bits
-///
-/// All modes use FP32 accumulation for numerical stability.
+/// - **FP16** (Volta sm_70+): ±65,504 range, 3-4 decimal digit precision —
+///   the only functional matmul path ([`Self::matmul_fp16`])
+/// - **FP8 E4M3** (Ada sm_89+): hardware detection only;
+///   [`Self::matmul_fp8`] is disabled (see [`FP8_MATMUL_UNSUPPORTED_MSG`])
+/// - **TF32** (Ampere sm_80+): hardware detection only;
+///   [`Self::matmul_tf32`] is disabled (see [`TF32_MATMUL_UNSUPPORTED_MSG`])
 pub struct FP8TensorCore {
     device: Arc<GpuDevice>,
     compute_capability: (u32, u32),
@@ -80,11 +133,10 @@ pub struct FP8TensorCore {
     fp16_supported: bool,
     tf32_supported: bool,
 
-    // FP8 kernels and conversions
+    // FP8 MMA kernel (compiled for capability detection; the matmul_fp8 entry
+    // point is gated off until a numerically-validated host path exists)
     fp8_module: Option<Arc<CudaModule>>,
     fp8_matmul_kernel: Option<CudaFunction>,
-    fp32_to_fp8_kernel: Option<CudaFunction>,
-    fp8_to_fp32_kernel: Option<CudaFunction>,
 
     // FP16 kernels and conversions
     fp16_module: Option<Arc<CudaModule>>,
@@ -100,7 +152,8 @@ pub struct FP8TensorCore {
 impl FP8TensorCore {
     /// Create FP8 tensor core context
     ///
-    /// Verifies GPU compute capability and loads pre-compiled FP8 kernels.
+    /// Verifies GPU compute capability and JIT-compiles the tensor core
+    /// kernels for the supported precision modes (cached after first call).
     ///
     /// # Arguments
     ///
@@ -124,7 +177,7 @@ impl FP8TensorCore {
         let compute_capability = device.compute_capability();
 
         // Detect supported precision modes
-        let fp8_supported = compute_capability.0 >= 8 && compute_capability.1 >= 9; // Ada sm_89+
+        let fp8_supported = supports_fp8_hardware(compute_capability.0, compute_capability.1); // Ada sm_89+
         let fp16_supported = compute_capability.0 >= 7; // Volta sm_70+
         let tf32_supported = compute_capability.0 >= 8; // Ampere sm_80+
 
@@ -139,8 +192,6 @@ impl FP8TensorCore {
             // FP8 kernels
             fp8_module: None,
             fp8_matmul_kernel: None,
-            fp32_to_fp8_kernel: None,
-            fp8_to_fp32_kernel: None,
 
             // FP16 kernels
             fp16_module: None,
@@ -155,25 +206,19 @@ impl FP8TensorCore {
 
         // Load kernels for supported precision modes (graceful degradation)
         // We don't fail if kernels don't load - just mark as unsupported
-        if fp8_supported {
-            if let Err(e) = instance.load_fp8_kernels() {
-                eprintln!("⚠️  FP8 kernels failed to load: {}", e);
-                instance.fp8_supported = false;
-            }
+        if fp8_supported && let Err(e) = instance.load_fp8_kernels() {
+            eprintln!("⚠️  FP8 kernels failed to load: {}", e);
+            instance.fp8_supported = false;
         }
 
-        if fp16_supported {
-            if let Err(e) = instance.load_fp16_kernels() {
-                eprintln!("⚠️  FP16 kernels failed to load: {}", e);
-                instance.fp16_supported = false;
-            }
+        if fp16_supported && let Err(e) = instance.load_fp16_kernels() {
+            eprintln!("⚠️  FP16 kernels failed to load: {}", e);
+            instance.fp16_supported = false;
         }
 
-        if tf32_supported {
-            if let Err(e) = instance.load_fp32_kernels() {
-                eprintln!("⚠️  FP32/TF32 kernels failed to load: {}", e);
-                instance.tf32_supported = false;
-            }
+        if tf32_supported && let Err(e) = instance.load_fp32_kernels() {
+            eprintln!("⚠️  FP32/TF32 kernels failed to load: {}", e);
+            instance.tf32_supported = false;
         }
 
         // Verify at least one precision mode is available
@@ -220,10 +265,14 @@ impl FP8TensorCore {
     }
 
     /// Load FP8 kernels from embedded source using cached JIT compilation
+    ///
+    /// Only the MMA kernel is compiled (capability/compile detection). The
+    /// FP8 conversion kernels were dropped along with the disabled
+    /// `matmul_fp8` host path; they produced "FP8" values stored as f32,
+    /// which the byte-oriented MMA kernel cannot consume.
     fn load_fp8_kernels(&mut self) -> Result<(), FP8Error> {
         // Load FP8 E4M3 tensor core kernel using RAW PTX inline assembly
         const FP8_MMA_KERNELS: &str = include_str!("kernels/fp8_mma_ptx.cu");
-        const FP8_CONVERSION_KERNELS: &str = include_str!("kernels/fp8_jit_fallback.cu");
 
         // Compile FP8 MMA kernel
         let ptx_arc =
@@ -245,35 +294,9 @@ impl FP8TensorCore {
                 FP8Error::ModuleLoadFailed(format!("Failed to load fp8_matmul_mma_ptx: {:?}", e))
             })?;
 
-        // Compile FP8 conversion kernels
-        let ptx_conv_arc = crate::gpu::compile::compile_ptx_optimized_cached(
-            FP8_CONVERSION_KERNELS,
-        )
-        .map_err(|e| {
-            FP8Error::ModuleLoadFailed(format!("Failed to compile FP8 conversion kernels: {:?}", e))
-        })?;
-
-        let module_conv = self
-            .device
-            .context()
-            .load_module(std::sync::Arc::unwrap_or_clone(ptx_conv_arc))
-            .map_err(|e| {
-                FP8Error::ModuleLoadFailed(format!("Failed to load FP8 conversion module: {:?}", e))
-            })?;
-
-        let fp32_to_fp8_kernel = module_conv.load_function("fp32_to_fp8_e4m3").map_err(|e| {
-            FP8Error::ModuleLoadFailed(format!("Failed to load fp32_to_fp8_e4m3: {:?}", e))
-        })?;
-
-        let fp8_to_fp32_kernel = module_conv.load_function("fp8_e4m3_to_fp32").map_err(|e| {
-            FP8Error::ModuleLoadFailed(format!("Failed to load fp8_e4m3_to_fp32: {:?}", e))
-        })?;
-
-        // Store modules and kernels
+        // Store module and kernel
         self.fp8_module = Some(module_mma);
         self.fp8_matmul_kernel = Some(fp8_matmul_kernel);
-        self.fp32_to_fp8_kernel = Some(fp32_to_fp8_kernel);
-        self.fp8_to_fp32_kernel = Some(fp8_to_fp32_kernel);
 
         Ok(())
     }
@@ -372,205 +395,36 @@ impl FP8TensorCore {
         Ok(())
     }
 
-    /// FP8 matrix multiplication using tensor cores
+    /// FP8 matrix multiplication using tensor cores - DISABLED
     ///
-    /// Performs C = A * B using FP8 E4M3 tensor cores with FP32 accumulation.
+    /// # Status: always returns an error
     ///
-    /// # Arguments
+    /// The previous implementation was verifiably wrong: it "quantized" FP32
+    /// inputs with an element-wise rounding kernel that still stored the
+    /// values as `f32`, then fed those 4-byte values to `fp8_matmul_mma_ptx`,
+    /// which reads packed 1-byte E4M3 operands. The kernel therefore consumed
+    /// reinterpreted float bit patterns and produced garbage. A correct host
+    /// path requires real E4M3 byte packing (u8 buffers end-to-end) plus
+    /// runtime numerical validation against an FP32 reference, neither of
+    /// which exists yet.
     ///
-    /// * `a` - Left matrix (M x K, row-major, FP32 on device)
-    /// * `b` - Right matrix (K x N, row-major, FP32 on device)
-    /// * `m` - Number of rows in A
-    /// * `n` - Number of columns in B
-    /// * `k` - Number of columns in A (rows in B)
+    /// Use [`Self::matmul_fp16`] for a working tensor core matmul.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// Device buffer containing result matrix C (M x N, FP32)
-    ///
-    /// # Performance
-    ///
-    /// - 2-4x faster than software FP8 simulation
-    /// - 4x faster than FP32 tensor cores
-    /// - Precision: ~2 decimal digits (acceptable for genetic optimizer)
-    ///
-    /// # Example
-    ///
-    /// ```rust,ignore
-    /// let d_a = device.copy_to_device(&a_host)?;
-    /// let d_b = device.copy_to_device(&b_host)?;
-    /// let d_c = fp8_core.matmul_fp8(&d_a, &d_b, 256, 256, 256)?;
-    /// let c_host = device.copy_to_host(&d_c)?;
-    /// ```
+    /// Always returns [`FP8_MATMUL_UNSUPPORTED_MSG`] wrapped in
+    /// `FP8Error::GpuError(GpuError::ComputationErrorStatic)`.
     pub fn matmul_fp8(
         &self,
-        a: &CudaSlice<f32>,
-        b: &CudaSlice<f32>,
-        m: usize,
-        n: usize,
-        k: usize,
+        _a: &CudaSlice<f32>,
+        _b: &CudaSlice<f32>,
+        _m: usize,
+        _n: usize,
+        _k: usize,
     ) -> Result<CudaSlice<f32>, FP8Error> {
-        if !self.is_fp8_supported() {
-            return Err(FP8Error::ExecutionFailed(
-                "FP8 kernels not loaded. Use is_fp8_supported() to check before calling."
-                    .to_string(),
-            ));
-        }
-
-        // Validate dimensions
-        if a.len() != m * k {
-            return Err(FP8Error::ExecutionFailed(format!(
-                "Matrix A size mismatch: expected {} ({}x{}), got {}",
-                m * k,
-                m,
-                k,
-                a.len()
-            )));
-        }
-        if b.len() != k * n {
-            return Err(FP8Error::ExecutionFailed(format!(
-                "Matrix B size mismatch: expected {} ({}x{}), got {}",
-                k * n,
-                k,
-                n,
-                b.len()
-            )));
-        }
-
-        // STEP 1: Convert FP32 → FP8 (quantization)
-        let a_fp8 = self.convert_fp32_to_fp8(a)?;
-        let b_fp8 = self.convert_fp32_to_fp8(b)?;
-
-        // STEP 2: FP8 tensor core matmul (hardware accelerated)
-        let c_fp8 = self.matmul_fp8_internal(&a_fp8, &b_fp8, m, n, k)?;
-
-        // STEP 3: Convert FP8 → FP32 (dequantization)
-        let c_fp32 = self.convert_fp8_to_fp32(&c_fp8)?;
-
-        Ok(c_fp32)
-    }
-
-    /// Internal FP8 matmul (assumes inputs already in FP8 format, outputs FP8)
-    fn matmul_fp8_internal(
-        &self,
-        a_fp8: &CudaSlice<f32>,
-        b_fp8: &CudaSlice<f32>,
-        m: usize,
-        n: usize,
-        k: usize,
-    ) -> Result<CudaSlice<f32>, FP8Error> {
-        // Note: FP8 values are stored as FP32 with quantized precision
-        // The kernel will interpret them as FP8 internally
-
-        // Allocate output buffer (FP8 stored as FP32)
-        let mut c_fp8 = self.device.allocate_device_buffer(m * n).map_err(|e| {
-            FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e))
-        })?;
-
-        // FP8 E4M3 tensor cores work on 16x8x32 tiles
-        let tile_m = 16;
-        let tile_n = 8;
-        let blocks_m = (m + tile_m - 1) / tile_m;
-        let blocks_n = (n + tile_n - 1) / tile_n;
-
-        let config = LaunchConfig {
-            grid_dim: (blocks_m as u32, blocks_n as u32, 1),
-            block_dim: (32, 1, 1), // 1 warp per block
-            shared_mem_bytes: 0,
-        };
-
-        use cudarc::driver::PushKernelArg;
-
-        let kernel = self.fp8_matmul_kernel.as_ref().unwrap();
-        let m_i32 = m as i32;
-        let n_i32 = n as i32;
-        let k_i32 = k as i32;
-
-        let mut builder = self.device.stream.launch_builder(kernel);
-        builder.arg(a_fp8);
-        builder.arg(b_fp8);
-        builder.arg(&mut c_fp8);
-        builder.arg(&m_i32);
-        builder.arg(&n_i32);
-        builder.arg(&k_i32);
-
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                FP8Error::ExecutionFailed(format!("FP8 matmul kernel launch failed: {:?}", e))
-            })?;
-        }
-
-        Ok(c_fp8)
-    }
-
-    /// Convert FP32 to FP8 E4M3 format
-    fn convert_fp32_to_fp8(&self, input: &CudaSlice<f32>) -> Result<CudaSlice<f32>, FP8Error> {
-        let n = input.len();
-        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
-            FP8Error::ExecutionFailed(format!("Failed to allocate FP8 buffer: {:?}", e))
-        })?;
-
-        let block_size = 256;
-        let n_blocks = (n + block_size - 1) / block_size;
-
-        let config = LaunchConfig {
-            grid_dim: (n_blocks as u32, 1, 1),
-            block_dim: (block_size as u32, 1, 1),
-            shared_mem_bytes: 0,
-        };
-
-        use cudarc::driver::PushKernelArg;
-
-        let kernel = self.fp32_to_fp8_kernel.as_ref().unwrap();
-        let n_i32 = n as i32;
-
-        let mut builder = self.device.stream.launch_builder(kernel);
-        builder.arg(input);
-        builder.arg(&mut output);
-        builder.arg(&n_i32);
-
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                FP8Error::ExecutionFailed(format!("FP32→FP8 conversion failed: {:?}", e))
-            })?;
-        }
-
-        Ok(output)
-    }
-
-    /// Convert FP8 E4M3 to FP32 format
-    fn convert_fp8_to_fp32(&self, input: &CudaSlice<f32>) -> Result<CudaSlice<f32>, FP8Error> {
-        let n = input.len();
-        let mut output = self.device.allocate_device_buffer(n).map_err(|e| {
-            FP8Error::ExecutionFailed(format!("Failed to allocate FP32 buffer: {:?}", e))
-        })?;
-
-        let block_size = 256;
-        let n_blocks = (n + block_size - 1) / block_size;
-
-        let config = LaunchConfig {
-            grid_dim: (n_blocks as u32, 1, 1),
-            block_dim: (block_size as u32, 1, 1),
-            shared_mem_bytes: 0,
-        };
-
-        use cudarc::driver::PushKernelArg;
-
-        let kernel = self.fp8_to_fp32_kernel.as_ref().unwrap();
-        let n_i32 = n as i32;
-
-        let mut builder = self.device.stream.launch_builder(kernel);
-        builder.arg(input);
-        builder.arg(&mut output);
-        builder.arg(&n_i32);
-
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                FP8Error::ExecutionFailed(format!("FP8→FP32 conversion failed: {:?}", e))
-            })?;
-        }
-
-        Ok(output)
+        Err(FP8Error::GpuError(GpuError::ComputationErrorStatic(
+            FP8_MATMUL_UNSUPPORTED_MSG,
+        )))
     }
 
     /// FP16 matrix multiplication using tensor cores
@@ -578,11 +432,10 @@ impl FP8TensorCore {
     /// Performs C = A * B using FP16 tensor cores with FP32 accumulation.
     /// Available on Volta GPUs and newer (compute capability >= 7.0).
     ///
-    /// # Performance
+    /// # Precision
     ///
-    /// - 2x faster than FP32 on tensor cores
-    /// - 2x memory bandwidth vs FP32
-    /// - Precision: ~3-4 decimal digits (±65,504 range)
+    /// ~3-4 decimal digits (±65,504 range); inputs are converted
+    /// FP32 → FP16 on device and the result back to FP32.
     pub fn matmul_fp16(
         &self,
         a: &CudaSlice<f32>,
@@ -648,8 +501,8 @@ impl FP8TensorCore {
         // FP16 raw PTX tensor cores work on 16x8x16 tiles
         let tile_m = 16;
         let tile_n = 8;
-        let blocks_m = (m + tile_m - 1) / tile_m;
-        let blocks_n = (n + tile_n - 1) / tile_n;
+        let blocks_m = m.div_ceil(tile_m);
+        let blocks_n = n.div_ceil(tile_n);
 
         let config = LaunchConfig {
             grid_dim: (blocks_m as u32, blocks_n as u32, 1),
@@ -689,7 +542,7 @@ impl FP8TensorCore {
         })?;
 
         let block_size = 256;
-        let n_blocks = (n + block_size - 1) / block_size;
+        let n_blocks = n.div_ceil(block_size);
 
         let config = LaunchConfig {
             grid_dim: (n_blocks as u32, 1, 1),
@@ -724,7 +577,7 @@ impl FP8TensorCore {
         })?;
 
         let block_size = 256;
-        let n_blocks = (n + block_size - 1) / block_size;
+        let n_blocks = n.div_ceil(block_size);
 
         let config = LaunchConfig {
             grid_dim: (n_blocks as u32, 1, 1),
@@ -751,99 +604,34 @@ impl FP8TensorCore {
         Ok(output)
     }
 
-    /// TF32 matrix multiplication using tensor cores
+    /// TF32 matrix multiplication using tensor cores - DISABLED
     ///
-    /// Performs C = A * B using TensorFloat-32 (TF32) tensor cores.
-    /// Available on Ampere GPUs and newer (compute capability >= 8.0).
+    /// # Status: always returns an error
     ///
-    /// # TF32 Format
+    /// No TF32 kernel exists in this crate. The previous implementation
+    /// loaded `fp16_matmul_mma_ptx` (which reads packed u16 half-precision
+    /// operands) under the name "TF32" and passed it raw `f32` buffers, so
+    /// the kernel reinterpreted float bit halves as FP16 values and produced
+    /// garbage. A real TF32 path needs a dedicated `mma.sync` tf32 kernel
+    /// plus runtime numerical validation.
     ///
-    /// - Same FP32 range (±3.4e38) but truncated mantissa (10 bits vs 23 bits)
-    /// - 8-10x faster than FP32 cuBLAS on tensor cores
-    /// - Precision sufficient for most ML/genetic optimization tasks
+    /// Use [`Self::matmul_fp16`] for a working tensor core matmul.
     ///
-    /// # Performance
+    /// # Errors
     ///
-    /// - 8-10x faster than FP32 cuBLAS
-    /// - 4x faster than FP16 (on Ampere/Ada)
-    /// - Automatic on Ampere+ GPUs (no manual conversion needed)
+    /// Always returns [`TF32_MATMUL_UNSUPPORTED_MSG`] wrapped in
+    /// `FP8Error::GpuError(GpuError::ComputationErrorStatic)`.
     pub fn matmul_tf32(
         &self,
-        a: &CudaSlice<f32>,
-        b: &CudaSlice<f32>,
-        m: usize,
-        n: usize,
-        k: usize,
+        _a: &CudaSlice<f32>,
+        _b: &CudaSlice<f32>,
+        _m: usize,
+        _n: usize,
+        _k: usize,
     ) -> Result<CudaSlice<f32>, FP8Error> {
-        if !self.is_tf32_supported() {
-            return Err(FP8Error::ExecutionFailed(
-                "TF32 kernels not loaded. Use is_tf32_supported() to check before calling."
-                    .to_string(),
-            ));
-        }
-
-        // Validate dimensions
-        if a.len() != m * k {
-            return Err(FP8Error::ExecutionFailed(format!(
-                "Matrix A size mismatch: expected {} ({}x{}), got {}",
-                m * k,
-                m,
-                k,
-                a.len()
-            )));
-        }
-        if b.len() != k * n {
-            return Err(FP8Error::ExecutionFailed(format!(
-                "Matrix B size mismatch: expected {} ({}x{}), got {}",
-                k * n,
-                k,
-                n,
-                b.len()
-            )));
-        }
-
-        // TF32 uses FP32 inputs directly (hardware truncates mantissa)
-        // No conversion needed!
-
-        // Allocate output buffer (FP32)
-        let mut c = self.device.allocate_device_buffer(m * n).map_err(|e| {
-            FP8Error::ExecutionFailed(format!("Failed to allocate output: {:?}", e))
-        })?;
-
-        // TF32 tensor cores work on 16x8x16 tiles (similar to FP16 but K=8)
-        let tile_m = 16;
-        let tile_n = 8;
-        let blocks_m = (m + tile_m - 1) / tile_m;
-        let blocks_n = (n + tile_n - 1) / tile_n;
-
-        let config = LaunchConfig {
-            grid_dim: (blocks_m as u32, blocks_n as u32, 1),
-            block_dim: (32, 1, 1), // 1 warp per block
-            shared_mem_bytes: 0,
-        };
-
-        use cudarc::driver::PushKernelArg;
-
-        let kernel = self.tf32_matmul_kernel.as_ref().unwrap();
-        let m_i32 = m as i32;
-        let n_i32 = n as i32;
-        let k_i32 = k as i32;
-
-        let mut builder = self.device.stream.launch_builder(kernel);
-        builder.arg(a);
-        builder.arg(b);
-        builder.arg(&mut c);
-        builder.arg(&m_i32);
-        builder.arg(&n_i32);
-        builder.arg(&k_i32);
-
-        unsafe {
-            builder.launch(config).map_err(|e| {
-                FP8Error::ExecutionFailed(format!("TF32 matmul kernel launch failed: {:?}", e))
-            })?;
-        }
-
-        Ok(c)
+        Err(FP8Error::GpuError(GpuError::ComputationErrorStatic(
+            TF32_MATMUL_UNSUPPORTED_MSG,
+        )))
     }
 
     /// Batch convert FP32 values to FP8 E4M3 format (software simulation)
@@ -869,44 +657,13 @@ impl FP8TensorCore {
 
         // Launch quantization kernel
         let block_size = 256;
-        let n_blocks = (values.len() + block_size - 1) / block_size;
+        let n_blocks = values.len().div_ceil(block_size);
 
         let config = LaunchConfig {
             grid_dim: (n_blocks as u32, 1, 1),
             block_dim: (block_size as u32, 1, 1),
             shared_mem_bytes: 0,
         };
-
-        // Load quantization kernel (simple element-wise operation)
-        const QUANTIZE_KERNEL: &str = r#"
-extern "C" __global__ void quantize_fp8_kernel(
-    const float* input,
-    float* output,
-    int n
-) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= n) return;
-
-    float value = input[idx];
-
-    // Handle special values
-    if (isnan(value) || isinf(value)) {
-        output[idx] = value;
-        return;
-    }
-
-    // FP8 E4M3 range: ±448
-    const float MAX_FP8 = 448.0f;
-    if (fabsf(value) > MAX_FP8) {
-        output[idx] = copysignf(MAX_FP8, value);
-        return;
-    }
-
-    // Quantize to ~2 decimal digits (100 steps)
-    const float SCALE = 100.0f;
-    output[idx] = roundf(value * SCALE) / SCALE;
-}
-"#;
 
         let ptx =
             crate::gpu::compile::compile_ptx_optimized_cached(QUANTIZE_KERNEL).map_err(|e| {
@@ -964,8 +721,7 @@ pub enum FP8Error {
 
 /// Software FP8 quantization (CPU fallback)
 ///
-/// Simulates FP8 E4M3 precision on CPU.
-/// Use hardware FP8 tensor cores when available for 2-4x speedup.
+/// Simulates FP8 E4M3 precision on CPU (clamp to ±448, round to 0.01 steps).
 ///
 /// # Arguments
 ///
@@ -1043,6 +799,46 @@ mod tests {
         assert_eq!(quantize_fp8_cpu(-1000.0), -448.0); // Beyond min
     }
 
+    #[test]
+    fn test_supports_fp8_hardware_capability_matrix() {
+        // Ada Lovelace (sm_89): the minimum supported capability
+        assert!(supports_fp8_hardware(8, 9));
+        // Hopper (sm_90): minor == 0 — the old `major >= 8 && minor >= 9`
+        // check wrongly rejected this
+        assert!(supports_fp8_hardware(9, 0));
+        // Blackwell (sm_100 / sm_120): also minor == 0
+        assert!(supports_fp8_hardware(10, 0));
+        assert!(supports_fp8_hardware(12, 0));
+        // Ampere (sm_80, sm_86): no FP8 tensor cores
+        assert!(!supports_fp8_hardware(8, 0));
+        assert!(!supports_fp8_hardware(8, 6));
+        // Turing/Volta: no FP8 tensor cores
+        assert!(!supports_fp8_hardware(7, 5));
+        assert!(!supports_fp8_hardware(7, 0));
+    }
+
+    #[test]
+    fn test_disabled_matmul_messages_point_at_fp16() {
+        // The honest-gating errors must tell users which path works.
+        assert!(FP8_MATMUL_UNSUPPORTED_MSG.contains("matmul_fp16"));
+        assert!(TF32_MATMUL_UNSUPPORTED_MSG.contains("matmul_fp16"));
+        // And explain why the path is disabled.
+        assert!(FP8_MATMUL_UNSUPPORTED_MSG.contains("disabled"));
+        assert!(TF32_MATMUL_UNSUPPORTED_MSG.contains("disabled"));
+    }
+
+    #[test]
+    fn test_quantize_kernel_is_nvrtc_compatible() {
+        // NVRTC compilation (compile_ptx_optimized_cached) cannot resolve
+        // header includes; the kernel must be self-contained with an
+        // extern "C" entry point matching the load_function() name.
+        assert!(
+            !QUANTIZE_KERNEL.contains("#include"),
+            "quantize kernel must not use #include (NVRTC-incompatible)"
+        );
+        assert!(QUANTIZE_KERNEL.contains("extern \"C\" __global__ void quantize_fp8_kernel"));
+    }
+
     #[cfg(feature = "gpu")]
     #[test]
     fn test_fp8_support_detection() {
@@ -1054,7 +850,7 @@ mod tests {
                     let (major, minor) = fp8_core.compute_capability();
                     println!("GPU Compute Capability: {}.{}", major, minor);
 
-                    if major >= 8 && minor >= 9 {
+                    if supports_fp8_hardware(major, minor) {
                         assert!(
                             fp8_core.is_fp8_supported(),
                             "FP8 should be supported on compute capability {}.{}",

@@ -1,85 +1,59 @@
-//! FP8 GEMM using CUTLASS 3.5.0 for Ada Lovelace (sm_89)
+//! FP8 GEMM using CUTLASS 3.5.0 for Ada Lovelace (sm_89) - UNAVAILABLE
 //!
-//! Production-ready FP8 E4M3 Tensor Core GEMM kernels optimized for RTX 3500 Ada.
+//! # Status: construction always fails
 //!
-//! # Features
+//! The CUTLASS GEMM kernel source (`src/gpu/kernels/fp8_gemm_cutlass.cu`)
+//! `#include`s CUTLASS 3.5 template headers. This crate JIT-compiles kernels
+//! at runtime through NVRTC (`compile_ptx_optimized_cached`), which cannot
+//! resolve header includes — so the previous implementation of
+//! [`FP8GemmCutlass::new`] failed on every call with a confusing NVRTC
+//! compilation error after attempting the doomed compile. It now fails fast
+//! with an honest explanation instead.
 //!
-//! - **2-4x speedup** over FP32 GEMM
-//! - **4x memory bandwidth reduction** (1 byte vs 4 bytes per element)
-//! - **Three tile sizes**: Small (64x64x32), Medium (128x128x64), Large (128x256x64)
-//! - **Auto-selection**: Automatically chooses optimal tile size
-//! - **Batch support**: Multiple independent GEMMs in parallel
-//! - **FP32 accumulation**: Maintains numerical accuracy despite FP8 inputs
+//! Making this module work requires a host-side nvcc/CUTLASS build step that
+//! produces a CUBIN, plus a CUBIN loading path (`load_module` from file) —
+//! neither exists today. No performance figures are quoted here: none were
+//! ever measured, because the kernels never compiled at runtime.
 //!
-//! # Performance
-//!
-//! | Matrix Size | FP32 GEMM | FP8 GEMM | Speedup |
-//! |-------------|-----------|----------|---------|
-//! | 64x64       | 0.08 ms   | 0.03 ms  | 2.7x    |
-//! | 128x128     | 0.40 ms   | 0.14 ms  | 2.9x    |
-//! | 256x256     | 2.00 ms   | 0.60 ms  | 3.3x    |
-//!
-//! # Example
-//!
-//! ```rust,ignore
-//! use kimsfinance_core::gpu::{GpuDevice, FP8GemmCutlass};
-//!
-//! let device = GpuDevice::new()?;
-//! let gemm = FP8GemmCutlass::new(&device)?;
-//!
-//! // Convert FP32 matrices to FP8
-//! let a_fp8 = gemm.fp32_to_fp8(&device, &a_fp32)?;
-//! let b_fp8 = gemm.fp32_to_fp8(&device, &b_fp32)?;
-//!
-//! // Execute FP8 GEMM: C = A @ B
-//! let c_fp32 = gemm.matmul(&device, &a_fp8, &b_fp8, m, n, k)?;
-//! ```
-//!
-//! # Hardware Requirements
-//!
-//! - **GPU**: NVIDIA Ada Lovelace (sm_89+) - e.g., RTX 3500, RTX 4000 series
-//! - **CUDA**: 13.0+ (for FP8 support)
-//! - **CUTLASS**: 3.5.0 (located at `/tmp/cutlass`)
-//!
-//! # Numerical Accuracy
-//!
-//! FP8 E4M3 has:
-//! - **Dynamic range**: 2^-6 to 2^7 (0.015 to 128)
-//! - **Precision**: ~1% relative error (3-bit mantissa)
-//! - **Sufficient for**: Genetic optimizer fitness evaluation, approximate gradients
-//! - **Not recommended for**: High-precision numerical computing
-//!
-//! # Implementation Details
-//!
-//! Uses CUTLASS 3.5.0 templates for Ada FP8 GEMM:
-//! - `cutlass::gemm::device::GemmUniversalWithAbsMax`
-//! - `cutlass::float_e4m3_t` (FP8 E4M3 type)
-//! - `cutlass::arch::Sm89` (Ada Lovelace)
-//!
-//! Kernels compiled from `src/gpu/kernels/fp8_gemm_cutlass.cu`.
+//! For a working tensor core matmul use
+//! [`crate::gpu::fp8_wmma::FP8TensorCore::matmul_fp16`].
 
 use crate::gpu::{GpuDevice, GpuError};
 use cudarc::driver::{CudaModule, CudaSlice, LaunchConfig, PushKernelArg};
 use std::sync::Arc;
 
-/// FP8 GEMM kernel manager using CUTLASS 3.5.0
+/// Error message returned by [`FP8GemmCutlass::new`].
+pub(crate) const CUTLASS_REQUIRES_HOST_BUILD_MSG: &str = "FP8GemmCutlass is unavailable: \
+kernels/fp8_gemm_cutlass.cu depends on CUTLASS headers (#include \"cutlass/...\") that NVRTC \
+cannot compile at runtime, and no pre-compiled CUBIN loading path is implemented. A host-side \
+nvcc/CUTLASS build would be required. Use FP8TensorCore::matmul_fp16 instead.";
+
+/// FP8 GEMM kernel manager using CUTLASS 3.5.0 - currently unavailable
 ///
-/// Manages compiled CUTLASS FP8 GEMM kernels and provides high-level API.
+/// [`Self::new`] always returns an error (see module documentation); the
+/// remaining methods are retained for API stability and for a future
+/// host-side CUTLASS build integration.
 pub struct FP8GemmCutlass {
     /// PTX module containing compiled kernels
     module: Arc<CudaModule>,
 }
 
 impl FP8GemmCutlass {
-    /// Load compiled FP8 GEMM kernels from CUBIN/PTX
+    /// Load compiled FP8 GEMM kernels - ALWAYS FAILS
     ///
-    /// Requires pre-compiled kernels from `compile_fp8_gemm_cutlass.sh`.
+    /// # Status
+    ///
+    /// The CUTLASS kernel source can never be compiled by the runtime NVRTC
+    /// pipeline (it requires CUTLASS headers), and there is no CUBIN loading
+    /// path. This constructor fails fast with an explanatory error instead
+    /// of attempting (and burying the reason for) a doomed NVRTC compile.
     ///
     /// # Errors
     ///
-    /// - Kernel file not found
-    /// - CUDA module load failure
-    /// - Incompatible GPU (requires sm_89)
+    /// - `InsufficientComputeCapability` if the GPU is older than sm_89
+    ///   (the operation could never work on such hardware anyway)
+    /// - `ComputationErrorStatic` ([`CUTLASS_REQUIRES_HOST_BUILD_MSG`])
+    ///   otherwise
     pub fn new(device: &GpuDevice) -> Result<Self, GpuError> {
         // Check GPU compute capability (must be 8.9 for Ada FP8)
         let (major, minor) = device.compute_capability();
@@ -90,18 +64,11 @@ impl FP8GemmCutlass {
             });
         }
 
-        // Load PTX module
-        const FP8_GEMM_PTX: &str = include_str!("kernels/fp8_gemm_cutlass.cu");
-
-        let ptx = crate::gpu::compile::compile_ptx_optimized_cached(FP8_GEMM_PTX)?;
-        let module = device
-            .context()
-            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
-            .map_err(|e| {
-                GpuError::CompilationError(format!("Failed to load FP8 GEMM PTX module: {:?}", e))
-            })?;
-
-        Ok(Self { module })
+        // Fail fast: NVRTC can never compile the CUTLASS-header-dependent
+        // kernel source, so there is nothing to load.
+        Err(GpuError::ComputationErrorStatic(
+            CUTLASS_REQUIRES_HOST_BUILD_MSG,
+        ))
     }
 
     /// Convert FP32 array to FP8 E4M3 on GPU
@@ -139,7 +106,7 @@ impl FP8GemmCutlass {
 
         // Launch configuration
         let block_size = 256;
-        let num_blocks = (n + block_size - 1) / block_size;
+        let num_blocks = n.div_ceil(block_size);
 
         let config = LaunchConfig {
             grid_dim: (num_blocks as u32, 1, 1),
@@ -199,7 +166,7 @@ impl FP8GemmCutlass {
 
         // Launch configuration
         let block_size = 256;
-        let num_blocks = (n + block_size - 1) / block_size;
+        let num_blocks = n.div_ceil(block_size);
 
         let config = LaunchConfig {
             grid_dim: (num_blocks as u32, 1, 1),
@@ -242,11 +209,6 @@ impl FP8GemmCutlass {
     /// # Returns
     ///
     /// FP32 matrix C (m × n, row-major)
-    ///
-    /// # Performance
-    ///
-    /// - Small matrices (<64x64): ~2.5x faster than FP32
-    /// - Large matrices (>128x128): ~3.3x faster than FP32
     #[allow(clippy::too_many_arguments)]
     pub fn gemm(
         &self,
@@ -482,97 +444,44 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // Requires Ada Lovelace GPU (sm_89)
-    fn test_fp8_gemm_cutlass_basic() {
-        let device = GpuDevice::new().expect("Failed to create GPU device");
-        let gemm = FP8GemmCutlass::new(&device).expect("Failed to create FP8 GEMM");
-
-        // Run built-in test
-        gemm.test(&device).expect("FP8 GEMM test failed");
+    fn test_unavailable_message_is_honest() {
+        // The fail-fast error must explain the root cause (CUTLASS headers
+        // vs NVRTC) and point at the working alternative.
+        assert!(CUTLASS_REQUIRES_HOST_BUILD_MSG.contains("CUTLASS"));
+        assert!(CUTLASS_REQUIRES_HOST_BUILD_MSG.contains("NVRTC"));
+        assert!(CUTLASS_REQUIRES_HOST_BUILD_MSG.contains("matmul_fp16"));
     }
 
     #[test]
-    #[ignore] // Requires Ada Lovelace GPU (sm_89)
-    fn test_fp8_conversion_roundtrip() {
-        let device = GpuDevice::new().expect("Failed to create GPU device");
-        let gemm = FP8GemmCutlass::new(&device).expect("Failed to create FP8 GEMM");
-
-        // Create test data
-        let test_data: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
-        let d_fp32 = device
-            .copy_to_device_f32(&test_data)
-            .expect("Failed to copy to device");
-
-        // Convert FP32 → FP8 → FP32
-        let d_fp8 = gemm.fp32_to_fp8(&device, &d_fp32).expect("FP32→FP8 failed");
-        let d_fp32_back = gemm.fp8_to_fp32(&device, &d_fp8).expect("FP8→FP32 failed");
-
-        // Copy back to host
-        let result = device
-            .copy_to_host_f32(&d_fp32_back)
-            .expect("Failed to copy to host");
-
-        // Check accuracy (FP8 E4M3 has ~1% precision)
-        for (orig, converted) in test_data.iter().zip(result.iter()) {
-            let error = (orig - converted).abs() / orig;
-            assert!(
-                error < 0.02,
-                "Conversion error too large: {} → {} (error: {:.2}%)",
-                orig,
-                converted,
-                error * 100.0
-            );
-        }
+    fn test_cutlass_kernel_source_cannot_be_nvrtc_compiled() {
+        // Documents WHY new() fails fast: the kernel source depends on
+        // header includes, which the NVRTC pipeline used by this crate
+        // (compile_ptx_optimized_cached) cannot resolve. If this assertion
+        // ever fails, the source became self-contained and the fail-fast
+        // gate in new() should be revisited.
+        const SRC: &str = include_str!("kernels/fp8_gemm_cutlass.cu");
+        assert!(
+            SRC.contains("#include"),
+            "fp8_gemm_cutlass.cu no longer has includes; re-evaluate FP8GemmCutlass::new()"
+        );
+        assert!(SRC.contains("cutlass"), "expected CUTLASS dependency");
     }
 
     #[test]
-    #[ignore] // Requires Ada Lovelace GPU (sm_89)
-    fn test_fp8_matmul_small() {
+    #[ignore] // Requires GPU (any CUDA device)
+    fn test_fp8_gemm_cutlass_new_fails_fast() {
         let device = GpuDevice::new().expect("Failed to create GPU device");
-        let gemm = FP8GemmCutlass::new(&device).expect("Failed to create FP8 GEMM");
-
-        // 4x4 matrix multiply
-        let m = 4;
-        let n = 4;
-        let k = 4;
-
-        // Create test matrices (identity-like)
-        let a_fp32: Vec<f32> = (0..m * k)
-            .map(|i| if i % (k + 1) == 0 { 1.0 } else { 0.0 })
-            .collect();
-        let b_fp32: Vec<f32> = (0..k * n)
-            .map(|i| if i % (n + 1) == 0 { 1.0 } else { 0.0 })
-            .collect();
-
-        // Convert to FP8
-        let d_a_fp32 = device.copy_to_device_f32(&a_fp32).unwrap();
-        let d_b_fp32 = device.copy_to_device_f32(&b_fp32).unwrap();
-
-        let d_a_fp8 = gemm.fp32_to_fp8(&device, &d_a_fp32).unwrap();
-        let d_b_fp8 = gemm.fp32_to_fp8(&device, &d_b_fp32).unwrap();
-
-        // Perform FP8 GEMM
-        let d_c_fp32 = gemm.matmul(&device, &d_a_fp8, &d_b_fp8, m, n, k).unwrap();
-
-        // Copy result to host
-        let c_result = device.copy_to_host_f32(&d_c_fp32).unwrap();
-
-        // Verify (identity @ identity = identity)
-        for i in 0..m {
-            for j in 0..n {
-                let idx = i * n + j;
-                let expected = if i == j { 1.0 } else { 0.0 };
-                let error = (c_result[idx] - expected).abs();
-                assert!(
-                    error < 0.1,
-                    "Element ({}, {}) error too large: {} vs {} (error: {})",
-                    i,
-                    j,
-                    c_result[idx],
-                    expected,
-                    error
-                );
+        match FP8GemmCutlass::new(&device) {
+            Err(GpuError::ComputationErrorStatic(msg)) => {
+                assert!(msg.contains("CUTLASS"));
             }
+            Err(GpuError::InsufficientComputeCapability { .. }) => {
+                // Acceptable on pre-Ada hardware
+            }
+            other => panic!(
+                "FP8GemmCutlass::new must fail fast, got {:?}",
+                other.map(|_| "Ok(FP8GemmCutlass)")
+            ),
         }
     }
 }

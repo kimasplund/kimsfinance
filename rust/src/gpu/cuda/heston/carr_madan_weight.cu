@@ -162,16 +162,4 @@ extern "C" __global__ void carr_madan_weight(
     // Store results
     weighted_real[idx] = out_real;
     weighted_imag[idx] = out_imag;
-
-    // DEBUG: Print first few values for verification
-    if (idx < 2) {
-        printf("CARR_MADAN_DEBUG [idx=%d, opt=%d, phi_idx=%d]: phi=%.4f, cf=(%.6f,%.6f), discount=%.6f, denom=(%.4f,%.4f), psi=(%.6f,%.6f), weight=%.1f, output=(%.6f,%.6f)\n",
-               idx, option_idx, phi_idx, phi,
-               cf.real, cf.imag,
-               discount,
-               denom_real, denom_imag,
-               psi.real, psi.imag,
-               simpson_weight,
-               out_real, out_imag);
-    }
 }

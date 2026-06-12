@@ -19,7 +19,7 @@ use crate::gpu::{GpuDevice, GpuError};
 use crate::quantitative::heston::BlackScholesPricer;
 use crate::quantitative::heston::{HestonParams, OptionQuote, OptionType};
 use chrono;
-use cudarc::driver::{CudaFunction, CudaSlice, DevicePtr, LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaFunction, CudaSlice, LaunchConfig, PushKernelArg};
 use num_complex::Complex64;
 use rustfft::FftPlanner;
 use std::f64::consts::PI;
@@ -93,16 +93,13 @@ impl HestonGpuPricer {
         // Try to allocate pinned memory (fallback to pageable on failure)
         let (pinned_strikes, pinned_expirations, pinned_spot_prices, pinned_rates) =
             match Self::try_allocate_pinned_buffers(max_batch_size) {
-                Ok(buffers) => {
-                    eprintln!(
-                        "✅ Pinned memory allocated ({} options max)",
-                        max_batch_size
-                    );
-                    buffers
-                }
-                Err(e) => {
-                    eprintln!("⚠️ Pinned allocation failed: {:?}", e);
-                    eprintln!("   Using pageable memory (20-30% slower transfers)");
+                Ok(buffers) => buffers,
+                Err(_e) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!("⚠️ Pinned allocation failed: {:?}", _e);
+                        eprintln!("   Using pageable memory (20-30% slower transfers)");
+                    }
                     (None, None, None, None)
                 }
             };
@@ -111,8 +108,9 @@ impl HestonGpuPricer {
         let (pinned_phi_values, pinned_char_func_real, pinned_char_func_imag) =
             match Self::try_allocate_fft_pinned_buffers(fft_size, max_batch_size) {
                 Ok(buffers) => buffers,
-                Err(e) => {
-                    eprintln!("⚠️ FFT pinned allocation failed: {:?}", e);
+                Err(_e) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("⚠️ FFT pinned allocation failed: {:?}", _e);
                     (None, None, None)
                 }
             };
@@ -120,15 +118,10 @@ impl HestonGpuPricer {
         // Pre-allocate device buffers
         let (d_strikes, d_expirations, d_spot_prices, d_risk_free_rates) =
             match Self::try_allocate_device_buffers(&device, max_batch_size) {
-                Ok(buffers) => {
-                    eprintln!(
-                        "✅ Device buffers allocated ({} options max)",
-                        max_batch_size
-                    );
-                    buffers
-                }
-                Err(e) => {
-                    eprintln!("⚠️ Device allocation failed: {:?}", e);
+                Ok(buffers) => buffers,
+                Err(_e) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("⚠️ Device allocation failed: {:?}", _e);
                     (None, None, None, None)
                 }
             };
@@ -328,21 +321,9 @@ impl HestonGpuPricer {
         let du = 0.25;
         let phi_values: Vec<f64> = (0..self.fft_size).map(|i| i as f64 * du).collect();
 
-        // DEBUG: Log phi values range
-        eprintln!(
-            "[DEBUG] phi_values: size={}, range=[{:.4}, {:.4}]",
-            phi_values.len(),
-            phi_values.first().unwrap_or(&0.0),
-            phi_values.last().unwrap_or(&0.0)
-        );
-
-        // Use pinned memory path if available
-        let _has_pinned = self.pinned_strikes.is_some()
-            && self.d_strikes.is_some()
-            && self.d_char_func_real.is_some();
-
-        // TEMPORARY: Force pageable memory to bypass dtoh_pinned bug
-        eprintln!("[DEBUG] FORCING pageable memory path to test download bug");
+        // NOTE: The pageable path is used unconditionally. The pinned download
+        // path (`price_with_pinned_memory`) is disabled pending a fix for a
+        // dtoh_pinned download bug; re-enable it once that path is validated.
         let (char_func_real, char_func_imag) = self.price_with_pageable_memory(
             params,
             &strikes,
@@ -354,58 +335,10 @@ impl HestonGpuPricer {
             use_fft,
         )?;
 
-        // Original code (disabled for testing):
-        /* let (char_func_real, char_func_imag) = if has_pinned {
-            eprintln!("[DEBUG] Using pinned memory path");
-            self.price_with_pinned_memory(
-                params,
-                &strikes,
-                &expirations,
-                &spot_prices,
-                &risk_free_rates,
-                &phi_values,
-                n_options,
-                use_fft,
-            )?
-        } else {
-            eprintln!("[DEBUG] Using pageable memory path");
-            self.price_with_pageable_memory(
-                params,
-                &strikes,
-                &expirations,
-                &spot_prices,
-                &risk_free_rates,
-                &phi_values,
-                n_options,
-                use_fft,
-            )?
-        }; */
-
-        // DEBUG: Check characteristic function values
-        let total_elements = n_options * self.fft_size;
-        let cf_real_nonzero = char_func_real.iter().filter(|&&x| x.abs() > 1e-10).count();
-        let cf_imag_nonzero = char_func_imag.iter().filter(|&&x| x.abs() > 1e-10).count();
-        eprintln!(
-            "[DEBUG] Characteristic function downloaded: total={}, real_nonzero={}, imag_nonzero={}",
-            total_elements, cf_real_nonzero, cf_imag_nonzero
-        );
-        if cf_real_nonzero > 0 {
-            let sample_idx = char_func_real
-                .iter()
-                .position(|&x| x.abs() > 1e-10)
-                .unwrap();
-            eprintln!(
-                "[DEBUG]   Sample CF value at idx={}: real={:.6}, imag={:.6}",
-                sample_idx, char_func_real[sample_idx], char_func_imag[sample_idx]
-            );
-        }
-
         // Choose pricing method
         let mut prices = if use_fft {
-            eprintln!("[PRICING] Using Carr-Madan FFT method");
             self.fft_to_option_prices(&char_func_real, &char_func_imag, options)?
         } else {
-            eprintln!("[PRICING] Using Lewis (2001) cosine transform method");
             self.price_with_lewis_method(params, &char_func_real, &char_func_imag, options)?
         };
 
@@ -418,6 +351,7 @@ impl HestonGpuPricer {
                 !price.is_finite() || price <= 1e-10 || price > 10.0 * option.spot_price;
 
             if is_invalid {
+                #[cfg(debug_assertions)]
                 eprintln!(
                     "[FALLBACK] Option {}: Price {:.6} invalid, using Black-Scholes",
                     i, price
@@ -442,6 +376,11 @@ impl HestonGpuPricer {
     }
 
     /// Fast path: Use pinned memory for transfers (20-30% faster)
+    ///
+    /// Currently unused: `price_options_with_method` forces the pageable
+    /// path until a dtoh_pinned download bug is fixed and this path is
+    /// re-validated against the pageable results.
+    #[allow(dead_code)]
     fn price_with_pinned_memory(
         &mut self,
         params: &HestonParams,
@@ -507,61 +446,14 @@ impl HestonGpuPricer {
                 &self.d_char_func_real,
                 &self.d_char_func_imag,
             ) {
-                // DEBUG: Verify we're downloading from the same buffers
-                let (ptr_real, _) = d_real.device_ptr(&self.device.stream);
-                let (ptr_imag, _) = d_imag.device_ptr(&self.device.stream);
-                eprintln!(
-                    "[DEBUG] Download buffer addresses: real={:?}, imag={:?}",
-                    ptr_real as *const (), ptr_imag as *const ()
-                );
-
-                eprintln!(
-                    "[DEBUG] Pinned buffer sizes: real={}, imag={}, requesting download of {} elements",
-                    p_real.len(),
-                    p_imag.len(),
-                    total_elements
-                );
-                eprintln!(
-                    "[DEBUG] Device buffer sizes: real={}, imag={}",
-                    d_real.len(),
-                    d_imag.len()
-                );
-
                 self.device.dtoh_pinned(d_real, p_real)?;
                 let real_slice = p_real.as_slice();
-                eprintln!(
-                    "[DEBUG] Downloaded real buffer, pinned buffer len={}, first 10 values: {:?}",
-                    real_slice.len(),
-                    &real_slice[..10.min(real_slice.len())]
-                );
-                eprintln!(
-                    "[DEBUG] Real buffer indices [0], [1], [4096]: {:?}, {:?}, {:?}",
-                    real_slice[0],
-                    real_slice[1],
-                    real_slice.get(4096)
-                );
 
                 self.device.dtoh_pinned(d_imag, p_imag)?;
                 let imag_slice = p_imag.as_slice();
-                eprintln!(
-                    "[DEBUG] Downloaded imag buffer, pinned buffer len={}, first 10 values: {:?}",
-                    imag_slice.len(),
-                    &imag_slice[..10.min(imag_slice.len())]
-                );
-                eprintln!(
-                    "[DEBUG] Imag buffer indices [0], [1], [4096]: {:?}, {:?}, {:?}",
-                    imag_slice[0],
-                    imag_slice[1],
-                    imag_slice.get(4096)
-                );
 
                 let char_func_real = real_slice[..total_elements].to_vec();
                 let char_func_imag = imag_slice[..total_elements].to_vec();
-
-                eprintln!(
-                    "[DEBUG] After vec conversion - real[0]={}, imag[0]={}, real[1]={}, imag[1]={}",
-                    char_func_real[0], char_func_imag[0], char_func_real[1], char_func_imag[1]
-                );
 
                 return Ok((char_func_real, char_func_imag));
             }
@@ -580,7 +472,10 @@ impl HestonGpuPricer {
         expirations: &[f64],
         spot_prices: &[f64],
         risk_free_rates: &[f64],
-        phi_values: &[f64],
+        // phi values live in the pre-allocated self.d_phi_values device
+        // buffer; the host slice is unused here (kept for signature parity
+        // with price_with_pinned_memory)
+        _phi_values: &[f64],
         n_options: usize,
         use_fft: bool,
     ) -> Result<(Vec<f64>, Vec<f64>), GpuError> {
@@ -622,8 +517,9 @@ impl HestonGpuPricer {
         pool.release(pinned_rates);
         drop(pool);
 
-        // Note: d_phi_values is already pre-allocated in device buffers (not copied each time)
-        let _d_phi_values = self.device.alloc_buffer(phi_values.len())?;
+        // Note: d_phi_values is already pre-allocated in device buffers (not
+        // copied each time). A previous version allocated an extra, never-used
+        // device buffer of the same size here on every call.
 
         // Launch kernel
         self.launch_kernel(
@@ -672,25 +568,6 @@ impl HestonGpuPricer {
         pool.release(pinned_imag);
         drop(pool);
 
-        // DEBUG: Check what was actually downloaded
-        eprintln!(
-            "[DEBUG] Async download - Downloaded real.len()={}, imag.len()={}",
-            char_func_real.len(),
-            char_func_imag.len()
-        );
-        eprintln!(
-            "[DEBUG] Async - real[0]={}, real[1]={}, real[4096]={}",
-            char_func_real.get(0).unwrap_or(&f64::NAN),
-            char_func_real.get(1).unwrap_or(&f64::NAN),
-            char_func_real.get(4096).unwrap_or(&f64::NAN)
-        );
-        eprintln!(
-            "[DEBUG] Async - imag[0]={}, imag[1]={}, imag[4096]={}",
-            char_func_imag.get(0).unwrap_or(&f64::NAN),
-            char_func_imag.get(1).unwrap_or(&f64::NAN),
-            char_func_imag.get(4096).unwrap_or(&f64::NAN)
-        );
-
         Ok((char_func_real, char_func_imag))
     }
 
@@ -720,11 +597,6 @@ impl HestonGpuPricer {
             shared_mem_bytes: 0,
         };
 
-        eprintln!(
-            "[DEBUG] 2D Launch config: grid=({}, {}), block=({}, {})",
-            grid_dim_x, grid_dim_y, block_dim_x, block_dim_y
-        );
-
         let kappa = params.kappa;
         let theta = params.theta;
         let sigma = params.sigma;
@@ -753,38 +625,6 @@ impl HestonGpuPricer {
             GpuError::ExecutionError("char_func_imag buffer not allocated".to_string())
         })?;
 
-        // DEBUG: Print buffer addresses to verify they're different
-        let (ptr_real, _) = d_char_func_real.device_ptr(&self.device.stream);
-        let (ptr_imag, _) = d_char_func_imag.device_ptr(&self.device.stream);
-        eprintln!(
-            "[DEBUG] BEFORE KERNEL - Buffer addresses: real={:?}, imag={:?}, same={}",
-            ptr_real as *const (),
-            ptr_imag as *const (),
-            ptr_real == ptr_imag
-        );
-        eprintln!(
-            "[DEBUG] BEFORE KERNEL - Device buffer object IDs: real={:p}, imag={:p}",
-            d_char_func_real as *const _, d_char_func_imag as *const _
-        );
-        let total_elements = n_options * self.fft_size;
-        eprintln!(
-            "[DEBUG] Buffer sizes: real={}, imag={}, expected={}",
-            d_char_func_real.len(),
-            d_char_func_imag.len(),
-            total_elements
-        );
-
-        eprintln!("[DEBUG] Launching kernel with:");
-        eprintln!(
-            "  kappa={}, theta={}, sigma={}, rho={}, v0={}, alpha={}",
-            kappa, theta, sigma, rho, v0, alpha
-        );
-        eprintln!("  n_options={}, fft_size={}", n_options_i32, fft_size_i32);
-        eprintln!(
-            "  2D grid_dim=({}, {}), block_dim=({}, {})",
-            grid_dim_x, grid_dim_y, block_dim_x, block_dim_y
-        );
-
         unsafe {
             let mut builder = self.device.stream.launch_builder(&self.char_func_kernel);
             builder.arg(&kappa); // Arg 0: f64
@@ -792,7 +632,7 @@ impl HestonGpuPricer {
             builder.arg(&sigma); // Arg 2: f64
             builder.arg(&rho); // Arg 3: f64
             builder.arg(&v0); // Arg 4: f64
-            builder.arg(&alpha); // Arg 5: f64 (NEW: Carr-Madan damping parameter)
+            builder.arg(&alpha); // Arg 5: f64 (Carr-Madan damping parameter)
             builder.arg(d_strikes); // Arg 6: *const f64
             builder.arg(d_expirations); // Arg 7: *const f64
             builder.arg(d_spot_prices); // Arg 8: *const f64
@@ -803,8 +643,6 @@ impl HestonGpuPricer {
             builder.arg(d_char_func_imag); // Arg 13: *mut f64 (OUTPUT)
             builder.arg(&n_options_i32); // Arg 14: i32
 
-            eprintln!("[DEBUG] Total kernel arguments: 15");
-
             builder.launch(config).map_err(|e| {
                 GpuError::ExecutionError(format!("Heston kernel launch failed: {:?}", e))
             })?;
@@ -814,24 +652,6 @@ impl HestonGpuPricer {
         self.device.stream.synchronize().map_err(|e| {
             GpuError::ExecutionError(format!("Kernel synchronization failed: {:?}", e))
         })?;
-
-        eprintln!("[DEBUG] Kernel synchronized successfully");
-        eprintln!("[DEBUG] Kernel output visible in CUDA_DEBUG prints above");
-
-        // DEBUG: Verify buffer pointers haven't changed after kernel
-        let d_char_func_real_after = self.d_char_func_real.as_ref().unwrap();
-        let d_char_func_imag_after = self.d_char_func_imag.as_ref().unwrap();
-        let (ptr_real_after, _) = d_char_func_real_after.device_ptr(&self.device.stream);
-        let (ptr_imag_after, _) = d_char_func_imag_after.device_ptr(&self.device.stream);
-        eprintln!(
-            "[DEBUG] AFTER KERNEL - Buffer addresses: real={:?}, imag={:?}",
-            ptr_real_after as *const (), ptr_imag_after as *const ()
-        );
-        eprintln!(
-            "[DEBUG] AFTER KERNEL - Addresses match: real={}, imag={}",
-            (ptr_real_after as usize) == (ptr_real as usize),
-            (ptr_imag_after as usize) == (ptr_imag as usize)
-        );
 
         Ok(())
     }
@@ -879,11 +699,6 @@ impl HestonGpuPricer {
         char_func_imag: &[f64],
         options: &[OptionQuote],
     ) -> Result<Vec<f64>, GpuError> {
-        eprintln!(
-            "[Lewis] Pricing {} options using Lewis (2001) cosine transform",
-            options.len()
-        );
-
         let mut prices = Vec::with_capacity(options.len());
 
         // Integration parameters
@@ -912,22 +727,9 @@ impl HestonGpuPricer {
 
             // Edge case: ATM or very close to ATM
             let moneyness_ratio = option.strike / option.spot_price;
-            eprintln!(
-                "[ATM CHECK] Option {}: K={}, S={}, ratio={}, diff={}",
-                i,
-                option.strike,
-                option.spot_price,
-                moneyness_ratio,
-                (moneyness_ratio - 1.0).abs()
-            );
             if (moneyness_ratio - 1.0).abs() < 1e-6 {
-                eprintln!("[ATM FALLBACK] Option {} is ATM, using Black-Scholes", i);
                 // Use Heston volatility directly (sqrt(v0))
                 let vol = params.v0.sqrt();
-                eprintln!(
-                    "[ATM FALLBACK] Using Heston vol={} (sqrt(v0={}))",
-                    vol, params.v0
-                );
                 let bs_price = BlackScholesPricer::price(
                     option.spot_price,
                     option.strike,
@@ -936,7 +738,6 @@ impl HestonGpuPricer {
                     vol,
                     option.option_type,
                 );
-                eprintln!("[ATM FALLBACK] BS price={}", bs_price);
                 prices.push(bs_price);
                 continue;
             }
@@ -982,12 +783,6 @@ impl HestonGpuPricer {
                 if integrand.abs() < truncation_threshold {
                     consecutive_small += 1;
                     if consecutive_small >= consecutive_limit {
-                        if i == 0 {
-                            eprintln!(
-                                "[Lewis] Option 0: Truncated at j={} (phi={:.2}), {} points used",
-                                j, phi, j
-                            );
-                        }
                         break;
                     }
                 } else {
@@ -1015,6 +810,7 @@ impl HestonGpuPricer {
 
             // Validation: Check against bounds
             if !price.is_finite() || price < 0.0 {
+                #[cfg(debug_assertions)]
                 eprintln!(
                     "[Lewis] WARN: Invalid price {:.6} for option {}, falling back to BS",
                     price, i
@@ -1036,19 +832,8 @@ impl HestonGpuPricer {
             } else {
                 prices.push(price);
             }
-
-            if i == 0 {
-                eprintln!(
-                    "[Lewis] Option 0: S={:.2}, K={:.2}, T={:.4}, integral={:.6}, call={:.4}, final={:.4}",
-                    option.spot_price, option.strike, tau, integral, call_price, price
-                );
-            }
         }
 
-        eprintln!(
-            "[Lewis] Pricing complete: prices={:?}",
-            &prices[..prices.len().min(5)]
-        );
         Ok(prices)
     }
 
@@ -1103,12 +888,6 @@ impl HestonGpuPricer {
         char_func_imag: &[f64],
         options: &[OptionQuote],
     ) -> Result<Vec<f64>, GpuError> {
-        eprintln!(
-            "[DEBUG] fft_to_option_prices: {} options, fft_size={}",
-            options.len(),
-            self.fft_size
-        );
-
         let mut prices = Vec::with_capacity(options.len());
 
         // Setup FFT planner
@@ -1120,15 +899,9 @@ impl HestonGpuPricer {
         let eta = 0.25; // Grid spacing in log-strike space
         let lambda = 2.0 * PI / (eta * self.fft_size as f64);
 
-        eprintln!(
-            "[DEBUG] Lewis formula params: eta={:.2}, lambda={:.4}",
-            eta, lambda
-        );
-
         for (i, option) in options.iter().enumerate() {
             // Extract characteristic function for this option
             let start = i * self.fft_size;
-            let end = start + self.fft_size;
 
             // Log-moneyness
             let k = (option.strike / option.spot_price).ln();
@@ -1137,40 +910,20 @@ impl HestonGpuPricer {
             let now = chrono::Utc::now().timestamp();
             let tau = option.time_to_expiry(now);
 
-            if i == 0 {
-                eprintln!(
-                    "[DEBUG] Option 0: S={:.2}, K={:.2}, T={:.4}, r={:.4}, k={:.6}",
-                    option.spot_price, option.strike, tau, option.risk_free_rate, k
-                );
-            }
-
             // Construct modified characteristic function for Carr-Madan
             let mut modified_cf: Vec<Complex64> = Vec::with_capacity(self.fft_size);
-            let mut nonzero_psi_count = 0;
-            let mut clamped_count = 0; // Count how many values were clamped
 
             // Adaptive truncation: stop when values become negligible OR when they start overflowing
             let mut consecutive_small = 0;
             const TRUNCATION_THRESHOLD: f64 = 1e-6; // More aggressive threshold
             const CONSECUTIVE_LIMIT: usize = 5; // Stop sooner
             const MAX_SAFE_PHI: f64 = 50.0; // Hard limit on frequency to prevent overflow
-            let mut _truncated_at: Option<usize> = None;
 
             for j in 0..self.fft_size {
                 let phi = j as f64 * eta;
 
                 // Hard frequency limit: stop if we exceed safe threshold
                 if phi > MAX_SAFE_PHI {
-                    _truncated_at = Some(j);
-                    if i == 0 {
-                        eprintln!(
-                            "[HARD TRUNCATION] Option {}: Stopped at phi={:.2} (exceeds MAX_SAFE_PHI={}), padding remaining {} points",
-                            i,
-                            phi,
-                            MAX_SAFE_PHI,
-                            self.fft_size - j
-                        );
-                    }
                     // Pad remaining with zeros
                     for _ in j..self.fft_size {
                         modified_cf.push(Complex64::new(0.0, 0.0));
@@ -1197,25 +950,6 @@ impl HestonGpuPricer {
                 // Modified CF
                 let psi: Complex64 = discount * cf / denominator;
 
-                // DEBUG: Check for first Inf/NaN in psi
-                if i == 0 && (psi.re.is_infinite() || psi.im.is_infinite()) && j < 20 {
-                    eprintln!(
-                        "[DEBUG] ⚠️ Inf detected at j={}, phi={:.4}, cf=({:.6},{:.6}), denom=({:.4},{:.4}), psi=({:.6},{:.6})",
-                        j, phi, cf_real, cf_imag, denom_real, denom_imag, psi.re, psi.im
-                    );
-                }
-
-                if i == 0 && j < 5 {
-                    eprintln!(
-                        "[DEBUG]   j={}, phi={:.4}, cf=({:.6},{:.6}), discount={:.6}, denom=({:.4},{:.4}), psi=({:.6},{:.6})",
-                        j, phi, cf_real, cf_imag, discount, denom_real, denom_imag, psi.re, psi.im
-                    );
-                }
-
-                if psi.norm() > 1e-10 {
-                    nonzero_psi_count += 1;
-                }
-
                 // Apply Simpson's rule weighting
                 let weight = if j == 0 {
                     0.5
@@ -1239,7 +973,6 @@ impl HestonGpuPricer {
                     || weighted_psi.im.is_nan()
                 {
                     // Explicit overflow/NaN - truncate
-                    clamped_count += 1;
                     Complex64::new(0.0, 0.0)
                 } else {
                     // Keep all finite values, even if large
@@ -1251,18 +984,8 @@ impl HestonGpuPricer {
                 if clamped_psi.norm() < TRUNCATION_THRESHOLD {
                     consecutive_small += 1;
                     if consecutive_small >= CONSECUTIVE_LIMIT {
-                        // Stop processing - values have become negligible
-                        _truncated_at = Some(j);
-                        if i == 0 {
-                            eprintln!(
-                                "[ADAPTIVE TRUNCATION] Option {}: Stopped at j={} (phi={:.2}), padding remaining {} points with zeros",
-                                i,
-                                j,
-                                phi,
-                                self.fft_size - j
-                            );
-                        }
-                        // Pad remaining with zeros
+                        // Stop processing - values have become negligible.
+                        // Pad remaining with zeros.
                         modified_cf.push(clamped_psi);
                         for _ in (j + 1)..self.fft_size {
                             modified_cf.push(Complex64::new(0.0, 0.0));
@@ -1276,57 +999,6 @@ impl HestonGpuPricer {
                 modified_cf.push(clamped_psi);
             }
 
-            if i == 0 {
-                eprintln!(
-                    "[DEBUG] Option 0: nonzero_psi_count={}/{}, clamped_count={} ({:.1}%)",
-                    nonzero_psi_count,
-                    self.fft_size,
-                    clamped_count,
-                    (clamped_count as f64 / self.fft_size as f64) * 100.0
-                );
-
-                // DEBUG: Check FFT input for NaN/Inf and find problematic indices
-                let has_nan = modified_cf.iter().any(|c| c.re.is_nan() || c.im.is_nan());
-                let has_inf = modified_cf
-                    .iter()
-                    .any(|c| c.re.is_infinite() || c.im.is_infinite());
-                let max_real = modified_cf
-                    .iter()
-                    .map(|c| c.re.abs())
-                    .fold(0.0f64, f64::max);
-                let max_imag = modified_cf
-                    .iter()
-                    .map(|c| c.im.abs())
-                    .fold(0.0f64, f64::max);
-
-                // Find indices with Inf values
-                let inf_indices: Vec<usize> = modified_cf
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, c)| c.re.is_infinite() || c.im.is_infinite())
-                    .map(|(i, _)| i)
-                    .take(10) // Show first 10
-                    .collect();
-
-                eprintln!(
-                    "[DEBUG] Option 0 BEFORE FFT: has_nan={}, has_inf={}, max_real={:.2e}, max_imag={:.2e}",
-                    has_nan, has_inf, max_real, max_imag
-                );
-                eprintln!(
-                    "[DEBUG] Option 0 BEFORE FFT: first 5 values: {:?}",
-                    &modified_cf[..5.min(modified_cf.len())]
-                );
-                if !inf_indices.is_empty() {
-                    eprintln!(
-                        "[DEBUG] Option 0 BEFORE FFT: Inf found at indices: {:?}",
-                        inf_indices
-                    );
-                    for &idx in inf_indices.iter().take(3) {
-                        eprintln!("[DEBUG]   idx={}: value={:?}", idx, modified_cf[idx]);
-                    }
-                }
-            }
-
             // Apply FFT
             fft.process(&mut modified_cf);
 
@@ -1336,35 +1008,6 @@ impl HestonGpuPricer {
             let fft_norm = 1.0 / (self.fft_size as f64);
             for cf in modified_cf.iter_mut() {
                 *cf *= fft_norm;
-            }
-
-            if i == 0 {
-                // DEBUG: Check FFT output for NaN/Inf
-                let has_nan = modified_cf.iter().any(|c| c.re.is_nan() || c.im.is_nan());
-                let has_inf = modified_cf
-                    .iter()
-                    .any(|c| c.re.is_infinite() || c.im.is_infinite());
-                let max_real = modified_cf
-                    .iter()
-                    .map(|c| c.re.abs())
-                    .fold(0.0f64, f64::max);
-                let max_imag = modified_cf
-                    .iter()
-                    .map(|c| c.im.abs())
-                    .fold(0.0f64, f64::max);
-                eprintln!(
-                    "[DEBUG] Option 0 AFTER FFT (normalized by 1/N=1/{}): has_nan={}, has_inf={}, max_real={:.2e}, max_imag={:.2e}",
-                    self.fft_size, has_nan, has_inf, max_real, max_imag
-                );
-                eprintln!(
-                    "[DEBUG] Option 0 AFTER FFT: values at idx [0, 1024, 2048, 3072]: {:?}",
-                    vec![
-                        modified_cf[0],
-                        modified_cf[1024],
-                        modified_cf[2048],
-                        modified_cf[3072]
-                    ]
-                );
             }
 
             // Extract price at strike K
@@ -1386,13 +1029,6 @@ impl HestonGpuPricer {
             let fft_value = modified_cf[idx];
             let call_price = option.spot_price * ((-alpha * k).exp() / PI * fft_value.re);
 
-            if i == 0 {
-                eprintln!(
-                    "[DEBUG] Option 0: idx={}, k_at_idx={:.6}, fft_value=({:.6},{:.6}), raw_call_price={:.4}",
-                    idx, k_values[idx], fft_value.re, fft_value.im, call_price
-                );
-            }
-
             // Ensure non-negative price
             let call_price = call_price.max(0.0);
 
@@ -1406,17 +1042,8 @@ impl HestonGpuPricer {
                 }
             };
 
-            if i == 0 {
-                eprintln!(
-                    "[DEBUG] Option 0 final: type={:?}, call={:.4}, final_price={:.4}",
-                    option.option_type, call_price, price
-                );
-            }
-
             prices.push(price);
         }
-
-        eprintln!("[DEBUG] Final prices: {:?}", prices);
 
         Ok(prices)
     }
@@ -1425,6 +1052,38 @@ impl HestonGpuPricer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_heston_kernels_are_nvrtc_compatible_and_printf_free() {
+        // Host-side guard: the Heston kernels must stay NVRTC-compatible
+        // (no #include) and must not reacquire the per-thread printf debug
+        // blocks that used to serialize warps and flood stderr.
+        const CHAR_FUNC: &str = include_str!("cuda/heston/characteristic_function.cu");
+        const CARR_MADAN: &str = include_str!("cuda/heston/carr_madan_weight.cu");
+        const EXTRACT: &str = include_str!("cuda/heston/extract_prices.cu");
+
+        for (name, src) in [
+            ("characteristic_function.cu", CHAR_FUNC),
+            ("carr_madan_weight.cu", CARR_MADAN),
+            ("extract_prices.cu", EXTRACT),
+        ] {
+            assert!(
+                !src.contains("#include"),
+                "{} must not use #include (NVRTC-incompatible)",
+                name
+            );
+            assert!(
+                !src.contains("printf("),
+                "{} must not contain printf debug spam",
+                name
+            );
+        }
+
+        // Entry point names must match the host-side load_function() calls.
+        assert!(CHAR_FUNC.contains("extern \"C\" __global__ void heston_characteristic_function"));
+        assert!(CARR_MADAN.contains("extern \"C\" __global__ void carr_madan_weight"));
+        assert!(EXTRACT.contains("extern \"C\" __global__ void extract_prices"));
+    }
 
     #[test]
     #[ignore] // Requires GPU

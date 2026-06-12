@@ -80,8 +80,8 @@ pub use tick_aggregation::{AggregatedCandles, TickAggregator};
 
 #[cfg(feature = "gpu")]
 pub use l2_cache::{
-    AccessProperty, L2CachePolicy, calculate_l2_chunk_size, clear_l2_persist_policy,
-    set_l2_persist_policy,
+    AccessProperty, L2CachePolicy, L2PolicyStatus, calculate_l2_chunk_size,
+    calculate_l2_chunk_size_with_overlap, clear_l2_persist_policy, set_l2_persist_policy,
 };
 
 #[cfg(feature = "gpu")]
@@ -175,6 +175,7 @@ pub use rsi_fused::{is_fused_available, rsi_fused_gpu};
 pub mod macd;
 
 #[cfg(feature = "gpu")]
+#[allow(deprecated)] // re-exported for API compatibility; deprecation warns at call sites
 pub use macd::{macd_gpu, macd_hybrid};
 
 #[cfg(feature = "gpu")]
@@ -204,7 +205,17 @@ pub use elder_ray::elder_ray_gpu;
 pub mod ema;
 
 #[cfg(feature = "gpu")]
+#[allow(deprecated)] // re-exported for API compatibility; deprecation warns at call sites
 pub use ema::ema_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod ma_advanced;
+
+#[cfg(feature = "gpu")]
+pub use ma_advanced::{
+    KamaParams, dema_batch_gpu, dema_gpu, hma_gpu, kama_batch_gpu, kama_gpu, tema_batch_gpu,
+    tema_gpu,
+};
 
 #[cfg(feature = "gpu")]
 pub mod batch;
@@ -326,6 +337,12 @@ pub mod batch_graphs;
 pub use batch_graphs::BatchGraphExecutor;
 
 #[cfg(feature = "gpu")]
+pub mod kernels_2d;
+
+#[cfg(feature = "gpu")]
+pub use kernels_2d::{momentum_fusion_2d_gpu, rsi_batch_2d_gpu, sma_batch_2d_gpu};
+
+#[cfg(feature = "gpu")]
 pub mod kernels_3d;
 
 #[cfg(feature = "gpu")]
@@ -358,15 +375,14 @@ pub mod tick_batch;
 #[cfg(feature = "gpu")]
 pub use tick_batch::TickBatchProcessor;
 
-// FIXME: Temporarily disabled due to cudarc API changes
-// #[cfg(feature = "gpu")]
-// pub mod tick_backtest_batch;
+#[cfg(feature = "gpu")]
+pub mod tick_backtest_batch;
 
-// #[cfg(feature = "gpu")]
-// pub use tick_backtest_batch::{
-//     TickBacktestBatch, BacktestConfig, BacktestResult, GpuTrade,
-//     MAX_TRADES, MAX_PENDING_ORDERS, DEFAULT_EXECUTION_DELAY_MS,
-// };
+#[cfg(feature = "gpu")]
+pub use tick_backtest_batch::{
+    BacktestConfig, BacktestResult, DEFAULT_EXECUTION_DELAY_MS, GpuTrade, MAX_PENDING_ORDERS,
+    MAX_TRADES, TickBacktestBatch,
+};
 
 #[cfg(feature = "gpu")]
 pub mod orderflow_batch;
@@ -388,6 +404,12 @@ pub mod supertrend;
 
 #[cfg(feature = "gpu")]
 pub use supertrend::supertrend_gpu;
+
+#[cfg(feature = "gpu")]
+pub mod vwap;
+
+#[cfg(feature = "gpu")]
+pub use vwap::vwap_gpu;
 
 #[cfg(feature = "gpu")]
 pub mod vwap_anchored;
@@ -478,9 +500,10 @@ pub use heston_pricing::HestonGpuPricer;
 ///     &device, &timestamps, &open, &high, &low, &close, &volume, &parameter_sets
 /// )?;
 /// ```
+#[allow(clippy::too_many_arguments)] // mirrors the OHLCV column layout of the Python API
 pub fn batch_backtest_genetic(
     device: &GpuDevice,
-    timestamps: &[i64],
+    _timestamps: &[i64],
     open: &ndarray::Array1<f64>,
     high: &ndarray::Array1<f64>,
     low: &ndarray::Array1<f64>,
@@ -544,13 +567,9 @@ pub fn batch_backtest_genetic(
 
     // Output buffers
     let mut d_equity_curves = device.alloc_async(n_strategies * n_candles)?;
+    // Must match `#define MAX_TRADES` in kernels_backtest.cu — the kernels index
+    // trades[strategy_idx * MAX_TRADES + i].
     let max_trades = 1000;
-
-    // Trade struct size: 6 * f64 + 2 * i64 + i8 = 65 bytes, round to 72 for alignment
-    // But we'll allocate as separate arrays for simplicity
-    let d_trade_entry_prices = device.alloc_async(n_strategies * max_trades)?;
-    let d_trade_exit_prices = device.alloc_async(n_strategies * max_trades)?;
-    let d_trade_pnls = device.alloc_async(n_strategies * max_trades)?;
     let mut d_num_trades = device.allocate_device_buffer::<i32>(n_strategies)?;
 
     // Metrics buffers
@@ -560,8 +579,10 @@ pub fn batch_backtest_genetic(
 
     // ====== PHASE 2: COMPILE KERNELS ======
 
-    const BACKTEST_KERNELS: &str = include_str!("kernels_backtest.cu");
-    let ptx_arc = compile_ptx_optimized_cached(BACKTEST_KERNELS)?;
+    // Assembled source (warp_primitives.cuh + kernels_backtest.cu): NVRTC has an
+    // empty include path, so the header is prepended at Rust compile time; the
+    // string is identical to backtest/batch.rs so the SHA-256 PTX cache hits.
+    let ptx_arc = compile_ptx_optimized_cached(crate::backtest::batch::BACKTEST_KERNELS_SRC)?;
     let ptx = std::sync::Arc::unwrap_or_clone(ptx_arc);
 
     let module = device
@@ -602,7 +623,7 @@ pub fn batch_backtest_genetic(
     // ====== PHASE 3: LAUNCH KERNEL 1 - BATCH INDICATORS ======
 
     let block_size = 256;
-    let n_blocks_candles = (n_candles + block_size - 1) / block_size;
+    let n_blocks_candles = n_candles.div_ceil(block_size);
 
     let config_indicators = LaunchConfig {
         grid_dim: (
@@ -659,20 +680,24 @@ pub fn batch_backtest_genetic(
 
     // ====== PHASE 5: LAUNCH KERNEL 3 - BACKTEST EXECUTION ======
 
-    // Note: We're using a simplified version that doesn't track individual trades
-    // Just tracks equity curve for performance metrics
+    // Strategy-packed launch: one thread per strategy, 128 threads per block.
+    // The kernel reads close_prices straight from L2 — no dynamic shared memory.
+    const EXECUTION_BLOCK_SIZE: u32 = 128; // keep in sync with backtest/batch.rs
     let config_execution = LaunchConfig {
-        grid_dim: (n_strategies as u32, 1, 1),
-        block_dim: (1, 1, 1), // Single thread per strategy (sequential execution)
-        shared_mem_bytes: 128 * 8, // CHUNK_SIZE * sizeof(double) for shared memory cache
+        grid_dim: ((n_strategies as u32).div_ceil(EXECUTION_BLOCK_SIZE), 1, 1),
+        block_dim: (EXECUTION_BLOCK_SIZE, 1, 1),
+        shared_mem_bytes: 0,
     };
 
     let initial_capital = 10000.0;
     let trading_fee = 0.001; // 0.1%
     let slippage = 0.0005; // 0.05%
 
-    // Create dummy trade buffers (simplified version doesn't use these yet)
-    let mut d_trades = device.alloc_async(n_strategies * max_trades * 7)?; // Placeholder
+    // Byte-sized trades buffer: the kernel writes 48-byte `Trade` structs
+    // (layout mirrored by crate::backtest::batch::GpuTrade with const asserts).
+    let mut d_trades = device.allocate_device_buffer::<i8>(
+        n_strategies * max_trades * std::mem::size_of::<crate::backtest::batch::GpuTrade>(),
+    )?;
 
     let mut builder = device.stream.launch_builder(&kernel_execution);
     builder.arg(&d_signals);
@@ -680,6 +705,7 @@ pub fn batch_backtest_genetic(
     builder.arg(&mut d_equity_curves);
     builder.arg(&mut d_trades);
     builder.arg(&mut d_num_trades);
+    builder.arg(&mut d_max_drawdowns);
     builder.arg(&initial_capital);
     builder.arg(&trading_fee);
     builder.arg(&slippage);
@@ -696,7 +722,9 @@ pub fn batch_backtest_genetic(
     let config_metrics = LaunchConfig {
         grid_dim: (n_strategies as u32, 1, 1),
         block_dim: (256, 1, 1), // Parallel reduction within each strategy
-        shared_mem_bytes: 256 * 8 * 3, // 3 arrays for reduction (returns, sq_returns, drawdowns)
+        // Block reductions use the static __shared__ buffers inside
+        // warp_primitives' block_reduce_* helpers; no dynamic shared memory.
+        shared_mem_bytes: 0,
     };
 
     let mut builder = device.stream.launch_builder(&kernel_metrics);
@@ -704,7 +732,6 @@ pub fn batch_backtest_genetic(
     builder.arg(&d_trades);
     builder.arg(&d_num_trades);
     builder.arg(&mut d_sharpe_ratios);
-    builder.arg(&mut d_max_drawdowns);
     builder.arg(&mut d_win_rates);
     builder.arg(&n_strategies_i32);
     builder.arg(&n_candles_i32);
@@ -722,6 +749,10 @@ pub fn batch_backtest_genetic(
     let max_drawdowns = device.copy_to_host(&d_max_drawdowns)?;
     let win_rates = device.copy_to_host(&d_win_rates)?;
     let equity_curves_flat = device.copy_to_host(&d_equity_curves)?;
+    let num_trades_host: Vec<i32> = device
+        .stream
+        .memcpy_dtov(&d_num_trades)
+        .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e)))?;
 
     // ====== PHASE 8: BUILD BACKTEST RESULTS ======
 
@@ -739,11 +770,12 @@ pub fn batch_backtest_genetic(
                 final_equity,
                 total_return,
                 sharpe_ratio: sharpe_ratios[i],
-                max_drawdown: max_drawdowns[i] * 100.0, // Convert to percentage
-                win_rate: win_rates[i] * 100.0,         // Convert to percentage
-                num_trades: 0,                          // TODO: Extract from d_num_trades
-                profit_factor: 1.0,                     // TODO: Calculate from trades
-                trades: Vec::new(),                     // TODO: Extract from d_trades
+                // Kernel writes a fraction; BacktestResult::fitness expects percent.
+                max_drawdown: max_drawdowns[i] * 100.0,
+                win_rate: win_rates[i] * 100.0, // Convert to percentage
+                num_trades: num_trades_host[i] as usize,
+                profit_factor: 1.0, // Placeholder: not computed on GPU (mirrors batch.rs path)
+                trades: Vec::new(), // Placeholder: trade structs not copied back (mirrors batch.rs)
             }
         })
         .collect();

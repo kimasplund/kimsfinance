@@ -5,7 +5,7 @@
 //! # Quantization Strategy
 //!
 //! - **Per-feature calibration**: Each of 6 features gets its own [min, max] range
-//! - **Compression ratio**: 8x (24 bytes → 6 bytes per tick)
+//! - **Compression ratio**: 4x (24 bytes → 6 bytes per tick)
 //! - **Memory savings**: 19GB → 2.4GB for 10 strategies (106M ticks each)
 //! - **Target accuracy**: <0.01% deviation in final backtest results
 //!
@@ -81,7 +81,7 @@
 //!
 //! # Fallback Strategy
 //!
-//! If accuracy loss > 0.01%, automatically falls back to FP16 (4x compression instead of 8x).
+//! If accuracy loss > 0.01%, automatically falls back to FP16 (2x compression instead of 4x).
 
 use crate::gpu::{GpuDevice, GpuError};
 use cudarc::driver::{CudaSlice, LaunchConfig, PushKernelArg};
@@ -384,7 +384,7 @@ impl QuantizationCalibrator {
 
         // Launch kernel: 256 threads per block, process 4 features per thread
         let block_size = 256;
-        let n_blocks = ((total_elements + block_size * 4 - 1) / (block_size * 4)) as u32;
+        let n_blocks = total_elements.div_ceil(block_size * 4) as u32;
 
         let config = LaunchConfig {
             grid_dim: (n_blocks, 1, 1),
@@ -491,7 +491,7 @@ impl QuantizationCalibrator {
 
         // Launch kernel
         let block_size = 256;
-        let n_blocks = ((total_elements + block_size * 4 - 1) / (block_size * 4)) as u32;
+        let n_blocks = total_elements.div_ceil(block_size * 4) as u32;
 
         let config = LaunchConfig {
             grid_dim: (n_blocks, 1, 1),
@@ -584,7 +584,7 @@ impl QuantizationCalibrator {
 ///
 /// - FP32: 106M ticks × 6 features × 4 bytes = 2.54GB per strategy
 /// - INT8: 106M ticks × 6 features × 1 byte = 636MB per strategy
-/// - Savings: **8x compression** (75% reduction)
+/// - Savings: **4x compression** (75% reduction)
 ///
 /// # Example
 ///
@@ -732,8 +732,8 @@ mod tests {
         let compression_ratio = fp32_size as f64 / int8_size as f64;
 
         assert!(
-            compression_ratio > 7.9 && compression_ratio < 8.1,
-            "Compression ratio should be ~8x, got {:.2}x",
+            compression_ratio > 3.9 && compression_ratio < 4.1,
+            "Compression ratio should be ~4x (FP32 -> INT8), got {:.2}x",
             compression_ratio
         );
     }

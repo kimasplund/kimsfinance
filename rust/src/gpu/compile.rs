@@ -40,7 +40,7 @@ static COMPILE_OPTS: OnceLock<CompileOptions> = OnceLock::new();
 /// Global cache for compiled PTX kernels
 /// Key: SHA-256 hash of source code
 /// Value: Arc<Ptx> for zero-copy sharing across threads
-static KERNEL_CACHE: LazyLock<DashMap<String, Arc<Ptx>>> = LazyLock::new(|| DashMap::new());
+static KERNEL_CACHE: LazyLock<DashMap<String, Arc<Ptx>>> = LazyLock::new(DashMap::new);
 
 /// Cache hit counter (for statistics)
 static CACHE_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -426,6 +426,10 @@ pub fn compile_backtest_kernels() -> Result<Arc<Ptx>, cudarc::nvrtc::CompileErro
 mod tests {
     use super::*;
 
+    /// Serializes tests that mutate the process-global PTX cache and its
+    /// hit/miss counters; without this they race under `--test-threads > 1`.
+    static CACHE_TEST_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
+
     #[test]
     fn test_default_arch_is_compute_89() {
         // Clear environment to test default
@@ -487,6 +491,7 @@ mod tests {
 
     #[test]
     fn test_cache_hit() {
+        let _guard = CACHE_TEST_LOCK.lock();
         clear_cache();
         const SIMPLE_KERNEL: &str = r#"
         extern "C" __global__ void test_cache_kernel(double* out, int n) {
@@ -516,6 +521,7 @@ mod tests {
 
     #[test]
     fn test_different_kernels() {
+        let _guard = CACHE_TEST_LOCK.lock();
         clear_cache();
         const KERNEL1: &str = r#"
         extern "C" __global__ void kernel1(double* out, int n) {
@@ -548,6 +554,7 @@ mod tests {
 
     #[test]
     fn test_clear_cache() {
+        let _guard = CACHE_TEST_LOCK.lock();
         clear_cache();
         const SIMPLE_KERNEL: &str = r#"
         extern "C" __global__ void clear_test(double* out, int n) {
@@ -602,6 +609,7 @@ mod tests {
 
     #[test]
     fn test_compile_ptx_cached_ref_shares_cache() {
+        let _guard = CACHE_TEST_LOCK.lock();
         const KERNEL: &str = r#"
         extern "C" __global__ void cached_ref_kernel(double* out, int n) {
             int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -622,6 +630,7 @@ mod tests {
 
     #[test]
     fn test_compilation_error_not_cached() {
+        let _guard = CACHE_TEST_LOCK.lock();
         clear_cache();
         const BAD_KERNEL: &str = r#"
         extern "C" __global__ void bad_syntax(double* out, int n) {

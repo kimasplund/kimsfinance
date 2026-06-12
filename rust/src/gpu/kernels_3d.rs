@@ -487,7 +487,7 @@ pub fn rsi_sweep_3d_gpu(
 
     let stage1_config = LaunchConfig {
         grid_dim: (
-            ((n_candles + 255) / 256) as u32, // x: candle chunks
+            n_candles.div_ceil(256) as u32, // x: candle chunks
             n_assets as u32,                  // y: asset batch
             1,
         ),
@@ -561,7 +561,7 @@ pub fn rsi_sweep_3d_gpu(
     // === Step 5: GPU - Calculate final RSI (3D parallel) ===
     let final_config = LaunchConfig {
         grid_dim: (
-            ((n_candles + 255) / 256) as u32, // x: candle chunks
+            n_candles.div_ceil(256) as u32, // x: candle chunks
             n_periods as u32,                 // y: period sweep
             n_assets as u32,                  // z: asset batch
         ),
@@ -643,7 +643,7 @@ pub fn sma_sweep_3d_gpu(
 
     let config = LaunchConfig {
         grid_dim: (
-            ((n_candles + 255) / 256) as u32,
+            n_candles.div_ceil(256) as u32,
             n_periods as u32,
             n_assets as u32,
         ),

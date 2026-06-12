@@ -30,12 +30,6 @@
 //!
 //! - Batch size 100 options, 4096 FFT points: <3ms
 //! - 100-500x speedup vs CPU for calibration workloads
-//!
-//! # Debug Mode
-//!
-//! This kernel includes comprehensive printf debugging (thread 0 only).
-//! All intermediate complex values are printed with "CUDA_DEBUG:" prefix.
-//! Use this to trace where imaginary parts become zero.
 
 // CUDA built-in math functions (no header needed with NVRTC)
 
@@ -154,33 +148,22 @@ extern "C" __global__ void heston_characteristic_function(
     // Early exit with 2D bounds check
     if (option_idx >= n_options || phi_idx >= n_fft) return;
 
-    // Compute linear index for debug prints and output
+    // Linear output index
     int idx = option_idx * n_fft + phi_idx;
 
-    double K = strikes[option_idx];
+    // NOTE: `strikes` is intentionally NOT read here. The characteristic
+    // function does not depend on the strike (it enters the pricing formula
+    // later, on the host / in extract_prices). The parameter is kept so the
+    // kernel ABI matches the host launch site (heston_pricing.rs arg 6).
     double T = expirations[option_idx];
     double S = spot_prices[option_idx];
     double r = risk_free_rates[option_idx];
-    
+
     // CRITICAL FIX: Construct COMPLEX argument z = u - (α+1)i
     // This is required by Carr-Madan FFT formula!
     double u_real = phi_values[phi_idx];
     double u_imag = -(alpha + 1.0);  // Typically -2.5 for α=1.5
     Complex z = Complex(u_real, u_imag);
-
-    // Print debug for both u=0 (idx=0) and u≠0 (idx=1) to see difference
-    bool debug_print = (idx == 0 || idx == 1);
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d, phi_idx=%d]: Initial z = (%f, %f)\n", idx, phi_idx, z.real, z.imag);
-        printf("CUDA_DEBUG [idx=%d]: u_real=%f (from phi_values), u_imag=%f (=-(alpha+1))\n",
-               idx, u_real, u_imag);
-        if (idx == 0) {
-            printf("CUDA_DEBUG [idx=%d]: Parameters: kappa=%f, theta=%f, sigma=%f, rho=%f, v0=%f, alpha=%f\n",
-                   idx, kappa, theta, sigma, rho, v0, alpha);
-            printf("CUDA_DEBUG [idx=%d]: Option params: S=%f, K=%f, T=%f, r=%f\n", idx, S, K, T, r);
-        }
-    }
 
     // Heston characteristic function computation for COMPLEX z
     // φ(z) = exp(C(T,z) + D(T,z)v₀ + iz·ln(S))
@@ -198,24 +181,11 @@ extern "C" __global__ void heston_characteristic_function(
     // Compute iz (i times z)
     Complex i_z = i_unit * z;
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: i_z = i * z = (%f, %f)\n", idx, i_z.real, i_z.imag);
-    }
-
     // Compute ρσiz
     Complex rho_sigma_i_z = Complex(rho * sigma, 0.0) * i_z;
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: rho_sigma_i_z = rho*sigma*i_z = (%f, %f)\n",
-               idx, rho_sigma_i_z.real, rho_sigma_i_z.imag);
-    }
-
     // Compute z² (z squared)
     Complex z_squared = z * z;
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: z_squared = (%f, %f)\n", idx, z_squared.real, z_squared.imag);
-    }
 
     // GATHERAL (2005) NUMERICALLY STABLE FORMULATION
     // Critical fix for "Little Heston Trap" (Albrecher et al. 2007)
@@ -232,19 +202,11 @@ extern "C" __global__ void heston_characteristic_function(
 
     Complex d_squared = term1 - term2;  // Subtract for Gatheral formulation
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: d_squared = (%f, %f)\n", idx, d_squared.real, d_squared.imag);
-    }
-
     // Gatheral branch cut selection: Choose branch with Re(d) > 0
     Complex d_raw = d_squared.sqrt();
 
     // If Re(d) < 0, flip the sign (choose the other branch)
     Complex d = (d_raw.real < 0.0) ? Complex(-d_raw.real, -d_raw.imag) : d_raw;
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: d = sqrt(d_squared) = (%f, %f)\n", idx, d.real, d.imag);
-    }
 
     // g = (b - ρσiz - d) / (b - ρσiz + d)
     Complex b_minus_rho_sigma_iz = b_complex - rho_sigma_i_z;
@@ -252,17 +214,8 @@ extern "C" __global__ void heston_characteristic_function(
     Complex denominator_g = b_minus_rho_sigma_iz + d;
     Complex g = numerator_g / denominator_g;
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: g = (%f, %f)\n", idx, g.real, g.imag);
-    }
-
     // e^(-d·T)
     Complex exp_neg_d_T = (d * (-T)).exp();
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: exp_neg_d_T = exp(-d*T) = (%f, %f)\n",
-               idx, exp_neg_d_T.real, exp_neg_d_T.imag);
-    }
 
     // D(T,z) = (b - ρσiz - d) / σ² · (1 - e^(-dT)) / (1 - g·e^(-dT))
     Complex one = Complex(1.0, 0.0);
@@ -270,10 +223,6 @@ extern "C" __global__ void heston_characteristic_function(
     Complex denominator_D_frac = one - g * exp_neg_d_T;
     Complex D_frac = numerator_D_frac / denominator_D_frac;
     Complex D = numerator_g / Complex(sigma_sq, 0.0) * D_frac;
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: D = (%f, %f)\n", idx, D.real, D.imag);
-    }
 
     // C(T,z) = r·iz·T + (κθ/σ²)[(b - ρσiz - d)T - 2ln((1 - g·e^(-dT))/(1 - g))]
     Complex r_iz_T = Complex(r * T, 0.0) * i_z;
@@ -288,45 +237,15 @@ extern "C" __global__ void heston_characteristic_function(
 
     Complex C = r_iz_T + Complex(kappa_theta_over_sigma_sq, 0.0) * (term_C1 - term_C2);
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: C = (%f, %f)\n", idx, C.real, C.imag);
-    }
-
     // φ(z) = exp(C + D·v₀ + iz·ln(S))
     Complex D_v0 = D * v0;
     Complex iz_ln_S = i_z * ::log(S);
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: D_v0 = (%f, %f)\n", idx, D_v0.real, D_v0.imag);
-        printf("CUDA_DEBUG [idx=%d]: iz_ln_S = (%f, %f)\n", idx, iz_ln_S.real, iz_ln_S.imag);
-    }
-
     Complex exponent = C + D_v0 + iz_ln_S;
-
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: exponent = C + D*v0 + iz*ln(S) = (%f, %f)\n",
-               idx, exponent.real, exponent.imag);
-    }
 
     Complex phi = exponent.exp();
 
-    if (debug_print) {
-        printf("CUDA_DEBUG [idx=%d]: phi = exp(exponent) = (%f, %f)\n", idx, phi.real, phi.imag);
-    }
-    
     // Store results
     char_func_real[idx] = phi.real;
     char_func_imag[idx] = phi.imag;
-
-    // DEBUG: Verify write (only first few threads)
-    if (idx < 2) {
-        printf("CUDA_DEBUG [idx=%d]: AFTER WRITE - char_func_real[%d] = %.6f, char_func_imag[%d] = %.6f\n",
-               idx, idx, char_func_real[idx], idx, char_func_imag[idx]);
-
-        // IMMEDIATE readback without syncthreads to avoid race
-        double immediate_readback_real = char_func_real[idx];
-        double immediate_readback_imag = char_func_imag[idx];
-        printf("CUDA_DEBUG [idx=%d]: IMMEDIATE READBACK - real=%.6f, imag=%.6f\n",
-               idx, immediate_readback_real, immediate_readback_imag);
-    }
 }

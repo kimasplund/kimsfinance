@@ -82,6 +82,26 @@ __device__ __forceinline__ uint32_t float_to_ordered_uint(float x) {
 }
 
 // ============================================================================
+// Warp shuffle helper (i64 via two 32-bit shuffles)
+// ============================================================================
+
+/**
+ * Warp shuffle-down of an i64 value built from two 32-bit shuffles.
+ *
+ * NVRTC provides the 32-bit __shfl_down_sync overloads as compiler builtins;
+ * the 64-bit overloads are SDK-header inline functions (sm_30_intrinsics.hpp)
+ * that NVRTC is not guaranteed to pre-include, so the halves are shuffled
+ * explicitly and reassembled in unsigned math (well-defined for negatives).
+ */
+__device__ __forceinline__ int64_t shfl_down_i64(uint32_t mask, int64_t v, int offset) {
+    int32_t lo = (int32_t)(uint32_t)((uint64_t)v & 0xFFFFFFFFu);
+    int32_t hi = (int32_t)(uint32_t)((uint64_t)v >> 32);
+    lo = __shfl_down_sync(mask, lo, offset);
+    hi = __shfl_down_sync(mask, hi, offset);
+    return (int64_t)(((uint64_t)(uint32_t)hi << 32) | (uint64_t)(uint32_t)lo);
+}
+
+// ============================================================================
 // Kernel 1: Parallel Binning (standalone utility, rebased indices)
 // ============================================================================
 
@@ -193,8 +213,8 @@ extern "C" __global__ void compute_bucket_range_kernel(
     // is full and the full mask is valid; threads with no elements hold the
     // neutral LLONG_MAX/LLONG_MIN values.
     for (int offset = 16; offset > 0; offset >>= 1) {
-        int64_t other_min = __shfl_down_sync(0xFFFFFFFFu, local_min, offset);
-        int64_t other_max = __shfl_down_sync(0xFFFFFFFFu, local_max, offset);
+        int64_t other_min = shfl_down_i64(0xFFFFFFFFu, local_min, offset);
+        int64_t other_max = shfl_down_i64(0xFFFFFFFFu, local_max, offset);
         if (other_min < local_min) local_min = other_min;
         if (other_max > local_max) local_max = other_max;
     }

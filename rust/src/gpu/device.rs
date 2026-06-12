@@ -5,8 +5,7 @@
 use super::async_alloc::AsyncAllocator;
 use super::persistent::pinned_memory::PinnedBufferPool;
 use cudarc::driver::{
-    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, PushKernelArg,
-    result::DriverError,
+    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, result::DriverError,
 };
 use cudarc::nvrtc::CompileError;
 use dashmap::DashMap;
@@ -379,7 +378,7 @@ impl GpuDevice {
     pub fn supports_async_alloc(&self) -> bool {
         self.async_allocator
             .as_ref()
-            .map_or(false, |a| a.supports_async())
+            .is_some_and(|a| a.supports_async())
     }
 
     /// Get async allocator statistics

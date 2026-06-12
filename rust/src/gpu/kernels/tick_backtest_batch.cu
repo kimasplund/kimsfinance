@@ -1,50 +1,101 @@
-//! GPU Tick-Level Batch Backtest Kernel with Pending Orders Queue
-//!
-//! # Architecture
-//!
-//! - **Sequential per-strategy**: Maintains position state correctness
-//! - **Parallel across strategies**: 10-20 strategies in parallel (one block per strategy)
-//! - **Pending orders queue**: 10ms execution delay simulation
-//! - **Exact CPU matching**: Matches tick_engine.rs calculations exactly
-//!
-//! # Performance Target
-//!
-//! - **Throughput**: 1-1.5B ticks/sec (10-20 strategies in parallel)
-//! - **Latency**: 10ms execution delay (configurable)
-//! - **Accuracy**: <0.01% deviation from CPU backtest
-//!
-//! # Memory Layout
-//!
-//! - Pending orders: 2KB per strategy (100 orders × 20 bytes)
-//! - Position state: Stored in registers (zero contention)
-//! - Trades array: 1000 trades max per strategy (MAX_TRADES)
-//!
-//! # Queue Overflow Handling
-//!
-//! If pending queue exceeds 100 orders:
-//! - Log warning (printf)
-//! - Execute immediately (graceful degradation)
-//! - Continue processing (no crash)
+/**
+ * GPU Tick-Level Batch Backtest Kernel with Pending Orders Queue
+ *
+ * NVRTC-JIT-compiled at runtime (gpu/compile.rs, targets compute_89):
+ * no header inclusion of any kind, extern "C" __global__ entry points only,
+ * NVRTC built-in types/intrinsics exclusively.
+ *
+ * ## Normative reference
+ *
+ * rust/src/backtest/tick_engine.rs defines the ground-truth cost model and
+ * equity semantics. This kernel mirrors it exactly:
+ *
+ * - Orders execute at the CURRENT tick's market price and timestamp once
+ *   current_time >= signal_time + execution_delay_ms (tick_engine.rs:218-232
+ *   executes pending orders with trade.price / trade.timestamp_ms — NOT the
+ *   stale signal-time price the previous kernel used).
+ * - Fees and slippage are charged exactly once, inside open_position /
+ *   close_position (tick_engine.rs:331-418). The previous kernel ALSO
+ *   pre-adjusted the execution price by (1 +/- slippage +/- fee),
+ *   double-charging every trade.
+ * - Equity is marked to market as cash + position_value + unrealized P&L
+ *   (tick_engine.rs:426-441). The previous kernel returned size * price for
+ *   longs (overstating by entry costs) and dropped position_value for shorts.
+ * - Any position still open after the last tick is force-closed at the last
+ *   price/timestamp (recording the trade), while final_equity reports the
+ *   last in-loop mark-to-market value — tick_engine.rs:259-271 passes the
+ *   pre-close `position.equity` to calculate_metrics. Quirky, but it is the
+ *   normative CPU behavior and the GPU-vs-CPU parity tests assert it.
+ *
+ * ## Signal contract (pipeline boundary)
+ *
+ * The orderflow producer (kernels/orderflow_signals_batch.cu and
+ * cpu/orderflow.rs) emits i8 signals BUY=1, SELL=-1, HOLD=0. This kernel
+ * remaps raw signals at execution time (see remap_signal):
+ *
+ *   raw  1  -> BUY (close short if any, open long)
+ *   raw -1  -> SELL (close long) when allow_short == 0,
+ *              SHORT (close long, open short) when allow_short != 0
+ *   raw  0  -> HOLD
+ *   raw 2-4 -> legacy enum encoding, unchanged (SELL=2, SHORT=3, COVER=4)
+ *   other   -> HOLD (defensive)
+ *
+ * The previous kernel interpreted raw bytes directly as the 0..4 enum,
+ * silently dropping every -1 sell signal from the orderflow pipeline.
+ *
+ * ## Occupancy
+ *
+ * One THREAD per strategy (grid = ceil(N_strategies / THREADS_PER_BLOCK),
+ * block = THREADS_PER_BLOCK). Every thread walks the tick loop in lockstep,
+ * so prices[tick] / timestamps[tick] loads are warp-uniform broadcasts.
+ * The previous kernel launched one single-thread block per strategy with all
+ * other lanes returning immediately — 10-20 active threads on the whole GPU.
+ * The pending-order queue lives in a per-thread local array (1.6KB/thread);
+ * the old shared-memory queue was both pointless for one thread and broken
+ * for more than one.
+ *
+ * ## Precision
+ *
+ * Position/cash accumulators are deliberately FP64 despite Ada's 1:64
+ * FP64:FP32 throughput: equity compounds over up to 1e8 ticks and the parity
+ * contract with the f64 CPU engine is 1e-9. The tick loop is dominated by
+ * global memory latency (sequential per-strategy scan), not arithmetic, so
+ * the FP64 penalty is hidden. f32 price migration is deferred until runtime
+ * benchmarking is possible.
+ *
+ * ## Memory
+ *
+ * - equity_stride parameter: 0 = no equity curve stored, k = every k-th tick
+ *   (ceil(N_ticks / k) points per strategy). Sharpe/drawdown/returns are
+ *   computed incrementally in registers, so a 106M-tick x 10-strategy run no
+ *   longer needs the 8B/tick/strategy store (and the matching multi-GB D2H).
+ * - Queue overflow increments overflow_counts[strategy] via atomicAdd and
+ *   executes the order immediately (graceful degradation). The previous
+ *   kernel issued a device-side print from the hot loop.
+ *
+ * ## Preconditions
+ *
+ * timestamps must be non-decreasing (tick data). FIFO order + a constant
+ * delay then guarantees the queue head always holds the earliest execution
+ * time, so the head-only expiry check below is exhaustive.
+ */
 
-// NVRTC Kernel - Do NOT include system headers
-// Built-in CUDA types and functions provided by NVRTC
-
-// Type definitions
+// NVRTC kernel - no system headers; built-in types only
 typedef signed char int8_t;
 typedef long long int64_t;
 
-// Constants
-#define CUDART_NAN __longlong_as_double(0x7ff8000000000000ULL)
-#define CUDART_INF __longlong_as_double(0x7ff0000000000000ULL)
+// Layout contract mirrored in rust/src/gpu/tick_backtest_batch.rs
+// (host-side tests assert these #define lines verbatim)
 #define MAX_TRADES 1000
 #define MAX_PENDING_ORDERS 100
-#define DEFAULT_EXECUTION_DELAY_MS 10
+#define THREADS_PER_BLOCK 128
 
 // ============================================================================
 // DATA STRUCTURES
 // ============================================================================
 
-/// Trade signal enumeration (matches Rust Signal enum)
+/// Trade signal enumeration (kernel-internal encoding; see remap_signal for
+/// the accepted wire encodings)
 enum Signal : int8_t {
     HOLD = 0,
     BUY = 1,
@@ -53,7 +104,10 @@ enum Signal : int8_t {
     COVER = 4
 };
 
-/// Completed trade record
+/// Completed trade record.
+///
+/// Layout contract with Rust `GpuTrade` (#[repr(C)]): 3 x double + 2 x
+/// int64_t + int8_t, natural alignment 8 -> sizeof == 48 (asserted host-side).
 struct Trade {
     double entry_price;
     double exit_price;
@@ -63,32 +117,37 @@ struct Trade {
     int8_t direction; // 1=Long, -1=Short
 };
 
-/// Pending order in execution queue
+/// Pending order: 16-byte packed record in per-thread local memory.
+///
+/// `signal` stores the RAW pipeline byte (remapped at execution time so the
+/// allow_short policy applies uniformly to queued and overflow-executed
+/// orders). `signal_price` records the f32 market price at signal time for
+/// diagnostics / future limit-order semantics; execution itself uses the
+/// CURRENT tick's price for CPU parity (see file header).
 struct PendingOrder {
-    Signal signal;
-    int64_t execution_time;  // timestamp_ms + delay
-    double price;            // Price at signal time
-    bool active;             // Is this slot active?
+    int64_t execution_time; // signal timestamp_ms + execution_delay_ms
+    float signal_price;     // price at signal time (reference only)
+    int8_t signal;          // raw pipeline signal byte
+    // 3 padding bytes -> sizeof == 16
 };
 
-/// Position state (stored in registers for performance)
+/// Position state (registers; mirrors tick_engine.rs `Position` fields)
 struct Position {
-    double cash;              // Available cash
-    double position_size;     // >0=long, <0=short, 0=flat
-    double position_value;    // Net position value after fees
-    double entry_price;       // Entry price
-    int64_t entry_timestamp;  // Entry timestamp
+    double cash;             // Available cash
+    double position_size;    // >0=long, <0=short, 0=flat
+    double position_value;   // Entry value NET of entry costs
+    double entry_price;      // Entry price
+    int64_t entry_timestamp; // Entry timestamp
 };
 
 // ============================================================================
-// WELFORD'S ALGORITHM FOR NUMERICAL STABILITY
+// WELFORD'S ALGORITHM (numerically stable running mean/variance for Sharpe)
 // ============================================================================
 
-/// Online mean and variance calculation (numerically stable)
 struct WelfordAccumulator {
     double mean;
-    double M2;  // Sum of squared differences from mean
-    int n;      // Sample count
+    double M2; // Sum of squared differences from mean
+    int n;     // Sample count
 };
 
 __device__ inline void welford_init(WelfordAccumulator* acc) {
@@ -115,86 +174,36 @@ __device__ inline double welford_std_dev(const WelfordAccumulator* acc) {
 }
 
 // ============================================================================
-// CIRCULAR QUEUE OPERATIONS
+// SIGNAL REMAP (pipeline contract; see file header)
 // ============================================================================
 
-__device__ void queue_init(
-    PendingOrder* queue,
-    int* head,
-    int* tail,
-    int* size
-) {
-    *head = 0;
-    *tail = 0;
-    *size = 0;
-
-    // Initialize all slots as inactive
-    for (int i = 0; i < MAX_PENDING_ORDERS; i++) {
-        queue[i].active = false;
+__device__ inline Signal remap_signal(int8_t raw, int allow_short) {
+    if (raw == -1) {
+        // Orderflow SELL: close long; additionally open short when the
+        // allow_short policy permits (matches tick_engine.rs Signal::Sell,
+        // which closes any long and opens a short via open_position(-1.0)).
+        return allow_short ? SHORT : SELL;
     }
-}
-
-__device__ bool queue_add(
-    PendingOrder* queue,
-    int* head,
-    int* tail,
-    int* size,
-    Signal signal,
-    int64_t execution_time,
-    double price
-) {
-    if (*size >= MAX_PENDING_ORDERS) {
-        return false;  // Queue full
+    if (raw >= 0 && raw <= 4) {
+        return (Signal)raw; // legacy 0..4 encoding, unchanged
     }
-
-    queue[*tail].signal = signal;
-    queue[*tail].execution_time = execution_time;
-    queue[*tail].price = price;
-    queue[*tail].active = true;
-
-    *tail = (*tail + 1) % MAX_PENDING_ORDERS;
-    (*size)++;
-
-    return true;
-}
-
-__device__ PendingOrder queue_peek(
-    const PendingOrder* queue,
-    int head
-) {
-    return queue[head];
-}
-
-__device__ void queue_remove(
-    PendingOrder* queue,
-    int* head,
-    int* size
-) {
-    queue[*head].active = false;
-    *head = (*head + 1) % MAX_PENDING_ORDERS;
-    (*size)--;
+    return HOLD; // defensive: unknown bytes do nothing
 }
 
 // ============================================================================
-// POSITION MANAGEMENT (MATCHES CPU tick_engine.rs EXACTLY!)
+// POSITION MANAGEMENT (mirrors tick_engine.rs open/close/update exactly)
 // ============================================================================
 
-/// Open position (matches tick_engine.rs:331-356)
+/// Open position with all available cash (tick_engine.rs:331-357).
+/// Caller closes any existing position first (CPU does the same).
 __device__ void open_position(
     Position* pos,
     double price,
     int64_t timestamp,
-    double direction,  // 1.0 = long, -1.0 = short
+    double direction, // 1.0 = long, -1.0 = short
     double trading_fee,
-    double slippage,
-    Trade* trades,
-    int* trade_count,
-    int max_trades
+    double slippage
 ) {
-    // Close existing position first (if any)
-    // This will be handled by caller to match CPU logic
-
-    // Calculate position size (use all available cash)
     double gross_position_value = pos->cash / price;
     double fee = gross_position_value * price * trading_fee;
     double slippage_cost = gross_position_value * price * slippage;
@@ -203,11 +212,13 @@ __device__ void open_position(
     pos->position_size = gross_position_value * direction;
     pos->entry_price = price;
     pos->entry_timestamp = timestamp;
-    pos->position_value = pos->cash - total_cost;  // NET value after costs
-    pos->cash = 0.0;  // All cash converted to position
+    pos->position_value = pos->cash - total_cost; // NET value after costs
+    pos->cash = 0.0;                              // All cash converted to position
 }
 
-/// Close position (matches tick_engine.rs:367-418)
+/// Close position at exit_price (tick_engine.rs:367-418). The ONLY place
+/// exit fees/slippage are charged; pnl itself is gross of exit costs,
+/// exactly like the CPU trade records.
 __device__ void close_position(
     Position* pos,
     double exit_price,
@@ -219,21 +230,18 @@ __device__ void close_position(
     int max_trades
 ) {
     if (pos->position_size == 0.0) {
-        return;  // No position to close
+        return; // No position to close
     }
 
     double exit_value = fabs(pos->position_size) * exit_price;
     double fee = exit_value * trading_fee;
     double slippage_cost = exit_value * slippage;
 
-    // Calculate P&L (matches CPU logic exactly)
     double pnl;
     if (pos->position_size > 0.0) {
-        // Long position
-        pnl = exit_value - pos->position_value;
+        pnl = exit_value - pos->position_value; // Long
     } else {
-        // Short position
-        pnl = pos->position_value - exit_value;
+        pnl = pos->position_value - exit_value; // Short
     }
 
     pos->cash += pos->position_value + pnl - fee - slippage_cost;
@@ -256,29 +264,35 @@ __device__ void close_position(
     pos->entry_timestamp = 0;
 }
 
-/// Update equity with mark-to-market (matches tick_engine.rs:426-438)
-__device__ double calculate_equity(
-    const Position* pos,
-    double current_price
-) {
+/// Mark-to-market equity (tick_engine.rs:426-441):
+/// flat  -> cash
+/// long  -> cash + position_value + (price - entry) * size
+/// short -> cash + position_value + (entry - price) * |size|
+__device__ double calculate_equity(const Position* pos, double current_price) {
     if (pos->position_size == 0.0) {
         return pos->cash;
-    } else if (pos->position_size > 0.0) {
-        // Long position: current market value
-        return pos->position_size * current_price;
-    } else {
-        // Short position: cash + unrealized P&L
-        return pos->cash + pos->position_size * (pos->entry_price - current_price);
     }
+    double unrealized;
+    if (pos->position_size > 0.0) {
+        unrealized = (current_price - pos->entry_price) * pos->position_size;
+    } else {
+        unrealized = (pos->entry_price - current_price) * fabs(pos->position_size);
+    }
+    return pos->cash + pos->position_value + unrealized;
 }
 
 // ============================================================================
-// TRADE EXECUTION WITH PENDING ORDERS
+// TRADE EXECUTION
 // ============================================================================
 
-/// Execute signal with slippage and fees
+/// Execute one raw pipeline signal at the RAW market price. No price
+/// pre-adjustment here: fees and slippage are charged once inside
+/// open_position / close_position, mirroring tick_engine.rs (the previous
+/// kernel multiplied price by (1 +/- slippage +/- fee) on top, double
+/// charging every trade).
 __device__ void execute_signal(
-    Signal signal,
+    int8_t raw_signal,
+    int allow_short,
     Position* pos,
     double current_price,
     int64_t current_time,
@@ -288,91 +302,49 @@ __device__ void execute_signal(
     int* trade_count,
     int max_trades
 ) {
-    // Apply slippage (matches batch_backtest.cu:344-345)
-    double buy_price = current_price * (1.0 + slippage + trading_fee);
-    double sell_price = current_price * (1.0 - slippage - trading_fee);
+    Signal signal = remap_signal(raw_signal, allow_short);
 
     switch (signal) {
         case BUY:
             if (pos->position_size <= 0.0) {
-                // Close short if exists
                 if (pos->position_size < 0.0) {
-                    close_position(pos, buy_price, current_time, trading_fee, slippage,
+                    close_position(pos, current_price, current_time, trading_fee, slippage,
                                    trades, trade_count, max_trades);
                 }
-                // Open long
-                open_position(pos, buy_price, current_time, 1.0, trading_fee, slippage,
-                              trades, trade_count, max_trades);
+                open_position(pos, current_price, current_time, 1.0, trading_fee, slippage);
             }
             break;
 
         case SELL:
-            if (pos->position_size >= 0.0) {
-                // Close long if exists
-                if (pos->position_size > 0.0) {
-                    close_position(pos, sell_price, current_time, trading_fee, slippage,
-                                   trades, trade_count, max_trades);
-                }
+            // Close long only (long-only exit; backwards-compatible with the
+            // legacy 0..4 contract). tick_engine.rs Signal::Sell additionally
+            // opens a short — route -1 with allow_short=1 (-> SHORT) for that.
+            if (pos->position_size > 0.0) {
+                close_position(pos, current_price, current_time, trading_fee, slippage,
+                               trades, trade_count, max_trades);
             }
             break;
 
         case SHORT:
             if (pos->position_size >= 0.0) {
-                // Close long if exists
                 if (pos->position_size > 0.0) {
-                    close_position(pos, sell_price, current_time, trading_fee, slippage,
+                    close_position(pos, current_price, current_time, trading_fee, slippage,
                                    trades, trade_count, max_trades);
                 }
-                // Open short
-                open_position(pos, sell_price, current_time, -1.0, trading_fee, slippage,
-                              trades, trade_count, max_trades);
+                open_position(pos, current_price, current_time, -1.0, trading_fee, slippage);
             }
             break;
 
         case COVER:
-            if (pos->position_size <= 0.0) {
-                // Close short if exists
-                if (pos->position_size < 0.0) {
-                    close_position(pos, buy_price, current_time, trading_fee, slippage,
-                                   trades, trade_count, max_trades);
-                }
+            if (pos->position_size < 0.0) {
+                close_position(pos, current_price, current_time, trading_fee, slippage,
+                               trades, trade_count, max_trades);
             }
             break;
 
         case HOLD:
-            // Do nothing
+        default:
             break;
-    }
-}
-
-/// Process expired orders from pending queue
-__device__ void process_pending_orders(
-    PendingOrder* queue,
-    int* head,
-    int* tail,
-    int* size,
-    int64_t current_time,
-    Position* pos,
-    double trading_fee,
-    double slippage,
-    Trade* trades,
-    int* trade_count,
-    int max_trades
-) {
-    // Process all expired orders (FIFO order)
-    while (*size > 0) {
-        PendingOrder order = queue_peek(queue, *head);
-
-        if (!order.active || current_time < order.execution_time) {
-            break;  // No more expired orders
-        }
-
-        // Execute order at recorded price
-        execute_signal(order.signal, pos, order.price, order.execution_time,
-                       trading_fee, slippage, trades, trade_count, max_trades);
-
-        // Remove from queue
-        queue_remove(queue, head, size);
     }
 }
 
@@ -382,21 +354,23 @@ __device__ void process_pending_orders(
 
 extern "C" __global__ void tick_backtest_batch_kernel(
     // Inputs
-    const int8_t* __restrict__ signals,        // [N_strategies × N_ticks]
-    const double* __restrict__ prices,         // [N_ticks]
-    const int64_t* __restrict__ timestamps,    // [N_ticks] (milliseconds)
+    const int8_t* __restrict__ signals,     // [N_strategies x N_ticks] raw pipeline bytes
+    const double* __restrict__ prices,      // [N_ticks]
+    const int64_t* __restrict__ timestamps, // [N_ticks] (ms, non-decreasing)
 
     // Outputs
-    double* __restrict__ equity_curves,        // [N_strategies × N_ticks]
-    Trade* __restrict__ trades,                // [N_strategies × MAX_TRADES]
+    double* __restrict__ equity_curves,        // [N_strategies x ceil(N_ticks/equity_stride)];
+                                               // unused when equity_stride == 0
+    Trade* __restrict__ trades,                // [N_strategies x MAX_TRADES]
     int* __restrict__ num_trades,              // [N_strategies]
+    unsigned int* __restrict__ overflow_counts, // [N_strategies], host pre-zeroed
 
     // Metrics outputs
-    double* __restrict__ final_equity,         // [N_strategies]
-    double* __restrict__ total_return,         // [N_strategies]
-    double* __restrict__ sharpe_ratios,        // [N_strategies]
-    double* __restrict__ max_drawdowns,        // [N_strategies]
-    double* __restrict__ win_rates,            // [N_strategies]
+    double* __restrict__ final_equity,  // [N_strategies]
+    double* __restrict__ total_return,  // [N_strategies] (percent)
+    double* __restrict__ sharpe_ratios, // [N_strategies]
+    double* __restrict__ max_drawdowns, // [N_strategies] (fraction)
+    double* __restrict__ win_rates,     // [N_strategies] (fraction)
 
     // Configuration
     int N_strategies,
@@ -404,32 +378,26 @@ extern "C" __global__ void tick_backtest_batch_kernel(
     double initial_capital,
     double trading_fee,
     double slippage,
-    int execution_delay_ms                     // Default: 10ms
+    int execution_delay_ms,
+    int allow_short,  // -1 signals: 0 -> SELL (close long), nonzero -> SHORT
+    int equity_stride // 0 = no equity curve, k = store every k-th tick
 ) {
-    // One block per strategy (parallel across strategies)
-    int strategy_idx = blockIdx.x;
-
+    // One THREAD per strategy; the whole warp walks the same tick index, so
+    // prices/timestamps loads are warp-uniform broadcasts.
+    int strategy_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (strategy_idx >= N_strategies) return;
 
-    // Only thread 0 in block executes (sequential per-strategy)
-    if (threadIdx.x != 0) return;
+    // ------------------------------------------------------------------
+    // Per-thread pending-orders ring buffer (local memory, 1.6KB/thread).
+    // ------------------------------------------------------------------
+    PendingOrder pending_queue[MAX_PENDING_ORDERS];
+    int queue_head = 0;
+    int queue_tail = 0;
+    int queue_size = 0;
 
-    // ========================================================================
-    // SHARED MEMORY: PENDING ORDERS QUEUE
-    // ========================================================================
-
-    __shared__ PendingOrder pending_queue[MAX_PENDING_ORDERS];
-    __shared__ int queue_head;
-    __shared__ int queue_tail;
-    __shared__ int queue_size;
-
-    // Initialize queue
-    queue_init(pending_queue, &queue_head, &queue_tail, &queue_size);
-
-    // ========================================================================
-    // REGISTER STATE: POSITION TRACKING
-    // ========================================================================
-
+    // ------------------------------------------------------------------
+    // Register state
+    // ------------------------------------------------------------------
     Position pos;
     pos.cash = initial_capital;
     pos.position_size = 0.0;
@@ -439,80 +407,71 @@ extern "C" __global__ void tick_backtest_batch_kernel(
 
     int trade_count = 0;
 
-    // Base offsets
-    int signal_base = strategy_idx * N_ticks;
-    int equity_base = strategy_idx * N_ticks;
-    int trade_base = strategy_idx * MAX_TRADES;
+    long long signal_base = (long long)strategy_idx * N_ticks;
+    Trade* strategy_trades = &trades[(long long)strategy_idx * MAX_TRADES];
 
-    // Welford accumulator for Sharpe ratio
+    // Stored equity points per strategy (matches host equity_points())
+    int n_eq = (equity_stride > 0) ? (N_ticks + equity_stride - 1) / equity_stride : 0;
+    long long equity_base = (long long)strategy_idx * n_eq;
+
+    // Incremental metrics (registers; independent of equity_stride)
     WelfordAccumulator returns_acc;
     welford_init(&returns_acc);
 
-    // Max drawdown tracking
     double running_peak = initial_capital;
     double max_dd = 0.0;
-
     double prev_equity = initial_capital;
 
-    // ========================================================================
-    // MAIN PROCESSING LOOP (SEQUENTIAL PER-STRATEGY)
-    // ========================================================================
-
+    // ------------------------------------------------------------------
+    // Main loop: sequential per-strategy (position state is path-dependent)
+    // ------------------------------------------------------------------
     for (int tick = 0; tick < N_ticks; tick++) {
         int64_t current_time = timestamps[tick];
         double current_price = prices[tick];
-        Signal signal = (Signal)signals[signal_base + tick];
+        int8_t raw_signal = signals[signal_base + tick];
 
-        // Process expired pending orders FIRST
-        process_pending_orders(
-            pending_queue,
-            &queue_head,
-            &queue_tail,
-            &queue_size,
-            current_time,
-            &pos,
-            trading_fee,
-            slippage,
-            &trades[trade_base],
-            &trade_count,
-            MAX_TRADES
-        );
+        // 1) Execute every due pending order, FIFO, at the CURRENT tick's
+        //    price/time (CPU parity; see file header). Monotone timestamps +
+        //    constant delay keep execution times FIFO-ordered, so stopping at
+        //    the first unexpired head order is exhaustive.
+        while (queue_size > 0 && current_time >= pending_queue[queue_head].execution_time) {
+            execute_signal(pending_queue[queue_head].signal, allow_short, &pos,
+                           current_price, current_time, trading_fee, slippage,
+                           strategy_trades, &trade_count, MAX_TRADES);
+            queue_head = (queue_head + 1) % MAX_PENDING_ORDERS;
+            queue_size--;
+        }
 
-        // Add new signal to pending queue (if not HOLD)
-        if (signal != HOLD) {
-            int64_t execution_time = current_time + execution_delay_ms;
-
-            bool added = queue_add(
-                pending_queue,
-                &queue_head,
-                &queue_tail,
-                &queue_size,
-                signal,
-                execution_time,
-                current_price
-            );
-
-            if (!added) {
-                // Queue overflow: Execute immediately (graceful degradation)
-                printf("WARNING: Pending queue overflow for strategy %d at tick %d - executing immediately\n",
-                       strategy_idx, tick);
-                execute_signal(signal, &pos, current_price, current_time,
-                               trading_fee, slippage, &trades[trade_base],
-                               &trade_count, MAX_TRADES);
+        // 2) Queue this tick's signal (raw 0 is HOLD in both encodings)
+        if (raw_signal != 0) {
+            if (queue_size >= MAX_PENDING_ORDERS) {
+                // Overflow: count it host-visibly and execute immediately
+                // (graceful degradation; no hot-loop device print).
+                atomicAdd(&overflow_counts[strategy_idx], 1u);
+                execute_signal(raw_signal, allow_short, &pos, current_price, current_time,
+                               trading_fee, slippage, strategy_trades, &trade_count, MAX_TRADES);
+            } else {
+                pending_queue[queue_tail].execution_time = current_time + execution_delay_ms;
+                pending_queue[queue_tail].signal_price = (float)current_price;
+                pending_queue[queue_tail].signal = raw_signal;
+                queue_tail = (queue_tail + 1) % MAX_PENDING_ORDERS;
+                queue_size++;
             }
         }
 
-        // Calculate mark-to-market equity
+        // 3) Mark-to-market equity
         double current_equity = calculate_equity(&pos, current_price);
-        equity_curves[equity_base + tick] = current_equity;
+        if (equity_stride > 0 && (tick % equity_stride) == 0) {
+            equity_curves[equity_base + tick / equity_stride] = current_equity;
+        }
 
-        // Update Welford accumulator (for Sharpe ratio)
+        // Per-tick return for Sharpe (Welford, registers)
         if (tick > 0 && prev_equity > 1e-10) {
             double ret = (current_equity - prev_equity) / prev_equity;
             welford_update(&returns_acc, ret);
         }
 
-        // Update max drawdown
+        // Max drawdown (incremental)
         running_peak = fmax(running_peak, current_equity);
         if (running_peak > 1e-10) {
             double dd = (running_peak - current_equity) / running_peak;
@@ -522,38 +481,42 @@ extern "C" __global__ void tick_backtest_batch_kernel(
         prev_equity = current_equity;
     }
 
-    // ========================================================================
-    // FINAL METRICS CALCULATION
-    // ========================================================================
+    // ------------------------------------------------------------------
+    // Final metrics
+    // ------------------------------------------------------------------
 
-    // Store final trade count
+    // CPU parity quirk (tick_engine.rs:259-271): final_equity is the LAST
+    // mark-to-market value; the forced close below only updates cash and the
+    // trade list. Orders still pending after the last tick are dropped,
+    // exactly like the CPU's leftover pending_orders vec.
+    double final_eq = prev_equity;
+    if (pos.position_size != 0.0) {
+        close_position(&pos, prices[N_ticks - 1], timestamps[N_ticks - 1],
+                       trading_fee, slippage, strategy_trades, &trade_count, MAX_TRADES);
+    }
+
     num_trades[strategy_idx] = trade_count;
-
-    // Final equity and total return
-    double final_eq = equity_curves[equity_base + N_ticks - 1];
     final_equity[strategy_idx] = final_eq;
     total_return[strategy_idx] = ((final_eq - initial_capital) / initial_capital) * 100.0;
 
-    // Sharpe ratio (annualized, assumes tick data is ~daily equivalent)
+    // Sharpe ratio (annualized; per-tick returns, sample variance). The CPU
+    // engine computes Sharpe over a 1-in-100 sampled curve with population
+    // variance — Sharpe is intentionally NOT part of the 1e-9 parity contract.
     if (returns_acc.n > 1) {
         double std_dev = welford_std_dev(&returns_acc);
-        if (std_dev > 1e-10) {
-            sharpe_ratios[strategy_idx] = (returns_acc.mean / std_dev) * sqrt(252.0);
-        } else {
-            sharpe_ratios[strategy_idx] = 0.0;
-        }
+        sharpe_ratios[strategy_idx] =
+            (std_dev > 1e-10) ? (returns_acc.mean / std_dev) * sqrt(252.0) : 0.0;
     } else {
         sharpe_ratios[strategy_idx] = 0.0;
     }
 
-    // Max drawdown (already calculated incrementally)
     max_drawdowns[strategy_idx] = max_dd;
 
-    // Win rate
+    // Win rate (fraction of recorded trades with positive pnl)
     if (trade_count > 0) {
         int wins = 0;
         for (int t = 0; t < trade_count; t++) {
-            if (trades[trade_base + t].pnl > 0.0) {
+            if (strategy_trades[t].pnl > 0.0) {
                 wins++;
             }
         }

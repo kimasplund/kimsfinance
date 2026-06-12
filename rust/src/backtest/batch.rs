@@ -98,6 +98,10 @@ pub(crate) const MAX_TRADES: usize = 1000;
 /// register-heavy sequential loops.
 const EXECUTION_BLOCK_SIZE: u32 = 128;
 
+/// Device buffers produced by Phase 3 (`execute_backtests_batch`):
+/// `(equity_curves, trades_data, num_trades, max_drawdowns)`.
+type BacktestDeviceBuffers = (CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>, CudaSlice<f64>);
+
 /// Host mirror of the CUDA `Trade` struct in `kernels_backtest.cu`.
 ///
 /// Layout contract (both sides 8-byte aligned, 48 bytes total):
@@ -169,7 +173,7 @@ fn pad_params_to_kernel_layout(
 ///
 /// Controls whether to use traditional (4 separate kernel launches),
 /// fused (single kernel launch), or async (triple-buffered pipeline) execution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ExecutionMode {
     /// Traditional execution: 4 separate kernel launches
     ///
@@ -217,13 +221,8 @@ pub enum ExecutionMode {
     /// - Large batches (>500): Async (triple-buffered)
     ///
     /// **Recommended**: Default choice for most use cases
+    #[default]
     Auto,
-}
-
-impl Default for ExecutionMode {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 /// Strategy type enumeration for batch backtesting
@@ -859,7 +858,7 @@ impl BatchBacktestSweep {
 
         // Calculate VRAM usage (approximate)
         let vram_used_mb = (n_strategies * 5 * n_candles * 8 // indicators
-            + n_strategies * n_candles * 1     // signals
+            + n_strategies * n_candles          // signals (i8, 1 byte each)
             + n_strategies * n_candles * 8     // equity
             + n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>() // trades
             + n_strategies * 3 * 8) as f64
@@ -917,7 +916,10 @@ impl BatchBacktestSweep {
     }
 
     /// Check if this is an options strategy (Phase 2 detection) - fallback for non-Heston builds
+    ///
+    /// Only referenced by the Heston-gated Phase 0 pipeline; kept for API parity.
     #[cfg(not(feature = "heston"))]
+    #[allow(dead_code)]
     fn is_options_strategy(&self) -> bool {
         false
     }
@@ -1106,12 +1108,9 @@ impl BatchBacktestSweep {
         pool.release(pinned_equity);
         drop(pool);
 
-        let num_trades_vec = {
-            let slice = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
-                GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
-            })?;
-            slice
-        };
+        let num_trades_vec = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
+        })?;
 
         // ===== Construct Results =====
         let mut results = Vec::with_capacity(n_strategies);
@@ -1173,7 +1172,7 @@ impl BatchBacktestSweep {
         // Calculate VRAM usage (approximate)
         let vram_used_mb = (
             n_strategies * 5 * n_candles * 8  // indicators (f64)
-            + n_strategies * n_candles * 1     // signals (i8)
+            + n_strategies * n_candles          // signals (i8, 1 byte each)
             + n_strategies * n_candles * 8     // equity (f64)
             + n_strategies * MAX_TRADES * std::mem::size_of::<GpuTrade>() // trades (struct)
             + n_strategies * 3 * 8
@@ -1258,7 +1257,7 @@ impl BatchBacktestSweep {
 
         // Grid: (N_strategies, N_indicators, (N_candles+255)/256)
         // Block: (256, 1, 1)
-        let grid_z = (n_candles + 255) / 256;
+        let grid_z = n_candles.div_ceil(256);
         let cfg = LaunchConfig {
             grid_dim: (n_strategies as u32, n_indicators as u32, grid_z as u32),
             block_dim: (256, 1, 1),
@@ -1346,7 +1345,7 @@ impl BatchBacktestSweep {
 
         // Grid: (N_strategies, (N_candles+255)/256)
         // Block: (256, 1)
-        let grid_y = (n_candles + 255) / 256;
+        let grid_y = n_candles.div_ceil(256);
         let cfg = LaunchConfig {
             grid_dim: (n_strategies as u32, grid_y as u32, 1),
             block_dim: (256, 1, 1),
@@ -1392,7 +1391,7 @@ impl BatchBacktestSweep {
         data: &OhlcvData,
         n_strategies: usize,
         n_candles: usize,
-    ) -> Result<(CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>, CudaSlice<f64>), GpuError> {
+    ) -> Result<BacktestDeviceBuffers, GpuError> {
         // === H2D - Asynchronously copy close prices to GPU ===
         let close_slice = data.close.as_slice().unwrap();
         let close_len = close_slice.len();
@@ -1460,7 +1459,7 @@ impl BatchBacktestSweep {
         // partition. No shared memory: the kernel reads close_prices straight
         // from L2 (the previous 1KB dynamic allocation backed a since-removed
         // single-thread staging loop).
-        let grid_x = (n_strategies as u32 + EXECUTION_BLOCK_SIZE - 1) / EXECUTION_BLOCK_SIZE;
+        let grid_x = (n_strategies as u32).div_ceil(EXECUTION_BLOCK_SIZE);
         let cfg = LaunchConfig {
             grid_dim: (grid_x, 1, 1),
             block_dim: (EXECUTION_BLOCK_SIZE, 1, 1),

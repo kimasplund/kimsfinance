@@ -124,25 +124,15 @@ pub fn affine_compose(a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
 }
 
 // ============================================================================
-// Module / kernel loading
+// Kernel loading
+//
+// `GpuDevice::get_or_load_function` caches the compiled PTX process-wide and
+// the loaded CudaModule per device, so after the first call each lookup is a
+// lock-free map hit + cuModuleGetFunction (sub-microsecond).
 // ============================================================================
 
-fn load_scan_module(device: &GpuDevice) -> Result<Arc<CudaModule>, GpuError> {
-    let ptx_arc = compile_ptx_optimized_cached(SCAN_KERNELS_SRC).map_err(|e| {
-        GpuError::CompilationError(format!("Failed to compile scan kernels: {:?}", e))
-    })?;
-    // PTX compilation is cached (SHA-256 keyed); module load itself is cheap.
-    let ptx = Arc::unwrap_or_clone(ptx_arc);
-    device
-        .context()
-        .load_module(ptx)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load scan PTX: {:?}", e)))
-}
-
-fn get_function(module: &Arc<CudaModule>, name: &str) -> Result<CudaFunction, GpuError> {
-    module
-        .load_function(name)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load kernel {}: {:?}", name, e)))
+fn get_function(device: &GpuDevice, name: &str) -> Result<CudaFunction, GpuError> {
+    device.get_or_load_function(SCAN_KERNELS_SRC, name)
 }
 
 /// The three kernels of one scan operator instantiation.
@@ -153,11 +143,11 @@ struct ScanKernelSet {
 }
 
 impl ScanKernelSet {
-    fn load(module: &Arc<CudaModule>, base: &str) -> Result<Self, GpuError> {
+    fn load(device: &GpuDevice, base: &str) -> Result<Self, GpuError> {
         Ok(Self {
-            partials: get_function(module, &format!("scan_partials_{}", base))?,
-            aggregates: get_function(module, &format!("scan_aggregates_{}", base))?,
-            fixup: get_function(module, &format!("scan_fixup_{}", base))?,
+            partials: get_function(device, &format!("scan_partials_{}", base))?,
+            aggregates: get_function(device, &format!("scan_aggregates_{}", base))?,
+            fixup: get_function(device, &format!("scan_fixup_{}", base))?,
         })
     }
 }
@@ -342,12 +332,11 @@ pub fn inclusive_scan_f32(
     if n == 0 {
         return Ok(());
     }
-    let module = load_scan_module(device)?;
     let base = match op {
         ScanOp::Sum => "sum_f32",
         ScanOp::Max => "max_f32",
     };
-    let set = ScanKernelSet::load(&module, base)?;
+    let set = ScanKernelSet::load(device, base)?;
     let stream = stream.unwrap_or(&device.stream);
     scan_device_buffers::<f32, f32>(stream, &set.partials, &set.fixup, &set, d_in, d_out, n, 1)
 }
@@ -371,12 +360,11 @@ pub fn inclusive_scan_f64(
     if n == 0 {
         return Ok(());
     }
-    let module = load_scan_module(device)?;
     let base = match op {
         ScanOp::Sum => "sum_f64",
         ScanOp::Max => "max_f64",
     };
-    let set = ScanKernelSet::load(&module, base)?;
+    let set = ScanKernelSet::load(device, base)?;
     let stream = stream.unwrap_or(&device.stream);
     scan_device_buffers::<f64, f64>(stream, &set.partials, &set.fixup, &set, d_in, d_out, n, 1)
 }
@@ -400,8 +388,7 @@ pub fn inclusive_scan_pair_sum_f32(
     if n_pairs == 0 {
         return Ok(());
     }
-    let module = load_scan_module(device)?;
-    let set = ScanKernelSet::load(&module, "pair_sum_f32")?;
+    let set = ScanKernelSet::load(device, "pair_sum_f32")?;
     let stream = stream.unwrap_or(&device.stream);
     scan_device_buffers::<f32, f32>(
         stream,
@@ -435,11 +422,10 @@ pub fn inclusive_scan_affine_f32(
     if n_pairs == 0 {
         return Ok(());
     }
-    let module = load_scan_module(device)?;
     let stream = stream.unwrap_or(&device.stream);
     match precision {
         AffinePrecision::F32 => {
-            let set = ScanKernelSet::load(&module, "affine_f32")?;
+            let set = ScanKernelSet::load(device, "affine_f32")?;
             scan_device_buffers::<f32, f32>(
                 stream,
                 &set.partials,
@@ -454,9 +440,9 @@ pub fn inclusive_scan_affine_f32(
         AffinePrecision::F64Acc => {
             // Level-0 kernels read/write float2 but accumulate in double;
             // partials are double2, so the recursion uses the affine_f64 set.
-            let partials0 = get_function(&module, "scan_partials_affine_f32_f64acc")?;
-            let fixup0 = get_function(&module, "scan_fixup_affine_f32_f64acc")?;
-            let rec_set = ScanKernelSet::load(&module, "affine_f64")?;
+            let partials0 = get_function(device, "scan_partials_affine_f32_f64acc")?;
+            let fixup0 = get_function(device, "scan_fixup_affine_f32_f64acc")?;
+            let rec_set = ScanKernelSet::load(device, "affine_f64")?;
             scan_device_buffers::<f32, f64>(
                 stream, &partials0, &fixup0, &rec_set, d_in, d_out, n_pairs, 2,
             )
@@ -477,8 +463,7 @@ pub fn inclusive_scan_affine_f64(
     if n_pairs == 0 {
         return Ok(());
     }
-    let module = load_scan_module(device)?;
-    let set = ScanKernelSet::load(&module, "affine_f64")?;
+    let set = ScanKernelSet::load(device, "affine_f64")?;
     let stream = stream.unwrap_or(&device.stream);
     scan_device_buffers::<f64, f64>(
         stream,
@@ -519,6 +504,7 @@ fn ema_period_from_alpha(alpha: f32) -> usize {
 /// 4. Affine scan (3-kernel design above), in place on the pairs buffer.
 /// 5. `scan_recurrence_finalize_f32` extracts `y[i]` and applies the NaN
 ///    warmup prefix.
+#[allow(clippy::too_many_arguments)]
 fn run_affine_recurrence_f32(
     device: &GpuDevice,
     stream: Option<&Arc<CudaStream>>,
@@ -531,11 +517,10 @@ fn run_affine_recurrence_f32(
 ) -> Result<(), GpuError> {
     let n = d_x.len();
     let stream = stream.unwrap_or(&device.stream);
-    let module = load_scan_module(device)?;
 
-    let build_fn = get_function(&module, "scan_recurrence_build_pairs_f32")?;
-    let finalize_fn = get_function(&module, "scan_recurrence_finalize_f32")?;
-    let affine_set = ScanKernelSet::load(&module, "affine_f32")?;
+    let build_fn = get_function(device, "scan_recurrence_build_pairs_f32")?;
+    let finalize_fn = get_function(device, "scan_recurrence_finalize_f32")?;
+    let affine_set = ScanKernelSet::load(device, "affine_f32")?;
 
     let n_i32 = n as i32;
     let period_i32 = period as i32;
@@ -548,8 +533,8 @@ fn run_affine_recurrence_f32(
         .map_err(|e| GpuError::AllocationError(format!("scan start-index alloc failed: {:?}", e)))?;
 
     if search_window {
-        let store_fn = get_function(&module, "scan_store_i32")?;
-        let window_fn = get_function(&module, "scan_first_valid_window_f32")?;
+        let store_fn = get_function(device, "scan_store_i32")?;
+        let window_fn = get_function(device, "scan_first_valid_window_f32")?;
 
         // Sentinel n => "no valid window" until atomicMin lowers it.
         let cfg_one = LaunchConfig {

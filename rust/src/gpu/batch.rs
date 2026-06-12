@@ -42,8 +42,10 @@ use std::sync::Arc;
 
 /// Warmup multiplier for recursive (Wilder/EMA) indicators.
 ///
-/// After `RECURSIVE_WARMUP_FACTOR * period` candles of overlap, the residual
-/// influence of the chunk-local seed is `(1 - 1/p)^(4p) ≈ e^-4 < 2%`
+/// With `RECURSIVE_WARMUP_FACTOR * period` candles of overlap, the
+/// chunk-local Wilder seed (an SMA over the first `period` overlap candles)
+/// decays through the remaining `~3p` smoothing steps, retaining
+/// `(1 - 1/p)^(3p+1) ≈ e^-3 < 5%` influence at the first kept candle
 /// (validated empirically in `test_stitch_chunked_rsi_within_tolerance`:
 /// max observed RSI deviation ≈ 0.8 points on a 0-100 scale).
 pub(crate) const RECURSIVE_WARMUP_FACTOR: usize = 4;
@@ -256,7 +258,8 @@ pub(crate) fn classify_indicator(indicator: BatchIndicatorType) -> IndicatorSpee
 /// entire history, so chunked values converge rather than match exactly:
 /// - RSI, ATR: Wilder smoothing with `alpha = 1/period`; after
 ///   `RECURSIVE_WARMUP_FACTOR * period` candles the chunk-local seed retains
-///   `(1 - 1/p)^(4p) ≈ e^-4 < 2%` influence
+///   `< 5%` influence at the first kept candle (decay derivation on
+///   [`RECURSIVE_WARMUP_FACTOR`])
 /// - MACD: cascaded EMAs (slow feeds the signal EMA), so the factor applies
 ///   to `slow_period + signal_period`
 ///
@@ -1090,5 +1093,514 @@ mod tests {
         assert_eq!(params.fast_period, Some(12));
         assert_eq!(params.slow_period, Some(26));
         assert_eq!(params.signal_period, Some(9));
+    }
+
+    // -----------------------------------------------------------------
+    // CPU-only tests for the overlap-and-discard chunker (no GPU needed)
+    //
+    // These exercise the exact stitching code (`plan_chunks`,
+    // `trim_leading`, `stitch_chunked_results`) used by the GPU pipeline,
+    // with the CPU indicator engine standing in for the GPU kernels.
+    // -----------------------------------------------------------------
+
+    use crate::indicators::{Indicator, ROC as CpuRoc, RSI as CpuRsi};
+
+    /// Deterministic pseudo-random walk (LCG, Knuth MMIX constants).
+    /// No `rand` dependency; identical data on every run/platform.
+    fn synthetic_walk(n: usize) -> Array1<f64> {
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut price = 100.0_f64;
+        let mut out = Vec::with_capacity(n);
+        for _ in 0..n {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            // Top 53 bits -> uniform in [0, 1)
+            let u = (state >> 11) as f64 / (1u64 << 53) as f64;
+            price *= 1.0 + (u - 0.5) * 0.02;
+            out.push(price);
+        }
+        Array1::from(out)
+    }
+
+    /// Run the production stitcher with a CPU compute function producing a
+    /// single-output indicator, returning the stitched series.
+    fn stitch_cpu_single<F>(
+        close: &Array1<f64>,
+        chunk_size: usize,
+        overlap: usize,
+        compute: F,
+    ) -> Array1<f64>
+    where
+        F: Fn(&Array1<f64>) -> Array1<f64>,
+    {
+        // Key choice is arbitrary: the stitcher treats all keys identically.
+        let key = BatchIndicatorType::RSI;
+        let mut results = stitch_chunked_results(close.len(), chunk_size, overlap, |span| {
+            let chunk = close.slice(ndarray::s![span.start..span.end]).to_owned();
+            let mut map = HashMap::new();
+            map.insert(key, IndicatorResult::Single(compute(&chunk)));
+            Ok(map)
+        })
+        .expect("stitching failed");
+
+        match results.remove(&key) {
+            Some(IndicatorResult::Single(arr)) => arr,
+            other => panic!("expected Single result, got {:?}", other),
+        }
+    }
+
+    /// Elementwise equality treating NaN == NaN (warmup regions).
+    fn assert_series_identical(full: &Array1<f64>, chunked: &Array1<f64>) {
+        assert_eq!(full.len(), chunked.len());
+        for (i, (&a, &b)) in full.iter().zip(chunked.iter()).enumerate() {
+            assert!(
+                (a.is_nan() && b.is_nan()) || a == b,
+                "mismatch at index {}: full={}, chunked={}",
+                i,
+                a,
+                b
+            );
+        }
+    }
+
+    #[test]
+    fn test_warmup_candles_pure_window_defaults() {
+        let p = BatchIndicatorParams::default();
+
+        // Window of `period` including current candle -> lookback period - 1.
+        // `default()` sets the shared `period` field to Some(14), which also
+        // applies to BollingerBands/Aroon (mirroring
+        // `calculate_single_indicator_on_stream`, which reads the same field).
+        assert_eq!(warmup_candles(BatchIndicatorType::WilliamsR, &p), 13);
+        assert_eq!(warmup_candles(BatchIndicatorType::CCI, &p), 13);
+        assert_eq!(warmup_candles(BatchIndicatorType::BollingerBands, &p), 13);
+        assert_eq!(warmup_candles(BatchIndicatorType::Aroon, &p), 13);
+
+        // With no explicit period, the per-indicator TA conventions apply
+        // (Bollinger 20, Aroon 25), matching the compute-side `unwrap_or`s.
+        let no_period = BatchIndicatorParams {
+            period: None,
+            ..Default::default()
+        };
+        assert_eq!(
+            warmup_candles(BatchIndicatorType::BollingerBands, &no_period),
+            19
+        );
+        assert_eq!(warmup_candles(BatchIndicatorType::Aroon, &no_period), 24);
+
+        // ROC references close[i - period] -> lookback period
+        assert_eq!(warmup_candles(BatchIndicatorType::ROC, &p), 14);
+
+        // Stochastic: %K window + %D smoothing of %K values
+        assert_eq!(warmup_candles(BatchIndicatorType::Stochastic, &p), 13 + 2);
+    }
+
+    #[test]
+    fn test_warmup_candles_recursive_defaults() {
+        let p = BatchIndicatorParams::default();
+
+        // Wilder smoothing: RECURSIVE_WARMUP_FACTOR * period
+        assert_eq!(
+            warmup_candles(BatchIndicatorType::RSI, &p),
+            14 * RECURSIVE_WARMUP_FACTOR
+        );
+        assert_eq!(
+            warmup_candles(BatchIndicatorType::ATR, &p),
+            14 * RECURSIVE_WARMUP_FACTOR
+        );
+
+        // MACD: cascaded EMAs -> factor applies to slow + signal
+        assert_eq!(
+            warmup_candles(BatchIndicatorType::MACD, &p),
+            (26 + 9) * RECURSIVE_WARMUP_FACTOR
+        );
+    }
+
+    #[test]
+    fn test_warmup_candles_custom_params() {
+        assert_eq!(
+            warmup_candles(
+                BatchIndicatorType::RSI,
+                &BatchIndicatorParams::new().with_period(21)
+            ),
+            21 * RECURSIVE_WARMUP_FACTOR
+        );
+        assert_eq!(
+            warmup_candles(
+                BatchIndicatorType::Stochastic,
+                &BatchIndicatorParams::new().with_stochastic(5, 3)
+            ),
+            4 + 2
+        );
+        assert_eq!(
+            warmup_candles(
+                BatchIndicatorType::MACD,
+                &BatchIndicatorParams::new().with_macd(10, 20, 8)
+            ),
+            (20 + 8) * RECURSIVE_WARMUP_FACTOR
+        );
+    }
+
+    #[test]
+    fn test_batch_overlap_candles_is_max_over_indicators() {
+        let params = HashMap::new();
+
+        // ROC (14) vs RSI (56) -> RSI dominates
+        assert_eq!(
+            batch_overlap_candles(
+                &[BatchIndicatorType::ROC, BatchIndicatorType::RSI],
+                &params
+            ),
+            56
+        );
+
+        // Adding MACD (140) raises the shared overlap
+        assert_eq!(
+            batch_overlap_candles(
+                &[
+                    BatchIndicatorType::ROC,
+                    BatchIndicatorType::RSI,
+                    BatchIndicatorType::MACD
+                ],
+                &params
+            ),
+            140
+        );
+
+        // Custom per-indicator params are honored
+        let mut custom = HashMap::new();
+        custom.insert(
+            BatchIndicatorType::RSI,
+            BatchIndicatorParams::new().with_period(50),
+        );
+        assert_eq!(
+            batch_overlap_candles(&[BatchIndicatorType::RSI], &custom),
+            50 * RECURSIVE_WARMUP_FACTOR
+        );
+
+        // No indicators -> no overlap
+        assert_eq!(batch_overlap_candles(&[], &params), 0);
+    }
+
+    #[test]
+    fn test_plan_chunks_invariants() {
+        // (n, chunk_size, overlap) including awkward sizes, overlap > chunk,
+        // single-element series, and chunk-aligned series lengths.
+        let cases = [
+            (10usize, 3usize, 0usize),
+            (10, 3, 2),
+            (1_000, 97, 56),
+            (1_000, 50, 140), // overlap larger than chunk_size
+            (6_000, 1_024, 56),
+            (1_048_576, 262_144, 140), // chunk-aligned
+            (5, 10, 3),                // single chunk
+            (1, 1, 0),
+        ];
+
+        for &(n, chunk_size, overlap) in &cases {
+            let spans = plan_chunks(n, chunk_size, overlap);
+            assert!(!spans.is_empty(), "n={} must produce spans", n);
+            assert_eq!(spans[0].discard, 0, "first chunk must not discard");
+
+            let mut expected_logical_start = 0usize;
+            for span in &spans {
+                assert!(span.start < span.end, "span must be non-empty: {:?}", span);
+                assert!(span.discard <= overlap, "discard bounded by overlap");
+                // Overlap clipped at the series start
+                assert_eq!(
+                    span.start,
+                    expected_logical_start.saturating_sub(overlap),
+                    "extended start must be logical start minus clipped overlap"
+                );
+                // Kept regions are contiguous
+                assert_eq!(span.start + span.discard, expected_logical_start);
+                expected_logical_start = span.end;
+            }
+            // Kept regions cover exactly [0, n)
+            assert_eq!(expected_logical_start, n);
+            let kept_total: usize = spans.iter().map(|s| s.len() - s.discard).sum();
+            assert_eq!(kept_total, n);
+        }
+    }
+
+    #[test]
+    fn test_plan_chunks_single_chunk_when_data_fits() {
+        let spans = plan_chunks(500, 1_000, 56);
+        assert_eq!(
+            spans,
+            vec![ChunkSpan {
+                start: 0,
+                end: 500,
+                discard: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn test_plan_chunks_empty_input() {
+        assert!(plan_chunks(0, 1_000, 56).is_empty());
+    }
+
+    #[test]
+    fn test_chunk_span_len() {
+        let span = ChunkSpan {
+            start: 944,
+            end: 2_048,
+            discard: 80,
+        };
+        assert_eq!(span.len(), 1_104);
+    }
+
+    #[test]
+    fn test_trim_leading_trims_each_arity() {
+        let arr = |v: Vec<f64>| Array1::from(v);
+
+        // Single
+        let trimmed = trim_leading(
+            IndicatorResult::Single(arr(vec![1.0, 2.0, 3.0, 4.0])),
+            2,
+            4,
+        )
+        .unwrap();
+        match trimmed {
+            IndicatorResult::Single(a) => assert_eq!(a.to_vec(), vec![3.0, 4.0]),
+            other => panic!("expected Single, got {:?}", other),
+        }
+
+        // Double
+        let trimmed = trim_leading(
+            IndicatorResult::Double(arr(vec![1.0, 2.0, 3.0]), arr(vec![4.0, 5.0, 6.0])),
+            1,
+            3,
+        )
+        .unwrap();
+        match trimmed {
+            IndicatorResult::Double(a, b) => {
+                assert_eq!(a.to_vec(), vec![2.0, 3.0]);
+                assert_eq!(b.to_vec(), vec![5.0, 6.0]);
+            }
+            other => panic!("expected Double, got {:?}", other),
+        }
+
+        // Triple with discard = 0 (first chunk) keeps everything
+        let trimmed = trim_leading(
+            IndicatorResult::Triple(
+                arr(vec![1.0, 2.0]),
+                arr(vec![3.0, 4.0]),
+                arr(vec![5.0, 6.0]),
+            ),
+            0,
+            2,
+        )
+        .unwrap();
+        match trimmed {
+            IndicatorResult::Triple(a, b, c) => {
+                assert_eq!(a.to_vec(), vec![1.0, 2.0]);
+                assert_eq!(b.to_vec(), vec![3.0, 4.0]);
+                assert_eq!(c.to_vec(), vec![5.0, 6.0]);
+            }
+            other => panic!("expected Triple, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_trim_leading_rejects_length_mismatch() {
+        // Indicator contract violation: output length != chunk input length
+        let result = trim_leading(
+            IndicatorResult::Single(Array1::from(vec![1.0, 2.0, 3.0])),
+            1,
+            4, // expected 4 elements, got 3
+        );
+        assert!(matches!(result, Err(GpuError::ExecutionError(_))));
+    }
+
+    #[test]
+    fn test_stitch_propagates_length_mismatch_error() {
+        let result = stitch_chunked_results(100, 40, 10, |span| {
+            // Return one element too many: must surface as an error, not
+            // silently mis-stitch.
+            let bad = Array1::from_elem(span.len() + 1, 0.0);
+            let mut map = HashMap::new();
+            map.insert(BatchIndicatorType::ROC, IndicatorResult::Single(bad));
+            Ok(map)
+        });
+        assert!(matches!(result, Err(GpuError::ExecutionError(_))));
+    }
+
+    /// Pure-window indicators must stitch bit-for-bit: the overlap equals the
+    /// lookback, so every kept value sees exactly the same window as the
+    /// unchunked computation.
+    #[test]
+    fn test_stitch_chunked_roc_matches_unchunked_exactly() {
+        let n = 6_000;
+        let period = 14;
+        let close = synthetic_walk(n);
+
+        let params = BatchIndicatorParams::default();
+        let overlap = warmup_candles(BatchIndicatorType::ROC, &params);
+        assert_eq!(overlap, period);
+
+        let roc = CpuRoc::new(period).unwrap();
+        let full = roc.calculate(close.view()).unwrap();
+
+        let chunked = stitch_cpu_single(&close, 1_024, overlap, |chunk| {
+            roc.calculate(chunk.view()).unwrap()
+        });
+
+        assert_series_identical(&full, &chunked);
+    }
+
+    /// Multi-output stitching (Double + Triple) with a pure-window compute
+    /// function: rolling min/mean/max over a `window`-candle lookback.
+    /// Overlap = window - 1 reconstructs the unchunked series exactly.
+    #[test]
+    fn test_stitch_multi_arity_pure_window_exact() {
+        fn rolling_min_mean_max(
+            data: &Array1<f64>,
+            window: usize,
+        ) -> (Array1<f64>, Array1<f64>, Array1<f64>) {
+            let n = data.len();
+            let mut mins = Array1::from_elem(n, f64::NAN);
+            let mut means = Array1::from_elem(n, f64::NAN);
+            let mut maxs = Array1::from_elem(n, f64::NAN);
+            for i in (window - 1)..n {
+                let w = data.slice(ndarray::s![i + 1 - window..i + 1]);
+                let mut mn = f64::INFINITY;
+                let mut mx = f64::NEG_INFINITY;
+                let mut sum = 0.0;
+                for &v in w.iter() {
+                    mn = mn.min(v);
+                    mx = mx.max(v);
+                    sum += v;
+                }
+                mins[i] = mn;
+                means[i] = sum / window as f64;
+                maxs[i] = mx;
+            }
+            (mins, means, maxs)
+        }
+
+        let n = 3_000;
+        let window = 20;
+        let close = synthetic_walk(n);
+
+        let (full_min, full_mean, full_max) = rolling_min_mean_max(&close, window);
+
+        let mut results = stitch_chunked_results(n, 511, window - 1, |span| {
+            let chunk = close.slice(ndarray::s![span.start..span.end]).to_owned();
+            let (mins, means, maxs) = rolling_min_mean_max(&chunk, window);
+            let mut map = HashMap::new();
+            map.insert(
+                BatchIndicatorType::Aroon,
+                IndicatorResult::Double(mins.clone(), maxs.clone()),
+            );
+            map.insert(
+                BatchIndicatorType::BollingerBands,
+                IndicatorResult::Triple(mins, means, maxs),
+            );
+            Ok(map)
+        })
+        .expect("stitching failed");
+
+        match results.remove(&BatchIndicatorType::Aroon) {
+            Some(IndicatorResult::Double(a, b)) => {
+                assert_series_identical(&full_min, &a);
+                assert_series_identical(&full_max, &b);
+            }
+            other => panic!("expected Double, got {:?}", other),
+        }
+        match results.remove(&BatchIndicatorType::BollingerBands) {
+            Some(IndicatorResult::Triple(a, b, c)) => {
+                assert_series_identical(&full_min, &a);
+                assert_series_identical(&full_mean, &b);
+                assert_series_identical(&full_max, &c);
+            }
+            other => panic!("expected Triple, got {:?}", other),
+        }
+    }
+
+    /// Recursive (Wilder) indicators converge rather than match exactly:
+    /// with the default RSI overlap of `RECURSIVE_WARMUP_FACTOR * period`
+    /// = 56 candles, the chunk-local seed retains < e^-3 ≈ 5% influence on
+    /// the smoothed averages at the first kept index. On this deterministic
+    /// random walk the observed max deviation is ≈ 0.77 RSI points
+    /// (0-100 scale); the 2.0-point bound has comfortable margin while still
+    /// failing loudly under naive (no-overlap) chunking, where boundary
+    /// deviations include spurious NaNs and full re-seeds.
+    #[test]
+    fn test_stitch_chunked_rsi_within_tolerance() {
+        let n = 6_000;
+        let period = 14;
+        let close = synthetic_walk(n);
+
+        let params = BatchIndicatorParams::default();
+        let overlap = warmup_candles(BatchIndicatorType::RSI, &params);
+        assert_eq!(overlap, 56);
+
+        let rsi = CpuRsi::new(period).unwrap();
+        let full = rsi.calculate(close.view()).unwrap();
+
+        let chunked = stitch_cpu_single(&close, 1_024, overlap, |chunk| {
+            rsi.calculate(chunk.view()).unwrap()
+        });
+
+        assert_eq!(full.len(), chunked.len());
+        let mut max_deviation = 0.0_f64;
+        for (i, (&a, &b)) in full.iter().zip(chunked.iter()).enumerate() {
+            // NaN positions must match exactly: only the global warmup
+            // (first `period` values) may be NaN. Chunk-local warmup NaNs
+            // land entirely inside the discarded overlap (period < overlap).
+            assert_eq!(
+                a.is_nan(),
+                b.is_nan(),
+                "NaN mismatch at index {}: full={}, chunked={}",
+                i,
+                a,
+                b
+            );
+            if !a.is_nan() {
+                max_deviation = max_deviation.max((a - b).abs());
+            }
+        }
+
+        assert!(
+            max_deviation < 2.0,
+            "chunked RSI deviates {} points from unchunked (tolerance 2.0)",
+            max_deviation
+        );
+    }
+
+    /// Regression contrast: naive chunking (overlap = 0) re-emits warmup
+    /// NaNs at every chunk boundary - the exact corruption the
+    /// overlap-and-discard chunker fixes. This proves the comparison tests
+    /// above are sensitive enough to catch the original bug.
+    #[test]
+    fn test_stitch_zero_overlap_reproduces_boundary_corruption() {
+        let n = 6_000;
+        let period = 14;
+        let close = synthetic_walk(n);
+
+        let roc = CpuRoc::new(period).unwrap();
+        let full = roc.calculate(close.view()).unwrap();
+
+        let naive = stitch_cpu_single(&close, 1_024, 0, |chunk| {
+            roc.calculate(chunk.view()).unwrap()
+        });
+
+        let leaked_nans = full
+            .iter()
+            .zip(naive.iter())
+            .skip(period) // global warmup NaNs are legitimately shared
+            .filter(|&(&a, &b)| !a.is_nan() && b.is_nan())
+            .count();
+
+        assert!(
+            leaked_nans > 0,
+            "naive chunking must leak boundary warmup NaNs; if this fails \
+             the chunked-vs-unchunked tests have lost their sensitivity"
+        );
+        // 5 interior boundaries (1024, 2048, 3072, 4096, 5120) x period NaNs
+        assert_eq!(leaked_nans, 5 * period);
     }
 }

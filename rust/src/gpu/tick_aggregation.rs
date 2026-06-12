@@ -299,7 +299,7 @@ impl TickAggregator {
 
         let n_trades_i32 = n_trades as i32;
         let threads_per_block = THREADS_PER_BLOCK;
-        let blocks_per_grid = (n_trades + threads_per_block - 1) / threads_per_block;
+        let blocks_per_grid = n_trades.div_ceil(threads_per_block);
 
         // ====================================================================
         // STEP 2: Sortedness check + bucket range (two tiny readbacks)
@@ -436,7 +436,7 @@ impl TickAggregator {
                 })?;
 
         let n_candles_i32 = n_candles as i32;
-        let candle_blocks = (n_candles + threads_per_block - 1) / threads_per_block;
+        let candle_blocks = n_candles.div_ceil(threads_per_block);
         let cfg_per_candle = LaunchConfig {
             grid_dim: (candle_blocks as u32, 1, 1),
             block_dim: (threads_per_block as u32, 1, 1),
@@ -753,17 +753,21 @@ fn aggregate_on_cpu(
     result
 }
 
-/// Compile CUDA kernels for tick aggregation
+/// Compile CUDA kernels for tick aggregation (cached).
+///
+/// Uses `compile_ptx_optimized_cached` so repeated `TickAggregator::new()`
+/// calls skip NVRTC compilation entirely (50-200x faster on cache hits).
 fn compile_tick_kernels() -> Result<cudarc::nvrtc::Ptx, GpuError> {
     let kernel_src = include_str!("kernels/tick_aggregation.cu");
-    let opts = super::compile::get_compile_options();
 
-    cudarc::nvrtc::compile_ptx_with_opts(kernel_src, opts.clone()).map_err(|e| {
+    let ptx_arc = super::compile::compile_ptx_optimized_cached(kernel_src).map_err(|e| {
         GpuError::CompilationError(format!(
             "Failed to compile tick aggregation kernels: {:?}",
             e
         ))
-    })
+    })?;
+
+    Ok(std::sync::Arc::unwrap_or_clone(ptx_arc))
 }
 
 #[cfg(test)]
@@ -816,6 +820,16 @@ mod tests {
         assert!(
             !KERNEL_SRC.contains("__shared__"),
             "tick aggregation kernels must not use shared memory"
+        );
+
+        // 64-bit warp shuffles must go through the 32-bit split helper: the
+        // long long __shfl_down_sync overloads are SDK-header inline functions
+        // not guaranteed by NVRTC's builtin preamble.
+        assert!(KERNEL_SRC.contains("shfl_down_i64(0xFFFFFFFFu, local_min, offset)"));
+        assert!(KERNEL_SRC.contains("shfl_down_i64(0xFFFFFFFFu, local_max, offset)"));
+        assert!(
+            !KERNEL_SRC.contains("__shfl_down_sync(0xFFFFFFFFu, local_"),
+            "shuffle i64 values via shfl_down_i64, not a direct 64-bit __shfl_down_sync"
         );
 
         // Racy CAS helpers and the dead hash kernel must stay deleted
@@ -954,7 +968,7 @@ mod tests {
         assert_eq!(candles.open[1], 120.0);
         assert_eq!(candles.high[1], 120.0);
         assert_eq!(candles.low[1], 118.0);
-        assert_eq!(candles.close[1], 120.0);
+        assert_eq!(candles.close[1], 118.0); // Last trade in stream order
         assert_eq!(candles.volume[1], 2.0);
         assert_eq!(candles.num_trades[1], 2);
     }

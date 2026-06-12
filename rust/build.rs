@@ -1,27 +1,27 @@
 //! Build script for kimsfinance_core
 //!
-//! Compiles CUDA kernels to PTX/CUBIN during build time when `gpu` feature is enabled.
+//! Compiles the RSI fused kernel (CUB-based) at build time when the `gpu`
+//! feature is enabled. CUB templates require nvcc; they cannot be compiled
+//! with the runtime NVRTC pipeline.
 //!
-//! # FP8 CUTLASS Kernel Compilation
-//!
-//! Compiles FP8 tensor core kernels using nvcc for sm_89 (RTX 3500 Ada):
-//! - Source: `src/gpu/kernels/fp8_cutlass.cu`
-//! - Output: `fp8_kernels.cubin` (placed in `OUT_DIR`)
-//! - Requires: CUDA 13.0+, CUTLASS headers
+//! NOTE: Earlier versions also nvcc-compiled `src/gpu/kernels_fp8_wmma.cu`
+//! and `src/gpu/kernels/fp8_cutlass.cu` to CUBINs and exported their paths
+//! via `FP8_WMMA_CUBIN_PATH` / `FP8_CUTLASS_CUBIN_PATH`. No Rust code ever
+//! loaded those CUBINs or read those env vars (the FP8 modules JIT-compile
+//! NVRTC-compatible sources via `include_str!` instead), so those build
+//! steps were dead work and have been removed.
 //!
 //! # Build Process
 //!
 //! 1. Detect if `gpu` feature is enabled (skip if not)
-//! 2. Find nvcc compiler (warn if not found, skip FP8 compilation)
+//! 2. Find nvcc compiler (warn if not found, skip kernel compilation)
 //! 3. Detect CUDA toolkit path (CUDA_HOME, /usr/local/cuda-13.0, /usr/local/cuda)
-//! 4. Detect CUTLASS include path (CUTLASS_PATH, /tmp/cutlass)
-//! 5. Compile FP8 kernel to CUBIN with sm_89 architecture
-//! 6. Emit cargo directives for rebuild detection
+//! 4. Compile RSI fused kernel to a shared library
+//! 5. Emit cargo directives for rebuild detection
 //!
 //! # Environment Variables
 //!
 //! - `CUDA_HOME`: Override CUDA toolkit path
-//! - `CUTLASS_PATH`: Override CUTLASS include path
 //! - `CUDA_ARCH`: Override target architecture (default: sm_89)
 //!
 //! # Example Usage
@@ -60,10 +60,10 @@ fn main() {
         }
         None => {
             println!(
-                "cargo:warning=nvcc not found in PATH. Skipping FP8 CUTLASS kernel compilation."
+                "cargo:warning=nvcc not found in PATH. Skipping build-time CUDA kernel compilation."
             );
             println!(
-                "cargo:warning=Install CUDA Toolkit (https://developer.nvidia.com/cuda-downloads) to enable FP8 support."
+                "cargo:warning=Install CUDA Toolkit (https://developer.nvidia.com/cuda-downloads) to enable the RSI fused kernel."
             );
             return;
         }
@@ -81,22 +81,6 @@ fn main() {
         }
     };
 
-    // Detect CUTLASS include path
-    let cutlass_path = match find_cutlass_path() {
-        Some(path) => {
-            println!("cargo:warning=CUTLASS found at: {}", path.display());
-            path
-        }
-        None => {
-            println!("cargo:warning=CUTLASS not found. FP8 kernels require CUTLASS headers.");
-            println!(
-                "cargo:warning=Clone CUTLASS: git clone https://github.com/NVIDIA/cutlass.git /tmp/cutlass"
-            );
-            println!("cargo:warning=Or set CUTLASS_PATH environment variable.");
-            return;
-        }
-    };
-
     // Get target architecture (default: sm_89 for RTX 3500 Ada)
     // Can also auto-detect GPU if available
     let cuda_arch = env::var("CUDA_ARCH").unwrap_or_else(|_| {
@@ -107,10 +91,6 @@ fn main() {
         "cargo:warning=Compiling for CUDA architecture: {}",
         cuda_arch
     );
-
-    // Compile FP8 kernels (both WMMA and CUTLASS variants)
-    compile_fp8_wmma_kernel(&nvcc, &cuda_home, &cuda_arch);
-    compile_fp8_cutlass_kernel(&nvcc, &cuda_home, &cutlass_path, &cuda_arch);
 
     // Compile RSI fused kernel with CUB (requires nvcc, not NVRTC)
     compile_rsi_fused_kernel(&nvcc, &cuda_home, &cuda_arch);
@@ -213,248 +193,6 @@ fn find_cuda_home() -> Option<PathBuf> {
     }
 
     None
-}
-
-/// Find CUTLASS include path
-///
-/// Tries in order:
-/// 1. CUTLASS_PATH environment variable
-/// 2. /tmp/cutlass
-/// 3. ./cutlass (in project root)
-fn find_cutlass_path() -> Option<PathBuf> {
-    // Try CUTLASS_PATH environment variable
-    if let Ok(cutlass_path) = env::var("CUTLASS_PATH") {
-        let path = PathBuf::from(cutlass_path);
-        if path.join("include").exists() {
-            return Some(path);
-        }
-    }
-
-    // Try /tmp/cutlass
-    let tmp_cutlass = PathBuf::from("/tmp/cutlass");
-    if tmp_cutlass.join("include").exists() {
-        return Some(tmp_cutlass);
-    }
-
-    // Try ./cutlass in project root
-    let project_cutlass = PathBuf::from("cutlass");
-    if project_cutlass.join("include").exists() {
-        return Some(project_cutlass);
-    }
-
-    None
-}
-
-/// Compile FP8 WMMA kernel to CUBIN
-///
-/// Simpler kernel using WMMA API instead of CUTLASS. More reliable compilation.
-///
-/// Compilation command:
-/// ```bash
-/// nvcc -cubin \
-///      -arch=sm_89 \
-///      -std=c++17 \
-///      -I{cuda}/include \
-///      -O3 \
-///      -use_fast_math \
-///      --expt-relaxed-constexpr \
-///      -D_FORCE_INLINES \
-///      -o {out_dir}/fp8_wmma_kernels.cubin \
-///      src/gpu/kernels_fp8_wmma.cu
-/// ```
-fn compile_fp8_wmma_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
-    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
-    let kernel_source = PathBuf::from("src/gpu/kernels_fp8_wmma.cu");
-    let output_cubin = out_dir.join("fp8_wmma_kernels.cubin");
-
-    if !kernel_source.exists() {
-        println!(
-            "cargo:warning=FP8 WMMA kernel source not found: {}",
-            kernel_source.display()
-        );
-        return;
-    }
-
-    println!(
-        "cargo:warning=Compiling FP8 WMMA kernel: {}",
-        kernel_source.display()
-    );
-
-    // Build include paths
-    let cuda_include = cuda_home.join("include");
-    let cuda_targets_include = cuda_home.join("targets/x86_64-linux/include");
-
-    // Build nvcc command with workarounds for CUDA 13.0 math header conflicts
-    let mut cmd = Command::new(nvcc);
-    cmd.arg("-cubin") // Compile to CUBIN (not PTX)
-        .arg(format!("-arch={}", cuda_arch)) // Target architecture
-        .arg("-std=c++17") // C++17 for modern features
-        .arg(format!("-I{}", cuda_include.display())) // CUDA headers
-        .arg(format!("-I{}", cuda_targets_include.display())) // CUDA target headers
-        .arg("-O3") // Maximum optimization
-        .arg("-use_fast_math") // Fast math operations
-        .arg("--expt-relaxed-constexpr") // Relaxed constexpr
-        .arg("--expt-extended-lambda") // Extended lambda
-        .arg("-D_FORCE_INLINES") // Force inline to avoid header conflicts
-        .arg("--Werror=cross-execution-space-call") // Suppress specific warnings
-        .arg("-Xcompiler=-w") // Suppress host compiler warnings
-        .arg("-o")
-        .arg(&output_cubin)
-        .arg(&kernel_source);
-
-    println!("cargo:warning=Running: {:?}", cmd);
-
-    // Execute nvcc
-    let output = match cmd.output() {
-        Ok(output) => output,
-        Err(e) => {
-            println!(
-                "cargo:warning=Failed to execute nvcc for WMMA kernel: {}",
-                e
-            );
-            return;
-        }
-    };
-
-    // Check compilation result
-    if output.status.success() {
-        println!(
-            "cargo:warning=Successfully compiled FP8 WMMA kernel to: {}",
-            output_cubin.display()
-        );
-
-        // Emit linker directive
-        println!(
-            "cargo:rustc-env=FP8_WMMA_CUBIN_PATH={}",
-            output_cubin.display()
-        );
-
-        // Print stdout/stderr for debugging
-        if !output.stdout.is_empty() {
-            println!(
-                "cargo:warning=nvcc stdout: {}",
-                String::from_utf8_lossy(&output.stdout)
-            );
-        }
-    } else {
-        println!("cargo:warning=Failed to compile FP8 WMMA kernel (non-critical)");
-        println!("cargo:warning=Exit code: {:?}", output.status.code());
-
-        if !output.stderr.is_empty() {
-            println!(
-                "cargo:warning=nvcc stderr: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
-    }
-}
-
-/// Compile FP8 CUTLASS kernel to CUBIN
-///
-/// Compilation command:
-/// ```bash
-/// nvcc -cubin \
-///      -arch=sm_89 \
-///      -std=c++17 \
-///      -I{cutlass}/include \
-///      -I{cuda}/include \
-///      -I{cuda}/targets/x86_64-linux/include \
-///      -O3 \
-///      -use_fast_math \
-///      --expt-relaxed-constexpr \
-///      -o {out_dir}/fp8_kernels.cubin \
-///      src/gpu/kernels/fp8_cutlass.cu
-/// ```
-fn compile_fp8_cutlass_kernel(nvcc: &Path, cuda_home: &Path, cutlass_path: &Path, cuda_arch: &str) {
-    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
-    let kernel_source = PathBuf::from("src/gpu/kernels/fp8_cutlass.cu");
-    let output_cubin = out_dir.join("fp8_kernels.cubin");
-
-    if !kernel_source.exists() {
-        println!(
-            "cargo:warning=FP8 CUTLASS kernel source not found: {}",
-            kernel_source.display()
-        );
-        return;
-    }
-
-    println!(
-        "cargo:warning=Compiling FP8 CUTLASS kernel: {}",
-        kernel_source.display()
-    );
-
-    // Build include paths
-    let cutlass_include = cutlass_path.join("include");
-    let cuda_include = cuda_home.join("include");
-    let cuda_targets_include = cuda_home.join("targets/x86_64-linux/include");
-
-    // Build nvcc command with workarounds for CUDA 13.0 math header conflicts
-    let mut cmd = Command::new(nvcc);
-    cmd.arg("-cubin") // Compile to CUBIN (not PTX)
-        .arg(format!("-arch={}", cuda_arch)) // Target architecture
-        .arg("-std=c++17") // C++17 required for CUTLASS
-        .arg(format!("-I{}", cutlass_include.display())) // CUTLASS headers
-        .arg(format!("-I{}", cuda_include.display())) // CUDA headers (cuda_fp8.h)
-        .arg(format!("-I{}", cuda_targets_include.display())) // CUDA target headers
-        .arg("-O3") // Maximum optimization
-        .arg("-use_fast_math") // Fast math operations
-        .arg("--expt-relaxed-constexpr") // Relaxed constexpr (for CUTLASS)
-        .arg("--expt-extended-lambda") // Extended lambda (for CUTLASS)
-        .arg("-D_FORCE_INLINES") // Force inline to avoid header conflicts
-        .arg("--Werror=cross-execution-space-call") // Suppress specific warnings
-        .arg("-Xcompiler=-w") // Suppress host compiler warnings
-        .arg("-o")
-        .arg(&output_cubin)
-        .arg(&kernel_source);
-
-    println!("cargo:warning=Running: {:?}", cmd);
-
-    // Execute nvcc
-    let output = match cmd.output() {
-        Ok(output) => output,
-        Err(e) => {
-            println!("cargo:warning=Failed to execute nvcc: {}", e);
-            return;
-        }
-    };
-
-    // Check compilation result
-    if output.status.success() {
-        println!(
-            "cargo:warning=Successfully compiled FP8 CUTLASS kernel to: {}",
-            output_cubin.display()
-        );
-
-        // Emit linker directive
-        println!(
-            "cargo:rustc-env=FP8_CUTLASS_CUBIN_PATH={}",
-            output_cubin.display()
-        );
-
-        // Print stdout/stderr for debugging
-        if !output.stdout.is_empty() {
-            println!(
-                "cargo:warning=nvcc stdout: {}",
-                String::from_utf8_lossy(&output.stdout)
-            );
-        }
-    } else {
-        println!("cargo:warning=Failed to compile FP8 CUTLASS kernel (non-critical)");
-        println!("cargo:warning=Exit code: {:?}", output.status.code());
-        println!(
-            "cargo:warning=Note: FP8 WMMA kernel may still work. CUTLASS kernel is experimental."
-        );
-
-        if !output.stderr.is_empty() {
-            // Only show first few lines of error to avoid spam
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let first_lines: Vec<&str> = stderr.lines().take(10).collect();
-            println!(
-                "cargo:warning=nvcc stderr (first 10 lines): {}",
-                first_lines.join("\n")
-            );
-        }
-    }
 }
 
 /// Compile RSI fused kernel with CUB to shared library
@@ -578,8 +316,6 @@ fn compile_rsi_fused_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
 /// Emit cargo directives for rebuild detection
 fn emit_rebuild_directives() {
     // Rebuild if CUDA kernels change
-    println!("cargo:rerun-if-changed=src/gpu/kernels/fp8_cutlass.cu");
-    println!("cargo:rerun-if-changed=src/gpu/kernels_fp8_wmma.cu");
     println!("cargo:rerun-if-changed=src/gpu/kernels/rsi_fused.cu");
 
     // Rebuild if build script changes
@@ -587,6 +323,5 @@ fn emit_rebuild_directives() {
 
     // Rebuild if environment variables change
     println!("cargo:rerun-if-env-changed=CUDA_HOME");
-    println!("cargo:rerun-if-env-changed=CUTLASS_PATH");
     println!("cargo:rerun-if-env-changed=CUDA_ARCH");
 }

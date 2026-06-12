@@ -479,7 +479,7 @@ impl<T> PinnedBufferPool<T> {
         }
 
         // Maintain the descending-by-length invariant
-        available.sort_by(|a, b| b.len().cmp(&a.len()));
+        available.sort_by_key(|buf| std::cmp::Reverse(buf.len()));
 
         Ok(Self {
             available,
