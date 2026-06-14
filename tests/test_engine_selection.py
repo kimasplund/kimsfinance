@@ -36,7 +36,7 @@ class TestGPUCrossoverThresholds:
     def test_specific_threshold_values(self):
         """Verify specific threshold values match expected empirical values."""
         # Updated after autotune rerun: thresholds reflect actual GPU crossover points
-        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 10_000   # rolling window threshold
+        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 10_000  # rolling window threshold
         assert GPU_CROSSOVER_THRESHOLDS["rsi"] == 100_000  # vectorizable_simple threshold
         assert GPU_CROSSOVER_THRESHOLDS["stochastic"] == 500_000  # iterative threshold
         assert GPU_CROSSOVER_THRESHOLDS["default"] == 100_000  # default threshold

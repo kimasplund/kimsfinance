@@ -13,7 +13,6 @@ from kimsfinance.plotting import (
 from kimsfinance.config.themes import THEMES
 from kimsfinance.utils.color_utils import _hex_to_rgba
 
-
 # Sample test data used across multiple tests
 SAMPLE_OHLC = {
     "open": np.array([100, 102, 101, 103, 105]),

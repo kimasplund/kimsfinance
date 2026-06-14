@@ -87,7 +87,9 @@ class HTMLReport:
         self.trade_stats = calculate_trade_statistics(self.trades)
 
         returns = self.equity_curve.pct_change().dropna()
-        benchmark_returns = self.benchmark.pct_change().dropna() if self.benchmark is not None else None
+        benchmark_returns = (
+            self.benchmark.pct_change().dropna() if self.benchmark is not None else None
+        )
         self.risk_metrics = calculate_risk_metrics(returns, self.equity_curve, benchmark_returns)
 
         self.monthly_returns = calculate_monthly_returns(self.equity_curve)
@@ -388,7 +390,9 @@ class HTMLReport:
     def _build_charts_section(self) -> str:
         """Build charts section."""
         # Generate charts
-        equity_img = create_equity_curve(self.equity_curve, self.benchmark, width=800, height=400, dpi=100)
+        equity_img = create_equity_curve(
+            self.equity_curve, self.benchmark, width=800, height=400, dpi=100
+        )
         drawdown_img = create_drawdown_chart(self.equity_curve, width=800, height=300, dpi=100)
 
         # Convert to base64
@@ -569,11 +573,12 @@ class HTMLReport:
             entry = trade.get("entry_time", "N/A")
             exit = trade.get("exit_time", "N/A")
 
-            entry_str = entry.strftime("%Y-%m-%d %H:%M") if hasattr(entry, "strftime") else str(entry)
+            entry_str = (
+                entry.strftime("%Y-%m-%d %H:%M") if hasattr(entry, "strftime") else str(entry)
+            )
             exit_str = exit.strftime("%Y-%m-%d %H:%M") if hasattr(exit, "strftime") else str(exit)
 
-            rows.append(
-                f"""
+            rows.append(f"""
             <tr>
                 <td>{i}</td>
                 <td>{entry_str}</td>
@@ -581,8 +586,7 @@ class HTMLReport:
                 <td>{trade.get('direction', 'N/A')}</td>
                 <td class="{pnl_class}">${pnl:,.2f}</td>
             </tr>
-"""
-            )
+""")
 
         return f"""
     <div class="section">

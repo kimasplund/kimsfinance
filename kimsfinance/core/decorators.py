@@ -45,7 +45,6 @@ from .types import ArrayLike, Engine
 from .engine import EngineManager, GPUNotAvailableError
 from ..config.gpu_thresholds import get_threshold
 
-
 P = ParamSpec("P")
 R = TypeVar("R")
 

@@ -9,12 +9,14 @@ import numpy as np
 # Test if Rust extension is available
 try:
     import kimsfinance_core
+
     RUST_AVAILABLE = True
 except ImportError:
     RUST_AVAILABLE = False
     print("⚠️  Rust extension not available")
 
 from kimsfinance.plotting.pil_renderer import _calculate_coordinates_numpy
+
 
 def generate_test_data(n_candles):
     """Generate realistic OHLCV test data"""
@@ -26,6 +28,7 @@ def generate_test_data(n_candles):
     volume = np.random.randint(1000, 100000, n_candles).astype(np.float64)
 
     return high, low, open_price, close, volume
+
 
 def benchmark_numpy(high, low, open_price, close, volume, iterations=100):
     """Benchmark NumPy implementation"""
@@ -48,12 +51,13 @@ def benchmark_numpy(high, low, open_price, close, volume, iterations=100):
             volume_range=float(volume.max()),
             chart_height=1080,
             volume_height=300,
-            height=1080
+            height=1080,
         )
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 
     return np.median(times)
+
 
 def benchmark_rust(high, low, open_price, close, volume, iterations=100):
     """Benchmark Rust implementation"""
@@ -72,37 +76,72 @@ def benchmark_rust(high, low, open_price, close, volume, iterations=100):
             volume,
             len(high),
             10.0,  # candle_width
-            1.0,   # spacing
-            9.0,   # bar_width
+            1.0,  # spacing
+            9.0,  # bar_width
             float(low.min()),
             float(high.max() - low.min()),
             float(volume.max()),
             1080,  # chart_height
-            300,   # volume_height
-            1080   # height
+            300,  # volume_height
+            1080,  # height
         )
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 
     return np.median(times)
 
-print("="*70)
+
+print("=" * 70)
 print("RUST VS PYTHON/NUMPY COORDINATE CALCULATION BENCHMARK")
-print("="*70)
+print("=" * 70)
 print()
 
 for n_candles in [100, 1_000, 10_000, 100_000]:
     high, low, open_price, close, volume = generate_test_data(n_candles)
 
     # Warm up
-    _ = _calculate_coordinates_numpy(len(high), 10.0, 1.0, 9.0, high, low, open_price, close, volume, float(low.min()), float(high.max() - low.min()), float(volume.max()), 1080, 300, 1080)
+    _ = _calculate_coordinates_numpy(
+        len(high),
+        10.0,
+        1.0,
+        9.0,
+        high,
+        low,
+        open_price,
+        close,
+        volume,
+        float(low.min()),
+        float(high.max() - low.min()),
+        float(volume.max()),
+        1080,
+        300,
+        1080,
+    )
     if RUST_AVAILABLE:
-        _ = kimsfinance_core.calculate_coordinates_py(high, low, open_price, close, volume, len(high), 10.0, 1.0, 9.0, float(low.min()), float(high.max() - low.min()), float(volume.max()), 1080, 300, 1080)
+        _ = kimsfinance_core.calculate_coordinates_py(
+            high,
+            low,
+            open_price,
+            close,
+            volume,
+            len(high),
+            10.0,
+            1.0,
+            9.0,
+            float(low.min()),
+            float(high.max() - low.min()),
+            float(volume.max()),
+            1080,
+            300,
+            1080,
+        )
 
     # Benchmark
     iterations = max(10, 1000 // n_candles)
     numpy_time = benchmark_numpy(high, low, open_price, close, volume, iterations)
-    rust_time = benchmark_rust(high, low, open_price, close, volume, iterations) if RUST_AVAILABLE else None
+    rust_time = (
+        benchmark_rust(high, low, open_price, close, volume, iterations) if RUST_AVAILABLE else None
+    )
 
     print(f"Dataset: {n_candles:,} candles ({iterations} iterations)")
     print(f"  NumPy:  {numpy_time*1000:8.3f} ms")
@@ -120,7 +159,7 @@ for n_candles in [100, 1_000, 10_000, 100_000]:
         print(f"  Rust:   N/A (not available)")
     print()
 
-print("="*70)
+print("=" * 70)
 if RUST_AVAILABLE:
     print("RUST MIGRATION: Ready for integration into pil_renderer.py")
     print()
@@ -128,4 +167,4 @@ if RUST_AVAILABLE:
     print("This translates to ~15-25% improvement in total chart rendering time")
 else:
     print("RUST EXTENSION: Not built. Run 'cd rust && maturin develop --release'")
-print("="*70)
+print("=" * 70)

@@ -180,9 +180,7 @@ def _get_theme_colors(theme: Theme) -> dict[str, str]:
     }
 
 
-def _prepare_ohlcv_data(
-    data: DataFrameInput, date_column: Optional[str] = None
-) -> pl.DataFrame:
+def _prepare_ohlcv_data(data: DataFrameInput, date_column: Optional[str] = None) -> pl.DataFrame:
     """
     Prepare OHLCV data for charting.
 
@@ -224,7 +222,9 @@ def _prepare_ohlcv_data(
     # Handle date column
     if date_column is None:
         # Try to find date column
-        date_candidates = [col for col in df.columns if "date" in col.lower() or "time" in col.lower()]
+        date_candidates = [
+            col for col in df.columns if "date" in col.lower() or "time" in col.lower()
+        ]
         if date_candidates:
             date_column = date_candidates[0]
         else:
@@ -300,8 +300,7 @@ def plot_candlestick_plotly(
     """
     if not PLOTLY_AVAILABLE:
         raise ImportError(
-            "Plotly is required for interactive charts. "
-            "Install with: pip install plotly"
+            "Plotly is required for interactive charts. " "Install with: pip install plotly"
         )
 
     # Prepare data
@@ -643,9 +642,7 @@ def plot_candlestick_bokeh(
             border_fill_color=colors["bg"],
         )
 
-        p_volume.vbar(
-            x="index", top="volume", width=0.5, source=source, color="color", alpha=0.5
-        )
+        p_volume.vbar(x="index", top="volume", width=0.5, source=source, color="color", alpha=0.5)
 
         p_volume.xaxis.axis_label = ""
         p_volume.yaxis.axis_label = "Volume"

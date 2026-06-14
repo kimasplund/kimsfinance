@@ -118,7 +118,9 @@ def create_drawdown_chart(
     fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
 
     # Plot drawdown as filled area
-    ax.fill_between(drawdown.index, 0, drawdown.values, color="#D62828", alpha=0.6, label="Drawdown")
+    ax.fill_between(
+        drawdown.index, 0, drawdown.values, color="#D62828", alpha=0.6, label="Drawdown"
+    )
     ax.plot(drawdown.index, drawdown.values, linewidth=1.5, color="#9B2226")
 
     # Formatting

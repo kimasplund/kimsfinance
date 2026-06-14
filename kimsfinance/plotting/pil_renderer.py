@@ -510,15 +510,15 @@ def render_ohlc_bars(
         x_lefts[:] = (x_centers - tick_length).astype(np.int32)
         x_rights[:] = (x_centers + tick_length).astype(np.int32)
 
-        y_highs[:] = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-            np.int32
-        )
+        y_highs[:] = (
+            chart_height - ((high_prices - price_min) / price_range * chart_height)
+        ).astype(np.int32)
         y_lows[:] = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
             np.int32
         )
-        y_opens[:] = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-            np.int32
-        )
+        y_opens[:] = (
+            chart_height - ((open_prices - price_min) / price_range * chart_height)
+        ).astype(np.int32)
         y_closes[:] = (
             chart_height - ((close_prices - price_min) / price_range * chart_height)
         ).astype(np.int32)
@@ -1168,9 +1168,9 @@ def render_line_chart(
         vol_heights = np.empty(num_points, dtype=np.int32)
 
         x_coords[:] = ((indices + CENTER_OFFSET) * point_spacing).astype(np.int32)
-        y_coords[:] = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-            np.int32
-        )
+        y_coords[:] = (
+            chart_height - ((close_prices - price_min) / price_range * chart_height)
+        ).astype(np.int32)
 
         bar_spacing = point_spacing * SPACING_RATIO
         bar_width_val = point_spacing - bar_spacing
@@ -1329,14 +1329,18 @@ def render_timeseries_chart(
         if num_points is None:
             num_points = len(y_array)
         elif len(y_array) != num_points:
-            raise ValueError(f"All series must have the same length. Expected {num_points}, got {len(y_array)} for '{label}'")
+            raise ValueError(
+                f"All series must have the same length. Expected {num_points}, got {len(y_array)} for '{label}'"
+            )
         series_arrays[label] = y_array
 
     # Handle x-axis data
     if x_data is not None:
         x_array = _ensure_c_contiguous(to_numpy_array(x_data))
         if len(x_array) != num_points:
-            raise ValueError(f"x_data length ({len(x_array)}) must match series length ({num_points})")
+            raise ValueError(
+                f"x_data length ({len(x_array)}) must match series length ({num_points})"
+            )
     else:
         x_array = np.arange(num_points, dtype=np.float64)
 
@@ -1355,10 +1359,10 @@ def render_timeseries_chart(
 
         # Default line colors from theme
         default_colors = [
-            theme_colors["up"],      # Green/primary
-            theme_colors["down"],    # Red/secondary
-            text_color_final,        # Text color (white/black)
-            theme_colors["grid"],    # Grid color
+            theme_colors["up"],  # Green/primary
+            theme_colors["down"],  # Red/secondary
+            text_color_final,  # Text color (white/black)
+            theme_colors["grid"],  # Grid color
         ]
     else:
         mode = "RGB"
@@ -1388,7 +1392,9 @@ def render_timeseries_chart(
             colors_to_use.append(color)
     else:
         if len(line_colors) < len(series_arrays):
-            raise ValueError(f"Need at least {len(series_arrays)} line_colors, got {len(line_colors)}")
+            raise ValueError(
+                f"Need at least {len(series_arrays)} line_colors, got {len(line_colors)}"
+            )
         colors_to_use = [_hex_to_rgba(c) if enable_antialiasing else c for c in line_colors]
 
     # Create image
@@ -1443,7 +1449,9 @@ def render_timeseries_chart(
         color = colors_to_use[idx]
 
         # Calculate y coordinates
-        y_coords = (chart_y_start + chart_height - ((y_values - y_min) / y_range * chart_height)).astype(np.int32)
+        y_coords = (
+            chart_y_start + chart_height - ((y_values - y_min) / y_range * chart_height)
+        ).astype(np.int32)
 
         # Create points for line
         points = list(zip(x_coords.tolist(), y_coords.tolist()))
@@ -1758,14 +1766,18 @@ def render_hollow_candles(
         is_bullish[:] = close_prices >= open_prices
 
         # Vectorized price scaling
-        y_high[:] = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
-            int)
+        y_high[:] = chart_height - (
+            ((high_prices - price_min) / price_range) * chart_height
+        ).astype(int)
         y_low[:] = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
-            int)
-        y_open[:] = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
-            int)
-        y_close[:] = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
-            int)
+            int
+        )
+        y_open[:] = chart_height - (
+            ((open_prices - price_min) / price_range) * chart_height
+        ).astype(int)
+        y_close[:] = chart_height - (
+            ((close_prices - price_min) / price_range) * chart_height
+        ).astype(int)
 
         # Vectorized volume scaling
         vol_heights[:] = ((volume_data / volume_range) * volume_height).astype(int)
@@ -2079,7 +2091,7 @@ def _draw_grid(
         draw.line([(x, 0), (x, chart_height)], fill=color, width=int(GRID_LINE_WIDTH))
 
 
-@njit(cache=True, fastmath=True, error_model='numpy')
+@njit(cache=True, fastmath=True, error_model="numpy")
 def _calculate_coordinates_jit(
     num_candles: int,
     candle_width: float,
@@ -2173,13 +2185,17 @@ def _calculate_coordinates_jit(
 
     # Vectorized price scaling
     y_high[:] = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_low[:] = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_open[:] = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_close[:] = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
 
     # Vectorized volume scaling
     vol_heights[:] = ((volume_data / volume_range) * volume_height).astype(np.int32)
@@ -2285,13 +2301,17 @@ def _calculate_coordinates_numpy(
 
     # Vectorized price scaling
     y_high[:] = (chart_height - ((high_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_low[:] = (chart_height - ((low_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_open[:] = (chart_height - ((open_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
     y_close[:] = (chart_height - ((close_prices - price_min) / price_range * chart_height)).astype(
-        np.int32)
+        np.int32
+    )
 
     # Vectorized volume scaling
     vol_heights[:] = ((volume_data / volume_range) * volume_height).astype(np.int32)
@@ -2646,14 +2666,18 @@ def render_ohlcv_chart(
         is_bullish[:] = close_prices >= open_prices
 
         # Vectorized price scaling (eliminates per-candle scale_price() calls)
-        y_high[:] = chart_height - (((high_prices - price_min) / price_range) * chart_height).astype(
-            int)
+        y_high[:] = chart_height - (
+            ((high_prices - price_min) / price_range) * chart_height
+        ).astype(int)
         y_low[:] = chart_height - (((low_prices - price_min) / price_range) * chart_height).astype(
-            int)
-        y_open[:] = chart_height - (((open_prices - price_min) / price_range) * chart_height).astype(
-            int)
-        y_close[:] = chart_height - (((close_prices - price_min) / price_range) * chart_height).astype(
-            int)
+            int
+        )
+        y_open[:] = chart_height - (
+            ((open_prices - price_min) / price_range) * chart_height
+        ).astype(int)
+        y_close[:] = chart_height - (
+            ((close_prices - price_min) / price_range) * chart_height
+        ).astype(int)
 
         # Vectorized volume scaling
         vol_heights[:] = ((volume_data / volume_range) * volume_height).astype(int)

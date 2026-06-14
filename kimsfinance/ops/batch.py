@@ -369,11 +369,7 @@ def calculate_indicators_batch(
     else:
         polars_engine = "cpu"  # explicit CPU engine (Polars rejects engine=None)
 
-    result = (
-        df.lazy()
-        .select(**expressions)
-        .collect(engine=polars_engine)
-    )
+    result = df.lazy().select(**expressions).collect(engine=polars_engine)
 
     # ========================================================================
     # Post-process results

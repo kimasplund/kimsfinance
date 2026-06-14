@@ -144,7 +144,7 @@ class GeneticOptimizer:
 
         self.population_size = population_size
         self.generations = generations
-        self.objectives = objectives or ['sharpe', 'max_drawdown', 'win_rate']
+        self.objectives = objectives or ["sharpe", "max_drawdown", "win_rate"]
         self.n_objectives = len(self.objectives)
 
         self.n_islands = n_islands
@@ -178,17 +178,9 @@ class GeneticOptimizer:
             dtype = self.param_types[param_name]
 
             if dtype == int:
-                self.toolbox.register(
-                    f"attr_{i}",
-                    np.random.randint,
-                    low, high + 1
-                )
+                self.toolbox.register(f"attr_{i}", np.random.randint, low, high + 1)
             else:
-                self.toolbox.register(
-                    f"attr_{i}",
-                    np.random.uniform,
-                    low, high
-                )
+                self.toolbox.register(f"attr_{i}", np.random.uniform, low, high)
 
         # Structure initializers
         self.toolbox.register(
@@ -196,7 +188,7 @@ class GeneticOptimizer:
             tools.initCycle,
             creator.Individual,
             [getattr(self.toolbox, f"attr_{i}") for i in range(len(self.param_names))],
-            n=1
+            n=1,
         )
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
 
@@ -226,7 +218,7 @@ class GeneticOptimizer:
                     individual[i] += np.random.normal(0, sigma)
                     individual[i] = np.clip(individual[i], low, high)
 
-        return individual,
+        return (individual,)
 
     def _decode_individual(self, individual: List[float]) -> Dict[str, Any]:
         """Convert individual (list of floats) to parameter dict."""
@@ -238,11 +230,7 @@ class GeneticOptimizer:
         return params
 
     def _evaluate_fitness(
-        self,
-        individual: List[float],
-        strategy: str,
-        data: Any,
-        backtester: Any
+        self, individual: List[float], strategy: str, data: Any, backtester: Any
     ) -> Tuple[float, ...]:
         """
         Evaluate fitness of an individual using Rust backtester.
@@ -261,27 +249,23 @@ class GeneticOptimizer:
 
         try:
             # Run backtest via Rust backtester (fast!)
-            result = backtester.run(
-                strategy=strategy,
-                data=data,
-                params=params
-            )
+            result = backtester.run(strategy=strategy, data=data, params=params)
 
             # Extract objectives
             fitness_values = []
             for objective in self.objectives:
-                if objective == 'sharpe':
-                    fitness_values.append(result.get('sharpe_ratio', 0.0))
-                elif objective == 'max_drawdown':
+                if objective == "sharpe":
+                    fitness_values.append(result.get("sharpe_ratio", 0.0))
+                elif objective == "max_drawdown":
                     # Negate so we maximize (minimize drawdown)
-                    dd = result.get('max_drawdown', -1.0)
+                    dd = result.get("max_drawdown", -1.0)
                     fitness_values.append(-abs(dd))  # Maximize negative drawdown
-                elif objective == 'win_rate':
-                    fitness_values.append(result.get('win_rate', 0.0))
-                elif objective == 'total_return':
-                    fitness_values.append(result.get('total_return', 0.0))
-                elif objective == 'profit_factor':
-                    fitness_values.append(result.get('profit_factor', 0.0))
+                elif objective == "win_rate":
+                    fitness_values.append(result.get("win_rate", 0.0))
+                elif objective == "total_return":
+                    fitness_values.append(result.get("total_return", 0.0))
+                elif objective == "profit_factor":
+                    fitness_values.append(result.get("profit_factor", 0.0))
                 else:
                     logger.warning(f"Unknown objective: {objective}, using 0.0")
                     fitness_values.append(0.0)
@@ -291,7 +275,7 @@ class GeneticOptimizer:
         except Exception as e:
             logger.error(f"Backtest failed for params {params}: {e}")
             # Return worst possible fitness
-            return tuple([float('-inf')] * self.n_objectives)
+            return tuple([float("-inf")] * self.n_objectives)
 
     def _evolve_island(
         self,
@@ -299,7 +283,7 @@ class GeneticOptimizer:
         strategy: str,
         data: Any,
         backtester: Any,
-        stats_callback: Optional[Callable] = None
+        stats_callback: Optional[Callable] = None,
     ) -> List[Any]:
         """
         Evolve a single island (population).
@@ -317,7 +301,7 @@ class GeneticOptimizer:
         # Register evaluate function for this island
         self.toolbox.register(
             "evaluate",
-            partial(self._evaluate_fitness, strategy=strategy, data=data, backtester=backtester)
+            partial(self._evaluate_fitness, strategy=strategy, data=data, backtester=backtester),
         )
 
         # Initialize population
@@ -370,11 +354,11 @@ class GeneticOptimizer:
 
             # Elitism: preserve best individuals
             hof.update(offspring)
-            elite = list(hof)[:self.elite_size]
+            elite = list(hof)[: self.elite_size]
 
             # Replace worst individuals with elite
             pop[:] = offspring
-            pop[:len(elite)] = elite
+            pop[: len(elite)] = elite
 
             # Update hall of fame
             hof.update(pop)
@@ -385,18 +369,15 @@ class GeneticOptimizer:
                 stats_callback(island_id, gen, record, hof)
 
             if island_id == 0 and gen % 10 == 0:
-                logger.info(f"Island {island_id}, Gen {gen}/{self.generations}: "
-                          f"Avg fitness = {record['avg']}")
+                logger.info(
+                    f"Island {island_id}, Gen {gen}/{self.generations}: "
+                    f"Avg fitness = {record['avg']}"
+                )
 
         return list(hof)
 
     def optimize(
-        self,
-        strategy: str,
-        data: Any,
-        backtester: Any,
-        verbose: bool = True,
-        n_jobs: int = -1
+        self, strategy: str, data: Any, backtester: Any, verbose: bool = True, n_jobs: int = -1
     ) -> List[Dict[str, Any]]:
         """
         Run genetic optimization (single island or island model).
@@ -438,7 +419,7 @@ class GeneticOptimizer:
             with mp.Pool(processes=min(n_jobs, self.n_islands)) as pool:
                 results = pool.starmap(
                     self._evolve_island,
-                    [(i, strategy, data, backtester, None) for i in range(self.n_islands)]
+                    [(i, strategy, data, backtester, None) for i in range(self.n_islands)],
                 )
 
             # Merge Pareto fronts from all islands
@@ -453,19 +434,19 @@ class GeneticOptimizer:
         solutions = []
         for ind in pareto_front:
             solution = {
-                'params': self._decode_individual(ind),
-                'fitness': dict(zip(self.objectives, ind.fitness.values))
+                "params": self._decode_individual(ind),
+                "fitness": dict(zip(self.objectives, ind.fitness.values)),
             }
             # Add individual objective values
             for obj, val in zip(self.objectives, ind.fitness.values):
-                if obj == 'max_drawdown':
+                if obj == "max_drawdown":
                     solution[obj] = -val  # Convert back to positive
                 else:
                     solution[obj] = val
             solutions.append(solution)
 
         # Sort by first objective (usually Sharpe ratio)
-        solutions.sort(key=lambda x: x['fitness'][self.objectives[0]], reverse=True)
+        solutions.sort(key=lambda x: x["fitness"][self.objectives[0]], reverse=True)
 
         if verbose:
             logger.info(f"\nOptimization complete! Found {len(solutions)} Pareto-optimal solutions")
@@ -485,7 +466,7 @@ def optimize_single_objective(
     backtester: Any,
     population_size: int = 100,
     generations: int = 50,
-    **kwargs
+    **kwargs,
 ) -> Dict[str, Any]:
     """
     Optimize a single objective (simpler interface).
@@ -508,7 +489,7 @@ def optimize_single_objective(
         population_size=population_size,
         generations=generations,
         objectives=[objective],
-        **kwargs
+        **kwargs,
     )
 
     solutions = optimizer.optimize(strategy, data, backtester)

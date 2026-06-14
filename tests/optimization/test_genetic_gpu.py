@@ -38,22 +38,16 @@ def sample_ohlcv():
     open_ = close * (1 + np.random.randn(n) * 0.005)
     volume = np.abs(np.random.randn(n)) * 1000
 
-    return pd.DataFrame({
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume
-    })
+    return pd.DataFrame({"open": open_, "high": high, "low": low, "close": close, "volume": volume})
 
 
 @pytest.fixture
 def rsi_param_space():
     """Standard RSI parameter space."""
     return {
-        'period': (10, 20, int),
-        'buy_threshold': (25, 35, float),
-        'sell_threshold': (65, 75, float),
+        "period": (10, 20, int),
+        "buy_threshold": (25, 35, float),
+        "sell_threshold": (65, 75, float),
     }
 
 
@@ -64,29 +58,23 @@ class TestGeneticGPUIntegration:
     def test_gpu_batch_evaluation_basic(self, sample_ohlcv, rsi_param_space):
         """Test basic GPU batch evaluation works."""
         optimizer = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=20,
-            generations=5,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=20, generations=5, objectives=["sharpe"]
         )
 
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         # Validate results
         assert len(results) > 0, "Should return at least one solution"
-        assert 'params' in results[0], "Solution should have params"
-        assert 'sharpe' in results[0], "Solution should have sharpe ratio"
+        assert "params" in results[0], "Solution should have params"
+        assert "sharpe" in results[0], "Solution should have sharpe ratio"
 
         # Check parameters are within bounds
-        best = results[0]['params']
-        assert 10 <= best['period'] <= 20
-        assert 25 <= best['buy_threshold'] <= 35
-        assert 65 <= best['sell_threshold'] <= 75
+        best = results[0]["params"]
+        assert 10 <= best["period"] <= 20
+        assert 25 <= best["buy_threshold"] <= 35
+        assert 65 <= best["sell_threshold"] <= 75
 
     @pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
     def test_gpu_vs_cpu_correctness(self, sample_ohlcv, rsi_param_space):
@@ -97,15 +85,12 @@ class TestGeneticGPUIntegration:
             param_space=rsi_param_space,
             population_size=20,
             generations=10,
-            objectives=['sharpe', 'max_drawdown', 'win_rate']
+            objectives=["sharpe", "max_drawdown", "win_rate"],
         )
 
         # Run with GPU
         results_gpu = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         # Reset seed and run with CPU
@@ -114,14 +99,11 @@ class TestGeneticGPUIntegration:
             param_space=rsi_param_space,
             population_size=20,
             generations=10,
-            objectives=['sharpe', 'max_drawdown', 'win_rate']
+            objectives=["sharpe", "max_drawdown", "win_rate"],
         )
 
         results_cpu = optimizer2.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=False,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=False, verbose=False
         )
 
         # Both should find solutions
@@ -133,7 +115,7 @@ class TestGeneticGPUIntegration:
         top_gpu = results_gpu[0]
         top_cpu = results_cpu[0]
 
-        sharpe_diff = abs(top_gpu['sharpe'] - top_cpu['sharpe'])
+        sharpe_diff = abs(top_gpu["sharpe"] - top_cpu["sharpe"])
         # Allow 30% difference due to evolutionary randomness
         assert sharpe_diff < 1.0, f"Sharpe difference {sharpe_diff:.2f} too large"
 
@@ -144,14 +126,11 @@ class TestGeneticGPUIntegration:
             param_space=rsi_param_space,
             population_size=30,
             generations=10,
-            objectives=['sharpe', 'max_drawdown', 'win_rate']
+            objectives=["sharpe", "max_drawdown", "win_rate"],
         )
 
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         # Should find Pareto front
@@ -159,15 +138,15 @@ class TestGeneticGPUIntegration:
 
         # All results should have all objectives
         for sol in results:
-            assert 'sharpe' in sol
-            assert 'max_drawdown' in sol
-            assert 'win_rate' in sol
+            assert "sharpe" in sol
+            assert "max_drawdown" in sol
+            assert "win_rate" in sol
 
         # Values should be reasonable
         best = results[0]
-        assert best['sharpe'] != float('-inf'), "Should not have infinite Sharpe"
-        assert -1.0 <= best['max_drawdown'] <= 0.0, "Drawdown should be negative"
-        assert 0.0 <= best['win_rate'] <= 1.0, "Win rate should be [0, 1]"
+        assert best["sharpe"] != float("-inf"), "Should not have infinite Sharpe"
+        assert -1.0 <= best["max_drawdown"] <= 0.0, "Drawdown should be negative"
+        assert 0.0 <= best["win_rate"] <= 1.0, "Win rate should be [0, 1]"
 
     @pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
     def test_large_population_gpu(self, sample_ohlcv, rsi_param_space):
@@ -176,15 +155,12 @@ class TestGeneticGPUIntegration:
             param_space=rsi_param_space,
             population_size=200,  # Large population
             generations=5,
-            objectives=['sharpe']
+            objectives=["sharpe"],
         )
 
         start = time.perf_counter()
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
         elapsed = time.perf_counter() - start
 
@@ -204,36 +180,24 @@ class TestGPUPerformance:
     def test_gpu_speedup_medium_population(self, sample_ohlcv, rsi_param_space):
         """Benchmark GPU vs CPU speedup with medium population (100)."""
         optimizer_gpu = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=100,
-            generations=20,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=100, generations=20, objectives=["sharpe"]
         )
 
         optimizer_cpu = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=100,
-            generations=20,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=100, generations=20, objectives=["sharpe"]
         )
 
         # Benchmark GPU
         start_gpu = time.perf_counter()
         results_gpu = optimizer_gpu.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
         gpu_time = time.perf_counter() - start_gpu
 
         # Benchmark CPU
         start_cpu = time.perf_counter()
         results_cpu = optimizer_cpu.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=False,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=False, verbose=False
         )
         cpu_time = time.perf_counter() - start_cpu
 
@@ -268,36 +232,24 @@ class TestGPUPerformance:
     def test_gpu_speedup_large_population(self, sample_ohlcv, rsi_param_space):
         """Benchmark GPU vs CPU speedup with large population (1000)."""
         optimizer_gpu = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=1000,
-            generations=10,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=1000, generations=10, objectives=["sharpe"]
         )
 
         optimizer_cpu = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=1000,
-            generations=10,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=1000, generations=10, objectives=["sharpe"]
         )
 
         # Benchmark GPU
         start_gpu = time.perf_counter()
         results_gpu = optimizer_gpu.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
         gpu_time = time.perf_counter() - start_gpu
 
         # Benchmark CPU (this will be SLOW!)
         start_cpu = time.perf_counter()
         results_cpu = optimizer_cpu.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=False,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=False, verbose=False
         )
         cpu_time = time.perf_counter() - start_cpu
 
@@ -333,23 +285,17 @@ class TestBackwardCompatibility:
     def test_cpu_fallback_no_gpu(self, sample_ohlcv, rsi_param_space):
         """Test CPU fallback works when GPU not available."""
         optimizer = GeneticOptimizer(
-            param_space=rsi_param_space,
-            population_size=10,
-            generations=3,
-            objectives=['sharpe']
+            param_space=rsi_param_space, population_size=10, generations=3, objectives=["sharpe"]
         )
 
         # Should work even without GPU
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=False,  # Force CPU
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=False, verbose=False  # Force CPU
         )
 
         assert len(results) > 0
-        assert 'params' in results[0]
-        assert 'sharpe' in results[0]
+        assert "params" in results[0]
+        assert "sharpe" in results[0]
 
 
 class TestEdgeCases:
@@ -362,14 +308,11 @@ class TestEdgeCases:
             param_space=rsi_param_space,
             population_size=5,  # Tiny population
             generations=3,
-            objectives=['sharpe']
+            objectives=["sharpe"],
         )
 
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         assert len(results) > 0
@@ -381,14 +324,11 @@ class TestEdgeCases:
             param_space=rsi_param_space,
             population_size=20,
             generations=1,  # Single generation
-            objectives=['sharpe']
+            objectives=["sharpe"],
         )
 
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         assert len(results) > 0
@@ -401,20 +341,17 @@ class TestEdgeCases:
             population_size=20,
             generations=5,
             n_islands=4,  # Island model
-            objectives=['sharpe']
+            objectives=["sharpe"],
         )
 
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=sample_ohlcv,
-            use_gpu=True,
-            verbose=False
+            strategy="rsi_crossover", data=sample_ohlcv, use_gpu=True, verbose=False
         )
 
         assert len(results) > 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Quick manual test
     print("Running manual GPU genetic optimizer test...")
 
@@ -428,45 +365,36 @@ if __name__ == '__main__':
     open_ = close * (1 + np.random.randn(n) * 0.005)
     volume = np.abs(np.random.randn(n)) * 1000
 
-    data = pd.DataFrame({
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume
-    })
+    data = pd.DataFrame({"open": open_, "high": high, "low": low, "close": close, "volume": volume})
 
     # Test optimizer
     param_space = {
-        'period': (10, 20, int),
-        'buy_threshold': (25, 35, float),
-        'sell_threshold': (65, 75, float),
+        "period": (10, 20, int),
+        "buy_threshold": (25, 35, float),
+        "sell_threshold": (65, 75, float),
     }
 
     optimizer = GeneticOptimizer(
         param_space=param_space,
         population_size=50,
         generations=10,
-        objectives=['sharpe', 'max_drawdown', 'win_rate']
+        objectives=["sharpe", "max_drawdown", "win_rate"],
     )
 
     print("\nRunning GPU optimization...")
     start = time.perf_counter()
-    results = optimizer.optimize(
-        strategy='rsi_crossover',
-        data=data,
-        use_gpu=True,
-        verbose=True
-    )
+    results = optimizer.optimize(strategy="rsi_crossover", data=data, use_gpu=True, verbose=True)
     gpu_time = time.perf_counter() - start
 
     print(f"\nCompleted in {gpu_time:.2f}s")
     print(f"Found {len(results)} Pareto-optimal solutions")
     print(f"\nTop 3 solutions:")
     for i, sol in enumerate(results[:3]):
-        print(f"{i+1}. Sharpe: {sol['sharpe']:.2f}, "
-              f"DD: {sol['max_drawdown']:.2%}, "
-              f"WR: {sol['win_rate']:.1%}")
+        print(
+            f"{i+1}. Sharpe: {sol['sharpe']:.2f}, "
+            f"DD: {sol['max_drawdown']:.2%}, "
+            f"WR: {sol['win_rate']:.1%}"
+        )
         print(f"   Params: {sol['params']}")
 
     print("\n✓ Manual test completed successfully!")

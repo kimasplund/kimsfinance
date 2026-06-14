@@ -52,7 +52,7 @@ def _rolling_max_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     for i in range(window - 1, n):
         result[i] = np.max(arr[max(0, i - window + 1) : i + 1])
@@ -92,14 +92,20 @@ def rolling_max(
         return _rolling_max_jit(arr, window)
     else:
         result = xp.empty(n, dtype=xp.float64)
-        result[:window - 1] = xp.nan
+        result[: window - 1] = xp.nan
 
         try:
-            if hasattr(np, 'lib') and hasattr(np.lib, 'stride_tricks') and isinstance(arr, np.ndarray):
+            if (
+                hasattr(np, "lib")
+                and hasattr(np.lib, "stride_tricks")
+                and isinstance(arr, np.ndarray)
+            ):
                 shape = (n - window + 1, window)
                 strides = (arr.strides[0], arr.strides[0])
-                windowed = np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides, writeable=False)
-                result[window - 1:] = xp.max(windowed, axis=1)
+                windowed = np.lib.stride_tricks.as_strided(
+                    arr, shape=shape, strides=strides, writeable=False
+                )
+                result[window - 1 :] = xp.max(windowed, axis=1)
             else:
                 for i in range(window - 1, n):
                     result[i] = xp.max(arr[max(0, i - window + 1) : i + 1])
@@ -119,7 +125,7 @@ def _rolling_min_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     for i in range(window - 1, n):
         result[i] = np.min(arr[max(0, i - window + 1) : i + 1])
@@ -159,14 +165,20 @@ def rolling_min(
         return _rolling_min_jit(arr, window)
     else:
         result = xp.empty(n, dtype=xp.float64)
-        result[:window - 1] = xp.nan
+        result[: window - 1] = xp.nan
 
         try:
-            if hasattr(np, 'lib') and hasattr(np.lib, 'stride_tricks') and isinstance(arr, np.ndarray):
+            if (
+                hasattr(np, "lib")
+                and hasattr(np.lib, "stride_tricks")
+                and isinstance(arr, np.ndarray)
+            ):
                 shape = (n - window + 1, window)
                 strides = (arr.strides[0], arr.strides[0])
-                windowed = np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides, writeable=False)
-                result[window - 1:] = xp.min(windowed, axis=1)
+                windowed = np.lib.stride_tricks.as_strided(
+                    arr, shape=shape, strides=strides, writeable=False
+                )
+                result[window - 1 :] = xp.min(windowed, axis=1)
             else:
                 for i in range(window - 1, n):
                     result[i] = xp.min(arr[max(0, i - window + 1) : i + 1])
@@ -186,7 +198,7 @@ def _rolling_mean_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     cumsum = np.cumsum(arr)
     result[window - 1] = cumsum[window - 1] / window
@@ -231,7 +243,7 @@ def rolling_mean(
     if has_nan:
         # Pre-allocate result
         result = xp.empty(n, dtype=xp.float64)
-        result[:window - 1] = xp.nan
+        result[: window - 1] = xp.nan
 
         # Slower path for NaN handling (still faster than original loop)
         for i in range(window - 1, n):
@@ -248,7 +260,7 @@ def rolling_mean(
         else:
             # Fallback using cumsum for arrays without NaN (5-50x faster)
             result = xp.empty(n, dtype=xp.float64)
-            result[:window - 1] = xp.nan
+            result[: window - 1] = xp.nan
             cumsum = xp.cumsum(arr)
             result[window - 1] = cumsum[window - 1] / window
             for i in range(window, n):
@@ -266,7 +278,7 @@ def _rolling_std_jit(arr: np.ndarray, window: int, ddof: int) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     for i in range(window - 1, n):
         start = max(0, i - window + 1)
@@ -320,7 +332,7 @@ def _ewm_mean_jit(arr: np.ndarray, span: int, adjust: bool) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:span - 1] = np.nan
+    result[: span - 1] = np.nan
 
     if adjust:
         alpha = 2.0 / (span + 1)

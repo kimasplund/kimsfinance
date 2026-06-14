@@ -151,9 +151,7 @@ def calculate_ichimoku(
     )
 
     # Select execution engine for Polars
-    polars_engine = EngineManager.select_polars_engine(
-        engine, operation="ichimoku", data_size=n
-    )
+    polars_engine = EngineManager.select_polars_engine(engine, operation="ichimoku", data_size=n)
 
     # Calculate Tenkan-sen (Conversion Line): (9-period high + 9-period low) / 2
     tenkan_high = pl.col("high").rolling_max(window_size=conversion_period)

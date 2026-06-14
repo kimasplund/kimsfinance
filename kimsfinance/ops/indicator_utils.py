@@ -37,7 +37,6 @@ except ImportError:
 
 from ..core.decorators import get_array_module
 
-
 EPSILON = 1e-10
 LAMBERT_CONSTANT = 0.015
 

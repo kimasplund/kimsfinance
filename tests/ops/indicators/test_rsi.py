@@ -28,7 +28,6 @@ from kimsfinance.ops.indicators.rsi import CUPY_AVAILABLE
 from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
 from kimsfinance.core import EngineManager
 
-
 # ============================================================================
 # Test Data Generators
 # ============================================================================

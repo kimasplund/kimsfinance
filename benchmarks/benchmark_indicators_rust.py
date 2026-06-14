@@ -134,7 +134,9 @@ class BenchmarkResult:
     p_value: float  # Statistical significance
 
 
-def timeit_median(func: Callable[[], Any], n_iterations: int, warmup: int = 5) -> tuple[float, float]:
+def timeit_median(
+    func: Callable[[], Any], n_iterations: int, warmup: int = 5
+) -> tuple[float, float]:
     """
     Time a function with warmup and return median and std in milliseconds.
 
@@ -770,7 +772,9 @@ def main():
     print("\n📋 Test Plan:")
     print(f"   Dataset sizes: {', '.join(f'{s:,}' for s in sizes)} candles")
     print(f"   Indicators tested: 24 individual + 1 batch API = 25 benchmarks per size")
-    print(f"   Categories: Moving Averages (7), Momentum (8), Volatility (5), Volume (3), Batch (1)")
+    print(
+        f"   Categories: Moving Averages (7), Momentum (8), Volatility (5), Volume (3), Batch (1)"
+    )
     print(f"   Statistical method: Mann-Whitney U test")
     print(f"   Confidence threshold: 95%")
 

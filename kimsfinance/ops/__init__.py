@@ -97,7 +97,6 @@ from .aggregations import (
     volume_weighted_price,
 )
 
-
 __all__ = [
     # Moving averages
     "calculate_sma",

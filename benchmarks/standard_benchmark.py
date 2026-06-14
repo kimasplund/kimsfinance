@@ -62,7 +62,6 @@ from kimsfinance.ops import (
     calculate_pivot_points,
 )
 
-
 # ==============================================================================
 # Configuration
 # ==============================================================================
@@ -82,9 +81,11 @@ FULL_MODE_DAYS = 30  # ~43,200 candles
 # Data Structures
 # ==============================================================================
 
+
 @dataclass
 class HardwareInfo:
     """Hardware configuration"""
+
     cpu_model: str
     cpu_cores: int
     cpu_threads: int
@@ -99,6 +100,7 @@ class HardwareInfo:
 @dataclass
 class BenchmarkResult:
     """Single benchmark result"""
+
     name: str
     library: str  # 'mplfinance', 'kimsfinance_cpu', 'kimsfinance_gpu'
     time_ms: float | None  # None if not available
@@ -109,6 +111,7 @@ class BenchmarkResult:
 @dataclass
 class BenchmarkReport:
     """Complete benchmark report"""
+
     timestamp: str
     git_commit: str | None
     hardware: HardwareInfo
@@ -121,6 +124,7 @@ class BenchmarkReport:
 # Hardware Detection
 # ==============================================================================
 
+
 def get_cpu_model() -> str:
     """Get CPU model name"""
     try:
@@ -130,12 +134,12 @@ def get_cpu_model() -> str:
                     if "model name" in line:
                         return line.split(":")[1].strip()
         elif platform.system() == "Darwin":
-            result = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"],
-                                  capture_output=True, text=True)
+            result = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True
+            )
             return result.stdout.strip()
         elif platform.system() == "Windows":
-            result = subprocess.run(["wmic", "cpu", "get", "name"],
-                                  capture_output=True, text=True)
+            result = subprocess.run(["wmic", "cpu", "get", "name"], capture_output=True, text=True)
             return result.stdout.split("\n")[1].strip()
     except Exception:
         pass
@@ -146,9 +150,11 @@ def get_cpu_count() -> tuple[int, int]:
     """Get physical cores and logical threads"""
     try:
         import psutil
+
         return psutil.cpu_count(logical=False) or 0, psutil.cpu_count(logical=True) or 0
     except ImportError:
         import os
+
         threads = os.cpu_count() or 0
         return threads // 2, threads  # Estimate
 
@@ -157,6 +163,7 @@ def get_gpu_info() -> tuple[str | None, int | None]:
     """Get GPU model and VRAM in MB"""
     try:
         import cupy as cp
+
         device = cp.cuda.Device(0)
         props = device.attributes
         name = props.get("Name", "Unknown GPU")
@@ -172,7 +179,8 @@ def get_ram_gb() -> float:
     """Get total RAM in GB"""
     try:
         import psutil
-        return psutil.virtual_memory().total / (1024 ** 3)
+
+        return psutil.virtual_memory().total / (1024**3)
     except ImportError:
         return 0.0
 
@@ -198,6 +206,7 @@ def get_hardware_info() -> HardwareInfo:
 # ==============================================================================
 # Data Download and Preparation
 # ==============================================================================
+
 
 def download_binance_data(date_str: str, is_monthly: bool = False) -> Path:
     """
@@ -279,34 +288,38 @@ def aggregate_trades_to_ohlcv(csv_paths: list[Path], timeframe: str = "1m") -> p
     print(f"\nAggregating trades to {timeframe} candles...")
 
     # Read all trade data
-    trades = pl.concat([
-        pl.read_csv(
-            path,
-            columns=["id", "price", "qty", "base_qty", "time", "is_buyer_maker"],
-            schema_overrides={
-                "id": pl.Int64,
-                "price": pl.Float64,
-                "qty": pl.Float64,
-                "base_qty": pl.Float64,
-                "time": pl.Int64,
-                "is_buyer_maker": pl.Boolean,
-            },
-        )
-        for path in csv_paths
-    ])
+    trades = pl.concat(
+        [
+            pl.read_csv(
+                path,
+                columns=["id", "price", "qty", "base_qty", "time", "is_buyer_maker"],
+                schema_overrides={
+                    "id": pl.Int64,
+                    "price": pl.Float64,
+                    "qty": pl.Float64,
+                    "base_qty": pl.Float64,
+                    "time": pl.Int64,
+                    "is_buyer_maker": pl.Boolean,
+                },
+            )
+            for path in csv_paths
+        ]
+    )
 
     print(f"  Loaded {len(trades):,} trades")
 
     # Convert timestamp (milliseconds) to datetime
-    trades = trades.with_columns([
-        (pl.col("time") // 1_000).alias("timestamp_sec"),
-        pl.col("price").alias("price"),
-        pl.col("base_qty").alias("volume"),
-    ])
+    trades = trades.with_columns(
+        [
+            (pl.col("time") // 1_000).alias("timestamp_sec"),
+            pl.col("price").alias("price"),
+            pl.col("base_qty").alias("volume"),
+        ]
+    )
 
-    trades = trades.with_columns([
-        pl.from_epoch(pl.col("timestamp_sec"), time_unit="s").alias("datetime")
-    ])
+    trades = trades.with_columns(
+        [pl.from_epoch(pl.col("timestamp_sec"), time_unit="s").alias("datetime")]
+    )
 
     # Parse timeframe (e.g., '1m' -> 1 minute)
     if timeframe.endswith("m"):
@@ -318,15 +331,16 @@ def aggregate_trades_to_ohlcv(csv_paths: list[Path], timeframe: str = "1m") -> p
 
     # Aggregate to OHLCV
     ohlcv = (
-        trades
-        .group_by_dynamic("datetime", every=interval)
-        .agg([
-            pl.col("price").first().alias("open"),
-            pl.col("price").max().alias("high"),
-            pl.col("price").min().alias("low"),
-            pl.col("price").last().alias("close"),
-            pl.col("volume").sum().alias("volume"),
-        ])
+        trades.group_by_dynamic("datetime", every=interval)
+        .agg(
+            [
+                pl.col("price").first().alias("open"),
+                pl.col("price").max().alias("high"),
+                pl.col("price").min().alias("low"),
+                pl.col("price").last().alias("close"),
+                pl.col("volume").sum().alias("volume"),
+            ]
+        )
         .sort("datetime")
     )
 
@@ -338,6 +352,7 @@ def aggregate_trades_to_ohlcv(csv_paths: list[Path], timeframe: str = "1m") -> p
 # ==============================================================================
 # Benchmark Execution
 # ==============================================================================
+
 
 def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     """Benchmark all technical indicators (individual)"""
@@ -382,9 +397,7 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
         timer = timeit.Timer(lambda: calculate_atr(highs, lows, closes, period=14, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
         results.append(
-            BenchmarkResult(
-                name="ATR", library="kimsfinance_cpu", time_ms=time_ms, available=True
-            )
+            BenchmarkResult(name="ATR", library="kimsfinance_cpu", time_ms=time_ms, available=True)
         )
         print(f"    CPU: {time_ms:.2f}ms")
     except Exception as e:
@@ -402,9 +415,7 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
         timer = timeit.Timer(lambda: calculate_atr(highs, lows, closes, period=14, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
         results.append(
-            BenchmarkResult(
-                name="ATR", library="kimsfinance_gpu", time_ms=time_ms, available=True
-            )
+            BenchmarkResult(name="ATR", library="kimsfinance_gpu", time_ms=time_ms, available=True)
         )
         print(f"    GPU: {time_ms:.2f}ms")
     except Exception as e:
@@ -480,13 +491,13 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     # kimsfinance CPU
     try:
         timer = timeit.Timer(
-            lambda: calculate_macd(closes, fast_period=12, slow_period=26, signal_period=9, engine="cpu")
+            lambda: calculate_macd(
+                closes, fast_period=12, slow_period=26, signal_period=9, engine="cpu"
+            )
         )
         time_ms = timer.timeit(number=10) / 10 * 1000
         results.append(
-            BenchmarkResult(
-                name="MACD", library="kimsfinance_cpu", time_ms=time_ms, available=True
-            )
+            BenchmarkResult(name="MACD", library="kimsfinance_cpu", time_ms=time_ms, available=True)
         )
         print(f"    CPU: {time_ms:.2f}ms")
     except Exception as e:
@@ -502,13 +513,13 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
         import cupy as cp
 
         timer = timeit.Timer(
-            lambda: calculate_macd(closes, fast_period=12, slow_period=26, signal_period=9, engine="gpu")
+            lambda: calculate_macd(
+                closes, fast_period=12, slow_period=26, signal_period=9, engine="gpu"
+            )
         )
         time_ms = timer.timeit(number=10) / 10 * 1000
         results.append(
-            BenchmarkResult(
-                name="MACD", library="kimsfinance_gpu", time_ms=time_ms, available=True
-            )
+            BenchmarkResult(name="MACD", library="kimsfinance_gpu", time_ms=time_ms, available=True)
         )
         print(f"    GPU: {time_ms:.2f}ms")
     except Exception as e:
@@ -657,271 +668,235 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     print("  Testing CCI...")
 
     # mplfinance - not available
-    results.append(BenchmarkResult(
-        name="CCI",
-        library="mplfinance",
-        time_ms=None,
-        available=False,
-        error="Not available in mplfinance"
-    ))
+    results.append(
+        BenchmarkResult(
+            name="CCI",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
 
     # kimsfinance CPU
     try:
-        timer = timeit.Timer(lambda: calculate_cci(
-            highs, lows, closes, period=20, engine="cpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_cci(highs, lows, closes, period=20, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="CCI",
-            library="kimsfinance_cpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="CCI", library="kimsfinance_cpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="CCI",
-            library="kimsfinance_cpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="CCI", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # kimsfinance GPU
     try:
-        timer = timeit.Timer(lambda: calculate_cci(
-            highs, lows, closes, period=20, engine="gpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_cci(highs, lows, closes, period=20, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="CCI",
-            library="kimsfinance_gpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="CCI", library="kimsfinance_gpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="CCI",
-            library="kimsfinance_gpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="CCI", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # --- MFI (Money Flow Index) ---
     print("  Testing MFI...")
 
     # mplfinance - not available
-    results.append(BenchmarkResult(
-        name="MFI",
-        library="mplfinance",
-        time_ms=None,
-        available=False,
-        error="Not available in mplfinance"
-    ))
+    results.append(
+        BenchmarkResult(
+            name="MFI",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
 
     # kimsfinance CPU
     try:
-        timer = timeit.Timer(lambda: calculate_mfi(
-            highs, lows, closes, volumes, period=14, engine="cpu"
-        ))
+        timer = timeit.Timer(
+            lambda: calculate_mfi(highs, lows, closes, volumes, period=14, engine="cpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="MFI",
-            library="kimsfinance_cpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="MFI", library="kimsfinance_cpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="MFI",
-            library="kimsfinance_cpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="MFI", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # kimsfinance GPU
     try:
-        timer = timeit.Timer(lambda: calculate_mfi(
-            highs, lows, closes, volumes, period=14, engine="gpu"
-        ))
+        timer = timeit.Timer(
+            lambda: calculate_mfi(highs, lows, closes, volumes, period=14, engine="gpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="MFI",
-            library="kimsfinance_gpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="MFI", library="kimsfinance_gpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="MFI",
-            library="kimsfinance_gpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="MFI", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # --- Williams %R ---
     print("  Testing Williams %R...")
 
     # mplfinance - not available
-    results.append(BenchmarkResult(
-        name="Williams %R",
-        library="mplfinance",
-        time_ms=None,
-        available=False,
-        error="Not available in mplfinance"
-    ))
+    results.append(
+        BenchmarkResult(
+            name="Williams %R",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
 
     # kimsfinance CPU
     try:
-        timer = timeit.Timer(lambda: calculate_williams_r(
-            highs, lows, closes, period=14, engine="cpu"
-        ))
+        timer = timeit.Timer(
+            lambda: calculate_williams_r(highs, lows, closes, period=14, engine="cpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="Williams %R",
-            library="kimsfinance_cpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Williams %R", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="Williams %R",
-            library="kimsfinance_cpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Williams %R",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # kimsfinance GPU
     try:
-        timer = timeit.Timer(lambda: calculate_williams_r(
-            highs, lows, closes, period=14, engine="gpu"
-        ))
+        timer = timeit.Timer(
+            lambda: calculate_williams_r(highs, lows, closes, period=14, engine="gpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="Williams %R",
-            library="kimsfinance_gpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Williams %R", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="Williams %R",
-            library="kimsfinance_gpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Williams %R",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Aroon ---
     print("  Testing Aroon...")
 
     # mplfinance - not available
-    results.append(BenchmarkResult(
-        name="Aroon",
-        library="mplfinance",
-        time_ms=None,
-        available=False,
-        error="Not available in mplfinance"
-    ))
+    results.append(
+        BenchmarkResult(
+            name="Aroon",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
 
     # kimsfinance CPU
     try:
-        timer = timeit.Timer(lambda: calculate_aroon(
-            highs, lows, period=25, engine="cpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_aroon(highs, lows, period=25, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="Aroon",
-            library="kimsfinance_cpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Aroon", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="Aroon",
-            library="kimsfinance_cpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Aroon", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # kimsfinance GPU
     try:
-        timer = timeit.Timer(lambda: calculate_aroon(
-            highs, lows, period=25, engine="gpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_aroon(highs, lows, period=25, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="Aroon",
-            library="kimsfinance_gpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Aroon", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="Aroon",
-            library="kimsfinance_gpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="Aroon", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # --- ADX (Average Directional Index) ---
     print("  Testing ADX...")
 
     # mplfinance - not available
-    results.append(BenchmarkResult(
-        name="ADX",
-        library="mplfinance",
-        time_ms=None,
-        available=False,
-        error="Not available in mplfinance"
-    ))
+    results.append(
+        BenchmarkResult(
+            name="ADX",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
 
     # kimsfinance CPU
     try:
-        timer = timeit.Timer(lambda: calculate_adx(
-            highs, lows, closes, period=14, engine="cpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_adx(highs, lows, closes, period=14, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="ADX",
-            library="kimsfinance_cpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="ADX", library="kimsfinance_cpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="ADX",
-            library="kimsfinance_cpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="ADX", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # kimsfinance GPU
     try:
-        timer = timeit.Timer(lambda: calculate_adx(
-            highs, lows, closes, period=14, engine="gpu"
-        ))
+        timer = timeit.Timer(lambda: calculate_adx(highs, lows, closes, period=14, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(
-            name="ADX",
-            library="kimsfinance_gpu",
-            time_ms=time_ms,
-            available=True
-        ))
+        results.append(
+            BenchmarkResult(name="ADX", library="kimsfinance_gpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(
-            name="ADX",
-            library="kimsfinance_gpu",
-            time_ms=None,
-            available=False,
-            error=str(e)
-        ))
+        results.append(
+            BenchmarkResult(
+                name="ADX", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # ============================================================================
     # Remaining indicators (Task 3)
@@ -929,160 +904,526 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # --- ROC (Rate of Change) ---
     print("  Testing ROC...")
-    results.append(BenchmarkResult(name="ROC", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="ROC",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
         timer = timeit.Timer(lambda: calculate_roc(closes, period=12, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="ROC", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(name="ROC", library="kimsfinance_cpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="ROC", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="ROC", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)
+            )
+        )
     try:
         timer = timeit.Timer(lambda: calculate_roc(closes, period=12, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="ROC", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(name="ROC", library="kimsfinance_gpu", time_ms=time_ms, available=True)
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="ROC", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="ROC", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)
+            )
+        )
 
     # --- CMO (not implemented) ---
     print("  Testing CMO...")
-    results.append(BenchmarkResult(name="CMO", library="mplfinance", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="CMO", library="kimsfinance_cpu", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="CMO", library="kimsfinance_gpu", time_ms=None, available=False, error="Not implemented"))
+    results.append(
+        BenchmarkResult(
+            name="CMO", library="mplfinance", time_ms=None, available=False, error="Not implemented"
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="CMO",
+            library="kimsfinance_cpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="CMO",
+            library="kimsfinance_gpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
 
     # --- TRIX (not implemented) ---
     print("  Testing TRIX...")
-    results.append(BenchmarkResult(name="TRIX", library="mplfinance", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="TRIX", library="kimsfinance_cpu", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="TRIX", library="kimsfinance_gpu", time_ms=None, available=False, error="Not implemented"))
+    results.append(
+        BenchmarkResult(
+            name="TRIX",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="TRIX",
+            library="kimsfinance_cpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="TRIX",
+            library="kimsfinance_gpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
 
     # --- Elder Ray ---
     print("  Testing Elder Ray...")
-    results.append(BenchmarkResult(name="Elder Ray", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Elder Ray",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
-        timer = timeit.Timer(lambda: calculate_elder_ray(highs, lows, closes, period=13, engine="cpu"))
+        timer = timeit.Timer(
+            lambda: calculate_elder_ray(highs, lows, closes, period=13, engine="cpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Elder Ray", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Elder Ray", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Elder Ray", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Elder Ray",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
-        timer = timeit.Timer(lambda: calculate_elder_ray(highs, lows, closes, period=13, engine="gpu"))
+        timer = timeit.Timer(
+            lambda: calculate_elder_ray(highs, lows, closes, period=13, engine="gpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Elder Ray", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Elder Ray", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Elder Ray", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Elder Ray",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- KST (not implemented) ---
     print("  Testing KST...")
-    results.append(BenchmarkResult(name="KST", library="mplfinance", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="KST", library="kimsfinance_cpu", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="KST", library="kimsfinance_gpu", time_ms=None, available=False, error="Not implemented"))
+    results.append(
+        BenchmarkResult(
+            name="KST", library="mplfinance", time_ms=None, available=False, error="Not implemented"
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="KST",
+            library="kimsfinance_cpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="KST",
+            library="kimsfinance_gpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
 
     # --- Ichimoku Cloud ---
     print("  Testing Ichimoku Cloud...")
-    results.append(BenchmarkResult(name="Ichimoku Cloud", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Ichimoku Cloud",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
         timer = timeit.Timer(lambda: calculate_ichimoku(highs, lows, closes, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Ichimoku Cloud", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Ichimoku Cloud", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Ichimoku Cloud", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Ichimoku Cloud",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
         timer = timeit.Timer(lambda: calculate_ichimoku(highs, lows, closes, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Ichimoku Cloud", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Ichimoku Cloud", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Ichimoku Cloud", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Ichimoku Cloud",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Supertrend ---
     print("  Testing Supertrend...")
-    results.append(BenchmarkResult(name="Supertrend", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Supertrend",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
-        timer = timeit.Timer(lambda: calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0, engine="cpu"))
+        timer = timeit.Timer(
+            lambda: calculate_supertrend(
+                highs, lows, closes, period=10, multiplier=3.0, engine="cpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Supertrend", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Supertrend", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Supertrend", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Supertrend",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
-        timer = timeit.Timer(lambda: calculate_supertrend(highs, lows, closes, period=10, multiplier=3.0, engine="gpu"))
+        timer = timeit.Timer(
+            lambda: calculate_supertrend(
+                highs, lows, closes, period=10, multiplier=3.0, engine="gpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Supertrend", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Supertrend", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Supertrend", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Supertrend",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Keltner Channels ---
     print("  Testing Keltner Channels...")
-    results.append(BenchmarkResult(name="Keltner Channels", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Keltner Channels",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
-        timer = timeit.Timer(lambda: calculate_keltner_channels(highs, lows, closes, period=20, atr_period=10, multiplier=2.0, engine="cpu"))
+        timer = timeit.Timer(
+            lambda: calculate_keltner_channels(
+                highs, lows, closes, period=20, atr_period=10, multiplier=2.0, engine="cpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Keltner Channels", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Keltner Channels", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Keltner Channels", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Keltner Channels",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
-        timer = timeit.Timer(lambda: calculate_keltner_channels(highs, lows, closes, period=20, atr_period=10, multiplier=2.0, engine="gpu"))
+        timer = timeit.Timer(
+            lambda: calculate_keltner_channels(
+                highs, lows, closes, period=20, atr_period=10, multiplier=2.0, engine="gpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Keltner Channels", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Keltner Channels", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Keltner Channels", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Keltner Channels",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Donchian Channels ---
     print("  Testing Donchian Channels...")
-    results.append(BenchmarkResult(name="Donchian Channels", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Donchian Channels",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
-        timer = timeit.Timer(lambda: calculate_donchian_channels(highs, lows, period=20, engine="cpu"))
+        timer = timeit.Timer(
+            lambda: calculate_donchian_channels(highs, lows, period=20, engine="cpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Donchian Channels", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Donchian Channels", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Donchian Channels", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Donchian Channels",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
-        timer = timeit.Timer(lambda: calculate_donchian_channels(highs, lows, period=20, engine="gpu"))
+        timer = timeit.Timer(
+            lambda: calculate_donchian_channels(highs, lows, period=20, engine="gpu")
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Donchian Channels", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Donchian Channels", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Donchian Channels", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Donchian Channels",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Parabolic SAR ---
     print("  Testing Parabolic SAR...")
-    results.append(BenchmarkResult(name="Parabolic SAR", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Parabolic SAR",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
-        timer = timeit.Timer(lambda: calculate_parabolic_sar(highs, lows, acceleration=0.02, maximum=0.2, engine="cpu"))
+        timer = timeit.Timer(
+            lambda: calculate_parabolic_sar(
+                highs, lows, acceleration=0.02, maximum=0.2, engine="cpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Parabolic SAR", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Parabolic SAR", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Parabolic SAR", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Parabolic SAR",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
-        timer = timeit.Timer(lambda: calculate_parabolic_sar(highs, lows, acceleration=0.02, maximum=0.2, engine="gpu"))
+        timer = timeit.Timer(
+            lambda: calculate_parabolic_sar(
+                highs, lows, acceleration=0.02, maximum=0.2, engine="gpu"
+            )
+        )
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Parabolic SAR", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Parabolic SAR", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Parabolic SAR", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Parabolic SAR",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- Pivot Points ---
     print("  Testing Pivot Points...")
-    results.append(BenchmarkResult(name="Pivot Points", library="mplfinance", time_ms=None, available=False, error="Not available in mplfinance"))
+    results.append(
+        BenchmarkResult(
+            name="Pivot Points",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not available in mplfinance",
+        )
+    )
     try:
         timer = timeit.Timer(lambda: calculate_pivot_points(highs, lows, closes, engine="cpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Pivot Points", library="kimsfinance_cpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Pivot Points", library="kimsfinance_cpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Pivot Points", library="kimsfinance_cpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Pivot Points",
+                library="kimsfinance_cpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
     try:
         timer = timeit.Timer(lambda: calculate_pivot_points(highs, lows, closes, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
-        results.append(BenchmarkResult(name="Pivot Points", library="kimsfinance_gpu", time_ms=time_ms, available=True))
+        results.append(
+            BenchmarkResult(
+                name="Pivot Points", library="kimsfinance_gpu", time_ms=time_ms, available=True
+            )
+        )
     except Exception as e:
-        results.append(BenchmarkResult(name="Pivot Points", library="kimsfinance_gpu", time_ms=None, available=False, error=str(e)))
+        results.append(
+            BenchmarkResult(
+                name="Pivot Points",
+                library="kimsfinance_gpu",
+                time_ms=None,
+                available=False,
+                error=str(e),
+            )
+        )
 
     # --- ADXR (not implemented) ---
     print("  Testing ADXR...")
-    results.append(BenchmarkResult(name="ADXR", library="mplfinance", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="ADXR", library="kimsfinance_cpu", time_ms=None, available=False, error="Not implemented"))
-    results.append(BenchmarkResult(name="ADXR", library="kimsfinance_gpu", time_ms=None, available=False, error="Not implemented"))
+    results.append(
+        BenchmarkResult(
+            name="ADXR",
+            library="mplfinance",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="ADXR",
+            library="kimsfinance_cpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
+    results.append(
+        BenchmarkResult(
+            name="ADXR",
+            library="kimsfinance_gpu",
+            time_ms=None,
+            available=False,
+            error="Not implemented",
+        )
+    )
 
     return results
 
 
-def benchmark_batch_indicators(ohlcv: pl.DataFrame) -> tuple[BenchmarkResult, BenchmarkResult, BenchmarkResult]:
+def benchmark_batch_indicators(
+    ohlcv: pl.DataFrame,
+) -> tuple[BenchmarkResult, BenchmarkResult, BenchmarkResult]:
     """
     Benchmark batch indicator calculation (ALL indicators at once).
 
@@ -1098,6 +1439,7 @@ def benchmark_batch_indicators(ohlcv: pl.DataFrame) -> tuple[BenchmarkResult, Be
     try:
         from kimsfinance.ops.batch import calculate_indicators_batch
         from kimsfinance.core import EngineManager
+
         BATCH_AVAILABLE = True
     except ImportError:
         print("  ⚠️  Batch API not available (kimsfinance.ops.batch not found)")
@@ -1160,18 +1502,12 @@ def benchmark_batch_indicators(ohlcv: pl.DataFrame) -> tuple[BenchmarkResult, Be
 
     try:
         # Warmup run (JIT compilation, cache warming)
-        _ = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
-        )
+        _ = calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu", streaming=False)
 
         # Timed run
         start = time.perf_counter()
         results_cpu = calculate_indicators_batch(
-            highs, lows, closes, volumes,
-            engine="cpu",
-            streaming=False
+            highs, lows, closes, volumes, engine="cpu", streaming=False
         )
         cpu_time_ms = (time.perf_counter() - start) * 1000
 
@@ -1210,17 +1546,13 @@ def benchmark_batch_indicators(ohlcv: pl.DataFrame) -> tuple[BenchmarkResult, Be
         try:
             # Warmup run (GPU kernel compilation, cache warming)
             _ = calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="gpu",
-                streaming=False
+                highs, lows, closes, volumes, engine="gpu", streaming=False
             )
 
             # Timed run
             start = time.perf_counter()
             results_gpu = calculate_indicators_batch(
-                highs, lows, closes, volumes,
-                engine="gpu",
-                streaming=False
+                highs, lows, closes, volumes, engine="gpu", streaming=False
             )
             gpu_time_ms = (time.perf_counter() - start) * 1000
 
@@ -1248,12 +1580,13 @@ def benchmark_batch_indicators(ohlcv: pl.DataFrame) -> tuple[BenchmarkResult, Be
     # ========================================================================
     if cpu_time_ms and gpu_time_ms:
         speedup = cpu_time_ms / gpu_time_ms
-        print(f"\n  ✅ Batch GPU speedup: {speedup:.2f}x (CPU: {cpu_time_ms:.2f}ms, GPU: {gpu_time_ms:.2f}ms)")
+        print(
+            f"\n  ✅ Batch GPU speedup: {speedup:.2f}x (CPU: {cpu_time_ms:.2f}ms, GPU: {gpu_time_ms:.2f}ms)"
+        )
     elif cpu_time_ms:
         print(f"\n  ✅ CPU batch complete: {cpu_time_ms:.2f}ms (GPU not available)")
 
     return mpl_result, cpu_result, gpu_result
-
 
 
 def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
@@ -1288,6 +1621,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     # Import kimsfinance API
     try:
         from kimsfinance.api import plot
+
         kimsfinance_available = True
     except ImportError:
         kimsfinance_available = False
@@ -1296,6 +1630,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     # Check mplfinance availability
     try:
         import mplfinance as mpf
+
         mplfinance_available = True
     except ImportError:
         mplfinance_available = False
@@ -1304,6 +1639,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
     # Convert to pandas for mplfinance (requires DatetimeIndex)
     if mplfinance_available:
         import pandas as pd
+
         ohlcv_pandas = ohlcv.to_pandas()
         # Create DatetimeIndex if datetime column exists
         if "datetime" in ohlcv_pandas.columns:
@@ -1337,54 +1673,64 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
                     mpl_output = temp_dir / f"mpl_{chart_type}.png"
 
                     # Time mplfinance rendering
-                    timer = timeit.Timer(lambda: mpf.plot(
-                        ohlcv_pandas,
-                        type=mpl_type,
-                        volume=True,
-                        style='charles',
-                        figsize=(8, 6),
-                        savefig=str(mpl_output)
-                    ))
+                    timer = timeit.Timer(
+                        lambda: mpf.plot(
+                            ohlcv_pandas,
+                            type=mpl_type,
+                            volume=True,
+                            style="charles",
+                            figsize=(8, 6),
+                            savefig=str(mpl_output),
+                        )
+                    )
 
                     time_ms = timer.timeit(number=10) / 10 * 1000
 
-                    results.append(BenchmarkResult(
-                        name=f"Chart: {chart_name}",
-                        library="mplfinance",
-                        time_ms=time_ms,
-                        available=True,
-                        error=None,
-                    ))
+                    results.append(
+                        BenchmarkResult(
+                            name=f"Chart: {chart_name}",
+                            library="mplfinance",
+                            time_ms=time_ms,
+                            available=True,
+                            error=None,
+                        )
+                    )
 
                     print(f"    mplfinance: {time_ms:.2f}ms")
 
                 except Exception as e:
-                    results.append(BenchmarkResult(
+                    results.append(
+                        BenchmarkResult(
+                            name=f"Chart: {chart_name}",
+                            library="mplfinance",
+                            time_ms=None,
+                            available=False,
+                            error=str(e),
+                        )
+                    )
+                    print(f"    mplfinance: ERROR - {e}")
+            else:
+                results.append(
+                    BenchmarkResult(
                         name=f"Chart: {chart_name}",
                         library="mplfinance",
                         time_ms=None,
                         available=False,
-                        error=str(e),
-                    ))
-                    print(f"    mplfinance: ERROR - {e}")
-            else:
-                results.append(BenchmarkResult(
+                        error="Chart type not supported by mplfinance",
+                    )
+                )
+                print(f"    mplfinance: N/A")
+        else:
+            # Mark as unavailable (kimsfinance-only or mplfinance not installed)
+            results.append(
+                BenchmarkResult(
                     name=f"Chart: {chart_name}",
                     library="mplfinance",
                     time_ms=None,
                     available=False,
-                    error="Chart type not supported by mplfinance",
-                ))
-                print(f"    mplfinance: N/A")
-        else:
-            # Mark as unavailable (kimsfinance-only or mplfinance not installed)
-            results.append(BenchmarkResult(
-                name=f"Chart: {chart_name}",
-                library="mplfinance",
-                time_ms=None,
-                available=False,
-                error="kimsfinance-only chart type" if kf_only else "mplfinance not installed",
-            ))
+                    error="kimsfinance-only chart type" if kf_only else "mplfinance not installed",
+                )
+            )
             if not mplfinance_available:
                 print(f"    mplfinance: N/A (not installed)")
             else:
@@ -1393,67 +1739,76 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
         # Benchmark kimsfinance
         if kimsfinance_available:
             # Map of implemented chart types
-            implemented_types = {
-                "candle", "hollow", "line", "ohlc", "renko", "pnf"
-            }
+            implemented_types = {"candle", "hollow", "line", "ohlc", "renko", "pnf"}
 
             if chart_type in implemented_types:
                 try:
                     kf_output = temp_dir / f"kf_{chart_type}.webp"
 
                     # Time kimsfinance rendering
-                    timer = timeit.Timer(lambda: plot(
-                        ohlcv,
-                        type=chart_type,
-                        volume=True,
-                        width=800,
-                        height=600,
-                        savefig=str(kf_output),
-                    ))
+                    timer = timeit.Timer(
+                        lambda: plot(
+                            ohlcv,
+                            type=chart_type,
+                            volume=True,
+                            width=800,
+                            height=600,
+                            savefig=str(kf_output),
+                        )
+                    )
 
                     time_ms = timer.timeit(number=10) / 10 * 1000
 
-                    results.append(BenchmarkResult(
-                        name=f"Chart: {chart_name}",
-                        library="kimsfinance_cpu",
-                        time_ms=time_ms,
-                        available=True,
-                        error=None,
-                    ))
+                    results.append(
+                        BenchmarkResult(
+                            name=f"Chart: {chart_name}",
+                            library="kimsfinance_cpu",
+                            time_ms=time_ms,
+                            available=True,
+                            error=None,
+                        )
+                    )
 
                     print(f"    kimsfinance: {time_ms:.2f}ms")
 
                 except Exception as e:
-                    results.append(BenchmarkResult(
+                    results.append(
+                        BenchmarkResult(
+                            name=f"Chart: {chart_name}",
+                            library="kimsfinance_cpu",
+                            time_ms=None,
+                            available=False,
+                            error=str(e),
+                        )
+                    )
+                    print(f"    kimsfinance: ERROR - {e}")
+            else:
+                # Not implemented yet
+                results.append(
+                    BenchmarkResult(
                         name=f"Chart: {chart_name}",
                         library="kimsfinance_cpu",
                         time_ms=None,
                         available=False,
-                        error=str(e),
-                    ))
-                    print(f"    kimsfinance: ERROR - {e}")
-            else:
-                # Not implemented yet
-                results.append(BenchmarkResult(
+                        error="Chart type not implemented yet",
+                    )
+                )
+                print(f"    kimsfinance: N/A (not implemented)")
+        else:
+            results.append(
+                BenchmarkResult(
                     name=f"Chart: {chart_name}",
                     library="kimsfinance_cpu",
                     time_ms=None,
                     available=False,
-                    error="Chart type not implemented yet",
-                ))
-                print(f"    kimsfinance: N/A (not implemented)")
-        else:
-            results.append(BenchmarkResult(
-                name=f"Chart: {chart_name}",
-                library="kimsfinance_cpu",
-                time_ms=None,
-                available=False,
-                error="kimsfinance not installed",
-            ))
+                    error="kimsfinance not installed",
+                )
+            )
             print(f"    kimsfinance: N/A (not installed)")
 
     # Clean up temporary directory
     import shutil
+
     shutil.rmtree(temp_dir, ignore_errors=True)
 
     print(f"\n✓ Chart benchmarking complete ({len(results)} results)")
@@ -1464,6 +1819,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 # ==============================================================================
 # Report Generation
 # ==============================================================================
+
 
 def generate_markdown_report(report: BenchmarkReport, output_path: Path):
     """Generate human-readable markdown report"""
@@ -1477,8 +1833,8 @@ def generate_markdown_report(report: BenchmarkReport, output_path: Path):
         "## Hardware Configuration",
         "",
         f"- **CPU:** {report.hardware.cpu_model} ({report.hardware.cpu_cores} cores, {report.hardware.cpu_threads} threads)",
-        f"- **GPU:** {report.hardware.gpu_model or 'None'}" +
-        (f" ({report.hardware.gpu_vram_mb} MB VRAM)" if report.hardware.gpu_vram_mb else ""),
+        f"- **GPU:** {report.hardware.gpu_model or 'None'}"
+        + (f" ({report.hardware.gpu_vram_mb} MB VRAM)" if report.hardware.gpu_vram_mb else ""),
         f"- **RAM:** {report.hardware.ram_gb:.1f} GB",
         f"- **OS:** {report.hardware.os_name} {report.hardware.os_version}",
         f"- **Python:** {report.hardware.python_version}",
@@ -1502,47 +1858,49 @@ def generate_markdown_report(report: BenchmarkReport, output_path: Path):
     lines.append("| ATR | 12.3ms | 2.1ms | 1.8ms | 5.9x | 1.2x |")
     lines.append("| RSI | ❌ N/A | 1.5ms | 1.2ms | N/A | 1.3x |")
 
-    lines.extend([
-        "",
-        "### Chart Rendering",
-        "",
-        "| Chart Type | mplfinance | kimsfinance CPU | kimsfinance GPU | Speedup |",
-        "|------------|------------|-----------------|-----------------|---------|",
-        "| Candlestick | 156ms | 8.2ms | N/A | 19.0x |",
-        "| Hollow | ❌ N/A | 8.5ms | N/A | N/A |",
-        "",
-        "### 🚀 Batch Processing (ALL Indicators at Once)",
-        "",
-        "**This is kimsfinance's killer feature!** GPU overhead is amortized across many operations.",
-        "",
-        "| Metric | mplfinance (sequential) | kimsfinance CPU (batch) | kimsfinance GPU (batch) |",
-        "|--------|-------------------------|-------------------------|-------------------------|",
-        "| Time | 1,234ms | 156ms | 89ms |",
-        "| Speedup vs mpl | 1.0x | **7.9x** | **13.9x** |",
-        "| GPU Efficiency | N/A | N/A | **66.7x more efficient than sequential!** |",
-        "",
-        "> **Note:** Batch GPU processing uses 15K row threshold vs 1M for individual indicators",
-        "> (99% reduction in overhead). This is why kimsfinance GPU shines with multiple indicators!",
-        "",
-        "## Summary",
-        "",
-        f"- **Average Speedup (vs mplfinance):** {report.speedups.get('avg_vs_mpl', 0):.1f}x",
-        f"- **GPU Acceleration (individual):** {report.speedups.get('gpu_vs_cpu', 1):.1f}x",
-        f"- **GPU Acceleration (batch):** {report.speedups.get('gpu_vs_cpu_batch', 1):.1f}x",
-        f"- **GPU Batch Efficiency:** {report.speedups.get('batch_efficiency', 66.7):.1f}x",
-        "",
-        "### Total Benchmark Time",
-        "",
-        f"- **mplfinance (all operations):** {report.speedups.get('total_mpl_ms', 0):.1f}ms",
-        f"- **kimsfinance CPU (all operations):** {report.speedups.get('total_cpu_ms', 0):.1f}ms",
-        f"- **kimsfinance GPU (all operations):** {report.speedups.get('total_gpu_ms', 0):.1f}ms",
-        "",
-        f"**Overall Speedup:** {report.speedups.get('overall_speedup', 0):.1f}x faster than mplfinance",
-        "",
-        "---",
-        "",
-        "*Generated by kimsfinance standard benchmark*",
-    ])
+    lines.extend(
+        [
+            "",
+            "### Chart Rendering",
+            "",
+            "| Chart Type | mplfinance | kimsfinance CPU | kimsfinance GPU | Speedup |",
+            "|------------|------------|-----------------|-----------------|---------|",
+            "| Candlestick | 156ms | 8.2ms | N/A | 19.0x |",
+            "| Hollow | ❌ N/A | 8.5ms | N/A | N/A |",
+            "",
+            "### 🚀 Batch Processing (ALL Indicators at Once)",
+            "",
+            "**This is kimsfinance's killer feature!** GPU overhead is amortized across many operations.",
+            "",
+            "| Metric | mplfinance (sequential) | kimsfinance CPU (batch) | kimsfinance GPU (batch) |",
+            "|--------|-------------------------|-------------------------|-------------------------|",
+            "| Time | 1,234ms | 156ms | 89ms |",
+            "| Speedup vs mpl | 1.0x | **7.9x** | **13.9x** |",
+            "| GPU Efficiency | N/A | N/A | **66.7x more efficient than sequential!** |",
+            "",
+            "> **Note:** Batch GPU processing uses 15K row threshold vs 1M for individual indicators",
+            "> (99% reduction in overhead). This is why kimsfinance GPU shines with multiple indicators!",
+            "",
+            "## Summary",
+            "",
+            f"- **Average Speedup (vs mplfinance):** {report.speedups.get('avg_vs_mpl', 0):.1f}x",
+            f"- **GPU Acceleration (individual):** {report.speedups.get('gpu_vs_cpu', 1):.1f}x",
+            f"- **GPU Acceleration (batch):** {report.speedups.get('gpu_vs_cpu_batch', 1):.1f}x",
+            f"- **GPU Batch Efficiency:** {report.speedups.get('batch_efficiency', 66.7):.1f}x",
+            "",
+            "### Total Benchmark Time",
+            "",
+            f"- **mplfinance (all operations):** {report.speedups.get('total_mpl_ms', 0):.1f}ms",
+            f"- **kimsfinance CPU (all operations):** {report.speedups.get('total_cpu_ms', 0):.1f}ms",
+            f"- **kimsfinance GPU (all operations):** {report.speedups.get('total_gpu_ms', 0):.1f}ms",
+            "",
+            f"**Overall Speedup:** {report.speedups.get('overall_speedup', 0):.1f}x faster than mplfinance",
+            "",
+            "---",
+            "",
+            "*Generated by kimsfinance standard benchmark*",
+        ]
+    )
 
     output_path.write_text("\n".join(lines))
     print(f"\n✓ Markdown report saved: {output_path}")
@@ -1568,12 +1926,17 @@ def save_json_results(report: BenchmarkReport, output_path: Path):
 # Main
 # ==============================================================================
 
+
 def main():
     parser = argparse.ArgumentParser(description="Run kimsfinance standard benchmark")
     parser.add_argument("--quick", action="store_true", help="Quick mode (1 day)")
     parser.add_argument("--full", action="store_true", help="Full mode (30 days)")
-    parser.add_argument("--monthly", action="store_true", help="Use monthly data (~43K candles for GPU)")
-    parser.add_argument("--skip-charts", action="store_true", help="Skip chart rendering (focus on calculations)")
+    parser.add_argument(
+        "--monthly", action="store_true", help="Use monthly data (~43K candles for GPU)"
+    )
+    parser.add_argument(
+        "--skip-charts", action="store_true", help="Skip chart rendering (focus on calculations)"
+    )
     parser.add_argument("--timeframe", default="1m", help="Candle timeframe (default: 1m)")
     args = parser.parse_args()
 
@@ -1641,10 +2004,13 @@ def main():
 
     # Get git commit
     try:
-        git_commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
+        git_commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .strip()
+        )
     except Exception:
         git_commit = None
 
@@ -1660,9 +2026,15 @@ def main():
         chart_results = benchmark_charts(ohlcv)
 
     # Calculate speedups
-    total_mpl_ms = sum(r.time_ms for r in indicator_results if r.library == "mplfinance" and r.time_ms)
-    total_cpu_ms = sum(r.time_ms for r in indicator_results if r.library == "kimsfinance_cpu" and r.time_ms)
-    total_gpu_ms = sum(r.time_ms for r in indicator_results if r.library == "kimsfinance_gpu" and r.time_ms)
+    total_mpl_ms = sum(
+        r.time_ms for r in indicator_results if r.library == "mplfinance" and r.time_ms
+    )
+    total_cpu_ms = sum(
+        r.time_ms for r in indicator_results if r.library == "kimsfinance_cpu" and r.time_ms
+    )
+    total_gpu_ms = sum(
+        r.time_ms for r in indicator_results if r.library == "kimsfinance_gpu" and r.time_ms
+    )
 
     speedups = {
         "avg_vs_mpl": total_mpl_ms / total_cpu_ms if total_cpu_ms > 0 else 0,

@@ -4,11 +4,11 @@ def pytest_addoption(parser):
         "--generate-baselines",
         action="store_true",
         default=False,
-        help="Generate new baseline images"
+        help="Generate new baseline images",
     )
     parser.addoption(
         "--tolerance",
         type=float,
         default=0.01,
-        help="Acceptable difference percentage (default: 1%%)"
+        help="Acceptable difference percentage (default: 1%%)",
     )

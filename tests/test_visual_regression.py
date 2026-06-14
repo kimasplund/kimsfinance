@@ -33,14 +33,14 @@ DIFF_DIR = Path(__file__).parent / "visual_diffs"
 
 # Test data - simple OHLCV for reproducibility
 TEST_OHLC = {
-    'open': np.array([100.0, 102.0, 101.0, 103.0, 102.0, 104.0, 103.0, 105.0]),
-    'high': np.array([103.0, 104.0, 102.0, 105.0, 103.0, 106.0, 104.0, 107.0]),
-    'low': np.array([99.0, 101.0, 100.0, 102.0, 101.0, 103.0, 102.0, 104.0]),
-    'close': np.array([102.0, 101.0, 103.0, 102.0, 104.0, 103.0, 105.0, 104.0]),
+    "open": np.array([100.0, 102.0, 101.0, 103.0, 102.0, 104.0, 103.0, 105.0]),
+    "high": np.array([103.0, 104.0, 102.0, 105.0, 103.0, 106.0, 104.0, 107.0]),
+    "low": np.array([99.0, 101.0, 100.0, 102.0, 101.0, 103.0, 102.0, 104.0]),
+    "close": np.array([102.0, 101.0, 103.0, 102.0, 104.0, 103.0, 105.0, 104.0]),
 }
 TEST_VOLUME = np.array([1000, 1200, 900, 1100, 1050, 1300, 950, 1150])
 
-THEMES = ['classic', 'modern', 'tradingview', 'light']
+THEMES = ["classic", "modern", "tradingview", "light"]
 
 
 def pytest_addoption(parser):
@@ -49,13 +49,13 @@ def pytest_addoption(parser):
         "--generate-baselines",
         action="store_true",
         default=False,
-        help="Generate new baseline images"
+        help="Generate new baseline images",
     )
     parser.addoption(
         "--tolerance",
         type=float,
         default=0.01,
-        help="Acceptable difference percentage (default: 1%%)"
+        help="Acceptable difference percentage (default: 1%%)",
     )
 
 
@@ -83,8 +83,8 @@ def compare_images(img1_path, img2_path, tolerance=0.01):
     Returns:
         (is_match, difference_percentage)
     """
-    img1 = Image.open(img1_path).convert('RGB')
-    img2 = Image.open(img2_path).convert('RGB')
+    img1 = Image.open(img1_path).convert("RGB")
+    img2 = Image.open(img2_path).convert("RGB")
 
     # Check dimensions match
     if img1.size != img2.size:
@@ -106,14 +106,14 @@ def compare_images(img1_path, img2_path, tolerance=0.01):
 
 def save_diff_image(baseline_path, current_path, diff_output_path):
     """Save a visual diff highlighting differences."""
-    baseline = Image.open(baseline_path).convert('RGB')
-    current = Image.open(current_path).convert('RGB')
+    baseline = Image.open(baseline_path).convert("RGB")
+    current = Image.open(current_path).convert("RGB")
 
     # Generate diff image
     diff = ImageChops.difference(baseline, current)
 
     # Enhance diff for visibility
-    diff = ImageChops.multiply(diff, Image.new('RGB', diff.size, (10, 10, 10)))
+    diff = ImageChops.multiply(diff, Image.new("RGB", diff.size, (10, 10, 10)))
 
     diff.save(diff_output_path)
 
@@ -134,12 +134,12 @@ def test_chart_visual_regression(theme, generate_baselines, tolerance, tmp_path)
         width=400,
         height=300,
         theme=theme,
-        enable_antialiasing=True
+        enable_antialiasing=True,
     )
 
     # Save current chart
     current_path = tmp_path / f"current_{theme}.png"
-    img.save(current_path, format='PNG')
+    img.save(current_path, format="PNG")
 
     # Baseline path
     baseline_dir = BASELINE_DIR / theme
@@ -148,7 +148,7 @@ def test_chart_visual_regression(theme, generate_baselines, tolerance, tmp_path)
     if generate_baselines:
         # Generate new baseline
         baseline_dir.mkdir(parents=True, exist_ok=True)
-        img.save(baseline_path, format='PNG')
+        img.save(baseline_path, format="PNG")
         pytest.skip(f"Generated baseline for {theme} theme")
 
     # Compare against baseline

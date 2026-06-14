@@ -10,6 +10,7 @@ import pytest
 # Import will fail if GPU feature not enabled
 try:
     from kimsfinance_core import batch_backtest, batch_backtest_info, BacktestResult
+
     GPU_AVAILABLE = True
 except ImportError:
     GPU_AVAILABLE = False
@@ -23,17 +24,17 @@ class TestBatchBacktestInfo:
         """Test that batch_backtest_info() returns expected keys."""
         info = batch_backtest_info()
 
-        assert 'gpu_available' in info
-        assert 'expected_speedup' in info
+        assert "gpu_available" in info
+        assert "expected_speedup" in info
 
-        if info['gpu_available']:
-            assert 'gpu_name' in info
-            assert 'cuda_version' in info
-            assert 'vram_gb' in info
-            assert info['expected_speedup'] > 1.0
+        if info["gpu_available"]:
+            assert "gpu_name" in info
+            assert "cuda_version" in info
+            assert "vram_gb" in info
+            assert info["expected_speedup"] > 1.0
         else:
-            assert 'error' in info
-            assert info['expected_speedup'] == 1.0
+            assert "error" in info
+            assert info["expected_speedup"] == 1.0
 
 
 class TestBatchBacktestBasic:
@@ -77,20 +78,17 @@ class TestBatchBacktestBasic:
     def test_batch_backtest_10_strategies(self, synthetic_ohlcv, timestamps):
         """Test batch backtest with 10 RSI strategies."""
         # 10 RSI strategies with different thresholds
-        parameters = [
-            [14.0, 20.0 + i * 2, 70.0 + i]
-            for i in range(10)
-        ]
+        parameters = [[14.0, 20.0 + i * 2, 70.0 + i] for i in range(10)]
 
         # Run batch backtest
         results = batch_backtest(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             ohlcv=synthetic_ohlcv,
             parameters=parameters,
             timestamps=timestamps,
             initial_capital=10000.0,
             trading_fee=0.001,
-            slippage=0.0001
+            slippage=0.0001,
         )
 
         # Validate results
@@ -101,18 +99,22 @@ class TestBatchBacktestBasic:
             assert isinstance(result, BacktestResult), f"Result {i} is not BacktestResult"
 
             # Check attributes exist
-            assert hasattr(result, 'sharpe_ratio')
-            assert hasattr(result, 'max_drawdown')
-            assert hasattr(result, 'win_rate')
-            assert hasattr(result, 'total_return')
-            assert hasattr(result, 'final_equity')
-            assert hasattr(result, 'num_trades')
-            assert hasattr(result, 'profit_factor')
+            assert hasattr(result, "sharpe_ratio")
+            assert hasattr(result, "max_drawdown")
+            assert hasattr(result, "win_rate")
+            assert hasattr(result, "total_return")
+            assert hasattr(result, "final_equity")
+            assert hasattr(result, "num_trades")
+            assert hasattr(result, "profit_factor")
 
             # Check value ranges
             assert 0.0 <= result.win_rate <= 1.0, f"Invalid win_rate: {result.win_rate}"
-            assert result.max_drawdown <= 0.0, f"Max drawdown should be negative: {result.max_drawdown}"
-            assert result.final_equity >= 0.0, f"Final equity should be positive: {result.final_equity}"
+            assert (
+                result.max_drawdown <= 0.0
+            ), f"Max drawdown should be negative: {result.max_drawdown}"
+            assert (
+                result.final_equity >= 0.0
+            ), f"Final equity should be positive: {result.final_equity}"
             assert result.num_trades >= 0, f"Num trades should be non-negative: {result.num_trades}"
 
     def test_batch_backtest_without_timestamps(self, synthetic_ohlcv):
@@ -120,10 +122,10 @@ class TestBatchBacktestBasic:
         parameters = [[14.0, 30.0, 70.0]]  # Single strategy
 
         results = batch_backtest(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             ohlcv=synthetic_ohlcv,
             parameters=parameters,
-            initial_capital=10000.0
+            initial_capital=10000.0,
         )
 
         assert len(results) == 1
@@ -132,16 +134,13 @@ class TestBatchBacktestBasic:
     def test_batch_backtest_ma_crossover(self, synthetic_ohlcv, timestamps):
         """Test MA crossover strategy."""
         # 5 MA crossover strategies
-        parameters = [
-            [10.0 + i * 5, 50.0 + i * 10]  # [fast_period, slow_period]
-            for i in range(5)
-        ]
+        parameters = [[10.0 + i * 5, 50.0 + i * 10] for i in range(5)]  # [fast_period, slow_period]
 
         results = batch_backtest(
-            strategy='ma_crossover',
+            strategy="ma_crossover",
             ohlcv=synthetic_ohlcv,
             parameters=parameters,
-            timestamps=timestamps
+            timestamps=timestamps,
         )
 
         assert len(results) == 5
@@ -158,10 +157,10 @@ class TestBatchBacktestBasic:
         ]
 
         results = batch_backtest(
-            strategy='bollinger',
+            strategy="bollinger",
             ohlcv=synthetic_ohlcv,
             parameters=parameters,
-            timestamps=timestamps
+            timestamps=timestamps,
         )
 
         assert len(results) == 3
@@ -199,23 +198,17 @@ class TestBatchBacktestStress:
     def test_100_strategies(self, large_ohlcv):
         """Test 100 strategies in parallel."""
         # 100 RSI strategies
-        parameters = [
-            [14.0, 20.0 + (i % 10) * 2, 70.0 + (i // 10)]
-            for i in range(100)
-        ]
+        parameters = [[14.0, 20.0 + (i % 10) * 2, 70.0 + (i // 10)] for i in range(100)]
 
-        results = batch_backtest(
-            strategy='rsi_crossover',
-            ohlcv=large_ohlcv,
-            parameters=parameters
-        )
+        results = batch_backtest(strategy="rsi_crossover", ohlcv=large_ohlcv, parameters=parameters)
 
         assert len(results) == 100
 
         # Check results are sorted by fitness (best first)
         fitness_scores = [r.fitness() for r in results]
-        assert fitness_scores == sorted(fitness_scores, reverse=True), \
-            "Results should be sorted by fitness (descending)"
+        assert fitness_scores == sorted(
+            fitness_scores, reverse=True
+        ), "Results should be sorted by fitness (descending)"
 
     @pytest.mark.slow
     @pytest.mark.skipif(not GPU_AVAILABLE, reason="Requires GPU with >1GB VRAM")
@@ -223,17 +216,10 @@ class TestBatchBacktestStress:
         """Stress test with 1000 strategies (VRAM test)."""
         # 1000 strategies: 10 periods × 10 buy thresholds × 10 sell thresholds
         parameters = [
-            [10.0 + p, 20.0 + b, 70.0 + s]
-            for p in range(10)
-            for b in range(10)
-            for s in range(10)
+            [10.0 + p, 20.0 + b, 70.0 + s] for p in range(10) for b in range(10) for s in range(10)
         ]
 
-        results = batch_backtest(
-            strategy='rsi_crossover',
-            ohlcv=large_ohlcv,
-            parameters=parameters
-        )
+        results = batch_backtest(strategy="rsi_crossover", ohlcv=large_ohlcv, parameters=parameters)
 
         assert len(results) == 1000
 
@@ -252,22 +238,14 @@ class TestBatchBacktestErrorHandling:
         parameters = [[14.0, 30.0, 70.0]]
 
         with pytest.raises(ValueError, match="Unknown strategy"):
-            batch_backtest(
-                strategy='invalid_strategy',
-                ohlcv=ohlcv,
-                parameters=parameters
-            )
+            batch_backtest(strategy="invalid_strategy", ohlcv=ohlcv, parameters=parameters)
 
     def test_empty_parameters(self):
         """Test error for empty parameter list."""
         ohlcv = np.random.randn(100, 5)
 
         with pytest.raises(ValueError, match="parameters cannot be empty"):
-            batch_backtest(
-                strategy='rsi_crossover',
-                ohlcv=ohlcv,
-                parameters=[]
-            )
+            batch_backtest(strategy="rsi_crossover", ohlcv=ohlcv, parameters=[])
 
     def test_wrong_ohlcv_shape(self):
         """Test error for wrong OHLCV shape."""
@@ -276,11 +254,7 @@ class TestBatchBacktestErrorHandling:
         parameters = [[14.0, 30.0, 70.0]]
 
         with pytest.raises(ValueError, match="ohlcv must have shape"):
-            batch_backtest(
-                strategy='rsi_crossover',
-                ohlcv=ohlcv,
-                parameters=parameters
-            )
+            batch_backtest(strategy="rsi_crossover", ohlcv=ohlcv, parameters=parameters)
 
     def test_timestamp_length_mismatch(self):
         """Test error for timestamp length mismatch."""
@@ -290,10 +264,7 @@ class TestBatchBacktestErrorHandling:
 
         with pytest.raises(ValueError, match="timestamps length.*must match"):
             batch_backtest(
-                strategy='rsi_crossover',
-                ohlcv=ohlcv,
-                parameters=parameters,
-                timestamps=timestamps
+                strategy="rsi_crossover", ohlcv=ohlcv, parameters=parameters, timestamps=timestamps
             )
 
 
@@ -308,9 +279,7 @@ class TestBacktestResultClass:
         ohlcv[:, 4] = np.abs(ohlcv[:, 4]) * 1000
 
         results = batch_backtest(
-            strategy='rsi_crossover',
-            ohlcv=ohlcv,
-            parameters=[[14.0, 30.0, 70.0]]
+            strategy="rsi_crossover", ohlcv=ohlcv, parameters=[[14.0, 30.0, 70.0]]
         )
 
         return results[0]
@@ -318,20 +287,20 @@ class TestBacktestResultClass:
     def test_repr(self, sample_result):
         """Test __repr__ method."""
         repr_str = repr(sample_result)
-        assert 'BacktestResult' in repr_str
-        assert 'sharpe=' in repr_str
-        assert 'dd=' in repr_str
+        assert "BacktestResult" in repr_str
+        assert "sharpe=" in repr_str
+        assert "dd=" in repr_str
 
     def test_to_dict(self, sample_result):
         """Test to_dict() method."""
         d = sample_result.to_dict()
 
         assert isinstance(d, dict)
-        assert 'sharpe_ratio' in d
-        assert 'max_drawdown' in d
-        assert 'win_rate' in d
-        assert 'params' in d
-        assert isinstance(d['params'], dict)
+        assert "sharpe_ratio" in d
+        assert "max_drawdown" in d
+        assert "win_rate" in d
+        assert "params" in d
+        assert isinstance(d["params"], dict)
 
     def test_fitness(self, sample_result):
         """Test fitness() method."""
@@ -366,23 +335,17 @@ class TestPerformance:
     @pytest.mark.benchmark
     def test_100_strategies_10k_candles_performance(self, perf_ohlcv, benchmark):
         """Benchmark 100 strategies × 10K candles (target: <300ms)."""
-        parameters = [
-            [14.0, 20.0 + i, 70.0 + i * 0.5]
-            for i in range(100)
-        ]
+        parameters = [[14.0, 20.0 + i, 70.0 + i * 0.5] for i in range(100)]
 
         def run_batch():
-            return batch_backtest(
-                strategy='rsi_crossover',
-                ohlcv=perf_ohlcv,
-                parameters=parameters
-            )
+            return batch_backtest(strategy="rsi_crossover", ohlcv=perf_ohlcv, parameters=parameters)
 
         # Warmup
         run_batch()
 
         # Benchmark
         import time
+
         start = time.perf_counter()
         results = run_batch()
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -398,5 +361,5 @@ class TestPerformance:
             print("✓ Performance target met!")
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v', '--tb=short'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])

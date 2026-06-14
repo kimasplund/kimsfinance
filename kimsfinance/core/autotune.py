@@ -85,10 +85,12 @@ def _get_operation_func(operation: str) -> Callable[[pl.DataFrame, Engine], Any]
         # Default to a simple operation for unknown indicators
         def default_op(df, engine):
             from .engine import EngineManager
+
             polars_engine = EngineManager.select_polars_engine(
                 engine, operation="default", data_size=len(df)
             )
             return df.select(pl.mean("close")).collect(engine=polars_engine)
+
         return default_op
 
 

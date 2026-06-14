@@ -21,7 +21,6 @@ from kimsfinance.ops.indicators.macd import CUPY_AVAILABLE
 from kimsfinance.core import EngineManager
 from kimsfinance.core.exceptions import ConfigurationError
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================

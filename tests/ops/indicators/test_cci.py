@@ -43,7 +43,6 @@ from kimsfinance.ops.indicators.cci import calculate_cci, CUPY_AVAILABLE
 from kimsfinance.core import EngineManager
 from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
 
-
 # ============================================================================
 # Test Data Generators
 # ============================================================================

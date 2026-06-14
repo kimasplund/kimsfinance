@@ -26,9 +26,10 @@ def _check_polars_gpu() -> bool:
     """Check if Polars GPU engine is available (production-ready in 2025)."""
     try:
         import polars as pl
+
         # Test GPU engine availability with simple operation
-        test_df = pl.LazyFrame({'test': [1, 2, 3]})
-        test_df.collect(engine='gpu')
+        test_df = pl.LazyFrame({"test": [1, 2, 3]})
+        test_df.collect(engine="gpu")
         return True
     except Exception:
         return False

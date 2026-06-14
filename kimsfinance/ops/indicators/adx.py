@@ -109,8 +109,7 @@ def calculate_adx(
     # result is simply an all-NaN warmup window rather than an error.
     if len(highs_arr) < period:
         raise ValueError(
-            f"Data length ({len(highs_arr)}) must be >= period ({period}) "
-            f"for ADX calculation"
+            f"Data length ({len(highs_arr)}) must be >= period ({period}) " f"for ADX calculation"
         )
 
     # Create Polars DataFrame for calculation

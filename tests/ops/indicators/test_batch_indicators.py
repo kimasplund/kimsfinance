@@ -35,7 +35,6 @@ from kimsfinance.ops.indicators import (
 )
 from kimsfinance.core import EngineManager
 
-
 # Skip all tests if batch module not yet implemented
 pytestmark = pytest.mark.skipif(not BATCH_AVAILABLE, reason="batch.py not yet implemented")
 
