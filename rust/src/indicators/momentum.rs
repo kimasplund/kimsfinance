@@ -239,7 +239,10 @@ impl WilliamsR {
                     if range > 0.0 {
                         ((hh - close[i]) / range) * -100.0
                     } else {
-                        f64::NAN
+                        // Flat window (hh==ll): %R is 0/0. Use the range midpoint
+                        // (-50 on the [-100,0] scale) -- the neutral convention also
+                        // used by the GPU kernel and mirroring RSI/Stochastic flat=neutral.
+                        -50.0
                     }
                 })
                 .collect();
@@ -257,7 +260,7 @@ impl WilliamsR {
                     *r = if range > 0.0 {
                         ((hh - c) / range) * -100.0
                     } else {
-                        f64::NAN
+                        -50.0 // flat window -> neutral midpoint (see parallel branch)
                     };
                 });
         }
@@ -337,7 +340,10 @@ impl Stochastic {
                     if range > 0.0 {
                         ((close[i] - ll) / range) * 100.0
                     } else {
-                        f64::NAN
+                        // Flat window (hh==ll): %K is 0/0. Use the range midpoint (50)
+                        // -- the neutral convention used by the GPU kernel; also keeps
+                        // %D = sma(%K) finite instead of NaN-poisoning the flat region.
+                        50.0
                     }
                 })
                 .collect();
@@ -354,7 +360,7 @@ impl Stochastic {
                     *k_val = if range > 0.0 {
                         ((c - ll) / range) * 100.0
                     } else {
-                        f64::NAN
+                        50.0 // flat window -> neutral midpoint (see parallel branch)
                     };
                 });
         }
@@ -429,22 +435,28 @@ impl Aroon {
                     let high_window = high.slice(s![window_start..=i]);
                     let low_window = low.slice(s![window_start..=i]);
 
-                    // Find last occurrence of max/min (most recent)
+                    // Most-recent occurrence of the window max/min. Mirror the
+                    // sequential path's tie-break EXACTLY (`>=` for max, `<=` for
+                    // min, both keeping the LATER index). The previous
+                    // `rev().max_by(...)` returned the OLDEST index on tied highs
+                    // (max_by yields the last element on ties, which after `.rev()`
+                    // is index 0), so identical input gave different Aroon-Up
+                    // depending only on whether n crossed PARALLEL_THRESHOLD.
                     let periods_since_high = high_window
                         .iter()
                         .enumerate()
-                        .rev()
-                        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                        .map(|(idx, _)| idx)
-                        .unwrap_or(0);
+                        .fold((0usize, f64::NEG_INFINITY), |(bi, bv), (i, &v)| {
+                            if v >= bv { (i, v) } else { (bi, bv) }
+                        })
+                        .0;
 
                     let periods_since_low = low_window
                         .iter()
                         .enumerate()
-                        .rev()
-                        .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                        .map(|(idx, _)| idx)
-                        .unwrap_or(0);
+                        .fold((0usize, f64::INFINITY), |(bi, bv), (i, &v)| {
+                            if v <= bv { (i, v) } else { (bi, bv) }
+                        })
+                        .0;
 
                     let period_f = (self.period - 1) as f64;
                     let up = ((self.period - 1 - periods_since_high) as f64 / period_f) * 100.0;

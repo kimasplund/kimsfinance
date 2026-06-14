@@ -17,6 +17,30 @@ use std::collections::VecDeque;
 /// Threshold for parallel computation
 const PARALLEL_THRESHOLD: usize = 5000;
 
+/// First index `s` for which `data[s..s+period]` are all finite, skipping any
+/// LEADING NaN/inf warmup; `None` if no such window exists.
+///
+/// The moving-average primitives (`sma`, `ema`, `wilders_smoothing`) use this to
+/// seed on real data when their input itself carries an indicator warmup of
+/// leading NaNs (e.g. MACD signal = `ema(macd_line)`, Stochastic %D = `sma(%K)`).
+/// Without it the seed is NaN and the recurrence / rolling-sum propagates NaN
+/// across the whole output. For a clean input (no leading NaNs) this returns
+/// `Some(0)`, so the primitives stay byte-for-byte unchanged.
+fn first_finite_window(data: ArrayView1<f64>, period: usize) -> Option<usize> {
+    let mut run = 0usize;
+    for (i, &x) in data.iter().enumerate() {
+        if x.is_finite() {
+            run += 1;
+            if run == period {
+                return Some(i + 1 - period);
+            }
+        } else {
+            run = 0;
+        }
+    }
+    None
+}
+
 /// Calculate Simple Moving Average (SMA)
 ///
 /// Core building block for many indicators. Uses SIMD-optimized operations.
@@ -36,12 +60,19 @@ pub fn sma(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
         return result;
     }
 
-    // Calculate first SMA value
-    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
-    result[period - 1] = first_sum / period as f64;
+    // Skip any leading-NaN warmup so a chained SMA (e.g. Stochastic %D = sma(%K))
+    // seeds on real data instead of propagating NaN through the rolling sum.
+    let start = match first_finite_window(data, period) {
+        Some(s) => s,
+        None => return result,
+    };
+
+    // Calculate first SMA value over the first complete finite window
+    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
+    result[start + period - 1] = first_sum / period as f64;
 
     // Use rolling sum for efficiency: O(n) instead of O(n*period)
-    for i in period..n {
+    for i in (start + period)..n {
         let prev_sma = result[i - 1];
         let new_value = data[i];
         let old_value = data[i - period];
@@ -78,24 +109,9 @@ pub fn ema(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
     // makes the seed NaN and the recurrence propagate NaN across the WHOLE output
     // (signal + histogram all-NaN). For a clean input (no leading NaNs) `start` is
     // 0, so the result is byte-for-byte identical to the previous implementation.
-    let start = {
-        let mut run = 0usize;
-        let mut seed = None;
-        for (i, &x) in data.iter().enumerate() {
-            if x.is_finite() {
-                run += 1;
-                if run == period {
-                    seed = Some(i + 1 - period);
-                    break;
-                }
-            } else {
-                run = 0;
-            }
-        }
-        match seed {
-            Some(s) => s,
-            None => return result, // never `period` consecutive finite values
-        }
+    let start = match first_finite_window(data, period) {
+        Some(s) => s,
+        None => return result, // never `period` consecutive finite values
     };
 
     // Initialize with SMA over the first complete finite window.
@@ -131,12 +147,20 @@ pub fn wilders_smoothing(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
 
     let alpha = 1.0 / period as f64;
 
-    // Initialize with SMA
-    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
-    result[period - 1] = first_sum / period as f64;
+    // Skip any leading-NaN warmup so a chained Wilder smoothing (e.g. ADX's DX
+    // line, which is NaN where directional movement is undefined) seeds on real
+    // data instead of propagating NaN. For clean input `start` is 0 (unchanged).
+    let start = match first_finite_window(data, period) {
+        Some(s) => s,
+        None => return result,
+    };
+
+    // Initialize with SMA over the first complete finite window
+    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
+    result[start + period - 1] = first_sum / period as f64;
 
     // Apply Wilder's smoothing
-    for i in period..n {
+    for i in (start + period)..n {
         result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
     }
 
