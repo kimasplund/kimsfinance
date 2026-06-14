@@ -78,7 +78,11 @@ impl Indicator for RSI {
                 .into_par_iter()
                 .map(|i| {
                     if avg_loss[i] == 0.0 {
-                        100.0
+                        // No losses: distinguish a genuine all-gains move (RSI 100)
+                        // from a FLAT series where there are also no gains. A flat
+                        // window is directionless, so RSI is neutral (50) -- returning
+                        // 100 here wrongly flags a flat market as maximally overbought.
+                        if avg_gain[i] == 0.0 { 50.0 } else { 100.0 }
                     } else {
                         let rs = avg_gain[i] / avg_loss[i];
                         100.0 - (100.0 / (1.0 + rs))
@@ -95,7 +99,9 @@ impl Indicator for RSI {
                 .and(&avg_loss.slice(s![self.period..]))
                 .for_each(|r, &gain, &loss| {
                     *r = if loss == 0.0 {
-                        100.0
+                        // Flat window (no gains AND no losses) is directionless -> 50;
+                        // genuine all-gains -> 100. See the parallel branch above.
+                        if gain == 0.0 { 50.0 } else { 100.0 }
                     } else {
                         let rs = gain / loss;
                         100.0 - (100.0 / (1.0 + rs))

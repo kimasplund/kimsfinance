@@ -71,12 +71,40 @@ pub fn ema(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
 
     let alpha = 2.0 / (period as f64 + 1.0);
 
-    // Initialize with SMA for first value
-    let first_sum: f64 = data.slice(ndarray::s![0..period]).sum();
-    result[period - 1] = first_sum / period as f64;
+    // Find the first index where `period` consecutive FINITE values are available
+    // to seed the SMA, skipping any LEADING NaN warmup in `data`. This matters for
+    // chained EMAs: the MACD signal line is `ema()` of the MACD line, which itself
+    // carries a leading-NaN warmup (the slow EMA's). Seeding the SMA on those NaNs
+    // makes the seed NaN and the recurrence propagate NaN across the WHOLE output
+    // (signal + histogram all-NaN). For a clean input (no leading NaNs) `start` is
+    // 0, so the result is byte-for-byte identical to the previous implementation.
+    let start = {
+        let mut run = 0usize;
+        let mut seed = None;
+        for (i, &x) in data.iter().enumerate() {
+            if x.is_finite() {
+                run += 1;
+                if run == period {
+                    seed = Some(i + 1 - period);
+                    break;
+                }
+            } else {
+                run = 0;
+            }
+        }
+        match seed {
+            Some(s) => s,
+            None => return result, // never `period` consecutive finite values
+        }
+    };
 
-    // Calculate EMA recursively
-    for i in period..n {
+    // Initialize with SMA over the first complete finite window.
+    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
+    result[start + period - 1] = first_sum / period as f64;
+
+    // Calculate EMA recursively. A NaN appearing LATER in `data` still propagates
+    // forward from that point (unchanged behavior for mid-series input gaps).
+    for i in (start + period)..n {
         result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
     }
 
