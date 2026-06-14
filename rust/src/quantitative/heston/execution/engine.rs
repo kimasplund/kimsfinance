@@ -529,7 +529,12 @@ mod tests {
         let result = engine.process_time_step(1735100000, &market_data).unwrap();
 
         assert_eq!(result.position_count, 1);
-        assert!(result.processing_time_us > 0);
+        // processing_time_us is a microsecond-resolution measurement; a single
+        // time step over one position legitimately completes in well under 1μs
+        // and rounds to 0, so `> 0` is a flaky timer-resolution check rather than
+        // a behavioral one. position_count above already proves the step ran;
+        // here just assert the timing field is a sane (non-overflow) value.
+        assert!(result.processing_time_us < 1_000_000);
     }
 
     #[test]
