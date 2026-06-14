@@ -158,7 +158,7 @@ extern "C" __global__ void sma_kernel_shared(
 /// // sma[2] = (100 + 102 + 104) / 3 = 102.0
 /// assert!((sma[2] - 102.0).abs() < 0.01);
 /// ```
-pub fn sma_gpu(
+pub fn sma_gpu_f64(
     device: &GpuDevice,
     close: &Array1<f64>,
     period: usize,
@@ -253,6 +253,21 @@ pub fn sma_gpu(
     device.pinned_pool.lock().release(pinned_sma);
 
     Ok(Array1::from_vec(sma_vec))
+}
+
+/// GPU-accelerated Simple Moving Average (SMA).
+///
+/// Computes in **FP32** internally (Ada sm_89 runs FP32 at full rate vs FP64 at
+/// 1/64; measured ~1.3-1.7x faster, scaling toward ~2x with size as the kernel
+/// becomes memory-bound). The public API and (price-scale) tolerance are
+/// unchanged; see [`sma_gpu_f64`] for the FP64 reference path.
+pub fn sma_gpu(
+    device: &GpuDevice,
+    close: &Array1<f64>,
+    period: usize,
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<Array1<f64>, GpuError> {
+    sma_gpu_f32(device, close, period, stream)
 }
 
 // ============================================================================
@@ -764,7 +779,10 @@ mod tests {
         let close = Array1::from_vec((0..n).map(|i| 100.0 + (i as f64) * 0.01).collect());
 
         // Test correctness on large dataset
-        let sma_global = sma_gpu(&device, &close, 20, None).expect("Global SMA failed");
+        // Compare the f64 global reference vs the (also f64) shared kernel: this
+        // test verifies the shared-memory kernel, so both sides must be f64 for
+        // the tight 1e-9 tolerance. (The public sma_gpu now computes in f32.)
+        let sma_global = sma_gpu_f64(&device, &close, 20, None).expect("Global SMA failed");
         let sma_shared = sma_gpu_shared(&device, &close, 20, None).expect("Shared SMA failed");
 
         // Verify results match
@@ -833,7 +851,7 @@ mod tests {
         let close: Array1<f64> =
             Array1::from_iter((0..n).map(|i| 30_000.0 + 5_000.0 * ((i as f64) * 0.001).sin()));
         for &period in &[5usize, 20, 50, 200] {
-            let f64_out = sma_gpu(&device, &close, period, None).expect("f64 SMA failed");
+            let f64_out = sma_gpu_f64(&device, &close, period, None).expect("f64 SMA failed");
             let f32_out = sma_gpu_f32(&device, &close, period, None).expect("f32 SMA failed");
             for i in 0..n {
                 if f64_out[i].is_nan() {
@@ -864,12 +882,12 @@ mod tests {
             let close: Array1<f64> =
                 Array1::from_iter((0..n).map(|i| 30_000.0 + ((i as f64) * 0.001).sin()));
             // Warmup: compile + cache modules for both paths.
-            let _ = sma_gpu(&device, &close, period, None).unwrap();
+            let _ = sma_gpu_f64(&device, &close, period, None).unwrap();
             let _ = sma_gpu_f32(&device, &close, period, None).unwrap();
             let iters = 20;
             let t0 = Instant::now();
             for _ in 0..iters {
-                let _ = sma_gpu(&device, &close, period, None).unwrap();
+                let _ = sma_gpu_f64(&device, &close, period, None).unwrap();
             }
             let f64_ms = t0.elapsed().as_secs_f64() * 1000.0 / iters as f64;
             let t1 = Instant::now();
