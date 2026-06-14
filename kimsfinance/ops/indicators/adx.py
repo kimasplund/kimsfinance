@@ -99,13 +99,17 @@ def calculate_adx(
     lows_arr = to_numpy_array(lows)
     closes_arr = to_numpy_array(closes)
 
+    if period < 1:
+        raise ValueError("period must be >= 1")
+
     if not (len(highs_arr) == len(lows_arr) == len(closes_arr)):
         raise ValueError("highs, lows, and closes must have same length")
 
-    min_length = 2 * period
-    if len(highs_arr) < min_length:
+    # Need at least `period` bars to compute. With fewer than 2*period bars the
+    # result is simply an all-NaN warmup window rather than an error.
+    if len(highs_arr) < period:
         raise ValueError(
-            f"Data length ({len(highs_arr)}) must be >= 2 × period ({min_length}) "
+            f"Data length ({len(highs_arr)}) must be >= period ({period}) "
             f"for ADX calculation"
         )
 
@@ -212,8 +216,18 @@ def calculate_adx(
     else:
         adx_result = adx_result.collect()
 
-    return (
-        adx_result["adx"].to_numpy(),
-        df["plus_di"].to_numpy(),
-        df["minus_di"].to_numpy(),
-    )
+    adx_out = adx_result["adx"].to_numpy().astype(float)
+    plus_di_out = df["plus_di"].to_numpy().astype(float)
+    minus_di_out = df["minus_di"].to_numpy().astype(float)
+
+    # Mask the warmup window with NaN. +DI/-DI need `period` bars for the first
+    # Wilder smoothing; ADX needs a further `period` bars (2*period total).
+    # Without this the EMA seed leaks pseudo-values into the warmup region,
+    # contradicting the documented "initial values will be NaN" contract.
+    di_warmup = min(period, len(plus_di_out))
+    adx_warmup = min(2 * period, len(adx_out))
+    plus_di_out[:di_warmup] = np.nan
+    minus_di_out[:di_warmup] = np.nan
+    adx_out[:adx_warmup] = np.nan
+
+    return adx_out, plus_di_out, minus_di_out
