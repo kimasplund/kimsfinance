@@ -130,3 +130,65 @@ holds >33% occupancy. Strong prior: (A) wins.
 
 - macOS/Windows GPU support; multi-GPU; datacenter-class assumptions.
 - The unified megakernel unless the decision gate justifies it.
+
+## 10. Profiling finding (Gap 3) — REORDERS the strategy
+
+nsys on the SMA path (n up to 10M) shows the workload is **memory-MOVEMENT
+bound, not compute bound**:
+- Host<->device transfers ~729M ns (**~93%**; D2H 66% + H2D 33%).
+- Kernels ~54M ns (~7%). The f32 kernel is 7.5x faster than f64 (758us->100us)
+  but that barely moves end-to-end because the kernel is only 7%.
+- The measured 1.74x end-to-end from f32 comes almost entirely from f32 halving
+  the **transfer bytes**, not from faster compute.
+
+Implications (priority reorder):
+1. **TOP LEVER = eliminate transfers.** Keep OHLCV + intermediates on-device
+   across the indicator/sweep pipeline; stop the per-kernel H2D/D2H round-trip.
+   This is the research's device-resident `scan.rs` / batch / persistent infra
+   (built-but-disconnected) and is likely a bigger win than any per-kernel
+   precision change. Profile the genetic-sweep hot path (data uploaded once,
+   many kernels) to confirm.
+2. **f32 conversion stays worthwhile** but as a transfer-halver (~1.7x), not a
+   compute win. Converting kernels in isolation only helps because each still
+   round-trips; inside an on-device pipeline per-kernel precision matters far
+   less (kernel is 7%).
+3. **Precision tiers help mainly where they cut bytes moved or enable tensor
+   cores**, not raw FLOPs.
+
+## 11. Precision policy (from research/gpu-cuda-cores/precision/)
+
+The real promotion gate is **"same trades fire AND P&L within a band"**, not
+"indicator value within 1e-4" (1e-4 is both too strict — most of the range is
+decision-irrelevant — and too weak — it can't catch a near-threshold sign flip).
+Chain the existing mechanisms: `signal_boundary_mismatch_ok`
+(orderflow_batch.rs:1383) + the tick-backtest 1e-9 equity/trade parity
+(tick_backtest_batch.rs:15). Promote to the primary gate.
+
+Tier policy (default precision by class):
+- **T0 f64** — P&L, long cumulative (OBV/VWAP/CVD/equity), Heston/Greeks.
+- **T1 f32 (default)** — EMA/MACD/SMA-family, windowed indicators.
+- **T1.5 f16-store / f32-accumulate** — windowed/element-wise, needs per-window
+  rebasing (none today); bandwidth win.
+- **T2/T3 INT8** — bounded oscillator outputs / orderflow (shipping, <0.01% dev).
+- **T-GEMM bf16/TF32-in / f32-accumulate** — GEMM-shaped only (covariance,
+  batched regression, MC).
+- **Universal rule: mixed precision (compute-low, accumulate-f32).** Generalize
+  the existing `scan.rs AffinePrecision::F64Acc`.
+
+Hazards where "coarse decisions" is FALSE (keep precision up): recursive/IIR
+(geometric error growth), long cumulative (O(N) loss; f32 2^24 cliff; fp16
+65504 overflow), variance/std (cancellation; fp16 x^2 overflow).
+
+## 12. New required work (gap analysis)
+
+- **Gap 3 DONE (profiled):** transfers dominate -> pursue device-residency first.
+- **Gap 2 — CI numerical gate:** today all f32 GPU tests are `#[ignore]` and CI
+  is GPU-less, so the tolerance/equivalence gates aren't enforced. Add a gate
+  (CPU-reference numerical checks that run GPU-less, + GPU equivalence runs
+  where a GPU exists).
+- **Gap 1 — `Precision` policy type** threaded through the GPU API (F64|F32|F16|
+  auto) so the tier policy is configurable, not hard-coded per kernel.
+- **Determinism — split `-use_fast_math`** (build.rs:258): keep it for
+  throughput-only kernels, drop it (and pin reduction order / use f64+Kahan for
+  equity) for signal/backtest kernels so backtests are reproducible.
+- Backtest-equivalence + f32 overflow/NaN audit before further promotions.
