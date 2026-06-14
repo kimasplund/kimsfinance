@@ -1712,6 +1712,54 @@ def process_large_dataset_streaming(data, chunk_size=1_000_000):
 
 ## Advanced Topics
 
+### Numerical Precision Policy & Determinism (Rust core)
+
+The Rust `kimsfinance_core` GPU layer exposes a configurable **precision policy** — the "accuracy
+limiter" — instead of hard-coding a dtype per kernel.
+
+**Why it exists (profiling finding):** `nsys` on the SMA path shows the workload is **memory-movement
+bound (~93% PCIe), not compute bound**. So lowering precision is valuable mainly as a **transfer /
+bandwidth halver** (f32 moves half the bytes), not as a compute win — and the bigger lever is keeping
+data **device-resident** across a sweep (upload once, run many kernels). On Ada, FP64 also runs at
+1/64 the FP32 rate, so f32 is the sensible default for decision-irrelevant indicator values.
+
+**API (Rust-internal — `rust/src/gpu/precision.rs`, GPU build):**
+
+```rust
+use kimsfinance_core::gpu::precision::{Precision, NumericalClass};
+
+// Precision: F64 | F32 | Auto   NumericalClass: BoundedWindow | Recursive | Cumulative | Variance
+let p = Precision::Auto.resolve(NumericalClass::BoundedWindow); // -> F32
+let p = Precision::Auto.resolve(NumericalClass::Cumulative);    // -> F64 (loss-prone)
+
+// SMA: explicit-precision + device-resident variants
+let sma = sma_gpu_f32(&device, &close, period, None)?;          // f32 (default path)
+let sma = sma_gpu_prec(&device, &close, period, Precision::F64, stream)?;
+let sweep = sma_sweep_on_device(&device, &close, &periods, stream)?; // upload-once, 87.7x vs re-upload
+```
+
+**Default tier policy** (see `research/gpu-cuda-cores/precision/`):
+
+| Class | Default | Examples |
+|-------|---------|----------|
+| Windowed / bounded | **f32** | SMA/EMA/MACD families, oscillators |
+| Recursive / cumulative / variance | **f64** | OBV/VWAP/CVD, equity & P&L, std-dev |
+
+The promotion gate is *"same trades fire AND P&L within band"*, not a raw 1e-4 value tolerance.
+
+**Determinism:** the `strict-fp` Cargo feature compiles signal/backtest kernels **without**
+`-use_fast_math`/denormal-flush (0.5-ULP div/sqrt) so backtests are bit-reproducible run-to-run; the
+default keeps fast-math for throughput-only kernels.
+
+```bash
+cargo test --release --features "gpu,strict-fp" --lib
+```
+
+> **CI note ("Gap 2"):** the GPU equivalence/tolerance tests are `#[ignore]` (need a GPU) and CI is
+> GPU-less, so the numerical gates aren't enforced in CI. The `self-hosted` GPU workflow jobs are
+> gated on the repo variable `HAS_GPU_RUNNER`; register a self-hosted GPU runner and set it to `true`
+> to run them. Full hardware status: `research/gpu-cuda-cores/GPU_TEST_AUDIT.md` (suite green, 326/0).
+
 ### Custom CUDA Kernels
 
 For maximum performance, write custom CUDA kernels with CuPy:

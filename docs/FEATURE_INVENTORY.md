@@ -325,10 +325,19 @@ upper, middle, lower = kimsfinance_core.calculate_bollinger_bands(prices, period
 **GPU Features**:
 - Persistent CUDA kernels (avoid launch overhead)
 - Memory pool optimization (pinned memory)
-- CUDA graphs for repeated operations
+- CUDA graphs for repeated operations (THREAD_LOCAL capture — safe under multi-thread use)
 - Multi-precision support (FP8/FP16/FP32/FP64)
+- Configurable precision policy (`gpu::precision::Precision` × `NumericalClass`) — the accuracy
+  "limiter"; profiling showed the SMA path is transfer-bound (~93% PCIe), so f32 acts mainly as a
+  transfer/bandwidth halver. Default tier: f32 for windowed indicators, f64 for cumulative/P&L.
+- Device-resident sweeps (upload-once, e.g. `sma_sweep_on_device`) — 87.7x vs per-call re-upload
+- Bit-reproducible kernels via the `strict-fp` Cargo feature (drops `-use_fast_math`)
 - Async memory transfers
 - Zero-copy transfers where possible
+
+> **GPU test-suite status (RTX 3500 Ada, CUDA 13.1):** the full `--ignored` GPU suite is **green
+> (326/0)** as of 2026-06-14 (was 279/47). Note "Gap 2": these tests don't run in GPU-less CI, so
+> enforcing them needs a self-hosted GPU runner. See `research/gpu-cuda-cores/GPU_TEST_AUDIT.md`.
 
 ### 4.2 Parallel Processing ✅
 
