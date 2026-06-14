@@ -17,30 +17,6 @@ use std::collections::VecDeque;
 /// Threshold for parallel computation
 const PARALLEL_THRESHOLD: usize = 5000;
 
-/// First index `s` for which `data[s..s+period]` are all finite, skipping any
-/// LEADING NaN/inf warmup; `None` if no such window exists.
-///
-/// The moving-average primitives (`sma`, `ema`, `wilders_smoothing`) use this to
-/// seed on real data when their input itself carries an indicator warmup of
-/// leading NaNs (e.g. MACD signal = `ema(macd_line)`, Stochastic %D = `sma(%K)`).
-/// Without it the seed is NaN and the recurrence / rolling-sum propagates NaN
-/// across the whole output. For a clean input (no leading NaNs) this returns
-/// `Some(0)`, so the primitives stay byte-for-byte unchanged.
-fn first_finite_window(data: ArrayView1<f64>, period: usize) -> Option<usize> {
-    let mut run = 0usize;
-    for (i, &x) in data.iter().enumerate() {
-        if x.is_finite() {
-            run += 1;
-            if run == period {
-                return Some(i + 1 - period);
-            }
-        } else {
-            run = 0;
-        }
-    }
-    None
-}
-
 /// Calculate Simple Moving Average (SMA)
 ///
 /// Core building block for many indicators. Uses SIMD-optimized operations.
@@ -60,23 +36,42 @@ pub fn sma(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
         return result;
     }
 
-    // Skip any leading-NaN warmup so a chained SMA (e.g. Stochastic %D = sma(%K))
-    // seeds on real data instead of propagating NaN through the rolling sum.
-    let start = match first_finite_window(data, period) {
-        Some(s) => s,
-        None => return result,
-    };
-
-    // Calculate first SMA value over the first complete finite window
-    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
-    result[start + period - 1] = first_sum / period as f64;
-
-    // Use rolling sum for efficiency: O(n) instead of O(n*period)
-    for i in (start + period)..n {
-        let prev_sma = result[i - 1];
-        let new_value = data[i];
-        let old_value = data[i - period];
-        result[i] = prev_sma + (new_value - old_value) / period as f64;
+    // NaN-robust rolling sum: carry the running sum of the FINITE values in the
+    // window plus a count of NaNs. The mean is emitted only when the window is
+    // NaN-free, and because NaNs are never added to `sum`, the average
+    // self-corrects the instant a NaN rolls out of the window -- so a leading OR
+    // mid-series gap recovers automatically instead of poisoning the whole tail.
+    // O(n). (Previously the rolling recurrence propagated a single NaN forever.)
+    let inv = 1.0 / period as f64;
+    let mut sum = 0.0;
+    let mut nan_count = 0usize;
+    for j in 0..period {
+        let v = data[j];
+        if v.is_finite() {
+            sum += v;
+        } else {
+            nan_count += 1;
+        }
+    }
+    if nan_count == 0 {
+        result[period - 1] = sum * inv;
+    }
+    for i in period..n {
+        let out = data[i - period];
+        if out.is_finite() {
+            sum -= out;
+        } else {
+            nan_count -= 1;
+        }
+        let inc = data[i];
+        if inc.is_finite() {
+            sum += inc;
+        } else {
+            nan_count += 1;
+        }
+        if nan_count == 0 {
+            result[i] = sum * inv;
+        }
     }
 
     result
@@ -102,26 +97,27 @@ pub fn ema(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
 
     let alpha = 2.0 / (period as f64 + 1.0);
 
-    // Find the first index where `period` consecutive FINITE values are available
-    // to seed the SMA, skipping any LEADING NaN warmup in `data`. This matters for
-    // chained EMAs: the MACD signal line is `ema()` of the MACD line, which itself
-    // carries a leading-NaN warmup (the slow EMA's). Seeding the SMA on those NaNs
-    // makes the seed NaN and the recurrence propagate NaN across the WHOLE output
-    // (signal + histogram all-NaN). For a clean input (no leading NaNs) `start` is
-    // 0, so the result is byte-for-byte identical to the previous implementation.
-    let start = match first_finite_window(data, period) {
-        Some(s) => s,
-        None => return result, // never `period` consecutive finite values
-    };
-
-    // Initialize with SMA over the first complete finite window.
-    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
-    result[start + period - 1] = first_sum / period as f64;
-
-    // Calculate EMA recursively. A NaN appearing LATER in `data` still propagates
-    // forward from that point (unchanged behavior for mid-series input gaps).
-    for i in (start + period)..n {
-        result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+    // Single pass that SEEDS, continues, and RE-SEEDS across NaN gaps. The EMA
+    // recurrence is undefined across a missing value, so a NaN breaks the chain;
+    // it is re-seeded (SMA over the trailing window) as soon as `period` consecutive
+    // finite values are available again. This handles both the leading-NaN warmup
+    // (chained EMAs like the MACD signal) and mid-series gaps -- previously a single
+    // NaN propagated to the end of the output. For a clean input the result is
+    // byte-for-byte identical to the plain recurrence (the first all-finite window
+    // seeds at index period-1, then the chain continues unbroken).
+    for i in (period - 1)..n {
+        if data[i].is_finite() && i >= 1 && result[i - 1].is_finite() {
+            // Continue the active chain.
+            result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+        } else if data[i].is_finite() {
+            // Chain inactive (start, or just after a gap): (re)seed from the
+            // trailing window when it is entirely finite.
+            let w = data.slice(ndarray::s![i + 1 - period..=i]);
+            if w.iter().all(|x| x.is_finite()) {
+                result[i] = w.sum() / period as f64;
+            }
+        }
+        // else: data[i] is NaN -> result[i] stays NaN (gap).
     }
 
     result
@@ -147,21 +143,20 @@ pub fn wilders_smoothing(data: ArrayView1<f64>, period: usize) -> Array1<f64> {
 
     let alpha = 1.0 / period as f64;
 
-    // Skip any leading-NaN warmup so a chained Wilder smoothing (e.g. ADX's DX
-    // line, which is NaN where directional movement is undefined) seeds on real
-    // data instead of propagating NaN. For clean input `start` is 0 (unchanged).
-    let start = match first_finite_window(data, period) {
-        Some(s) => s,
-        None => return result,
-    };
-
-    // Initialize with SMA over the first complete finite window
-    let first_sum: f64 = data.slice(ndarray::s![start..start + period]).sum();
-    result[start + period - 1] = first_sum / period as f64;
-
-    // Apply Wilder's smoothing
-    for i in (start + period)..n {
-        result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+    // Seed / continue / re-seed across NaN gaps (same recovery as `ema`): a NaN
+    // breaks the Wilder recurrence, which is re-seeded from the trailing window as
+    // soon as `period` consecutive finite values reappear. Handles the leading-NaN
+    // warmup (e.g. ADX's DX line) AND mid-series gaps (ATR over a gappy series)
+    // instead of propagating one NaN to the end. Clean input is byte-identical.
+    for i in (period - 1)..n {
+        if data[i].is_finite() && i >= 1 && result[i - 1].is_finite() {
+            result[i] = alpha * data[i] + (1.0 - alpha) * result[i - 1];
+        } else if data[i].is_finite() {
+            let w = data.slice(ndarray::s![i + 1 - period..=i]);
+            if w.iter().all(|x| x.is_finite()) {
+                result[i] = w.sum() / period as f64;
+            }
+        }
     }
 
     result

@@ -67,54 +67,49 @@ impl ParabolicSAR {
         sar[0] = low[0];
 
         for i in 1..n {
-            // Calculate SAR for this period
+            // 1. Tentative SAR for this period.
             sar[i] = sar[i - 1] + af * (ep - sar[i - 1]);
 
-            // Check for reversal
+            // 2. Constrain BEFORE the reversal test (Wilder's rule): the SAR may
+            //    not penetrate the prior two periods' range. This must happen first
+            //    -- the un-constrained SAR sits closer to price, so testing the
+            //    reversal against it flips the trend 1-2 bars too early. On a
+            //    reversal bar this constrained value is discarded (SAR := EP below).
             if is_long {
-                // In uptrend
+                if i >= 2 {
+                    sar[i] = sar[i].min(low[i - 1]).min(low[i - 2]);
+                } else {
+                    sar[i] = sar[i].min(low[i - 1]);
+                }
+            } else if i >= 2 {
+                sar[i] = sar[i].max(high[i - 1]).max(high[i - 2]);
+            } else {
+                sar[i] = sar[i].max(high[i - 1]);
+            }
+
+            // 3. Reversal test against the CONSTRAINED SAR.
+            if is_long {
                 if low[i] <= sar[i] {
-                    // Reversal to downtrend
+                    // Reversal to downtrend.
                     is_long = false;
-                    sar[i] = ep; // SAR becomes the extreme point
+                    sar[i] = ep; // SAR becomes the prior trend's extreme point
                     ep = low[i];
                     af = self.af_start;
-                } else {
-                    // Continue uptrend
-                    if high[i] > ep {
-                        ep = high[i];
-                        af = (af + self.af_increment).min(self.af_max);
-                    }
-
-                    // SAR cannot be above prior two lows
-                    if i >= 2 {
-                        sar[i] = sar[i].min(low[i - 1]).min(low[i - 2]);
-                    } else if i >= 1 {
-                        sar[i] = sar[i].min(low[i - 1]);
-                    }
-                }
-            } else {
-                // In downtrend
-                if high[i] >= sar[i] {
-                    // Reversal to uptrend
-                    is_long = true;
-                    sar[i] = ep; // SAR becomes the extreme point
+                } else if high[i] > ep {
+                    // Continue uptrend: advance the extreme point and accelerate.
                     ep = high[i];
-                    af = self.af_start;
-                } else {
-                    // Continue downtrend
-                    if low[i] < ep {
-                        ep = low[i];
-                        af = (af + self.af_increment).min(self.af_max);
-                    }
-
-                    // SAR cannot be below prior two highs
-                    if i >= 2 {
-                        sar[i] = sar[i].max(high[i - 1]).max(high[i - 2]);
-                    } else if i >= 1 {
-                        sar[i] = sar[i].max(high[i - 1]);
-                    }
+                    af = (af + self.af_increment).min(self.af_max);
                 }
+            } else if high[i] >= sar[i] {
+                // Reversal to uptrend.
+                is_long = true;
+                sar[i] = ep;
+                ep = high[i];
+                af = self.af_start;
+            } else if low[i] < ep {
+                // Continue downtrend.
+                ep = low[i];
+                af = (af + self.af_increment).min(self.af_max);
             }
         }
 

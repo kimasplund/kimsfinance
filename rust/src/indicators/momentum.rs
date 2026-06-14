@@ -458,9 +458,16 @@ impl Aroon {
                         })
                         .0;
 
+                    // Aroon-Up = 100 * (period - bars_since_high) / period. Here
+                    // periods_since_high is the window INDEX of the most-recent high
+                    // (0 = oldest .. period-1 = newest), i.e. exactly (period-1 -
+                    // bars_since_high), so the formula reduces to
+                    // 100 * periods_since_high / (period-1). The previous
+                    // `(period-1 - periods_since_high)` was inverted: a newest-bar
+                    // high gave Aroon-Up 0 instead of 100.
                     let period_f = (self.period - 1) as f64;
-                    let up = ((self.period - 1 - periods_since_high) as f64 / period_f) * 100.0;
-                    let down = ((self.period - 1 - periods_since_low) as f64 / period_f) * 100.0;
+                    let up = (periods_since_high as f64 / period_f) * 100.0;
+                    let down = (periods_since_low as f64 / period_f) * 100.0;
 
                     (up, down)
                 })
@@ -498,9 +505,11 @@ impl Aroon {
                     }
                 }
 
+                // See the parallel branch: Aroon-Up = 100 * periods_since_high /
+                // (period-1); the old `(period-1 - ...)` was inverted.
                 let period_f = (self.period - 1) as f64;
-                aroon_up[i] = ((self.period - 1 - periods_since_high) as f64 / period_f) * 100.0;
-                aroon_down[i] = ((self.period - 1 - periods_since_low) as f64 / period_f) * 100.0;
+                aroon_up[i] = (periods_since_high as f64 / period_f) * 100.0;
+                aroon_down[i] = (periods_since_low as f64 / period_f) * 100.0;
             }
         }
 

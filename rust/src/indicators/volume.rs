@@ -107,7 +107,9 @@ impl VWAP {
     ) -> IndicatorResult {
         let n = validate_lengths(&[high, low, close, volume])?;
 
-        let mut vwap = Array1::zeros(n);
+        // Init NaN, not 0: where cumulative volume is 0 (or non-positive) VWAP is
+        // undefined -- a 0.0 here is a false "price". Only written below when cum vol > 0.
+        let mut vwap = Array1::from_elem(n, f64::NAN);
 
         // Fused single-pass: compute typical price, accumulate sums, and calculate VWAP
         // This eliminates 3 intermediate allocations and reduces memory bandwidth by ~75%
@@ -153,7 +155,9 @@ impl VWAP {
             });
         }
 
-        let mut vwap = Array1::zeros(n);
+        // Init NaN, not 0: where cumulative volume is 0 (or non-positive) VWAP is
+        // undefined -- a 0.0 here is a false "price". Only written below when cum vol > 0.
+        let mut vwap = Array1::from_elem(n, f64::NAN);
         let mut cumsum_tp_volume = 0.0;
         let mut cumsum_volume = 0.0;
 
