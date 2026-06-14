@@ -454,10 +454,28 @@ impl BatchBuffers {
 ///
 /// First call: ~100-150ms, subsequent calls: ~1-2ms (50-200x faster)
 fn compile_persistent_kernel(device: &GpuDevice) -> Result<CudaFunction, GpuError> {
-    // Compile PTX with caching (50-200x faster on cache hits)
-    let ptx_arc = compile_ptx_optimized_cached(PERSISTENT_ROC_KERNEL).map_err(|e| {
-        GpuError::CompilationError(format!("Failed to compile persistent ROC kernel: {:?}", e))
-    })?;
+    use super::compile::{compile_ptx_coopgroups_cached, is_missing_header_error};
+
+    // Compile PTX with caching (50-200x faster on cache hits). The ROC kernel
+    // `#include`s cooperative_groups, so fall back to the CUDA-include compile
+    // when NVRTC can't find the system header (see PersistentIndicator::compile_kernel).
+    let ptx_arc = match compile_ptx_optimized_cached(PERSISTENT_ROC_KERNEL) {
+        Ok(ptx) => ptx,
+        Err(e) if is_missing_header_error(&e) => {
+            compile_ptx_coopgroups_cached(PERSISTENT_ROC_KERNEL).map_err(|e2| {
+                GpuError::CompilationError(format!(
+                    "Failed to compile persistent ROC kernel (with CUDA includes): {:?}",
+                    e2
+                ))
+            })?
+        }
+        Err(e) => {
+            return Err(GpuError::CompilationError(format!(
+                "Failed to compile persistent ROC kernel: {:?}",
+                e
+            )));
+        }
+    };
 
     // Extract Ptx from Arc for load_module
     let ptx = Arc::unwrap_or_clone(ptx_arc);

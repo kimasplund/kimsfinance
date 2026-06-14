@@ -62,17 +62,41 @@ pub trait PersistentIndicator: Sized {
     /// - First call: ~100-150ms compilation
     /// - Subsequent calls: ~1-2ms (50-200x faster)
     fn compile_kernel(device: &GpuDevice) -> Result<CudaFunction, GpuError> {
-        use super::super::compile::compile_ptx_optimized_cached;
+        use super::super::compile::{
+            compile_ptx_coopgroups_cached, compile_ptx_optimized_cached, is_missing_header_error,
+        };
         use std::sync::Arc;
 
-        // Compile PTX with caching (50-200x faster on cache hits)
-        let ptx_arc = compile_ptx_optimized_cached(Self::kernel_source()).map_err(|e| {
-            GpuError::CompilationError(format!(
-                "Failed to compile {} kernel: {:?}",
-                Self::kernel_name(),
-                e
-            ))
-        })?;
+        // Compile PTX with caching (50-200x faster on cache hits).
+        //
+        // Persistent/candle kernels `#include <cooperative_groups.h>`, which NVRTC
+        // cannot resolve without CUDA include paths. We try the self-contained
+        // (no-include) path first so any kernel that already compiles keeps its
+        // exact behavior, and only fall back to the include-path compile when the
+        // failure is specifically a missing-system-header error. This is provably
+        // non-regressive: a global include path would instead break the crate's
+        // self-contained kernels (header/built-in collisions), which is why
+        // `get_compile_options` keeps `include_paths` empty.
+        let src = Self::kernel_source();
+        let ptx_arc = match compile_ptx_optimized_cached(src) {
+            Ok(ptx) => ptx,
+            Err(e) if is_missing_header_error(&e) => {
+                compile_ptx_coopgroups_cached(src).map_err(|e2| {
+                    GpuError::CompilationError(format!(
+                        "Failed to compile {} kernel (with CUDA includes): {:?}",
+                        Self::kernel_name(),
+                        e2
+                    ))
+                })?
+            }
+            Err(e) => {
+                return Err(GpuError::CompilationError(format!(
+                    "Failed to compile {} kernel: {:?}",
+                    Self::kernel_name(),
+                    e
+                )));
+            }
+        };
 
         // Extract Ptx from Arc for load_module
         let ptx = Arc::unwrap_or_clone(ptx_arc);
