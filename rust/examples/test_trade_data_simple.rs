@@ -1,7 +1,7 @@
 //! Simple test to verify trade data loading works
 //!
 //! This demonstrates that the Rust backtest already supports trade data
-//! from /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades
+//! from /home/kim/projects/binance-data/futures/BTCUSDT/trades
 
 use kimsfinance_core::binance::{Timeframe, process_binance_month};
 use std::error::Error;
@@ -11,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Trade Data Support Verification ===\n");
 
     // Test with most recent trade data
-    let data_path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
+    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
     let timeframe = Timeframe::minutes(5);
 
     println!("Loading trade data from: {}", data_path);

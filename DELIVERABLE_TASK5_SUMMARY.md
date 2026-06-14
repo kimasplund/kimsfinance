@@ -19,7 +19,7 @@ I've prepared **comprehensive benchmark infrastructure** for validating GPU batc
 ### 1. Verify Infrastructure
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 bash scripts/verify_benchmark_infrastructure.sh
 ```
 
@@ -47,7 +47,7 @@ python scripts/validate_batch_accuracy.py
 ## Files Created (7 new files)
 
 ### 1. **Rust Benchmark Suite**
-📁 `/home/kim-asplund/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
+📁 `/home/kim/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
 
 **Features**:
 - 9 benchmark configurations (10 → 2000 strategies, 1K → 50K candles)
@@ -59,7 +59,7 @@ python scripts/validate_batch_accuracy.py
 **Target Benchmark**: 1000 strategies × 10K candles in <250ms (40x speedup)
 
 ### 2. **Test Data Generator**
-📁 `/home/kim-asplund/projects/kimsfinance/rust/benches/test_data_generator.rs`
+📁 `/home/kim/projects/kimsfinance/rust/benches/test_data_generator.rs`
 
 **Features**:
 - Realistic OHLCV with trends, volatility, cycles
@@ -68,7 +68,7 @@ python scripts/validate_batch_accuracy.py
 - Unit tests for validation
 
 ### 3. **Statistical Validation Script**
-📁 `/home/kim-asplund/projects/kimsfinance/scripts/validate_batch_accuracy.py`
+📁 `/home/kim/projects/kimsfinance/scripts/validate_batch_accuracy.py`
 
 **Features**:
 - Compares GPU vs CPU for 100 random strategies
@@ -77,7 +77,7 @@ python scripts/validate_batch_accuracy.py
 - Acceptance criteria: <0.01% difference, >0.9999 correlation
 
 ### 4. **Performance Report Template**
-📁 `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md`
+📁 `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md`
 
 **Structure** (10 sections):
 1. Executive Summary
@@ -94,7 +94,7 @@ python scripts/validate_batch_accuracy.py
 **Usage**: Fill in `[TBD]` placeholders after running benchmarks
 
 ### 5. **Benchmark README**
-📁 `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md`
+📁 `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md`
 
 **Contents**:
 - Quick start guide
@@ -105,7 +105,7 @@ python scripts/validate_batch_accuracy.py
 - Expected output examples
 
 ### 6. **Verification Script**
-📁 `/home/kim-asplund/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh`
+📁 `/home/kim/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh`
 
 **Checks**:
 - Files in place (5 files)
@@ -115,7 +115,7 @@ python scripts/validate_batch_accuracy.py
 - GPU availability (nvidia-smi)
 
 ### 7. **Task Summary**
-📁 `/home/kim-asplund/projects/kimsfinance/TASK5_BENCHMARK_INFRASTRUCTURE_SUMMARY.md`
+📁 `/home/kim/projects/kimsfinance/TASK5_BENCHMARK_INFRASTRUCTURE_SUMMARY.md`
 
 **Complete documentation** of preparation phase.
 
@@ -224,7 +224,7 @@ Replace all `[TBD]` with actual results from criterion reports.
 
 ### Step 5: Update GPU Thresholds (5 minutes)
 
-If targets met, update `/home/kim-asplund/projects/kimsfinance/kimsfinance/core/engine.py`:
+If targets met, update `/home/kim/projects/kimsfinance/kimsfinance/core/engine.py`:
 
 ```python
 GPU_BATCH_THRESHOLD = 100  # Strategies

@@ -79,7 +79,7 @@ GIL: False
 ## Repository Structure (Final)
 
 ```
-/home/kim-asplund/projects/kimsfinance/
+/home/kim/projects/kimsfinance/
 ├── kimsfinance/              # Python package (main)
 │   ├── __init__.py
 │   ├── core/
@@ -122,7 +122,7 @@ No changes needed.
 - **Features**: PIL rendering, Polars, GPU operations, visualization
 - **Install**: `pip install kimsfinance`
 - **Import**: `import kimsfinance as mfp`
-- **Status**: v0.1.0, 329+ tests, 77% coverage
+- **Status**: v0.2.0, 1,500+ tests (suite grew ~5x since original report)
 
 ### kimsfinance_core (Rust)
 - **Purpose**: Low-level GPU-accelerated computation engine

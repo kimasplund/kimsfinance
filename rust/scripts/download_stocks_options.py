@@ -101,7 +101,7 @@ def main():
     print()
 
     # Setup directories
-    base_dir = Path("/home/kim-asplund/projects/kimsfinance/data")
+    base_dir = Path("/home/kim/projects/kimsfinance/data")
     yahoo_dir = base_dir / "yahoo"
 
     # Date range for stock data (last year)

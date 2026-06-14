@@ -35,11 +35,11 @@ class TestGPUCrossoverThresholds:
 
     def test_specific_threshold_values(self):
         """Verify specific threshold values match expected empirical values."""
-        # Updated after Phase 1: GPU thresholds moved to centralized config
-        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 50_000  # rolling window threshold
-        assert GPU_CROSSOVER_THRESHOLDS["rsi"] == 50_000  # vectorizable_simple threshold
-        assert GPU_CROSSOVER_THRESHOLDS["stochastic"] == 500_000  # iterative threshold (unchanged)
-        assert GPU_CROSSOVER_THRESHOLDS["default"] == 100_000  # default threshold (unchanged)
+        # Updated after autotune rerun: thresholds reflect actual GPU crossover points
+        assert GPU_CROSSOVER_THRESHOLDS["atr"] == 10_000  # rolling window threshold
+        assert GPU_CROSSOVER_THRESHOLDS["rsi"] == 100_000  # vectorizable_simple threshold
+        assert GPU_CROSSOVER_THRESHOLDS["stochastic"] == 500_000  # iterative threshold
+        assert GPU_CROSSOVER_THRESHOLDS["default"] == 100_000  # default threshold
 
 
 class TestExplicitEngineSelection:
@@ -94,31 +94,19 @@ class TestAutoEngineSelection:
         mock_gpu.assert_called_once()
 
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
-    @pytest.mark.parametrize(
-        "operation,threshold",
-        [
-            ("atr", 50_000),  # Updated: rolling window threshold
-            ("rsi", 50_000),  # Updated: vectorizable_simple threshold
-            ("stochastic", 500_000),
-        ],
-    )
-    def test_auto_with_small_data_returns_cpu(self, mock_gpu, operation, threshold):
+    @pytest.mark.parametrize("operation", ["atr", "rsi", "stochastic"])
+    def test_auto_with_small_data_returns_cpu(self, mock_gpu, operation):
         """Test engine='auto' returns 'cpu' for data below threshold."""
+        threshold = GPU_CROSSOVER_THRESHOLDS[operation]
         result = EngineManager.select_engine("auto", operation=operation, data_size=threshold - 1)
         assert result == "cpu"
         mock_gpu.assert_called_once()
 
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
-    @pytest.mark.parametrize(
-        "operation,threshold",
-        [
-            ("atr", 50_000),  # Updated: rolling window threshold
-            ("rsi", 50_000),  # Updated: vectorizable_simple threshold
-            ("stochastic", 500_000),
-        ],
-    )
-    def test_auto_with_large_data_returns_gpu(self, mock_gpu, operation, threshold):
+    @pytest.mark.parametrize("operation", ["atr", "rsi", "stochastic"])
+    def test_auto_with_large_data_returns_gpu(self, mock_gpu, operation):
         """Test engine='auto' returns 'gpu' for data at or above threshold."""
+        threshold = GPU_CROSSOVER_THRESHOLDS[operation]
         result = EngineManager.select_engine("auto", operation=operation, data_size=threshold)
         assert result == "gpu"
         mock_gpu.assert_called_once()
@@ -153,9 +141,9 @@ class TestIndicatorEngineIntegration:
         self.small_closes = 100 + np.cumsum(np.random.randn(self.small_size))
         self.large_closes = 100 + np.cumsum(np.random.randn(self.large_size))
 
-    @patch.object(EngineManager, "select_engine")
+    @patch.object(EngineManager, "select_polars_engine")
     def test_rsi_calls_select_engine_correctly(self, mock_select):
-        """Test that calculate_rsi() calls select_engine() correctly."""
+        """Test that calculate_rsi() calls select_polars_engine() correctly."""
         mock_select.return_value = "cpu"
         calculate_rsi(self.small_closes, period=14, engine="auto")
         mock_select.assert_called_once_with("auto", operation="rsi", data_size=self.small_size)
@@ -168,7 +156,7 @@ class TestIndicatorEngineIntegration:
         mock_collect.assert_called_with(engine="cpu")
 
     @patch("kimsfinance.ops.indicators.pl.LazyFrame.collect")
-    @patch.object(EngineManager, "check_gpu_available", return_value=True)
+    @patch.object(EngineManager, "check_polars_gpu_available", return_value=True)
     def test_rsi_with_large_data_uses_gpu(self, mock_gpu, mock_collect):
         """Test that RSI with large data uses the GPU engine."""
         mock_collect.return_value = pl.DataFrame({"rsi": []})
@@ -185,15 +173,15 @@ class TestEdgeCases:
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_exactly_at_threshold(self, mock_gpu):
         """Test behavior at the exact threshold."""
-        # Updated: ATR uses rolling window threshold (50_000)
-        result = EngineManager.select_engine("auto", "atr", 50_000)
+        atr_threshold = GPU_CROSSOVER_THRESHOLDS["atr"]
+        result = EngineManager.select_engine("auto", "atr", atr_threshold)
         assert result == "gpu"
 
     @patch.object(EngineManager, "check_gpu_available", return_value=True)
     def test_one_row_below_threshold(self, mock_gpu):
         """Test behavior one row below the threshold."""
-        # Updated: ATR uses rolling window threshold (50_000)
-        result = EngineManager.select_engine("auto", "atr", 49_999)
+        atr_threshold = GPU_CROSSOVER_THRESHOLDS["atr"]
+        result = EngineManager.select_engine("auto", "atr", atr_threshold - 1)
         assert result == "cpu"
 
     def test_zero_data_size(self):

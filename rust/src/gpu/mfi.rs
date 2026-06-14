@@ -530,7 +530,7 @@ fn rolling_sum_cpu(input: &Array1<f64>, period: usize) -> Result<Array1<f64>, Gp
     // Roll window forward with O(n) complexity
     for i in (period + 1)..n {
         // Add new value, remove old value
-        window_sum += input[i] - input[i - period];
+        window_sum += input[i] - input[i - period - 1];
         sums[i] = window_sum;
     }
 

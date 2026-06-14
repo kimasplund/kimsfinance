@@ -1,7 +1,7 @@
 # Rust Indicator Optimization Analysis - Quick Reference
 
 **Date**: 2025-10-25  
-**Full Report**: `/home/kim-asplund/projects/kimsfinance/integrated-reasoning/rust_optimization_analysis.md` (1107 lines)  
+**Full Report**: `/home/kim/projects/kimsfinance/integrated-reasoning/rust_optimization_analysis.md` (1107 lines)  
 **Confidence**: 87% (High)
 
 ---
@@ -345,7 +345,7 @@ assert p_value < 0.05, "Speedup not statistically significant"
 ```bash
 # 1. Add PyO3 binding to lib.rs
 # 2. Test from Python
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 source .venv/bin/activate
 python -c "
 import kimsfinance_core
@@ -455,7 +455,7 @@ Before proceeding with GPU implementation, answer:
 
 ---
 
-**Full Analysis**: `/home/kim-asplund/projects/kimsfinance/integrated-reasoning/rust_optimization_analysis.md`
+**Full Analysis**: `/home/kim/projects/kimsfinance/integrated-reasoning/rust_optimization_analysis.md`
 
 **Files to Modify**:
 - 🔥 `rust/src/lib.rs` - Add batch API PyO3 binding
@@ -464,7 +464,7 @@ Before proceeding with GPU implementation, answer:
 - ⚡ `rust/src/indicators/*/rs:24` - Raise Rayon thresholds
 
 **Benchmarks**:
-- `/home/kim-asplund/projects/kimsfinance/benchmarks/BENCHMARK_RESULTS_WITH_COMPARISON.md`
+- `/home/kim/projects/kimsfinance/benchmarks/BENCHMARK_RESULTS_WITH_COMPARISON.md`
 - Target: 10-20x after Phase 1, 30-60x after Phase 2
 
 ---

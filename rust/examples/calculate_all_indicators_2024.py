@@ -35,8 +35,8 @@ def main():
     print(separator)
 
     # Input CSV from aggregation
-    input_csv = Path("/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv")
-    output_csv = Path("/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_with_indicators.csv")
+    input_csv = Path("/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv")
+    output_csv = Path("/home/kim/projects/binance-data/BTCUSDT_2024_1min_with_indicators.csv")
 
     if not input_csv.exists():
         print(f"❌ Input CSV not found: {input_csv}")

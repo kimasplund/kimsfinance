@@ -9,11 +9,11 @@ Design enum-based method selection for GPU-accelerated Heston option pricing to 
 
 ## Key Components
 
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/heston_pricing.rs` - Main GPU pricer implementation (1,121 lines)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/model.rs` - Core Heston model and OptionType enum
-- `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/black_scholes.rs` - Analytical BS pricer (fallback)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/auto_select.rs` - Enum pattern example (AggregationEngine)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/autotuner.rs` - Enum pattern example (ExecutionStrategy)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/heston_pricing.rs` - Main GPU pricer implementation (1,121 lines)
+- `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/model.rs` - Core Heston model and OptionType enum
+- `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/black_scholes.rs` - Analytical BS pricer (fallback)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/auto_select.rs` - Enum pattern example (AggregationEngine)
+- `/home/kim/projects/kimsfinance/rust/src/autotuner.rs` - Enum pattern example (ExecutionStrategy)
 
 ## Implementation Patterns
 

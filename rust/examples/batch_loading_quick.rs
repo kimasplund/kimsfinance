@@ -13,7 +13,7 @@ use std::time::Instant;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Quick Batch Loading Example ===\n");
 
-    let data_dir = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/";
+    let data_dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/";
     let months = vec!["2021-01"];
     let timeframe = Timeframe::parse("5m")?;
 

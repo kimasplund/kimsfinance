@@ -1,6 +1,6 @@
 # API Reference
 
-**kimsfinance v0.1.0** - High-Performance Financial Charting Library
+**kimsfinance v0.2.0** - High-Performance Financial Charting Library
 
 This comprehensive API reference covers all public functions and methods in kimsfinance. The library achieves **28.8x average speedup** over mplfinance (validated range: 7.3x - 70.1x) through native PIL rendering, GPU acceleration, and optimized algorithms.
 
@@ -529,7 +529,7 @@ kf.plot(df, enable_antialiasing=False, savefig='fast.webp')
 
 ## Technical Indicators
 
-kimsfinance provides **28 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection. Of these, 24 have Rust implementations for 3-8x speedup.
+kimsfinance provides **28 GPU-accelerated technical indicators** with automatic CPU/GPU engine selection. The Rust core exposes 26 standalone indicator functions (30+ indicators total incl. batch-only) for 3-8x speedup.
 
 ### Indicator Categories
 
@@ -986,9 +986,7 @@ kimsfinance.calculate_cmf(
 
 ---
 
-#### `calculate_mfi()` - Money Flow Index *(Planned for v0.2.0)*
-
-**Status:** Not yet implemented. Planned for v0.2.0 release.
+#### `calculate_mfi()` - Money Flow Index
 
 **Planned API:**
 ```python
@@ -1009,9 +1007,7 @@ kimsfinance.calculate_mfi(
 
 ### Trend Indicators
 
-#### `calculate_adx()` - Average Directional Index *(Planned for v0.2.0)*
-
-**Status:** Not yet implemented. Planned for v0.2.0 release.
+#### `calculate_adx()` - Average Directional Index
 
 **Planned API:**
 ```python
@@ -1029,9 +1025,7 @@ kimsfinance.calculate_adx(
 
 ---
 
-#### `calculate_ichimoku()` - Ichimoku Cloud *(Planned for v0.2.0)*
-
-**Status:** Not yet implemented. Planned for v0.2.0 release.
+#### `calculate_ichimoku()` - Ichimoku Cloud
 
 **Planned API:**
 ```python
@@ -1052,9 +1046,7 @@ kimsfinance.calculate_ichimoku(
 
 ---
 
-#### `calculate_supertrend()` - SuperTrend *(Planned for v0.2.0)*
-
-**Status:** Not yet implemented. Planned for v0.2.0 release.
+#### `calculate_supertrend()` - SuperTrend
 
 **Planned API:**
 ```python
@@ -2300,9 +2292,13 @@ print(f"Throughput: {1/elapsed:.0f} img/sec")
 
 ## API Version
 
-**Current Version:** v0.1.0
+**Current Version:** v0.2.0
 
 ### Version History
+
+- **v0.2.0** (2026-06-14) - Python package aligned to 0.2.0 (matching the Rust `kimsfinance_core` crate)
+  - MFI, ADX, Supertrend, Ichimoku promoted from planned to available
+  - Rust core: 26 standalone indicator functions (30+ incl. batch-only)
 
 - **v0.1.0** (2025-10-22) - Initial release
   - Native PIL rendering (28.8x average speedup, up to 70.1x)
@@ -2347,7 +2343,7 @@ See `LICENSE` and `COMMERCIAL-LICENSE.md` for details.
 
 ---
 
-**Last Updated:** 2025-10-22
-**Version:** 0.1.0
+**Last Updated:** 2026-06-14
+**Version:** 0.2.0
 **Status:** Production Ready (Beta)
 

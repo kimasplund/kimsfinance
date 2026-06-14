@@ -422,7 +422,7 @@ results = optimizer.optimize('rsi_crossover', data, use_gpu=True)
 ### 1. Compilation Check ✅
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo check --features gpu
 ```
 
@@ -492,7 +492,7 @@ ncu-ui optimized_metrics.nsys-rep
 
 1. **Run on RTX 3500 Ada GPU**:
    ```bash
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    cargo build --release --features gpu
    ./scripts/run_optimization_benchmarks.sh --quick
    ```

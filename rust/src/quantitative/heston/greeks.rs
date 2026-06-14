@@ -548,7 +548,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_calculate_greeks() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device, 4096).expect("Pricer creation failed");
+        let pricer = HestonGpuPricer::new(device, 4096, 4096).expect("Pricer creation failed");
         let calculator = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer)));
 
         let params = create_test_params();
@@ -591,7 +591,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_delta_gamma_symmetry() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device, 4096).expect("Pricer creation failed");
+        let pricer = HestonGpuPricer::new(device, 4096, 4096).expect("Pricer creation failed");
         let calculator = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer)));
 
         let params = create_test_params();
@@ -615,7 +615,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_greeks_batch() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = HestonGpuPricer::new(device, 4096).expect("Pricer creation failed");
+        let pricer = HestonGpuPricer::new(device, 4096, 4096).expect("Pricer creation failed");
         let calculator = HestonGreeksCalculator::new(Arc::new(Mutex::new(pricer)));
 
         let params = create_test_params();

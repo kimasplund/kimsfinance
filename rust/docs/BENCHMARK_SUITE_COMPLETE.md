@@ -131,7 +131,7 @@ Comprehensive benchmark suite comparing three optimizer implementations for stra
 nvidia-smi
 
 # 2. Build with GPU feature
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features gpu
 
 # 3. Install Python analysis dependencies
@@ -496,13 +496,13 @@ cat docs/benchmark_results/analysis_report.md
 
 ## References
 
-- **Grid Search Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/grid_search.rs`
-- **Euler Search Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/euler_search.rs`
-- **Genetic Optimizer**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs`
-- **Benchmark Suite**: `/home/kim-asplund/projects/kimsfinance/rust/benches/optimizer_comparison.rs`
-- **Analysis Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/analyze_optimizer_benchmarks.py`
-- **User Guide**: `/home/kim-asplund/projects/kimsfinance/rust/docs/OPTIMIZER_BENCHMARKING_GUIDE.md`
-- **Results Template**: `/home/kim-asplund/projects/kimsfinance/rust/docs/OPTIMIZER_COMPARISON.md`
+- **Grid Search Implementation**: `/home/kim/projects/kimsfinance/rust/src/backtest/grid_search.rs`
+- **Euler Search Implementation**: `/home/kim/projects/kimsfinance/rust/src/backtest/euler_search.rs`
+- **Genetic Optimizer**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs`
+- **Benchmark Suite**: `/home/kim/projects/kimsfinance/rust/benches/optimizer_comparison.rs`
+- **Analysis Script**: `/home/kim/projects/kimsfinance/rust/scripts/analyze_optimizer_benchmarks.py`
+- **User Guide**: `/home/kim/projects/kimsfinance/rust/docs/OPTIMIZER_BENCHMARKING_GUIDE.md`
+- **Results Template**: `/home/kim/projects/kimsfinance/rust/docs/OPTIMIZER_COMPARISON.md`
 
 ---
 

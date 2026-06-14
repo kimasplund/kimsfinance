@@ -8,7 +8,7 @@
 //! - Generating comprehensive markdown report
 //!
 //! # Data Source
-//! Binance BTCUSDT futures trade data from `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades`
+//! Binance BTCUSDT futures trade data from `/home/kim/projects/binance-data/futures/BTCUSDT/trades`
 //!
 //! # Usage
 //! ```bash
@@ -346,7 +346,7 @@ fn generate_markdown_report(
     total_duration: std::time::Duration,
 ) -> Result<(), Box<dyn Error>> {
     let mut file =
-        File::create("/home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
+        File::create("/home/kim/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
 
     writeln!(file, "# Binance BTCUSDT Futures Backtest Results\n")?;
     writeln!(file, "## Test Configuration\n")?;
@@ -604,7 +604,7 @@ fn generate_markdown_report(
     )?;
 
     println!(
-        "\n✓ Report saved to: /home/kim-asplund/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md"
+        "\n✓ Report saved to: /home/kim/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md"
     );
 
     Ok(())
@@ -613,7 +613,7 @@ fn generate_markdown_report(
 fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Comprehensive Binance BTCUSDT Futures Backtesting ===\n");
 
-    let data_path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
+    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
 
     let total_start = Instant::now();
     let mut all_results = Vec::new();

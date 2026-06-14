@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kimsfinance"
-version = "0.1.0"
+version = "0.2.0"
 description = "Blazing-fast financial charting for quantitative trading - 194x average speedup (764x peak) with Rust CPU, GPU persistent kernels (41x batch), and production-ready quality. Built for hedge funds, algo traders, and quants."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -115,3 +115,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "benchmark: marks performance benchmark tests",
+]

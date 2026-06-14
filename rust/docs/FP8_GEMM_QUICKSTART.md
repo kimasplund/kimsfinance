@@ -15,7 +15,7 @@
 ### 1. Compile Kernels
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 chmod +x scripts/compile_fp8_gemm_cutlass.sh
 ./scripts/compile_fp8_gemm_cutlass.sh
 ```

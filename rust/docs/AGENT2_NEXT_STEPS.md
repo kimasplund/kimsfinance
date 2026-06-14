@@ -45,7 +45,7 @@
 
 **Implementation**:
 
-Create `/home/kim-asplund/projects/kimsfinance/rust/tests/async_transfer_regression.rs`:
+Create `/home/kim/projects/kimsfinance/rust/tests/async_transfer_regression.rs`:
 
 ```rust
 //! Regression tests to ensure all GPU indicators use async transfers
@@ -130,7 +130,7 @@ fn test_async_infrastructure_exists() {
 
 **Goal**: Document async transfer best practices for contributors
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/docs/GPU_ASYNC_TRANSFER_GUIDE.md`
+**File**: `/home/kim/projects/kimsfinance/rust/docs/GPU_ASYNC_TRANSFER_GUIDE.md`
 
 **Outline**:
 ```markdown
@@ -192,7 +192,7 @@ fn test_async_infrastructure_exists() {
 
 ## Files Generated
 
-All documentation created in `/home/kim-asplund/projects/kimsfinance/rust/docs/`:
+All documentation created in `/home/kim/projects/kimsfinance/rust/docs/`:
 
 1. `ASYNC_TRANSFER_AUDIT_REPORT.md` - Comprehensive 34-file audit
 2. `AGENT2_COMPLETION_SUMMARY.md` - Executive summary
@@ -226,7 +226,7 @@ All documentation created in `/home/kim-asplund/projects/kimsfinance/rust/docs/`
 - See: `AGENT2_COMPLETION_SUMMARY.md` (quick summary)
 
 ### Reference Implementation
-- File: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi.rs`
+- File: `/home/kim/projects/kimsfinance/rust/src/gpu/rsi.rs`
 - Lines: 218-332 (async transfer pattern)
 
 ### Infrastructure Files

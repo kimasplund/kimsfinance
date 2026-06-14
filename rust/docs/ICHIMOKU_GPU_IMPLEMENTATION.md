@@ -348,10 +348,10 @@ Cloud Thickness: 7.25 (1.2% of price)
 
 ## References
 
-- **CPU Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/trend.rs` (lines 461-636)
-- **GPU Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/ichimoku.rs`
-- **Benchmark**: `/home/kim-asplund/projects/kimsfinance/rust/benches/ichimoku_gpu_benchmark.rs`
-- **Example**: `/home/kim-asplund/projects/kimsfinance/rust/examples/ichimoku_gpu_demo.rs`
+- **CPU Implementation**: `/home/kim/projects/kimsfinance/rust/src/indicators/trend.rs` (lines 461-636)
+- **GPU Implementation**: `/home/kim/projects/kimsfinance/rust/src/gpu/ichimoku.rs`
+- **Benchmark**: `/home/kim/projects/kimsfinance/rust/benches/ichimoku_gpu_benchmark.rs`
+- **Example**: `/home/kim/projects/kimsfinance/rust/examples/ichimoku_gpu_demo.rs`
 
 ## Related Indicators
 

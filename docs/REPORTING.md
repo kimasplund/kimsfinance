@@ -584,4 +584,4 @@ Part of kimsfinance - AGPL-3.0-or-later
 ---
 
 **Last Updated**: 2025-11-03
-**Version**: 0.1.0
+**Version**: 0.2.0

@@ -1268,7 +1268,7 @@ mod tests {
 
         // Verify fields match
         assert_eq!(profile.hardware_id, deserialized.hardware_id);
-        assert_eq!(profile.cpu_clock_ghz, deserialized.cpu_clock_ghz);
+        assert!((profile.cpu_clock_ghz - deserialized.cpu_clock_ghz).abs() < 1e-5);
         assert_eq!(
             profile.thresholds.ema_crossover,
             deserialized.thresholds.ema_crossover

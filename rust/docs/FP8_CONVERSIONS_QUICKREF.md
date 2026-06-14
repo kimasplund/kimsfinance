@@ -1,6 +1,6 @@
 # FP8 E4M3 Conversion Kernels - Quick Reference
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`
 
 ---
 
@@ -126,7 +126,7 @@ NaN negative:  0xFF
 ## Quick Test
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp8_conversions.py
 ```
 

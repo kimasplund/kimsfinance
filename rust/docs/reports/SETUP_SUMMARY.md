@@ -117,7 +117,7 @@
 pip install maturin
 
 # Build development version (editable install)
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 maturin develop --release
 
 # Or build production wheel
@@ -158,7 +158,7 @@ print(f"is_bullish: {coords['is_bullish']}")
 
 ### 3. Integrate with kimsfinance
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/plotting/pil_renderer.py`
+**Location**: `/home/kim/projects/kimsfinance/kimsfinance/plotting/pil_renderer.py`
 
 **Strategy**:
 1. Add optional Rust backend detection in `render_ohlcv_chart()`
@@ -219,7 +219,7 @@ def _calculate_coordinates_with_backend(
 
 ### 4. Benchmark Performance
 
-Create `/home/kim-asplund/projects/kimsfinance/benchmarks/benchmark_rust_coordinates.py`:
+Create `/home/kim/projects/kimsfinance/benchmarks/benchmark_rust_coordinates.py`:
 
 ```python
 import numpy as np
@@ -407,7 +407,7 @@ strip = true
 ### Build Wheel
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 maturin build --release --out ../dist/
 ```
 
@@ -419,7 +419,7 @@ pip install kimsfinance_core-0.1.0-cp313-cp313-linux_x86_64.whl
 
 ### Optional Dependency in kimsfinance
 
-Update `/home/kim-asplund/projects/kimsfinance/pyproject.toml`:
+Update `/home/kim/projects/kimsfinance/pyproject.toml`:
 
 ```toml
 [project.optional-dependencies]
@@ -457,7 +457,7 @@ Based on implementation patterns:
 
 **Project**: kimsfinance
 **Repository**: https://github.com/kimasplund/kimsfinance
-**Rust Module**: `/home/kim-asplund/projects/kimsfinance/rust/`
+**Rust Module**: `/home/kim/projects/kimsfinance/rust/`
 
 ---
 

@@ -2,9 +2,9 @@
 
 ## Overview
 
-Complete Python bindings for all 24 technical indicators plus coordinate calculations.
+Complete Python bindings for all 26 standalone indicator functions plus coordinate calculations.
 
-**Status**: ✅ All 24 indicators exported and tested (2025-10-25)
+**Status**: ✅ All 26 standalone indicator functions exported (26 standalone; 30+ total incl. batch-only)
 
 **Rust Version**: 1.90.0, Edition 2024
 **PyO3 Version**: 0.27.1
@@ -41,8 +41,8 @@ maturin develop --release
 4. `calculate_stochastic(high, low, close, k_period=14, d_period=3)` - Returns dict: `{k, d}`
 5. `calculate_aroon(high, low, period=14)` - Returns dict: `{aroon_up, aroon_down}`
 6. `calculate_cci(high, low, close, period=20)` - Commodity Channel Index
-7. `calculate_macd(prices, fast=12, slow=26, signal=9)` - Returns dict: `{macd, signal, histogram}`
-8. `calculate_tsi(prices, long=25, short=13, signal=7)` - Returns dict: `{tsi, signal}`
+7. `calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9)` - Returns dict: `{macd, signal, histogram}`
+8. `calculate_tsi(prices, long_period=25, short_period=13, signal_period=7)` - Returns dict: `{tsi, signal}`
 
 ### Volatility Indicators (5 indicators)
 
@@ -52,12 +52,17 @@ maturin develop --release
 4. `calculate_donchian_channels(high, low, period=20)` - Returns dict: `{middle, upper, lower}`
 5. `calculate_elder_ray(high, low, close, ema_period=13)` - Returns dict: `{bull_power, bear_power}`
 
-### Volume Indicators (4 indicators)
+### Volume Indicators (5 indicators)
 
 1. `calculate_obv(close, volume)` - On-Balance Volume
 2. `calculate_vwap(high, low, close, volume)` - Volume Weighted Average Price
 3. `calculate_cmf(high, low, close, volume, period=20)` - Chaikin Money Flow (-1 to 1 range)
-4. `calculate_volume_profile(high, low, close, volume, num_bins=20)` - Volume distribution histogram
+4. `calculate_mfi(high, low, close, volume, period=14)` - Money Flow Index
+5. `calculate_volume_profile(high, low, close, volume, num_bins=20)` - Volume distribution histogram
+
+### Trend Indicators (1 indicator)
+
+1. `calculate_parabolic_sar(high, low, af_start=0.02, af_increment=0.02, af_max=0.2)` - Parabolic SAR
 
 ## Python Usage Examples
 
@@ -154,7 +159,7 @@ maturin develop --release
 cd rust
 maturin build --release
 # Wheel created in rust/target/wheels/
-pip install target/wheels/kimsfinance_core-0.1.0-*.whl
+pip install target/wheels/kimsfinance_core-0.2.0-*.whl
 ```
 
 ## Testing
@@ -170,7 +175,7 @@ cargo test
 python test_rust_bindings.py
 ```
 
-Expected output:
+Expected output (covers original 24; 2 newer indicators added separately):
 ```
 SUMMARY: 24/24 indicators passed
 ✓ All 24 technical indicators working correctly!
@@ -181,7 +186,7 @@ SUMMARY: 24/24 indicators passed
 ```python
 import kimsfinance_core
 
-print(kimsfinance_core.__version__)  # "0.1.0"
+print(kimsfinance_core.__version__)  # "0.2.0"
 print(kimsfinance_core.__doc__)      # Module documentation
 ```
 
@@ -222,7 +227,7 @@ Ok(dict)
 ```
 rust/
 ├── src/
-│   ├── lib.rs              # Python bindings (THIS FILE - 24 indicators)
+│   ├── lib.rs              # Python bindings (THIS FILE - 26 standalone indicator functions)
 │   ├── coordinates.rs      # Coordinate calculation
 │   ├── types.rs           # Common types
 │   ├── indicators/
@@ -299,6 +304,12 @@ rust/
 
 ## Version History
 
+- **v0.2.0** (current): 26 standalone indicator functions
+  - Added `calculate_mfi`, `calculate_parabolic_sar`
+  - Coordinate calculations
+  - PyO3 0.27.1 bindings
+  - Edition 2024 support
+  - Rust 1.90.0 compatibility
 - **v0.1.0** (2025-10-25): Initial release
   - 24 technical indicators
   - Coordinate calculations

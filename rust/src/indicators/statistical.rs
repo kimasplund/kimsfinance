@@ -56,7 +56,7 @@ impl Indicator for LinearRegression {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let window = &prices.slice(s![(i - self.period + 1)..=i]).to_vec();
+            let window = &prices.slice(s![i + 1 - self.period..=i]).to_vec();
             result[i] = self.fit_linear(window);
         }
 
@@ -121,7 +121,7 @@ impl Indicator for TimeSeriesForecast {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let window = &prices.slice(s![(i - self.period + 1)..=i]).to_vec();
+            let window = &prices.slice(s![i + 1 - self.period..=i]).to_vec();
             result[i] = self.forecast(window);
         }
 
@@ -168,8 +168,8 @@ impl CorrelationCoefficient {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let x = series1.slice(s![(i - self.period + 1)..=i]);
-            let y = series2.slice(s![(i - self.period + 1)..=i]);
+            let x = series1.slice(s![i + 1 - self.period..=i]);
+            let y = series2.slice(s![i + 1 - self.period..=i]);
 
             // Calculate means
             let mean_x: f64 = x.sum() / self.period as f64;
@@ -249,8 +249,8 @@ impl Covariance {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let x = series1.slice(s![(i - self.period + 1)..=i]);
-            let y = series2.slice(s![(i - self.period + 1)..=i]);
+            let x = series1.slice(s![i + 1 - self.period..=i]);
+            let y = series2.slice(s![i + 1 - self.period..=i]);
 
             // Calculate means
             let mean_x: f64 = x.sum() / self.period as f64;

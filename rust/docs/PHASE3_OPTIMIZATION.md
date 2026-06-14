@@ -294,7 +294,7 @@ for (orig, opt) in results_original.iter().zip(results_optimized.iter()) {
 
 ### CUDA Kernel Source
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
 
 **Function**: `backtest_execution_kernel_optimized`
 
@@ -308,7 +308,7 @@ for (orig, opt) in results_original.iter().zip(results_optimized.iter()) {
 
 ### Rust API Integration
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
 
 **Change**: Use `backtest_execution_kernel_optimized` instead of `backtest_execution_kernel`
 

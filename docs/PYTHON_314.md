@@ -105,7 +105,7 @@ kimsfinance maintains compatibility with both Python 3.13 and 3.14:
 
 ## GPU Acceleration with CUDA 13
 
-kimsfinance v0.1.0+ uses CUDA 13 packages for optimal RTX 3500 Ada performance:
+kimsfinance v0.2.0+ uses CUDA 13 packages for optimal RTX 3500 Ada performance:
 
 ```bash
 # Install CUDA 13 packages (automatic with pip install -e ".[all]")

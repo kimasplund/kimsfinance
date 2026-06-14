@@ -11,7 +11,7 @@
 
 ### 1. Optimized CUDA Kernel ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
 
 **Function**: `backtest_execution_kernel_optimized`
 
@@ -27,7 +27,7 @@
 
 ### 2. Rust API Integration ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
 
 **Changes**:
 - Updated `execute_backtests_batch()` to use `backtest_execution_kernel_optimized`
@@ -40,7 +40,7 @@
 
 ### 3. Profiling Script ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/profile_phase3.sh`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/profile_phase3.sh`
 
 **Features**:
 - Profiles both original and optimized kernels with Nsight Compute
@@ -54,7 +54,7 @@
 
 ### 4. Benchmark Infrastructure ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/phase3_optimization.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/phase3_optimization.rs`
 
 **Features**:
 - Criterion-based benchmark for candle scaling (1K, 5K, 10K)
@@ -69,8 +69,8 @@
 ### 5. Documentation ✅
 
 **Files**:
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION.md` - Comprehensive guide (750 lines)
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION_SUMMARY.md` - This file
+- `/home/kim/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION.md` - Comprehensive guide (750 lines)
+- `/home/kim/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION_SUMMARY.md` - This file
 
 **Content**:
 - Problem analysis
@@ -349,8 +349,8 @@ The `phase3_optimization.rs` benchmark currently uses a placeholder implementati
 
 ## Files Modified
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu` (+130 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs` (13 lines modified)
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu` (+130 lines)
+2. `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs` (13 lines modified)
 
 **Total Changes**: 143 lines
 
@@ -358,10 +358,10 @@ The `phase3_optimization.rs` benchmark currently uses a placeholder implementati
 
 ## Files Created
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/scripts/profile_phase3.sh` (80 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/benches/phase3_optimization.rs` (95 lines)
-3. `/home/kim-asplund/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION.md` (750 lines)
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION_SUMMARY.md` (This file)
+1. `/home/kim/projects/kimsfinance/rust/scripts/profile_phase3.sh` (80 lines)
+2. `/home/kim/projects/kimsfinance/rust/benches/phase3_optimization.rs` (95 lines)
+3. `/home/kim/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION.md` (750 lines)
+4. `/home/kim/projects/kimsfinance/rust/docs/PHASE3_OPTIMIZATION_SUMMARY.md` (This file)
 
 **Total New Lines**: 925 lines
 

@@ -24,7 +24,6 @@ from unittest.mock import patch
 from kimsfinance.ops.indicators import calculate_hma, calculate_wma, calculate_sma, calculate_ema
 from kimsfinance.core import EngineManager
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================

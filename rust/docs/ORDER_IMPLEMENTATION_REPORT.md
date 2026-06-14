@@ -633,11 +633,11 @@ pub struct MatchingConfig {
 
 ### File Locations
 
-- **Orders**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/orders.rs`
-- **Matching Engine**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/matching_engine.rs`
-- **Tests**: `/home/kim-asplund/projects/kimsfinance/rust/tests/test_order_management.rs`
-- **Example**: `/home/kim-asplund/projects/kimsfinance/rust/examples/advanced_orders.rs`
-- **Documentation**: `/home/kim-asplund/projects/kimsfinance/rust/docs/ORDER_TYPES.md`
+- **Orders**: `/home/kim/projects/kimsfinance/rust/src/backtest/orders.rs`
+- **Matching Engine**: `/home/kim/projects/kimsfinance/rust/src/backtest/matching_engine.rs`
+- **Tests**: `/home/kim/projects/kimsfinance/rust/tests/test_order_management.rs`
+- **Example**: `/home/kim/projects/kimsfinance/rust/examples/advanced_orders.rs`
+- **Documentation**: `/home/kim/projects/kimsfinance/rust/docs/ORDER_TYPES.md`
 
 ### Lines of Code
 

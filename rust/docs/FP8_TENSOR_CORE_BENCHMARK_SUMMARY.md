@@ -12,7 +12,7 @@ Comprehensive benchmark suite to validate **2-4x speedup** claim for FP8 E4M3 te
 
 ### 1. Core Benchmark File
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs`
 
 **Features**:
 - ✅ Single matrix multiply benchmarks (16x16 to 128x128)
@@ -91,7 +91,7 @@ const CONFIDENCE_LEVEL: f64 = 0.95;  // 95% CI
 
 ### 4. Cargo Integration
 
-**Updated**: `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`
+**Updated**: `/home/kim/projects/kimsfinance/rust/Cargo.toml`
 
 ```toml
 [[bench]]
@@ -291,31 +291,31 @@ After running benchmarks and validating results:
 ### Benchmark Files
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs
-/home/kim-asplund/projects/kimsfinance/rust/benches/genetic_optimizer_precision.rs (existing)
+/home/kim/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs
+/home/kim/projects/kimsfinance/rust/benches/genetic_optimizer_precision.rs (existing)
 ```
 
 ### Documentation
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_GUIDE.md
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_BENCHMARK_EXAMPLE_OUTPUT.md
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_README.md
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_SUMMARY.md (this file)
+/home/kim/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_GUIDE.md
+/home/kim/projects/kimsfinance/rust/docs/FP8_BENCHMARK_EXAMPLE_OUTPUT.md
+/home/kim/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_README.md
+/home/kim/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_SUMMARY.md (this file)
 ```
 
 ### Source Files
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs (FP8 implementation)
-/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu (CUDA kernel)
-/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs (genetic optimizer)
+/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs (FP8 implementation)
+/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu (CUDA kernel)
+/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs (genetic optimizer)
 ```
 
 ### Configuration
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml (benchmark entry added)
+/home/kim/projects/kimsfinance/rust/Cargo.toml (benchmark entry added)
 ```
 
 ## Reproducibility

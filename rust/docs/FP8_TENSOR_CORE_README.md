@@ -107,11 +107,11 @@ watch -n 1 nvidia-smi
 
 ## Files
 
-- **Benchmark**: `/home/kim-asplund/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs`
-- **Guide**: `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_GUIDE.md`
-- **Example Output**: `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_BENCHMARK_EXAMPLE_OUTPUT.md`
-- **FP8 Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
-- **CUDA Kernel**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu`
+- **Benchmark**: `/home/kim/projects/kimsfinance/rust/benches/fp8_tensor_cores.rs`
+- **Guide**: `/home/kim/projects/kimsfinance/rust/docs/FP8_TENSOR_CORE_BENCHMARK_GUIDE.md`
+- **Example Output**: `/home/kim/projects/kimsfinance/rust/docs/FP8_BENCHMARK_EXAMPLE_OUTPUT.md`
+- **FP8 Implementation**: `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
+- **CUDA Kernel**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu`
 
 ## Troubleshooting
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cmf.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/cmf.rs`
 
 GPU-accelerated implementation of the Chaikin Money Flow (CMF) indicator, a volume-weighted accumulation/distribution indicator that measures buying and selling pressure.
 

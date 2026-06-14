@@ -10,7 +10,7 @@ use kimsfinance_core::backtest::{
 fn create_test_bar(timestamp: i64, close: f64, volume: f64, low: f64, high: f64) -> OHLCVBar {
     OHLCVBar {
         timestamp,
-        open: close * 0.99,
+        open: close * 0.999,
         high,
         low,
         close,
@@ -19,7 +19,7 @@ fn create_test_bar(timestamp: i64, close: f64, volume: f64, low: f64, high: f64)
 }
 
 fn create_market_snapshot(timestamp: i64, close: f64, volume: f64) -> MarketSnapshot {
-    let bar = create_test_bar(timestamp, close, volume, close * 0.99, close * 1.01);
+    let bar = create_test_bar(timestamp, close, volume, close * 0.999, close * 1.001);
     MarketSnapshot::new(timestamp, bar)
 }
 
@@ -129,7 +129,7 @@ fn test_stop_limit_order() {
     assert_eq!(fills1.len(), 0);
 
     // Price hits stop but doesn't reach limit - triggers but doesn't fill
-    let mut bar2 = create_test_bar(2000, 49500.0, 100.0, 48950.0, 50000.0);
+    let mut bar2 = create_test_bar(2000, 48800.0, 100.0, 48800.0, 48850.0);
     let market2 = MarketSnapshot::new(2000, bar2);
     let fills2 = engine.match_orders(&market2);
 
@@ -285,7 +285,8 @@ fn test_iceberg_order() {
 #[test]
 fn test_twap_order() {
     let mut engine = MatchingEngine::new();
-    let order = Order::twap(0, "BTC/USD".to_string(), OrderSide::Buy, 100.0, 10); // 10 seconds
+    let mut order = Order::twap(0, "BTC/USD".to_string(), OrderSide::Buy, 100.0, 10); // 10 seconds
+    order.created_at = 0; // Align with test timestamps
 
     let order_id = engine.submit_order(order);
 

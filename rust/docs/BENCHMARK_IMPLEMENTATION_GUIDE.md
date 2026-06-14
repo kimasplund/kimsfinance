@@ -108,7 +108,7 @@ impl BatchBacktestSweep {
 ## Step 1: Verify Environment
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Check GPU availability
 nvidia-smi --query-gpu=name,memory.total,compute_cap --format=csv

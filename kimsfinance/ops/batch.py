@@ -367,13 +367,9 @@ def calculate_indicators_batch(
     elif exec_engine == "gpu" and POLARS_GPU_AVAILABLE:
         polars_engine = "gpu"
     else:
-        polars_engine = None  # CPU default
+        polars_engine = "cpu"  # explicit CPU engine (Polars rejects engine=None)
 
-    result = (
-        df.lazy()
-        .select(**expressions)
-        .collect(engine=polars_engine)
-    )
+    result = df.lazy().select(**expressions).collect(engine=polars_engine)
 
     # ========================================================================
     # Post-process results

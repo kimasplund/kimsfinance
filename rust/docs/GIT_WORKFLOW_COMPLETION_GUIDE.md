@@ -21,7 +21,7 @@ This guide provides the exact git commands to commit all agent army work in logi
 Before committing, verify:
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # 1. Compilation check
 cargo build --release --features gpu --lib
@@ -38,7 +38,7 @@ cd cuda-ext && cargo build --release && cd ..
 # Expected: ✅ SUCCESS
 
 # 4. Check git status
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 git status
 # Review all modified/new files
 ```
@@ -52,7 +52,7 @@ git status
 **Description**: Core performance improvement removing mutex bottleneck
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/backtest/optimizer.rs
@@ -96,7 +96,7 @@ EOF
 **Description**: GPU acceleration framework (kernel already exists)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/backtest/optimizer.rs
@@ -143,7 +143,7 @@ EOF
 **Description**: Multi-population genetic algorithm
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/backtest/optimizer.rs
@@ -191,7 +191,7 @@ EOF
 **Description**: Dynamic mutation based on population diversity
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/backtest/optimizer.rs
@@ -242,7 +242,7 @@ EOF
 **Description**: Multi-criteria convergence with diversity awareness
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/backtest/optimizer.rs
@@ -295,7 +295,7 @@ EOF
 **Description**: Hardware FP8 acceleration for Ada GPUs
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/src/gpu/fp8_wmma.rs
@@ -351,7 +351,7 @@ EOF
 **Description**: 18 tests with 100% pass rate
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/tests/genetic_optimizer_comprehensive_test.rs
@@ -414,7 +414,7 @@ EOF
 **Description**: Criterion benchmarks with automated reporting
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage changes
 git add rust/benches/genetic_optimizer_comparison.rs
@@ -494,7 +494,7 @@ EOF
 **Description**: Comprehensive documentation for all agents
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage all documentation files
 git add rust/docs/AGENT1_GPU_BATCH_WRAPPER_REPORT.md
@@ -567,7 +567,7 @@ EOF
 **Description**: FFI wrapper for cudaMallocAsync/cudaFreeAsync
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Stage cuda-ext files
 git add rust/cuda-ext/Cargo.toml
@@ -653,7 +653,7 @@ EOF
 After all commits, verify the repository state:
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # 1. Check commit history
 git log --oneline -10
@@ -686,7 +686,7 @@ cargo build --release
 If working with a remote repository:
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # 1. Create feature branch (recommended)
 git checkout -b feature/genetic-optimizer-optimization
@@ -747,7 +747,7 @@ EOF
 If issues are discovered after committing:
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Option 1: Soft reset (keep changes, undo commits)
 git reset --soft HEAD~10  # Undo last 10 commits, keep changes staged

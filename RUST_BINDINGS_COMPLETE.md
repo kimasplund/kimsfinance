@@ -2,11 +2,11 @@
 
 **Date**: 2025-10-25
 **Status**: ✅ COMPLETE
-**Version**: kimsfinance_core v0.1.0
+**Version**: kimsfinance_core v0.2.0
 
 ## Summary
 
-Successfully completed Python bindings for **all 24 technical indicators** in `/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs`.
+Successfully completed Python bindings for **all 24 technical indicators** in `/home/kim/projects/kimsfinance/rust/src/lib.rs`.
 
 ## What Was Done
 
@@ -90,28 +90,28 @@ Successfully completed Python bindings for **all 24 technical indicators** in `/
 ## Files Modified/Created
 
 ### Modified
-- `/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs`
+- `/home/kim/projects/kimsfinance/rust/src/lib.rs`
   - Added 24 indicator bindings (711 lines of code)
   - Updated module registration
   - Updated module documentation
 
 ### Created
-- `/home/kim-asplund/projects/kimsfinance/test_rust_bindings.py`
+- `/home/kim/projects/kimsfinance/test_rust_bindings.py`
   - Comprehensive test for all 24 indicators
   - Validates inputs, outputs, and error handling
 
-- `/home/kim-asplund/projects/kimsfinance/rust/PYTHON_BINDINGS.md`
+- `/home/kim/projects/kimsfinance/rust/PYTHON_BINDINGS.md`
   - Complete documentation of Python API
   - Usage examples for all indicators
   - Performance characteristics
   - Error handling guide
 
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/all_indicators_example.py`
+- `/home/kim/projects/kimsfinance/rust/examples/all_indicators_example.py`
   - Comprehensive example showing all 24 indicators
   - Demonstrates single and multi-output patterns
   - Shows proper NaN handling
 
-- `/home/kim-asplund/projects/kimsfinance/RUST_BINDINGS_COMPLETE.md` (this file)
+- `/home/kim/projects/kimsfinance/RUST_BINDINGS_COMPLETE.md` (this file)
   - Completion report
 
 ## Usage Example
@@ -171,7 +171,7 @@ vwap = kimsfinance_core.calculate_vwap(high, low, prices, volume)
 
 ```bash
 # Development installation
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 maturin develop --release
 
 # Test installation

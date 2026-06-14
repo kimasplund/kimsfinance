@@ -159,7 +159,7 @@ fn test_rsi_strategy_gpu() {
     let base_price = 100.0;
     for i in 0..n {
         let t = i as f64;
-        let price = base_price + t * 0.5 + (t * 0.1).sin() * 5.0;
+        let price = base_price + (t * 0.1).sin() * 20.0;
         let spread = 2.0;
 
         timestamps.push(i as i64);

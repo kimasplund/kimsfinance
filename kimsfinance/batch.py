@@ -36,6 +36,7 @@ try:
         batch_backtest as _batch_backtest_rs,
         batch_backtest_info as _batch_backtest_info_rs,
     )
+
     GPU_AVAILABLE = True
 except ImportError:
     GPU_AVAILABLE = False
@@ -50,6 +51,7 @@ class BacktestConfig:
         trading_fee: Fee per trade as fraction (default: 0.001 = 0.1%)
         slippage: Slippage per trade as fraction (default: 0.0001 = 0.01%)
     """
+
     initial_capital: float = 10000.0
     trading_fee: float = 0.001
     slippage: float = 0.0001
@@ -75,9 +77,9 @@ def get_gpu_info() -> Dict[str, Union[bool, str, float]]:
     """
     if not GPU_AVAILABLE:
         return {
-            'gpu_available': False,
-            'error': 'GPU feature not compiled. Install with: pip install kimsfinance[gpu]',
-            'expected_speedup': 1.0,
+            "gpu_available": False,
+            "error": "GPU feature not compiled. Install with: pip install kimsfinance[gpu]",
+            "expected_speedup": 1.0,
         }
 
     return dict(_batch_backtest_info_rs())
@@ -88,7 +90,7 @@ def batch_backtest(
     data: pd.DataFrame,
     parameters: List[Dict[str, float]],
     config: Optional[BacktestConfig] = None,
-    timestamps_col: str = 'timestamp',
+    timestamps_col: str = "timestamp",
 ) -> List[Dict]:
     """Run batch backtest on GPU for multiple parameter sets.
 
@@ -161,20 +163,18 @@ def batch_backtest(
     """
     if not GPU_AVAILABLE:
         raise ImportError(
-            "GPU batch backtesting not available. "
-            "Install with: pip install kimsfinance[gpu]"
+            "GPU batch backtesting not available. " "Install with: pip install kimsfinance[gpu]"
         )
 
     # Validate inputs
     if not parameters:
         raise ValueError("parameters cannot be empty")
 
-    required_cols = ['open', 'high', 'low', 'close', 'volume']
+    required_cols = ["open", "high", "low", "close", "volume"]
     missing_cols = [col for col in required_cols if col not in data.columns]
     if missing_cols:
         raise ValueError(
-            f"Missing required columns: {missing_cols}. "
-            f"DataFrame must contain: {required_cols}"
+            f"Missing required columns: {missing_cols}. " f"DataFrame must contain: {required_cols}"
         )
 
     # Use default config if not provided
@@ -194,23 +194,23 @@ def batch_backtest(
     # (Order must match strategy parameter order!)
     param_lists = []
     for param_dict in parameters:
-        if strategy == 'rsi_crossover':
+        if strategy == "rsi_crossover":
             param_list = [
-                param_dict.get('period', 14.0),
-                param_dict.get('buy_threshold', 30.0),
-                param_dict.get('sell_threshold', 70.0),
+                param_dict.get("period", 14.0),
+                param_dict.get("buy_threshold", 30.0),
+                param_dict.get("sell_threshold", 70.0),
             ]
-        elif strategy == 'ma_crossover':
+        elif strategy == "ma_crossover":
             param_list = [
-                param_dict.get('fast_period', 10.0),
-                param_dict.get('slow_period', 50.0),
+                param_dict.get("fast_period", 10.0),
+                param_dict.get("slow_period", 50.0),
             ]
-        elif strategy == 'bollinger':
+        elif strategy == "bollinger":
             param_list = [
-                param_dict.get('period', 20.0),
-                param_dict.get('std_dev', 2.0),
-                param_dict.get('entry_std', 1.5),
-                param_dict.get('exit_std', 0.5),
+                param_dict.get("period", 20.0),
+                param_dict.get("std_dev", 2.0),
+                param_dict.get("entry_std", 1.5),
+                param_dict.get("exit_std", 0.5),
             ]
         else:
             raise ValueError(
@@ -235,7 +235,7 @@ def batch_backtest(
     results = []
     for i, r in enumerate(rust_results):
         result_dict = r.to_dict()
-        result_dict['params'] = parameters[i]  # Original dict
+        result_dict["params"] = parameters[i]  # Original dict
         results.append(result_dict)
 
     return results
@@ -246,7 +246,7 @@ def find_best_parameters(
     data: pd.DataFrame,
     parameter_ranges: Dict[str, List[float]],
     config: Optional[BacktestConfig] = None,
-    objective: str = 'sharpe_ratio',
+    objective: str = "sharpe_ratio",
 ) -> Dict:
     """Find best parameters via exhaustive grid search.
 
@@ -289,10 +289,7 @@ def find_best_parameters(
     param_values = [parameter_ranges[name] for name in param_names]
 
     all_combinations = itertools.product(*param_values)
-    parameters = [
-        dict(zip(param_names, combo))
-        for combo in all_combinations
-    ]
+    parameters = [dict(zip(param_names, combo)) for combo in all_combinations]
 
     # Run batch backtest
     results = batch_backtest(strategy, data, parameters, config)
@@ -301,16 +298,16 @@ def find_best_parameters(
     best_result = max(results, key=lambda r: r[objective])
 
     return {
-        'best_params': best_result['params'],
-        'best_score': best_result[objective],
-        'all_results': results,
+        "best_params": best_result["params"],
+        "best_score": best_result[objective],
+        "all_results": results,
     }
 
 
 __all__ = [
-    'batch_backtest',
-    'get_gpu_info',
-    'find_best_parameters',
-    'BacktestConfig',
-    'GPU_AVAILABLE',
+    "batch_backtest",
+    "get_gpu_info",
+    "find_best_parameters",
+    "BacktestConfig",
+    "GPU_AVAILABLE",
 ]

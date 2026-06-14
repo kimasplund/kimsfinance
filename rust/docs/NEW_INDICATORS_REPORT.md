@@ -383,16 +383,16 @@ Based on existing indicator benchmarks:
 ## File Changes
 
 ### New Files Created
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/price.rs` (329 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/momentum_advanced.rs` (538 lines)
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/moving_averages_advanced.rs` (484 lines)
-4. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/volatility_advanced.rs` (472 lines)
-5. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/statistical.rs` (393 lines)
+1. `/home/kim/projects/kimsfinance/rust/src/indicators/price.rs` (329 lines)
+2. `/home/kim/projects/kimsfinance/rust/src/indicators/momentum_advanced.rs` (538 lines)
+3. `/home/kim/projects/kimsfinance/rust/src/indicators/moving_averages_advanced.rs` (484 lines)
+4. `/home/kim/projects/kimsfinance/rust/src/indicators/volatility_advanced.rs` (472 lines)
+5. `/home/kim/projects/kimsfinance/rust/src/indicators/statistical.rs` (393 lines)
 
 **Total new code**: ~2,216 lines (including tests and documentation)
 
 ### Modified Files
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/mod.rs` - Updated exports
+1. `/home/kim/projects/kimsfinance/rust/src/indicators/mod.rs` - Updated exports
 
 ---
 

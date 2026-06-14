@@ -11,10 +11,10 @@
 This agent has successfully created a **comprehensive tensor core performance validation framework** with rigorous statistical analysis, accuracy validation, and regression detection capabilities. The framework is **ready to validate** the 3 tensor core implementations once they are complete.
 
 **Deliverables**:
-1. ✅ Comprehensive benchmark suite at `/home/kim-asplund/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs`
-2. ✅ Detailed results template at `/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md`
-3. ✅ Quickstart guide at `/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_QUICKSTART.md`
-4. ✅ Statistical rigor framework (already exists at `/home/kim-asplund/projects/kimsfinance/rust/benches/statistics.rs`)
+1. ✅ Comprehensive benchmark suite at `/home/kim/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs`
+2. ✅ Detailed results template at `/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md`
+3. ✅ Quickstart guide at `/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_QUICKSTART.md`
+4. ✅ Statistical rigor framework (already exists at `/home/kim/projects/kimsfinance/rust/benches/statistics.rs`)
 5. ✅ Cargo.toml registration for `tensor_core_benchmark`
 
 **Blockers**: Awaiting completion of tensor core implementations from 3 other agents (see Dependencies section)
@@ -213,7 +213,7 @@ This agent has successfully created a **comprehensive tensor core performance va
 
 ## Deliverable 4: Statistical Framework (Existing)
 
-**✅ Already Implemented** at `/home/kim-asplund/projects/kimsfinance/rust/benches/statistics.rs`:
+**✅ Already Implemented** at `/home/kim/projects/kimsfinance/rust/benches/statistics.rs`:
 
 - `BenchmarkStats::from_samples()` - Descriptive statistics
 - `compare_distributions()` - Hypothesis testing
@@ -228,7 +228,7 @@ This agent has successfully created a **comprehensive tensor core performance va
 
 ## Deliverable 5: Cargo.toml Registration
 
-**✅ Registered** at `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`:
+**✅ Registered** at `/home/kim/projects/kimsfinance/rust/Cargo.toml`:
 
 ```toml
 [[bench]]
@@ -470,22 +470,22 @@ Once all implementations complete:
 
 ## Files Delivered
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs`**
    - Comprehensive benchmark suite (1042 lines)
    - 9 benchmark functions + 2 accuracy tests
    - Statistical rigor, GFLOPS calculation, error analysis
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md`**
+2. **`/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md`**
    - Results template (540 lines)
    - Tables for all benchmarks with placeholders
    - Statistical validation, recommendations, reproducibility
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_QUICKSTART.md`**
+3. **`/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_QUICKSTART.md`**
    - User guide (550 lines)
    - Prerequisites, running instructions, troubleshooting
    - Result interpretation, FAQ, next steps
 
-4. **`/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`** (modified)
+4. **`/home/kim/projects/kimsfinance/rust/Cargo.toml`** (modified)
    - Added `[[bench]]` entry for `tensor_core_benchmark`
    - Lines 268-271
 

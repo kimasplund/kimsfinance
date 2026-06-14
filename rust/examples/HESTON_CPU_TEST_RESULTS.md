@@ -69,7 +69,7 @@ If GPU kernel produces zeros for u>0, then there's a bug in the CUDA implementat
 
 ## Files Created
 
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/test_heston_cpu.rs`
+- `/home/kim/projects/kimsfinance/rust/examples/test_heston_cpu.rs`
 
 ## How to Run
 

@@ -319,7 +319,7 @@ ls /tmp/cutlass/include/cutlass/gemm/device/gemm_universal_with_absmax.h
 
 **Step 1**: Run compilation script
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 chmod +x scripts/compile_fp8_gemm_cutlass.sh
 ./scripts/compile_fp8_gemm_cutlass.sh
 ```
@@ -741,7 +741,7 @@ nvcc --version  # Check CUDA version
 
 ### Genetic Optimizer Context
 
-- Project Rust codebase: `/home/kim-asplund/projects/kimsfinance/rust`
+- Project Rust codebase: `/home/kim/projects/kimsfinance/rust`
 - Genetic optimizer: `src/backtest/optimizer.rs`
 - GPU batch backtesting: `src/gpu/mod.rs::batch_backtest_genetic()`
 

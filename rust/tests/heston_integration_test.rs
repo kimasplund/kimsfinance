@@ -140,9 +140,9 @@ mod heston_integration {
         println!("  ρ: {:.4}", initial_guess.rho);
         println!("  v₀: {:.4}", initial_guess.v0);
 
-        let gpu_pricer = Arc::new(
+        let gpu_pricer = Arc::new(Mutex::new(
             HestonGpuPricer::new(device, 4096, 1000).expect("Failed to create pricer for calib"),
-        );
+        ));
         let calibrator = HestonCalibrator::new(gpu_pricer, synthetic_options, initial_guess)
             .expect("Failed to create calibrator")
             .with_max_iterations(100);
@@ -422,7 +422,7 @@ mod heston_integration {
         // Create portfolio: long 10 calls
         let portfolio = vec![OptionPosition {
             option: option.clone(),
-            quantity: 10.0,
+            quantity: 10,
         }];
 
         let greeks_vec = vec![greeks];
@@ -437,7 +437,7 @@ mod heston_integration {
         println!("\nHedge recommendation:");
         println!(
             "  {} {:.2} shares of underlying",
-            if hedge.underlying_shares > 0.0 {
+            if hedge.underlying_shares > 0 {
                 "BUY"
             } else {
                 "SELL"
@@ -448,14 +448,14 @@ mod heston_integration {
 
         // For long calls, delta is positive, so we should SELL underlying to hedge
         assert!(
-            hedge.underlying_shares < 0.0,
+            hedge.underlying_shares < 0,
             "Should sell underlying to hedge long calls, got {}",
             hedge.underlying_shares
         );
 
         // Magnitude should be approximately 10 * delta
         let expected_magnitude = 10.0 * greeks.delta.unwrap();
-        let actual_magnitude = hedge.underlying_shares.abs();
+        let actual_magnitude = hedge.underlying_shares.abs() as f64;
         let error_pct = ((actual_magnitude - expected_magnitude) / expected_magnitude).abs();
         assert!(
             error_pct < 0.01,
@@ -481,7 +481,7 @@ mod heston_integration {
         let options = generate_synthetic_options(&params, &mut pricer_for_gen, 50);
 
         let gpu_pricer =
-            Arc::new(HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer"));
+            Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer")));
         let calibrator = HestonCalibrator::new(gpu_pricer, options, params)
             .expect("Failed to create calibrator")
             .with_max_iterations(50);

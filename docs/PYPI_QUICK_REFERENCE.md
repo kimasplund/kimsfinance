@@ -1,4 +1,4 @@
-# PyPI Quick Reference - kimsfinance v0.1.0
+# PyPI Quick Reference - kimsfinance v0.2.0
 
 **Quick command reference for PyPI upload process**
 
@@ -81,8 +81,8 @@ print('✅ Smoke test passed: chart saved to /tmp/smoke_test.webp')
 
 ```bash
 # Create and push tag
-git tag -a v0.1.0 -m "Release v0.1.0 - Beta"
-git push origin v0.1.0
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin v0.2.0
 
 # Verify tag
 git tag -l

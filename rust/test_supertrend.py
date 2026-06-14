@@ -5,7 +5,7 @@ import sys
 import numpy as np
 
 # Add the target directory to path
-sys.path.insert(0, '/home/kim-asplund/projects/kimsfinance/rust/target/release')
+sys.path.insert(0, '/home/kim/projects/kimsfinance/rust/target/release')
 
 import kimsfinance_core
 

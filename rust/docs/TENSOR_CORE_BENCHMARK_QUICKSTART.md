@@ -350,9 +350,9 @@ fn bench_int8_tensor_cores(c: &mut Criterion) {
 
 ### Kimsfinance Docs
 
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md` - Results template
-- `/home/kim-asplund/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs` - Benchmark source
-- `/home/kim-asplund/projects/kimsfinance/rust/benches/statistics.rs` - Statistical validation module
+- `/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_BENCHMARK_RESULTS.md` - Results template
+- `/home/kim/projects/kimsfinance/rust/benches/tensor_core_benchmark.rs` - Benchmark source
+- `/home/kim/projects/kimsfinance/rust/benches/statistics.rs` - Statistical validation module
 
 ### Related Benchmarks
 

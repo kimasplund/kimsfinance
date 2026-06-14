@@ -17,7 +17,7 @@ Enhanced convergence detection with multiple criteria and diversity-aware elitis
 
 ### 1. Enhanced `has_converged()` Method
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs:665-725`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs:665-725`
 
 **Features**:
 - **Multi-criteria convergence detection** (requires 2+ criteria):
@@ -432,7 +432,7 @@ Final diversity: 0.89%
 
 ## Files Modified
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs`**
    - Lines 665-798: Enhanced convergence detection + diversity-aware elitism
    - Lines 929-935: `ConvergenceStats` struct
    - Line 959: Added to `OptimizerResult`

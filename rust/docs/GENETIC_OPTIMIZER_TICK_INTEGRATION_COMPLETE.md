@@ -27,7 +27,7 @@ Successfully integrated the genetic optimizer with the new multi-pair tick-level
 - Time range: 2021-01-01 → 2025-10-13
 - Validation: 100% passed
 
-**Location**: `/home/kim-asplund/projects/binance-data/futures/<PAIR>/trades_parquet/`
+**Location**: `/home/kim/projects/binance-data/futures/<PAIR>/trades_parquet/`
 
 **Documentation**: `MULTI_PAIR_CONVERSION_SUMMARY.md`
 
@@ -316,7 +316,7 @@ class SimpleMovingAverageCrossStrategy:
 ### Quick Start (60 seconds)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python rust/scripts/test_genetic_optimizer_tick_data.py
 ```
 
@@ -361,7 +361,7 @@ See `GENETIC_OPTIMIZER_QUICKSTART.md` section "Add Your Own Strategy"
 1. `rust/docs/GENETIC_OPTIMIZER_TICK_BENCHMARK.md` - **NEW** (comprehensive benchmark analysis)
 2. `rust/docs/GENETIC_OPTIMIZER_QUICKSTART.md` - **NEW** (practical usage guide)
 3. `rust/docs/GENETIC_OPTIMIZER_TICK_INTEGRATION_COMPLETE.md` - **NEW** (this file)
-4. `/home/kim-asplund/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md` - **NEW** (dataset documentation)
+4. `/home/kim/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md` - **NEW** (dataset documentation)
 
 ### Per-Pair Documentation (12 pairs)
 
@@ -568,7 +568,7 @@ The infrastructure is **ready for use** today:
 
 **Benchmark Script**: `rust/scripts/test_genetic_optimizer_tick_data.py`
 **Documentation**: `rust/docs/GENETIC_OPTIMIZER_QUICKSTART.md`
-**Dataset**: `/home/kim-asplund/projects/binance-data/futures/<PAIR>/trades_parquet/`
+**Dataset**: `/home/kim/projects/binance-data/futures/<PAIR>/trades_parquet/`
 **Results**: `/tmp/genetic_optimizer_tick_benchmark/`
 
 **Run Now**:

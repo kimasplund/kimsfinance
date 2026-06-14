@@ -10,7 +10,7 @@ Successfully implemented persistent kernel integration for GPU batch backtesting
 
 ### 1. Persistent CUDA Kernel ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
 
 - **Lines**: 467
 - **Features**:
@@ -39,7 +39,7 @@ extern "C" __global__ void persistent_batch_backtest_kernel(...) {
 
 ### 2. Rust Integration ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/persistent.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/persistent.rs`
 
 - **Lines**: 317
 - **Features**:
@@ -61,7 +61,7 @@ pub fn execute_persistent(
 
 ### 3. Auto-Selection Logic ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs` (modified)
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs` (modified)
 
 - **Lines Modified**: 60
 - **Features**:
@@ -84,7 +84,7 @@ pub fn execute(self) -> Result<BatchBacktestResults, GpuError> {
 
 ### 4. Integration Tests ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/examples/test_persistent_backtest.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/examples/test_persistent_backtest.rs`
 
 - **Lines**: 125
 - **Features**:
@@ -109,7 +109,7 @@ Persistent kernel speedup: 2.64x
 
 ### 5. Benchmarks ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/persistent_vs_traditional.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/persistent_vs_traditional.rs`
 
 - **Lines**: 181
 - **Features**:
@@ -125,7 +125,7 @@ cargo bench --features gpu --bench persistent_vs_traditional
 
 ### 6. Test Scripts ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_persistent_integration.sh`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/test_persistent_integration.sh`
 
 - **Lines**: 23
 - **Features**:
@@ -141,7 +141,7 @@ cargo bench --features gpu --bench persistent_vs_traditional
 
 ### 7. Documentation ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/docs/PERSISTENT_KERNEL_INTEGRATION.md`
+**File**: `/home/kim/projects/kimsfinance/rust/docs/PERSISTENT_KERNEL_INTEGRATION.md`
 
 - **Lines**: 500+
 - **Sections**:
@@ -280,7 +280,7 @@ let results = BatchBacktestSweep::new(device)
 ### Quick Test
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 ./scripts/test_persistent_integration.sh
 ```
 

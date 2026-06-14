@@ -13,7 +13,7 @@
 ### 1. Run the Benchmark
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python rust/scripts/test_genetic_optimizer_tick_data.py
 ```
 
@@ -67,7 +67,7 @@ Genetic Optimization:
 
 **Total**: 20.7 billion trades, 187.3 GB
 
-**Location**: `/home/kim-asplund/projects/binance-data/futures/<PAIR>/trades_parquet/`
+**Location**: `/home/kim/projects/binance-data/futures/<PAIR>/trades_parquet/`
 
 ---
 
@@ -346,10 +346,10 @@ if random.random() < 0.3:  # 30% mutation rate
 **Fix**:
 ```bash
 # Check available pairs
-ls /home/kim-asplund/projects/binance-data/futures/
+ls /home/kim/projects/binance-data/futures/
 
 # Check available months for a pair
-ls /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/
+ls /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/
 ```
 
 ### Issue: "MemoryError" or slow performance
@@ -412,8 +412,8 @@ result = run_genetic_optimization_tick(df, generations=10, population=20)
 ### Documentation
 
 - **Benchmark Results**: `rust/docs/GENETIC_OPTIMIZER_TICK_BENCHMARK.md`
-- **Multi-Pair Dataset**: `/home/kim-asplund/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md`
-- **Individual Pair README**: `/home/kim-asplund/projects/binance-data/futures/<PAIR>/trades_parquet/README.md`
+- **Multi-Pair Dataset**: `/home/kim/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md`
+- **Individual Pair README**: `/home/kim/projects/binance-data/futures/<PAIR>/trades_parquet/README.md`
 
 ### Scripts
 
@@ -424,7 +424,7 @@ result = run_genetic_optimization_tick(df, generations=10, population=20)
 ### Results
 
 - **Latest Benchmark**: `/tmp/genetic_optimizer_tick_benchmark/`
-- **Validation Reports**: `/home/kim-asplund/projects/binance-data/futures/<PAIR>/trades_parquet/VALIDATION_REPORT.json`
+- **Validation Reports**: `/home/kim/projects/binance-data/futures/<PAIR>/trades_parquet/VALIDATION_REPORT.json`
 
 ---
 

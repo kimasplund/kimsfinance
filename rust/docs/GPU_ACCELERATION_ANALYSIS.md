@@ -534,7 +534,7 @@ Do you need tick-level resolution?
 
 ```bash
 # Rebuild with NaN fix
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features data-downloaders --example advanced_momentum_strategy
 
 # Run optimization on small dataset (10M trades)

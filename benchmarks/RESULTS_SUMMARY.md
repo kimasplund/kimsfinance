@@ -155,7 +155,7 @@ This is because `ta-lib`'s ATR implementation is inefficient for large datasets.
 
 ```bash
 # Run the benchmark yourself
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 source .venv/bin/activate
 python benchmarks/benchmark_all_implementations.py
 ```

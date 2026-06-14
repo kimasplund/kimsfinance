@@ -549,9 +549,9 @@ If paper trading shows:
 
 ### Contact
 
-- **Documentation**: `/home/kim-asplund/projects/kimsfinance/rust/docs/`
-- **Code Examples**: `/home/kim-asplund/projects/kimsfinance/rust/examples/`
-- **Strategy Framework**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/`
+- **Documentation**: `/home/kim/projects/kimsfinance/rust/docs/`
+- **Code Examples**: `/home/kim/projects/kimsfinance/rust/examples/`
+- **Strategy Framework**: `/home/kim/projects/kimsfinance/rust/src/strategy/`
 
 ---
 

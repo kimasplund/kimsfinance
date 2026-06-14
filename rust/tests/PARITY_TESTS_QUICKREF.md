@@ -1,6 +1,6 @@
 # Aggregation Parity Tests - Quick Reference
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/aggregation_parity_comprehensive.rs`  
+**File**: `/home/kim/projects/kimsfinance/rust/tests/aggregation_parity_comprehensive.rs`  
 **Status**: ✅ All tests passing (10/10 core + 2/2 optional)
 
 ---

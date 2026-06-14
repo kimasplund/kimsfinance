@@ -25,7 +25,7 @@ Successfully updated the FP8 WMMA test suite to work with pre-compiled `.cubin` 
 
 ### Test File Structure
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
 **Lines**: 598
 **Test Functions**: 7
 

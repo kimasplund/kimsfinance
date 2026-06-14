@@ -14,7 +14,7 @@ Successfully implemented GPU-accelerated batch tick processing by wrapping exist
 1. **Tick Aggregation** (GPU): TradeData → OHLCV Candles (5-10x speedup)
 2. **Indicator Calculation** (GPU): Candles → Indicators (15-50x speedup)
 
-**Key Deliverable**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_batch.rs`
+**Key Deliverable**: `/home/kim/projects/kimsfinance/rust/src/gpu/tick_batch.rs`
 
 **Total Pipeline Speedup**: 3-8x vs CPU-only processing (for >100K ticks)
 
@@ -80,7 +80,7 @@ Tick Stream → Custom CUDA Kernels → Indicators
 
 ### File Created
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_batch.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/tick_batch.rs`
 **Lines of Code**: 671 (including docs and tests)
 **API Surface**: 1 struct (`TickBatchProcessor`) + 6 public methods
 
@@ -301,7 +301,7 @@ for candle in candles.iter().take(5) {
 
 ### Test Suite
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_batch.rs` (lines 600-671)
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/tick_batch.rs` (lines 600-671)
 
 **Tests Implemented**:
 1. ✅ `test_tick_batch_processor_init`: GPU initialization
@@ -325,7 +325,7 @@ cargo test --features gpu --test gpu_accuracy_validation
 **Manual Verification**:
 ```bash
 # 1. Compile check
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo check --features gpu
 
 # 2. Build
@@ -541,7 +541,7 @@ let best_params = optimizer.optimize(/* candles, strategy, ... */)?;
    ```
 
 2. **Add Benchmark**:
-   - Create `/home/kim-asplund/projects/kimsfinance/rust/benches/tick_batch_benchmark.rs`
+   - Create `/home/kim/projects/kimsfinance/rust/benches/tick_batch_benchmark.rs`
    - Measure CPU vs GPU crossover point empirically
    - Validate 3-8x speedup claims
 
@@ -586,7 +586,7 @@ let best_params = optimizer.optimize(/* candles, strategy, ... */)?;
 
 ## Deliverables Checklist
 
-- [✓] **Code**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_batch.rs` (671 lines)
+- [✓] **Code**: `/home/kim/projects/kimsfinance/rust/src/gpu/tick_batch.rs` (671 lines)
 - [✓] **Integration**: Updated `rust/src/gpu/mod.rs` to export `TickBatchProcessor`
 - [✓] **Documentation**: Comprehensive rustdoc comments (API, examples, performance)
 - [✓] **Tests**: 6 unit tests (GPU-gated)

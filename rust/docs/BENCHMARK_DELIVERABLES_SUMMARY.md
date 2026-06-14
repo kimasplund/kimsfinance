@@ -21,7 +21,7 @@ Comprehensive benchmarking infrastructure has been created to validate GPU batch
 
 ## Deliverable 1: Comprehensive Benchmark Suite
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/optimization_comparison.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/optimization_comparison.rs`
 
 **Purpose**: Criterion-based benchmark suite with 5 groups testing traditional vs optimized kernels
 
@@ -81,7 +81,7 @@ cargo bench --bench optimization_comparison --features gpu -- 2_persistent
 
 ## Deliverable 2: Automated Benchmark Runner
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_optimization_benchmarks.sh`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/run_optimization_benchmarks.sh`
 
 **Purpose**: End-to-end benchmark automation with environment validation and reporting
 
@@ -150,7 +150,7 @@ cargo bench --bench optimization_comparison --features gpu -- 2_persistent
 
 ## Deliverable 3: Statistical Analysis Script
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/analyze_optimization_results.py`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/analyze_optimization_results.py`
 
 **Purpose**: Parse Criterion JSON and perform statistical tests
 
@@ -197,7 +197,7 @@ pip install scipy numpy
 
 ## Deliverable 4: Regression Detection Tests
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/performance/test_optimization_regression.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/tests/performance/test_optimization_regression.rs`
 
 **Purpose**: Prevent performance regressions in future code changes
 
@@ -250,7 +250,7 @@ cargo test --test optimization_regression --features gpu -- --ignored
 
 ## Deliverable 5: Results Report Template
 
-**File**: `/home/kim-asplund/projects/kimsfinance/benchmarks/OPTIMIZATION_RESULTS.md`
+**File**: `/home/kim/projects/kimsfinance/benchmarks/OPTIMIZATION_RESULTS.md`
 
 **Purpose**: Comprehensive markdown report template for benchmark results
 
@@ -314,7 +314,7 @@ cargo test --test optimization_regression --features gpu -- --ignored
 
 ## Deliverable 6: Implementation Guide
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/docs/BENCHMARK_IMPLEMENTATION_GUIDE.md`
+**File**: `/home/kim/projects/kimsfinance/rust/docs/BENCHMARK_IMPLEMENTATION_GUIDE.md`
 
 **Purpose**: Step-by-step guide for executing benchmarks and integrating results
 
@@ -349,7 +349,7 @@ cargo test --test optimization_regression --features gpu -- --ignored
 
 **Status**: ⚠️ TODO (blocking benchmark execution)
 
-**Required Changes** to `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`:
+**Required Changes** to `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`:
 
 ### 1. Add Fields to `BatchBacktestSweep`
 
@@ -545,19 +545,19 @@ Use this checklist to validate benchmark results:
 ## References
 
 ### Benchmark Files
-- `/home/kim-asplund/projects/kimsfinance/rust/benches/optimization_comparison.rs`
-- `/home/kim-asplund/projects/kimsfinance/rust/tests/performance/test_optimization_regression.rs`
+- `/home/kim/projects/kimsfinance/rust/benches/optimization_comparison.rs`
+- `/home/kim/projects/kimsfinance/rust/tests/performance/test_optimization_regression.rs`
 
 ### Automation
-- `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_optimization_benchmarks.sh`
-- `/home/kim-asplund/projects/kimsfinance/rust/scripts/analyze_optimization_results.py`
+- `/home/kim/projects/kimsfinance/rust/scripts/run_optimization_benchmarks.sh`
+- `/home/kim/projects/kimsfinance/rust/scripts/analyze_optimization_results.py`
 
 ### Documentation
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/BENCHMARK_IMPLEMENTATION_GUIDE.md`
-- `/home/kim-asplund/projects/kimsfinance/benchmarks/OPTIMIZATION_RESULTS.md`
+- `/home/kim/projects/kimsfinance/rust/docs/BENCHMARK_IMPLEMENTATION_GUIDE.md`
+- `/home/kim/projects/kimsfinance/benchmarks/OPTIMIZATION_RESULTS.md`
 
 ### Configuration
-- `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml` (updated with benchmark entry)
+- `/home/kim/projects/kimsfinance/rust/Cargo.toml` (updated with benchmark entry)
 
 ---
 

@@ -7,8 +7,8 @@ Usage:
 
 Example:
     python convert_trades_to_parquet.py \
-        /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades \
-        /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet \
+        /home/kim/projects/binance-data/futures/BTCUSDT/trades \
+        /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet \
         --parallel 8
 
 Performance:

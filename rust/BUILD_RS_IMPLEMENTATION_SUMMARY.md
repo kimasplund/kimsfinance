@@ -34,7 +34,7 @@ Successfully implemented a production-ready `build.rs` script that compiles FP8 
 
 ## Files Created
 
-### 1. `/home/kim-asplund/projects/kimsfinance/rust/build.rs`
+### 1. `/home/kim/projects/kimsfinance/rust/build.rs`
 
 **Lines of Code**: 415
 **Functions**: 7
@@ -68,7 +68,7 @@ nvcc -cubin \
      src/gpu/kernels/fp8_cutlass.cu
 ```
 
-### 2. `/home/kim-asplund/projects/kimsfinance/rust/docs/BUILD_RS_FP8_COMPILATION_GUIDE.md`
+### 2. `/home/kim/projects/kimsfinance/rust/docs/BUILD_RS_FP8_COMPILATION_GUIDE.md`
 
 **Purpose**: Comprehensive user guide for build script
 **Sections**:
@@ -360,16 +360,16 @@ CUDA_ARCH=sm_80 CUDA_HOME=/opt/cuda CUTLASS_PATH=/opt/cutlass cargo build --feat
 
 ### Documentation
 
-- Build script guide: `/home/kim-asplund/projects/kimsfinance/rust/docs/BUILD_RS_FP8_COMPILATION_GUIDE.md`
+- Build script guide: `/home/kim/projects/kimsfinance/rust/docs/BUILD_RS_FP8_COMPILATION_GUIDE.md`
 - CUDA Toolkit: https://developer.nvidia.com/cuda-downloads
 - CUTLASS Library: https://github.com/NVIDIA/cutlass
 - Cargo Build Scripts: https://doc.rust-lang.org/cargo/reference/build-scripts.html
 
 ### Source Files
 
-- Build script: `/home/kim-asplund/projects/kimsfinance/rust/build.rs`
-- WMMA kernel: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_fp8_wmma.cu`
-- CUTLASS kernel: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu`
+- Build script: `/home/kim/projects/kimsfinance/rust/build.rs`
+- WMMA kernel: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_fp8_wmma.cu`
+- CUTLASS kernel: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_cutlass.cu`
 
 ---
 

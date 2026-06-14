@@ -25,7 +25,7 @@ You don't need to understand the kimsfinance codebase to use the scanner - just 
 ### Morning Scan (Before Market Open)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run the scanner
 cargo run --release --features data-downloaders --example paper_trading_scanner
@@ -242,14 +242,14 @@ Update trade log:
 **Option 1: Manual (Recommended for first month)**
 ```bash
 # Every morning before market open
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --release --features data-downloaders --example paper_trading_scanner > ~/Desktop/today_opportunities.txt
 ```
 
 **Option 2: Cron Job (After 1 month validation)**
 ```bash
 # Add to crontab (crontab -e):
-0 8 * * 1-5 cd /home/kim-asplund/projects/kimsfinance/rust && cargo run --release --features data-downloaders --example paper_trading_scanner > ~/Desktop/today_opportunities.txt
+0 8 * * 1-5 cd /home/kim/projects/kimsfinance/rust && cargo run --release --features data-downloaders --example paper_trading_scanner > ~/Desktop/today_opportunities.txt
 ```
 
 **Option 3: Live API (Future - requires IBKR API integration)**
@@ -385,12 +385,12 @@ If poor performance:
 
 **Scanner Executable**:
 ```
-/home/kim-asplund/projects/kimsfinance/rust/examples/paper_trading_scanner.rs
+/home/kim/projects/kimsfinance/rust/examples/paper_trading_scanner.rs
 ```
 
 **Documentation**:
 ```
-/home/kim-asplund/projects/kimsfinance/rust/docs/
+/home/kim/projects/kimsfinance/rust/docs/
 ├── PAPER_TRADING_GUIDE.md          ← Entry/exit checklists
 ├── PAPER_TRADING_DEPLOYMENT.md     ← This file (deployment)
 └── PROFITABILITY_REPORT.md         ← 266% ROC validation
@@ -398,14 +398,14 @@ If poor performance:
 
 **Data Directories**:
 ```
-/home/kim-asplund/projects/kimsfinance/rust/data/yfinance/
+/home/kim/projects/kimsfinance/rust/data/yfinance/
 ├── options_historical/              ← Options chains
 └── ohlcv/                          ← Spot prices (parent dir)
 ```
 
 **Strategy Code** (for reference, not required to understand):
 ```
-/home/kim-asplund/projects/kimsfinance/rust/src/strategy/
+/home/kim/projects/kimsfinance/rust/src/strategy/
 ├── types.rs                        ← Data structures
 ├── strategies.rs                   ← Bull put spread logic
 ├── backtest.rs                     ← Backtesting engine
@@ -442,7 +442,7 @@ If poor performance:
 
 Run the scanner now:
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --release --features data-downloaders --example paper_trading_scanner
 ```
 

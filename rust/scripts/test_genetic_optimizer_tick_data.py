@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import json
 
 # Paths
-TICK_DATA_BASE = Path("/home/kim-asplund/projects/binance-data/futures")
+TICK_DATA_BASE = Path("/home/kim/projects/binance-data/futures")
 OUTPUT_DIR = Path("/tmp/genetic_optimizer_tick_benchmark")
 OUTPUT_DIR.mkdir(exist_ok=True)
 

@@ -186,7 +186,7 @@ Profit Factor: >1.5
 # This will find optimal parameters automatically
 cargo run --release --features data-downloaders \
   --example advanced_momentum_strategy \
-  optimize /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01 \
+  optimize /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01 \
   100 50
 
 # Expected runtime: ~2 hours
@@ -295,7 +295,7 @@ The infrastructure is **production-ready**. The default strategy parameters are 
 ```bash
 cargo run --release --features data-downloaders \
   --example advanced_momentum_strategy \
-  optimize /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01 \
+  optimize /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01 \
   100 50
 ```
 

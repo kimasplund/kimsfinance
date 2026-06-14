@@ -36,7 +36,6 @@ import polars as pl
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from moving_averages import calculate_sma, calculate_ema, GPUNotAvailableError
 
-
 # Type aliases
 type Engine = Literal["cpu", "gpu"]
 

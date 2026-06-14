@@ -35,7 +35,7 @@ This benchmark proves the feasibility of tick-level genetic optimization and est
 **Dataset**:
 - Pair: BTCUSDT
 - Month: January 2024
-- Source: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
+- Source: `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
 - Ticks: 1,000,000 (subset for testing)
 
 **Strategy**:
@@ -162,7 +162,7 @@ Gen 10/10: Best return = 4.13% (MA 23/30)
 
 ### Script Details
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
 **Lines**: 379
 **Language**: Python 3.13
 
@@ -279,7 +279,7 @@ def run_genetic_optimization_tick(df, generations=20, population=50):
 
 **Finding**: Successfully loaded and processed data from new Parquet dataset
 
-**Data Source**: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
+**Data Source**: `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
 
 **Format Compatibility**: Polars reads month-partitioned Parquet efficiently
 
@@ -325,7 +325,7 @@ def run_genetic_optimization_tick(df, generations=20, population=50):
 ```
 
 ### 3. Benchmark Script
-**Path**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
+**Path**: `/home/kim/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
 **Purpose**: Reusable benchmark for any trading pair/month combination
 
 ---
@@ -415,7 +415,7 @@ def run_genetic_optimization_tick(df, generations=20, population=50):
 ### Run Full Benchmark
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python rust/scripts/test_genetic_optimizer_tick_data.py
 ```
 
@@ -529,9 +529,9 @@ Before declaring production-ready:
 
 ## Related Documentation
 
-- **Multi-Pair Dataset**: `/home/kim-asplund/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md`
-- **Tick Data README**: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/README.md`
-- **Benchmark Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
+- **Multi-Pair Dataset**: `/home/kim/projects/binance-data/futures/MULTI_PAIR_CONVERSION_SUMMARY.md`
+- **Tick Data README**: `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/README.md`
+- **Benchmark Script**: `/home/kim/projects/kimsfinance/rust/scripts/test_genetic_optimizer_tick_data.py`
 - **Results JSON**: `/tmp/genetic_optimizer_tick_benchmark/tick_benchmark_BTCUSDT_2024-01.json`
 
 ---

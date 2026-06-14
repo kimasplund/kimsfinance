@@ -109,7 +109,7 @@ def test_cpu_fallback():
     """Test graceful fallback to CPU when GPU unavailable."""
     lf = pl.LazyFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 
-    result = lf.collect(engine="gpu" if GPU_AVAILABLE else None)
+    result = lf.collect(engine="gpu" if GPU_AVAILABLE else "cpu")
 
     assert result.shape == (3, 2)
     assert result["a"].to_list() == [1, 2, 3]

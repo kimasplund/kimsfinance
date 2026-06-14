@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-14
+
+### Changed
+
+- Python package version aligned to 0.2.0 to match the Rust `kimsfinance_core` crate; documentation verified against the current API surface (backtesting, optimizers, tick engine, 35 candlestick patterns, multi-asset, parquet loaders).
+
 ## [0.1.0] - 2025-01-XX (Beta Release)
 
 ### Added

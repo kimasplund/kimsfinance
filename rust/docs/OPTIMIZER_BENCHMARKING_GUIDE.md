@@ -8,7 +8,7 @@ This guide explains how to run comprehensive benchmarks comparing Grid Search, E
 
 ```bash
 # 1. Run all benchmarks (15-30 minutes)
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo bench --bench optimizer_comparison
 
 # 2. Analyze results

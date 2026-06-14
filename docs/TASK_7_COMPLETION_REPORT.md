@@ -326,18 +326,18 @@ python scripts/validate_gpu_batch_backtest.py --verbose
 
 ### Test Files
 
-1. `/home/kim-asplund/projects/kimsfinance/tests/integration/__init__.py` (1 line)
-2. `/home/kim-asplund/projects/kimsfinance/tests/integration/test_gpu_batch_backtest_e2e.py` (643 lines)
-3. `/home/kim-asplund/projects/kimsfinance/tests/integration/test_gpu_compatibility.py` (315 lines)
+1. `/home/kim/projects/kimsfinance/tests/integration/__init__.py` (1 line)
+2. `/home/kim/projects/kimsfinance/tests/integration/test_gpu_batch_backtest_e2e.py` (643 lines)
+3. `/home/kim/projects/kimsfinance/tests/integration/test_gpu_compatibility.py` (315 lines)
 
 ### Scripts
 
-4. `/home/kim-asplund/projects/kimsfinance/scripts/validate_gpu_batch_backtest.py` (486 lines, executable)
+4. `/home/kim/projects/kimsfinance/scripts/validate_gpu_batch_backtest.py` (486 lines, executable)
 
 ### Documentation
 
-5. `/home/kim-asplund/projects/kimsfinance/docs/INTEGRATION_TESTING.md` (654 lines)
-6. `/home/kim-asplund/projects/kimsfinance/docs/TASK_7_COMPLETION_REPORT.md` (this file)
+5. `/home/kim/projects/kimsfinance/docs/INTEGRATION_TESTING.md` (654 lines)
+6. `/home/kim/projects/kimsfinance/docs/TASK_7_COMPLETION_REPORT.md` (this file)
 
 ---
 

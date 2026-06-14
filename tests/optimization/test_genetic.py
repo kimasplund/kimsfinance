@@ -7,6 +7,10 @@ for strategy parameter optimization.
 
 import pytest
 import numpy as np
+
+# GeneticOptimizer requires the optional 'deap' package (the [optimization] extra).
+pytest.importorskip("deap")
+
 from kimsfinance.optimization import GeneticOptimizer, optimize_single_objective
 
 
@@ -28,9 +32,9 @@ class MockBacktestEngine:
         self.call_count += 1
 
         # Simple fitness function: optimal RSI is period=14, buy=30, sell=70
-        rsi_period = params.get('rsi_period', 14)
-        buy_threshold = params.get('buy_threshold', 30)
-        sell_threshold = params.get('sell_threshold', 70)
+        rsi_period = params.get("rsi_period", 14)
+        buy_threshold = params.get("buy_threshold", 30)
+        sell_threshold = params.get("sell_threshold", 70)
 
         # Calculate fitness score
         period_score = 1.0 - abs(rsi_period - 14) / 20.0
@@ -51,11 +55,11 @@ class MockBacktestEngine:
         win_rate = min(1.0, 0.5 + 0.3 * base_score + randomness * 0.1)
 
         return {
-            'sharpe_ratio': sharpe,
-            'max_drawdown': max_drawdown,
-            'win_rate': win_rate,
-            'total_return': max(0, 0.5 * base_score + randomness * 0.2),
-            'profit_factor': max(1.0, 1.5 * base_score),
+            "sharpe_ratio": sharpe,
+            "max_drawdown": max_drawdown,
+            "win_rate": win_rate,
+            "total_return": max(0, 0.5 * base_score + randomness * 0.2),
+            "profit_factor": max(1.0, 1.5 * base_score),
         }
 
 
@@ -64,11 +68,11 @@ def create_sample_data(n=1000):
     np.random.seed(42)
     close = 100 + np.cumsum(np.random.randn(n) * 2)
     return {
-        'open': close + np.random.randn(n),
-        'high': close + np.random.uniform(0.5, 2.0, n),
-        'low': close - np.random.uniform(0.5, 2.0, n),
-        'close': close,
-        'volume': np.random.uniform(1000, 10000, n),
+        "open": close + np.random.randn(n),
+        "high": close + np.random.uniform(0.5, 2.0, n),
+        "low": close - np.random.uniform(0.5, 2.0, n),
+        "close": close,
+        "volume": np.random.uniform(1000, 10000, n),
     }
 
 
@@ -76,9 +80,9 @@ def create_sample_data(n=1000):
 def param_space():
     """Standard parameter space for RSI strategy."""
     return {
-        'rsi_period': (5, 30, int),
-        'buy_threshold': (20, 40, float),
-        'sell_threshold': (60, 80, float),
+        "rsi_period": (5, 30, int),
+        "buy_threshold": (20, 40, float),
+        "sell_threshold": (60, 80, float),
     }
 
 
@@ -103,7 +107,7 @@ class TestGeneticOptimizerInit:
 
         assert optimizer.population_size == 100
         assert optimizer.generations == 50
-        assert optimizer.objectives == ['sharpe', 'max_drawdown', 'win_rate']
+        assert optimizer.objectives == ["sharpe", "max_drawdown", "win_rate"]
         assert optimizer.n_islands == 1
         assert optimizer.mutation_rate == 0.2
         assert optimizer.crossover_rate == 0.8
@@ -114,14 +118,14 @@ class TestGeneticOptimizerInit:
             param_space=param_space,
             population_size=200,
             generations=100,
-            objectives=['sharpe'],
+            objectives=["sharpe"],
             n_islands=4,
             mutation_rate=0.3,
         )
 
         assert optimizer.population_size == 200
         assert optimizer.generations == 100
-        assert optimizer.objectives == ['sharpe']
+        assert optimizer.objectives == ["sharpe"]
         assert optimizer.n_islands == 4
         assert optimizer.mutation_rate == 0.3
 
@@ -129,12 +133,12 @@ class TestGeneticOptimizerInit:
         """Test parameter space parsing."""
         optimizer = GeneticOptimizer(param_space=param_space)
 
-        assert 'rsi_period' in optimizer.param_names
-        assert 'buy_threshold' in optimizer.param_names
-        assert 'sell_threshold' in optimizer.param_names
+        assert "rsi_period" in optimizer.param_names
+        assert "buy_threshold" in optimizer.param_names
+        assert "sell_threshold" in optimizer.param_names
 
-        assert optimizer.param_bounds['rsi_period'] == (5, 30)
-        assert optimizer.param_types['rsi_period'] == int
+        assert optimizer.param_bounds["rsi_period"] == (5, 30)
+        assert optimizer.param_types["rsi_period"] == int
 
 
 class TestGeneticOptimizerDecoding:
@@ -149,11 +153,11 @@ class TestGeneticOptimizerDecoding:
 
         params = optimizer._decode_individual(individual)
 
-        assert params['rsi_period'] == 14
-        assert isinstance(params['rsi_period'], int)
-        assert params['buy_threshold'] == 30.0
-        assert isinstance(params['buy_threshold'], float)
-        assert params['sell_threshold'] == 70.0
+        assert params["rsi_period"] == 14
+        assert isinstance(params["rsi_period"], int)
+        assert params["buy_threshold"] == 30.0
+        assert isinstance(params["buy_threshold"], float)
+        assert params["sell_threshold"] == 70.0
 
     def test_decode_respects_types(self, param_space):
         """Test that decoding respects parameter types."""
@@ -163,12 +167,12 @@ class TestGeneticOptimizerDecoding:
         params = optimizer._decode_individual(individual)
 
         # Integer parameter should be converted
-        assert params['rsi_period'] == 14
-        assert isinstance(params['rsi_period'], int)
+        assert params["rsi_period"] == 14
+        assert isinstance(params["rsi_period"], int)
 
         # Float parameters should remain floats
-        assert isinstance(params['buy_threshold'], float)
-        assert isinstance(params['sell_threshold'], float)
+        assert isinstance(params["buy_threshold"], float)
+        assert isinstance(params["sell_threshold"], float)
 
 
 class TestGeneticOptimizerMutation:
@@ -181,7 +185,7 @@ class TestGeneticOptimizerMutation:
         # Run mutation many times
         for _ in range(100):
             individual = [14, 30.0, 70.0]
-            mutated, = optimizer._custom_mutate(individual)
+            (mutated,) = optimizer._custom_mutate(individual)
 
             # Check bounds
             assert 5 <= mutated[0] <= 30  # rsi_period
@@ -193,7 +197,7 @@ class TestGeneticOptimizerMutation:
         optimizer = GeneticOptimizer(param_space=param_space, mutation_rate=0.0)
 
         individual = [14, 30.0, 70.0]
-        mutated, = optimizer._custom_mutate(individual)
+        (mutated,) = optimizer._custom_mutate(individual)
 
         # Should be unchanged
         assert mutated == individual
@@ -204,18 +208,12 @@ class TestGeneticOptimizerFitness:
 
     def test_evaluate_fitness_single_objective(self, param_space, backtester, sample_data):
         """Test fitness evaluation with single objective."""
-        optimizer = GeneticOptimizer(
-            param_space=param_space,
-            objectives=['sharpe']
-        )
+        optimizer = GeneticOptimizer(param_space=param_space, objectives=["sharpe"])
 
         individual = [14, 30.0, 70.0]
 
         fitness = optimizer._evaluate_fitness(
-            individual,
-            strategy='rsi_crossover',
-            data=sample_data,
-            backtester=backtester
+            individual, strategy="rsi_crossover", data=sample_data, backtester=backtester
         )
 
         assert len(fitness) == 1
@@ -225,17 +223,13 @@ class TestGeneticOptimizerFitness:
     def test_evaluate_fitness_multi_objective(self, param_space, backtester, sample_data):
         """Test fitness evaluation with multiple objectives."""
         optimizer = GeneticOptimizer(
-            param_space=param_space,
-            objectives=['sharpe', 'max_drawdown', 'win_rate']
+            param_space=param_space, objectives=["sharpe", "max_drawdown", "win_rate"]
         )
 
         individual = [14, 30.0, 70.0]
 
         fitness = optimizer._evaluate_fitness(
-            individual,
-            strategy='rsi_crossover',
-            data=sample_data,
-            backtester=backtester
+            individual, strategy="rsi_crossover", data=sample_data, backtester=backtester
         )
 
         assert len(fitness) == 3
@@ -251,10 +245,7 @@ class TestGeneticOptimizerFitness:
 
         individual = [14, 30.0, 70.0]
         optimizer._evaluate_fitness(
-            individual,
-            strategy='rsi_crossover',
-            data=sample_data,
-            backtester=backtester
+            individual, strategy="rsi_crossover", data=sample_data, backtester=backtester
         )
 
         assert backtester.call_count == initial_count + 1
@@ -267,47 +258,47 @@ class TestSingleObjectiveOptimization:
         """Test single-objective optimization completes successfully."""
         best_solution = optimize_single_objective(
             param_space=param_space,
-            objective='sharpe',
-            strategy='rsi_crossover',
+            objective="sharpe",
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             population_size=20,
             generations=5,
         )
 
-        assert 'params' in best_solution
-        assert 'sharpe' in best_solution
+        assert "params" in best_solution
+        assert "sharpe" in best_solution
 
         # Check parameter types
-        assert isinstance(best_solution['params']['rsi_period'], int)
-        assert isinstance(best_solution['params']['buy_threshold'], float)
-        assert isinstance(best_solution['params']['sell_threshold'], float)
+        assert isinstance(best_solution["params"]["rsi_period"], int)
+        assert isinstance(best_solution["params"]["buy_threshold"], float)
+        assert isinstance(best_solution["params"]["sell_threshold"], float)
 
         # Check parameter bounds
-        params = best_solution['params']
-        assert 5 <= params['rsi_period'] <= 30
-        assert 20 <= params['buy_threshold'] <= 40
-        assert 60 <= params['sell_threshold'] <= 80
+        params = best_solution["params"]
+        assert 5 <= params["rsi_period"] <= 30
+        assert 20 <= params["buy_threshold"] <= 40
+        assert 60 <= params["sell_threshold"] <= 80
 
     def test_optimize_converges_to_optimum(self, param_space, backtester, sample_data):
         """Test that optimizer converges near optimal solution."""
         # With deterministic backtester, optimal is rsi=14, buy=30, sell=70
         best_solution = optimize_single_objective(
             param_space=param_space,
-            objective='sharpe',
-            strategy='rsi_crossover',
+            objective="sharpe",
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             population_size=50,
             generations=30,
         )
 
-        params = best_solution['params']
+        params = best_solution["params"]
 
         # Should be close to optimal (within 10% for continuous params)
-        assert abs(params['rsi_period'] - 14) <= 3
-        assert abs(params['buy_threshold'] - 30) <= 4
-        assert abs(params['sell_threshold'] - 70) <= 4
+        assert abs(params["rsi_period"] - 14) <= 3
+        assert abs(params["buy_threshold"] - 30) <= 4
+        assert abs(params["sell_threshold"] - 70) <= 4
 
 
 class TestMultiObjectiveOptimization:
@@ -319,11 +310,11 @@ class TestMultiObjectiveOptimization:
             param_space=param_space,
             population_size=30,
             generations=10,
-            objectives=['sharpe', 'max_drawdown', 'win_rate'],
+            objectives=["sharpe", "max_drawdown", "win_rate"],
         )
 
         pareto_front = optimizer.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             verbose=False,
@@ -334,11 +325,11 @@ class TestMultiObjectiveOptimization:
 
         # Check solution structure
         solution = pareto_front[0]
-        assert 'params' in solution
-        assert 'fitness' in solution
-        assert 'sharpe' in solution
-        assert 'max_drawdown' in solution
-        assert 'win_rate' in solution
+        assert "params" in solution
+        assert "fitness" in solution
+        assert "sharpe" in solution
+        assert "max_drawdown" in solution
+        assert "win_rate" in solution
 
     def test_pareto_front_non_dominated(self, param_space, backtester, sample_data):
         """Test that Pareto front contains non-dominated solutions."""
@@ -346,11 +337,11 @@ class TestMultiObjectiveOptimization:
             param_space=param_space,
             population_size=20,
             generations=5,
-            objectives=['sharpe', 'max_drawdown'],
+            objectives=["sharpe", "max_drawdown"],
         )
 
         pareto_front = optimizer.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             verbose=False,
@@ -391,7 +382,7 @@ class TestIslandModel:
         )
 
         pareto_front = optimizer.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             verbose=False,
@@ -401,7 +392,9 @@ class TestIslandModel:
         assert len(pareto_front) > 0
 
     @pytest.mark.slow
-    @pytest.mark.skip(reason="Probabilistic test - island diversity not guaranteed with small populations")
+    @pytest.mark.skip(
+        reason="Probabilistic test - island diversity not guaranteed with small populations"
+    )
     def test_island_model_diversity(self, param_space, sample_data):
         """Test that island model explores more diverse solutions.
 
@@ -419,7 +412,7 @@ class TestIslandModel:
         )
 
         pareto_single = optimizer_single.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester_random,
             verbose=False,
@@ -434,7 +427,7 @@ class TestIslandModel:
         )
 
         pareto_multi = optimizer_multi.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester_random,
             verbose=False,
@@ -460,6 +453,7 @@ class TestErrorHandling:
 
     def test_fitness_evaluation_error(self, param_space, sample_data):
         """Test that fitness evaluation errors are handled gracefully."""
+
         class FailingBacktester:
             def run(self, strategy, data, params):
                 raise RuntimeError("Backtesting failed!")
@@ -470,14 +464,11 @@ class TestErrorHandling:
 
         # Should return worst fitness, not crash
         fitness = optimizer._evaluate_fitness(
-            individual,
-            strategy='rsi_crossover',
-            data=sample_data,
-            backtester=FailingBacktester()
+            individual, strategy="rsi_crossover", data=sample_data, backtester=FailingBacktester()
         )
 
         # Should return -inf for all objectives
-        assert all(f == float('-inf') for f in fitness)
+        assert all(f == float("-inf") for f in fitness)
 
     def test_zero_generations(self, param_space, backtester, sample_data):
         """Test optimization with zero generations."""
@@ -488,7 +479,7 @@ class TestErrorHandling:
 
         # Should still return initial population
         pareto_front = optimizer.optimize(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             data=sample_data,
             backtester=backtester,
             verbose=False,
@@ -511,7 +502,7 @@ class TestPerformance:
 
         def run_optimization():
             return optimizer.optimize(
-                strategy='rsi_crossover',
+                strategy="rsi_crossover",
                 data=sample_data,
                 backtester=backtester,
                 verbose=False,
@@ -535,7 +526,7 @@ class TestPerformance:
             )
 
             optimizer.optimize(
-                strategy='rsi_crossover',
+                strategy="rsi_crossover",
                 data=sample_data,
                 backtester=backtester_test,
                 verbose=False,
@@ -547,5 +538,5 @@ class TestPerformance:
         assert call_counts[0] < call_counts[1] < call_counts[2]
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

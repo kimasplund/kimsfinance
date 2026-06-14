@@ -26,7 +26,7 @@ fi
 
 # Build release binary
 echo "🔨 Building release binary..."
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features gpu --example test_persistent_minimal
 echo ""
 

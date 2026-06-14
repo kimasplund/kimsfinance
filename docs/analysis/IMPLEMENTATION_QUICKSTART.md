@@ -14,8 +14,8 @@ Before starting implementation, verify:
 - [ ] **RTX 3500 Ada GPU** with CUDA 13.0 driver (check: `nvidia-smi`)
 - [ ] **cudarc 0.17.3** confirmed in `Cargo.toml` (check: `cargo tree | grep cudarc`)
 - [ ] **Existing placeholder APIs** reviewed:
-  - [ ] `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)
-  - [ ] `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/device.rs` (lines 122-136)
+  - [ ] `/home/kim/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)
+  - [ ] `/home/kim/projects/kimsfinance/rust/src/gpu/device.rs` (lines 122-136)
 - [ ] **Baseline benchmark** measured (run: `cargo bench --bench launch_overhead --features gpu`)
 
 ---

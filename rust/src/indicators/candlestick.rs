@@ -357,8 +357,8 @@ pub fn recognize_patterns(
         .map(|i| Candle::new(open[i], high[i], low[i], close[i], volume[i]))
         .collect();
 
-    // Scan for patterns (start at index 2 to have enough lookback)
-    for i in 2..len {
+    // Scan for patterns (start at index 0 to include all single/double candle patterns)
+    for i in 0..len {
         // Single-candle patterns
         if let Some(detection) = check_single_candle_patterns(&candles, i, config) {
             if detection.confidence >= config.min_confidence {
@@ -569,7 +569,7 @@ fn check_two_candle_patterns(
 
     // Bullish Engulfing: small bearish followed by large bullish that engulfs
     if prev.is_bearish() && curr.is_bullish() {
-        let engulfs_body = curr.open < prev.close && curr.close > prev.open;
+        let engulfs_body = curr.open <= prev.close && curr.close >= prev.open && (curr.open < prev.close || curr.close > prev.open);
         let engulfs_full = curr.open < prev.low && curr.close > prev.high;
 
         if engulfs_body {
@@ -597,7 +597,7 @@ fn check_two_candle_patterns(
 
     // Bearish Engulfing: small bullish followed by large bearish that engulfs
     if prev.is_bullish() && curr.is_bearish() {
-        let engulfs_body = curr.open > prev.close && curr.close < prev.open;
+        let engulfs_body = curr.open >= prev.close && curr.close <= prev.open && (curr.open > prev.close || curr.close < prev.open);
         let engulfs_full = curr.open > prev.high && curr.close < prev.low;
 
         if engulfs_body {
@@ -1028,11 +1028,11 @@ mod tests {
 
     #[test]
     fn test_morning_star() {
-        let open = vec![100.0, 105.0, 96.0, 97.0, 100.0];
-        let high = vec![102.0, 106.0, 97.0, 98.0, 103.0];
-        let low = vec![95.0, 95.0, 95.0, 96.0, 99.0];
-        let close = vec![96.0, 96.0, 96.5, 97.5, 102.0];
-        let volume = vec![1000.0, 1000.0, 500.0, 500.0, 1500.0];
+        let open = vec![100.0, 105.0, 96.0, 100.0];
+        let high = vec![102.0, 106.0, 97.0, 103.0];
+        let low = vec![95.0, 95.0, 95.0, 99.0];
+        let close = vec![96.0, 96.0, 96.5, 102.0];
+        let volume = vec![1000.0, 1000.0, 500.0, 1500.0];
 
         let config = PatternConfig::default();
         let patterns = recognize_patterns(&open, &high, &low, &close, &volume, &config);

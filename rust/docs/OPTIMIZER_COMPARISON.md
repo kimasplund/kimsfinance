@@ -2,7 +2,7 @@
 
 **Benchmark Date**: [TO BE FILLED]
 **Hardware**: NVIDIA RTX 3500 Ada (12GB VRAM), Intel i9-13980HX (24 cores)
-**Software**: CUDA 13.0, Rust 1.75+, kimsfinance v0.1.0
+**Software**: CUDA 13.0, Rust 1.75+, kimsfinance v0.2.0
 **Methodology**: 10 runs per configuration, 95% confidence intervals
 
 ---

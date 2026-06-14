@@ -76,6 +76,7 @@ fn test_batch_api_10_strategies() {
             initial_capital: 10_000.0,
             trading_fee: 0.001,
             slippage: 0.0005,
+            ..Default::default()
         })
         .execute();
 

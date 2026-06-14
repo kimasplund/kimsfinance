@@ -3,7 +3,7 @@
 # Launch Overhead Benchmark Runner
 #
 # Purpose: Validate 2-4x speedup claim for persistent kernels
-# Location: /home/kim-asplund/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh
+# Location: /home/kim/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh
 #
 
 set -e  # Exit on error
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-PROJECT_ROOT="/home/kim-asplund/projects/kimsfinance/rust"
+PROJECT_ROOT="/home/kim/projects/kimsfinance/rust"
 BENCHMARK_NAME="launch_overhead"
 
 echo -e "${BLUE}============================================${NC}"

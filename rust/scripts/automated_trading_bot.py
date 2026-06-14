@@ -192,7 +192,7 @@ class TradingBot:
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout
-                cwd="/home/kim-asplund/projects/kimsfinance/rust",
+                cwd="/home/kim/projects/kimsfinance/rust",
             )
 
             if result.returncode != 0:

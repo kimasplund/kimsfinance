@@ -9,7 +9,7 @@ Quick reference for running kimsfinance performance benchmarks.
 ### Run All Benchmarks
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Full automated benchmark suite
 ./scripts/generate_cuda_ext_report.sh

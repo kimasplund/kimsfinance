@@ -214,10 +214,10 @@ mod heston_performance {
             }
 
             let stats = benchmark("Calibration (50 options, 30 iters)", 5, || {
-                let gpu_pricer = Arc::new(
+                let gpu_pricer = Arc::new(Mutex::new(
                     HestonGpuPricer::new(device.clone(), 4096, 100)
                         .expect("Failed to create pricer"),
-                );
+                ));
                 let calibrator = HestonCalibrator::new(gpu_pricer, options.clone(), params)
                     .expect("Failed to create calibrator")
                     .with_max_iterations(30);
@@ -244,10 +244,10 @@ mod heston_performance {
             }
 
             let stats = benchmark("Calibration (100 options, 50 iters)", 3, || {
-                let gpu_pricer = Arc::new(
+                let gpu_pricer = Arc::new(Mutex::new(
                     HestonGpuPricer::new(device.clone(), 4096, 200)
                         .expect("Failed to create pricer"),
-                );
+                ));
                 let calibrator = HestonCalibrator::new(gpu_pricer, options.clone(), params)
                     .expect("Failed to create calibrator")
                     .with_max_iterations(50);

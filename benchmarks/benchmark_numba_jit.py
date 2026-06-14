@@ -43,7 +43,7 @@ def rolling_mean_numpy(arr: np.ndarray, window: int) -> np.ndarray:
     """Calculate rolling mean with pure NumPy (cumsum trick)."""
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     cumsum = np.cumsum(arr)
     result[window - 1] = cumsum[window - 1] / window
@@ -57,7 +57,7 @@ def rolling_std_numpy(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray
     """Calculate rolling standard deviation with pure NumPy."""
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     for i in range(window - 1, n):
         start = max(0, i - window + 1)
@@ -70,7 +70,7 @@ def ewm_mean_numpy(arr: np.ndarray, span: int, adjust: bool = False) -> np.ndarr
     """Calculate exponential weighted moving average with pure NumPy."""
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:span - 1] = np.nan
+    result[: span - 1] = np.nan
 
     alpha = 2.0 / (span + 1) if adjust else 1.0 / span
 
@@ -94,7 +94,7 @@ def rolling_mean_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     cumsum = np.cumsum(arr)
     result[window - 1] = cumsum[window - 1] / window
@@ -113,7 +113,7 @@ def rolling_std_jit(arr: np.ndarray, window: int, ddof: int = 1) -> np.ndarray:
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:window - 1] = np.nan
+    result[: window - 1] = np.nan
 
     for i in range(window - 1, n):
         start = max(0, i - window + 1)
@@ -132,7 +132,7 @@ def ewm_mean_jit(arr: np.ndarray, span: int, adjust: bool = False) -> np.ndarray
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
-    result[:span - 1] = np.nan
+    result[: span - 1] = np.nan
 
     alpha = 2.0 / (span + 1) if adjust else 1.0 / span
 

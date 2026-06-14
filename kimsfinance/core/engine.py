@@ -26,9 +26,10 @@ def _check_polars_gpu() -> bool:
     """Check if Polars GPU engine is available (production-ready in 2025)."""
     try:
         import polars as pl
+
         # Test GPU engine availability with simple operation
-        test_df = pl.LazyFrame({'test': [1, 2, 3]})
-        test_df.collect(engine='gpu')
+        test_df = pl.LazyFrame({"test": [1, 2, 3]})
+        test_df.collect(engine="gpu")
         return True
     except Exception:
         return False
@@ -180,11 +181,13 @@ class EngineManager:
     @classmethod
     def select_polars_engine(
         cls, engine: Engine, operation: str | None = None, data_size: int | None = None
-    ) -> Literal["cpu", "gpu"] | None:
+    ) -> Literal["cpu", "gpu"]:
         """
         Select Polars execution engine for .collect() with GPU support.
 
-        Returns 'gpu' for Polars GPU engine, 'cpu' for CPU, or None for default.
+        Returns 'gpu' for the Polars GPU engine, otherwise 'cpu'. The explicit
+        'cpu' value is required: recent Polars (>=1.x) rejects ``engine=None``
+        with ``ValueError: Invalid engine argument engine=None``.
         Polars GPU engine provides 13x speedup on aggregations when available.
 
         Args:
@@ -193,7 +196,7 @@ class EngineManager:
             data_size: Dataset size for threshold check
 
         Returns:
-            Selected engine ("cpu", "gpu", or None for Polars default)
+            Selected engine ("cpu" or "gpu")
         """
         if engine not in ("cpu", "gpu", "auto"):
             raise ConfigurationError(f"Invalid engine: {engine!r}")
@@ -209,16 +212,16 @@ class EngineManager:
             case "auto":
                 # Auto selection: use Polars GPU if available
                 if not cls.check_polars_gpu_available():
-                    return None  # Use Polars default (CPU)
+                    return "cpu"  # Explicit CPU engine (Polars rejects engine=None)
 
                 # Apply threshold-based selection if provided
                 if operation and data_size is not None:
                     threshold = GPU_CROSSOVER_THRESHOLDS.get(
                         operation, GPU_CROSSOVER_THRESHOLDS["default"]
                     )
-                    return "gpu" if data_size >= threshold else None
+                    return "gpu" if data_size >= threshold else "cpu"
 
-                return None  # Conservative default for "auto"
+                return "cpu"  # Conservative default for "auto"
             case _:
                 # This should never be reached due to validation above
                 raise ConfigurationError(f"Invalid engine: {engine!r}")

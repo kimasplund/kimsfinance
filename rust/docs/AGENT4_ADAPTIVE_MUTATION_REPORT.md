@@ -144,7 +144,7 @@ Gen 15: Diversity=0.18, Mutation=0.0810   (balanced)
 ## Integration Points
 
 ### Files Modified
-- `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs`
+- `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs`
 
 ### Methods Added/Modified
 - ✅ `calculate_diversity()` - Measures population diversity

@@ -22,7 +22,7 @@ Successfully implemented **CPU-based orderflow feature extraction** and **signal
 
 ### 1. Files Created
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/src/cpu/orderflow.rs` (870 lines)
+#### `/home/kim/projects/kimsfinance/rust/src/cpu/orderflow.rs` (870 lines)
 
 **Core Implementation**:
 - `OrderflowBatchProcessor` - Main CPU processor (stateless)
@@ -53,7 +53,7 @@ Successfully implemented **CPU-based orderflow feature extraction** and **signal
 - 9 unit tests covering all functionality
 - Test coverage: validation, signal generation, calibration, multi-strategy, performance
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/tests/cpu_orderflow_integration.rs` (280 lines)
+#### `/home/kim/projects/kimsfinance/rust/tests/cpu_orderflow_integration.rs` (280 lines)
 
 **Integration Tests**:
 1. `test_cpu_orderflow_basic_functionality` - End-to-end processing
@@ -64,7 +64,7 @@ Successfully implemented **CPU-based orderflow feature extraction** and **signal
 
 ### 2. Files Modified
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/src/cpu/mod.rs`
+#### `/home/kim/projects/kimsfinance/rust/src/cpu/mod.rs`
 
 **Changes**:
 ```rust
@@ -305,12 +305,12 @@ The CPU orderflow implementation is **production-ready** and provides a robust f
 ## Files Changed Summary
 
 **Created**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/cpu/orderflow.rs` (870 lines)
-- `/home/kim-asplund/projects/kimsfinance/rust/tests/cpu_orderflow_integration.rs` (280 lines)
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/CPU_ORDERFLOW_IMPLEMENTATION_REPORT.md` (this file)
+- `/home/kim/projects/kimsfinance/rust/src/cpu/orderflow.rs` (870 lines)
+- `/home/kim/projects/kimsfinance/rust/tests/cpu_orderflow_integration.rs` (280 lines)
+- `/home/kim/projects/kimsfinance/rust/docs/CPU_ORDERFLOW_IMPLEMENTATION_REPORT.md` (this file)
 
 **Modified**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/cpu/mod.rs` (+8 lines)
+- `/home/kim/projects/kimsfinance/rust/src/cpu/mod.rs` (+8 lines)
 
 **Total Lines Added**: 1,158 lines
 **Test Coverage**: 14 tests (9 unit + 5 integration)

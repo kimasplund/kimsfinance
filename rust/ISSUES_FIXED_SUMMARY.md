@@ -218,7 +218,7 @@ cargo check --features gpu
    - Validate 5-10x speedup claim
 
 2. **Real Data Validation** (1-2 hours recommended)
-   - Test with real Binance data at `/home/kim-asplund/projects/binance-data/`
+   - Test with real Binance data at `/home/kim/projects/binance-data/`
    - Run: `cargo run --example tick_backtest_btc --release`
 
 ### Future (Outside Scope)

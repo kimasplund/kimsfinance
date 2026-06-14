@@ -1,6 +1,6 @@
 # Genetic Algorithm Optimization
 
-**kimsfinance v0.1.0** - Production-Grade Genetic Optimization for Trading Strategies
+**kimsfinance v0.2.0** - Production-Grade Genetic Optimization for Trading Strategies
 
 This guide covers genetic algorithm optimization using DEAP (Distributed Evolutionary Algorithms in Python) integrated with kimsfinance's Rust backtester for fast fitness evaluation.
 

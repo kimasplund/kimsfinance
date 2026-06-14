@@ -157,7 +157,7 @@ let candles = process_binance_month(
 ```rust
 // Load entire year automatically
 let candles = process_binance_directory(
-    "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/",
+    "/home/kim/projects/binance-data/futures/BTCUSDT/trades/",
     "2021-01-01",  // Start date
     "2021-12-31",  // End date
     Timeframe::parse("5m")?

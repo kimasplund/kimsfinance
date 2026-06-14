@@ -29,7 +29,7 @@ Comprehensive benchmark infrastructure has been prepared for GPU batch backtesti
 
 ### 1. Rust Benchmark Suite
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
 
 **Features**:
 - Comprehensive benchmark configurations (9 test cases)
@@ -67,7 +67,7 @@ cargo bench --bench batch_backtest_benchmark
 
 ### 2. Test Data Generator
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/test_data_generator.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/test_data_generator.rs`
 
 **Features**:
 - Realistic OHLCV generation with trends and volatility
@@ -98,7 +98,7 @@ let data = generate_realistic_ohlcv(&config);
 
 ### 3. Statistical Validation Script
 
-**File**: `/home/kim-asplund/projects/kimsfinance/scripts/validate_batch_accuracy.py`
+**File**: `/home/kim/projects/kimsfinance/scripts/validate_batch_accuracy.py`
 
 **Features**:
 - Compares GPU batch vs CPU sequential for 100 random strategies
@@ -134,7 +134,7 @@ ls benchmarks/figures/accuracy_validation_*.png
 
 ### 4. Performance Report Template
 
-**File**: `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md`
+**File**: `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md`
 
 **Structure**:
 1. **Executive Summary**: Speedup, latency, VRAM, accuracy
@@ -155,8 +155,8 @@ ls benchmarks/figures/accuracy_validation_*.png
 ### 5. Documentation & Verification
 
 **Files**:
-- `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md`
-- `/home/kim-asplund/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh`
+- `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md`
+- `/home/kim/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh`
 
 **README Features**:
 - Quick start guide
@@ -182,7 +182,7 @@ bash scripts/verify_benchmark_infrastructure.sh
 
 ## Cargo.toml Integration
 
-**Updated**: `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`
+**Updated**: `/home/kim/projects/kimsfinance/rust/Cargo.toml`
 
 ```toml
 [[bench]]
@@ -373,7 +373,7 @@ Replace all `[TBD]` placeholders with actual results from criterion reports.
 
 ### Step 5: Update GPU Thresholds
 
-If targets met, update `/home/kim-asplund/projects/kimsfinance/kimsfinance/core/engine.py`:
+If targets met, update `/home/kim/projects/kimsfinance/kimsfinance/core/engine.py`:
 
 ```python
 GPU_BATCH_THRESHOLD = 100  # Use GPU for 100+ strategies
@@ -489,16 +489,16 @@ GPU_CANDLE_THRESHOLD = 1000  # Use GPU for 1000+ candles
 ## Files Summary
 
 **Created** (5 new files):
-1. `/home/kim-asplund/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs` (350 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/benches/test_data_generator.rs` (280 lines)
-3. `/home/kim-asplund/projects/kimsfinance/scripts/validate_batch_accuracy.py` (400 lines)
-4. `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md` (600 lines template)
-5. `/home/kim-asplund/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md` (300 lines)
-6. `/home/kim-asplund/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh` (150 lines)
-7. `/home/kim-asplund/projects/kimsfinance/TASK5_BENCHMARK_INFRASTRUCTURE_SUMMARY.md` (this file)
+1. `/home/kim/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs` (350 lines)
+2. `/home/kim/projects/kimsfinance/rust/benches/test_data_generator.rs` (280 lines)
+3. `/home/kim/projects/kimsfinance/scripts/validate_batch_accuracy.py` (400 lines)
+4. `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_RESULTS.md` (600 lines template)
+5. `/home/kim/projects/kimsfinance/benchmarks/BATCH_BACKTEST_README.md` (300 lines)
+6. `/home/kim/projects/kimsfinance/scripts/verify_benchmark_infrastructure.sh` (150 lines)
+7. `/home/kim/projects/kimsfinance/TASK5_BENCHMARK_INFRASTRUCTURE_SUMMARY.md` (this file)
 
 **Modified** (1 file):
-1. `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml` (added benchmark registration)
+1. `/home/kim/projects/kimsfinance/rust/Cargo.toml` (added benchmark registration)
 
 **Total Lines**: ~2,280 lines of code and documentation
 

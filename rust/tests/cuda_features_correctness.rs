@@ -175,7 +175,7 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
 fn test_cuda_graph_vs_sequential_identical_results() {
     println!("\n=== Correctness Test: CUDA Graph vs Sequential ===");
 
-    use kimsfinance_core::gpu::{GpuDevice, IndicatorGraphBuilder};
+    use kimsfinance_core::gpu::{GpuDevice, IndicatorGraphBuilder, IndicatorSpeed, StreamManager};
     use std::sync::Arc;
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
@@ -189,13 +189,15 @@ fn test_cuda_graph_vs_sequential_identical_results() {
 
     // Graph execution
     println!("Graph execution...");
-    let mut builder = IndicatorGraphBuilder::new(&device).unwrap();
-    builder.begin_capture().unwrap();
+    let stream_mgr = Arc::new(StreamManager::new(device.clone()).unwrap());
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
+    builder.begin_capture_stream(IndicatorSpeed::Fast).unwrap();
     // TODO: Capture kernel launches
-    let graph = builder.end_capture().unwrap();
+    builder.end_capture_stream(IndicatorSpeed::Fast).unwrap();
+    let graph = builder.build().unwrap();
 
     for _ in 0..10 {
-        graph.launch().unwrap();
+        graph.launch_all().unwrap();
     }
     graph.synchronize().unwrap();
 
@@ -228,7 +230,7 @@ fn test_async_allocator_vs_standard_same_behavior() {
 
     // Test 2: Async allocation
     println!("Async allocation...");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create allocator");
     let buffer_async = allocator
         .alloc::<f64>(10_000)
@@ -253,23 +255,25 @@ fn test_async_allocator_vs_standard_same_behavior() {
     let host_data: Vec<f64> = (0..1000).map(|i| i as f64).collect();
 
     device
-        .stream
-        .htod_sync_copy_into(&host_data, &buffers_std[0])
+        .stream()
+        .memcpy_htod(&host_data, &mut buffers_std[0])
         .expect("Standard H2D copy failed");
 
-    let readback_std = device
-        .stream
-        .dtoh_sync_copy(&buffers_std[0])
+    let mut readback_std = vec![0.0; 1000];
+    device
+        .stream()
+        .memcpy_dtoh(&buffers_std[0], &mut readback_std)
         .expect("Standard D2H copy failed");
 
     device
-        .stream
-        .htod_sync_copy_into(&host_data, &buffers_async[0])
+        .stream()
+        .memcpy_htod(&host_data, &mut buffers_async[0])
         .expect("Async H2D copy failed");
 
-    let readback_async = device
-        .stream
-        .dtoh_sync_copy(&buffers_async[0])
+    let mut readback_async = vec![0.0; 1000];
+    device
+        .stream()
+        .memcpy_dtoh(&buffers_async[0], &mut readback_async)
         .expect("Async D2H copy failed");
 
     // Data should be identical
@@ -501,7 +505,7 @@ fn test_async_allocator_stats_accuracy() {
     use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice};
 
     let device = GpuDevice::new().expect("GPU required");
-    let allocator = AsyncAllocator::new(device.stream.clone(), device.device_id as i32)
+    let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
         .expect("Failed to create allocator");
 
     // Allocate 10 buffers

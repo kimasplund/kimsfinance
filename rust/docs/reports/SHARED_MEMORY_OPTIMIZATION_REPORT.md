@@ -161,7 +161,7 @@ for (int j = 0; j < period; j++) {
 
 ### 4.2 Kernel Implementation
 
-**Location:** `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/sma.rs:57-107`
+**Location:** `/home/kim/projects/kimsfinance/rust/src/gpu/sma.rs:57-107`
 
 ```cuda
 extern "C" __global__ void sma_kernel_shared(

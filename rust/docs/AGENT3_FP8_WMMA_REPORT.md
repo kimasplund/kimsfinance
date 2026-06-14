@@ -28,7 +28,7 @@ Successfully implemented hardware FP8 E4M3 tensor core support for NVIDIA Ada Lo
 
 ### 1. FP8 WMMA Module (`rust/src/gpu/fp8_wmma.rs`)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
 **Lines of Code**: ~450
 **Purpose**: Rust FFI wrapper for FP8 tensor core operations
 
@@ -85,7 +85,7 @@ pub fn quantize_fp8_cpu(value: f64) -> f64;
 
 ### 2. FP8 CUDA Kernel (`rust/src/gpu/kernels_fp8_wmma.cu`)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_fp8_wmma.cu`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_fp8_wmma.cu`
 **Lines of Code**: ~300
 **Purpose**: CUDA kernel using WMMA API for FP8 tensor cores
 
@@ -127,7 +127,7 @@ extern "C" __global__ void batch_quantize_fp8_kernel(
 
 ### 3. Integration Example (`rust/examples/fp8_genetic_optimizer.rs`)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/examples/fp8_genetic_optimizer.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/examples/fp8_genetic_optimizer.rs`
 **Lines of Code**: ~350
 **Purpose**: Demonstrate FP8 integration with genetic optimizer
 
@@ -186,7 +186,7 @@ impl GpuDevice {
 
 ### 5. Comprehensive Test Suite (`rust/tests/fp8_wmma_tests.rs`)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
 **Test Count**: 6 comprehensive tests
 **Coverage**: Hardware detection, quantization, matmul, accuracy, performance
 
@@ -227,7 +227,7 @@ ncu --set full cargo test --features gpu test_fp8_matmul_accuracy
 
 ### 6. Complete Documentation (`rust/docs/FP8_TENSOR_CORES.md`)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_TENSOR_CORES.md`
+**Location**: `/home/kim/projects/kimsfinance/rust/docs/FP8_TENSOR_CORES.md`
 **Pages**: ~50 pages (comprehensive)
 **Sections**: 15 major sections
 

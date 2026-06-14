@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented the Lewis (2001) cosine transform method for Heston option pricing in `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`.
+Successfully implemented the Lewis (2001) cosine transform method for Heston option pricing in `/home/kim/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`.
 
 ## Formula
 
@@ -18,7 +18,7 @@ Where:
 ## Implementation Details
 
 ### File Location
-`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`
+`/home/kim/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`
 
 ### Key Functions
 
@@ -162,7 +162,7 @@ println!("Option price (FFT): ${:.2}", fft_prices[0]);
 
 ## Files Modified
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/heston_pricing.rs`**
    - Added `price_with_lewis_method()` (lines 757-920)
    - Added `estimate_vol_from_cf()` (lines 923-939)
    - Modified `price_options()` to call `price_options_with_method()` (lines 281-287)

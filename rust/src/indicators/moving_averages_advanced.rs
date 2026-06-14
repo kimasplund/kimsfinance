@@ -70,7 +70,7 @@ impl Indicator for KAMA {
 
             // Volatility: sum of absolute price changes
             let mut volatility = 0.0;
-            for j in (i - self.period + 1)..=i {
+            for j in (i + 1 - self.period)..=i {
                 volatility += (prices[j] - prices[j - 1]).abs();
             }
 
@@ -355,7 +355,7 @@ impl Indicator for LSMA {
         let mut result = Array1::from_elem(n, f64::NAN);
 
         for i in (self.period - 1)..n {
-            let window = &prices.slice(s![(i - self.period + 1)..=i]).to_vec();
+            let window = &prices.slice(s![i + 1 - self.period..=i]).to_vec();
             result[i] = self.linear_regression(window);
         }
 

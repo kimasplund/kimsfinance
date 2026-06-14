@@ -352,7 +352,7 @@ mod tests {
     #[test]
     #[ignore] // Requires actual dataset
     fn test_load_parquet_file_btcusdt() {
-        let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
+        let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
 
         let trades = load_parquet_file(path).expect("Failed to load Parquet file");
 
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     #[ignore] // Requires actual dataset
     fn test_load_parquet_month_btcusdt() {
-        let dir = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+        let dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
         let trades = load_parquet_month(dir, Some(100_000)).expect("Failed to load month");
 
@@ -405,7 +405,7 @@ mod tests {
     #[test]
     #[ignore] // Requires actual dataset
     fn test_load_parquet_month_no_limit() {
-        let dir = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+        let dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
         let trades = load_parquet_month(dir, None).expect("Failed to load month");
 

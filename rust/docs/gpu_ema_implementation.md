@@ -4,7 +4,7 @@
 
 GPU-accelerated Exponential Moving Average (EMA) implementation using CUDA.
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/ema.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/ema.rs`
 
 ## Algorithm
 
@@ -302,10 +302,10 @@ let ema = ema_gpu(
 
 ## References
 
-- CUDA Kernel: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/ema.rs`
-- Similar Pattern: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi.rs` (Wilder's smoothing)
-- MACD Usage: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/macd.rs` (embedded EMA kernel)
-- Module Export: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`
+- CUDA Kernel: `/home/kim/projects/kimsfinance/rust/src/gpu/ema.rs`
+- Similar Pattern: `/home/kim/projects/kimsfinance/rust/src/gpu/rsi.rs` (Wilder's smoothing)
+- MACD Usage: `/home/kim/projects/kimsfinance/rust/src/gpu/macd.rs` (embedded EMA kernel)
+- Module Export: `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`
 
 ---
 

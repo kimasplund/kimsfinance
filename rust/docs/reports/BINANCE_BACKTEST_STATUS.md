@@ -12,7 +12,7 @@
 
 ### 1. Data Analysis ✅
 
-**Location**: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/`
+**Location**: `/home/kim/projects/binance-data/futures/BTCUSDT/trades/`
 
 **Sample Data Analyzed**: `BTCUSDT-trades-2024-05-31.zip`
 - **Format**: CSV inside ZIP archive

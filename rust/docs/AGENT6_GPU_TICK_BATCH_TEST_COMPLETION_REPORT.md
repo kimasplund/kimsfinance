@@ -33,7 +33,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 ### 1. Unit Tests (3 files)
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/tests/gpu_tick_aggregation_test.rs`
+#### `/home/kim/projects/kimsfinance/rust/tests/gpu_tick_aggregation_test.rs`
 
 **Purpose**: Validate GPU tick-to-candle aggregation (Agent 1)
 
@@ -48,7 +48,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 **Known Limitation**: Edition 2024 `gen` keyword conflict (requires `r#gen` for rand)
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/tests/gpu_tick_orderflow_test.rs`
+#### `/home/kim/projects/kimsfinance/rust/tests/gpu_tick_orderflow_test.rs`
 
 **Purpose**: Validate GPU orderflow feature calculation and signals (Agent 2)
 
@@ -62,7 +62,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 **Test Count**: 8 tests
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/tests/gpu_tick_backtest_test.rs`
+#### `/home/kim/projects/kimsfinance/rust/tests/gpu_tick_backtest_test.rs`
 
 **Purpose**: Validate GPU tick-level backtest execution (Agent 3)
 
@@ -80,7 +80,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 ### 2. Integration Tests (1 file - Already Exists)
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/tests/gpu_tick_batch_integration.rs`
+#### `/home/kim/projects/kimsfinance/rust/tests/gpu_tick_batch_integration.rs`
 
 **Status**: ✅ Already implemented (discovered during exploration)
 
@@ -97,7 +97,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 ### 3. Benchmarks (1 file)
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/benches/gpu_tick_batch_benchmark.rs`
+#### `/home/kim/projects/kimsfinance/rust/benches/gpu_tick_batch_benchmark.rs`
 
 **Purpose**: Comprehensive performance validation
 
@@ -118,7 +118,7 @@ Successfully implemented comprehensive testing infrastructure for GPU tick batch
 
 ### 4. Documentation (1 file)
 
-#### `/home/kim-asplund/projects/kimsfinance/rust/docs/AGENT6_GPU_TICK_BATCH_TEST_PLAN.md`
+#### `/home/kim/projects/kimsfinance/rust/docs/AGENT6_GPU_TICK_BATCH_TEST_PLAN.md`
 
 **Contents**:
 - ✅ Success checklist (requirements + verification)
@@ -470,7 +470,7 @@ pub fn gpu_tick_backtest_batch(
 ### Test Files Created
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/
+/home/kim/projects/kimsfinance/rust/
 ├── tests/
 │   ├── gpu_tick_aggregation_test.rs       (366 lines, 9 tests)
 │   ├── gpu_tick_orderflow_test.rs         (282 lines, 8 tests)

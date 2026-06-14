@@ -14,6 +14,7 @@ use ndarray::Array1;
 use std::collections::HashMap;
 
 /// Simple RSI strategy with tunable parameters
+#[derive(Debug, Clone)]
 struct TunableRSIStrategy {
     rsi_period: usize,
     buy_threshold: f64,

@@ -367,9 +367,9 @@ cargo run --features gpu --example test_fp8_gemm
 - CUDA 13.0 Release Notes: https://docs.nvidia.com/cuda/cuda-toolkit-release-notes
 
 ### Related Files
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs` - FP8 WMMA module (similar patterns)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi.rs` - Working cudarc 0.17.3 example
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/device.rs` - GpuDevice API reference
+- `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs` - FP8 WMMA module (similar patterns)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/rsi.rs` - Working cudarc 0.17.3 example
+- `/home/kim/projects/kimsfinance/rust/src/gpu/device.rs` - GpuDevice API reference
 
 ---
 

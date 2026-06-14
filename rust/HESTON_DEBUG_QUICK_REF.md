@@ -2,7 +2,7 @@
 
 ## Run Test (Copy-Paste)
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee heston_debug_output.txt
 ```
 

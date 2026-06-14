@@ -80,6 +80,7 @@ half = { version = "2.4", optional = true }  # For f16 support
 # Optimization libraries for Heston calibration
 argmin = { version = "0.11", optional = true }
 argmin-math = { version = "0.5", default-features = false, features = ["ndarray_v0_16"], optional = true }
+ndarray-linalg = { version = "0.17", features = ["intel-mkl-static"], optional = true }
 
 # FFT library for Carr-Madan option pricing
 rustfft = { version = "6.2", optional = true }
@@ -114,7 +115,7 @@ data-deribit = ["deribit", "tokio", "async-trait"]
 data-downloaders = ["tokio", "async-trait", "reqwest", "arrow", "parquet"]
 data-yahoo-tls = ["data-downloaders", "rquest", "scraper", "regex", "once_cell"]
 data-all = ["data-ibkr", "data-deribit", "data-downloaders", "data-yahoo-tls"]
-heston = ["gpu", "argmin", "argmin-math", "rustfft", "num-complex"]
+heston = ["gpu", "argmin", "argmin-math", "rustfft", "num-complex", "ndarray-linalg"]
 
 [[bench]]
 name = "momentum_indicators"

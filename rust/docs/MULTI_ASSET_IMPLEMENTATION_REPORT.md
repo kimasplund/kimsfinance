@@ -79,7 +79,7 @@ pub struct AssetSpec {
 
 ### 1. Equity (Stocks)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/equity.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/equity.rs`
 
 #### Features Implemented:
 - ✅ **Tick Size Rules**: Penny pilot (≥$1.00 → $0.01 tick, <$1.00 → $0.0001 tick)
@@ -121,7 +121,7 @@ let adjusted_price = aapl.adjust_price(historical_price, split_date);
 
 ### 2. Futures Contracts
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/futures.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/futures.rs`
 
 #### Features Implemented:
 - ✅ **Contract Specifications**: Multiplier, tick size, tick value
@@ -169,7 +169,7 @@ let (initial, maintenance) = es.required_margin(2);
 
 ### 3. Options Contracts
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/options.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/options.rs`
 
 #### Features Implemented:
 - ✅ **Black-Scholes Pricing**: Full analytical solution
@@ -220,7 +220,7 @@ let iv = call.implied_volatility(spot, option_price, risk_free_rate, time_to_exp
 
 ### 4. Forex (Foreign Exchange)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/forex.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/forex.rs`
 
 #### Features Implemented:
 - ✅ **Pip Calculations**: Automatic pip size (0.0001 for most, 0.01 for JPY pairs)
@@ -259,7 +259,7 @@ let pip_value = eurusd.calculate_pip_value(1.1000, 1.0);
 
 ### 5. Cryptocurrency
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/crypto.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/crypto.rs`
 
 #### Features Implemented:
 - ✅ **Satoshi/Wei Precision**: 8 decimals for BTC, 18 for ETH
@@ -299,7 +299,7 @@ assert!(btcusd.is_market_open(Utc::now()));
 
 ### 6. CFD (Contract for Difference)
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/cfd.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/cfd.rs`
 
 #### Features Implemented:
 - ✅ **Leverage Support**: Configurable max leverage (e.g., 10x)
@@ -334,7 +334,7 @@ let max_size = cfd.max_position_size(10_000.0, 150.0);
 
 ### 7. Market Indices
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/assets/index.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/assets/index.rs`
 
 #### Features Implemented:
 - ✅ **Index Methodologies**:
@@ -520,7 +520,7 @@ cargo test --lib assets::options
 
 ### 1. Multi-Asset Demo
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/examples/multi_asset_demo.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/examples/multi_asset_demo.rs`
 
 Complete demonstration of all 7 asset classes with:
 - Asset creation
@@ -674,18 +674,18 @@ The multi-asset support implementation successfully expands kimsfinance from a c
 ## Files Created
 
 ### Source Files:
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/mod.rs` (285 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/specs.rs` (363 lines)
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/equity.rs` (467 lines)
-4. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/futures.rs` (618 lines)
-5. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/options.rs` (738 lines)
-6. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/forex.rs` (268 lines)
-7. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/crypto.rs` (242 lines)
-8. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/cfd.rs` (175 lines)
-9. `/home/kim-asplund/projects/kimsfinance/rust/src/assets/index.rs` (256 lines)
+1. `/home/kim/projects/kimsfinance/rust/src/assets/mod.rs` (285 lines)
+2. `/home/kim/projects/kimsfinance/rust/src/assets/specs.rs` (363 lines)
+3. `/home/kim/projects/kimsfinance/rust/src/assets/equity.rs` (467 lines)
+4. `/home/kim/projects/kimsfinance/rust/src/assets/futures.rs` (618 lines)
+5. `/home/kim/projects/kimsfinance/rust/src/assets/options.rs` (738 lines)
+6. `/home/kim/projects/kimsfinance/rust/src/assets/forex.rs` (268 lines)
+7. `/home/kim/projects/kimsfinance/rust/src/assets/crypto.rs` (242 lines)
+8. `/home/kim/projects/kimsfinance/rust/src/assets/cfd.rs` (175 lines)
+9. `/home/kim/projects/kimsfinance/rust/src/assets/index.rs` (256 lines)
 
 ### Example Files:
-10. `/home/kim-asplund/projects/kimsfinance/rust/examples/multi_asset_demo.rs` (233 lines)
+10. `/home/kim/projects/kimsfinance/rust/examples/multi_asset_demo.rs` (233 lines)
 
 ### Documentation:
 11. This report (`docs/MULTI_ASSET_IMPLEMENTATION_REPORT.md`)

@@ -95,7 +95,7 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 
 # Output directories
 PARQUET_DIR = Path("data/1min_candles_parquet")
-OLD_CSV_DIR = Path("/home/kim-asplund/projects/ib-data-downloader/data")
+OLD_CSV_DIR = Path("/home/kim/projects/ib-data-downloader/data")
 
 # IBKR connection settings
 IBKR_HOST = "127.0.0.1"

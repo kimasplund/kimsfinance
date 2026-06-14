@@ -82,7 +82,7 @@ def main():
     report.append("\n## 4. Performance Analysis\n")
 
     code, stdout, stderr = run_command(
-        "python3 /home/kim-asplund/projects/kimsfinance/rust/scripts/analyze_phase5_benchmarks.py"
+        "python3 /home/kim/projects/kimsfinance/rust/scripts/analyze_phase5_benchmarks.py"
     )
 
     if code == 0:

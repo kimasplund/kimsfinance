@@ -74,10 +74,12 @@ fn generate_trending_data(
     for i in 0..n {
         timestamps.push((i * 60) as i64);
 
-        price += trend + ((i as f64 * 0.1).sin() * 0.5);
+        // To ensure crossovers happen, we start with a downward trend and then reverse it
+        let current_trend = if i < n / 3 { -trend * 2.0 } else { trend };
+        price += current_trend + ((i as f64 * 0.1).sin() * 0.5);
 
         let o = price;
-        let c = price + trend;
+        let c = price + current_trend;
         let h = o.max(c) + 0.5;
         let l = o.min(c) - 0.5;
 

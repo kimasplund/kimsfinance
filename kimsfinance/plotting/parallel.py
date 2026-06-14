@@ -52,7 +52,7 @@ def _check_free_threading_available() -> bool:
     """
     try:
         # Python 3.13+ with free-threading build (python3.14t)
-        return hasattr(sys, '_is_gil_enabled') and not sys._is_gil_enabled()
+        return hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled()
     except Exception:
         return False
 

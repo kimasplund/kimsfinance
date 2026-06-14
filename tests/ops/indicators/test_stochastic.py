@@ -29,7 +29,6 @@ from kimsfinance.ops.indicators.stochastic_oscillator import (
 from kimsfinance.core import EngineManager
 from kimsfinance.core.exceptions import ConfigurationError
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================

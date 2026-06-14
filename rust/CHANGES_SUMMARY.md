@@ -178,14 +178,14 @@ Add comprehensive CUDA printf debugging to trace where imaginary parts become ze
 
 ### Quick Start
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 chmod +x RUN_HESTON_DEBUG.sh
 ./RUN_HESTON_DEBUG.sh
 ```
 
 ### Manual Steps
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Build and run
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee debug_output.txt
@@ -250,7 +250,7 @@ If you need to remove the debug instrumentation:
 
 ### Remove CUDA Printfs
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Restore original kernel (if you have backup)
 git checkout src/gpu/cuda/heston/characteristic_function.cu

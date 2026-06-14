@@ -25,7 +25,7 @@ Successfully created comprehensive benchmark infrastructure to validate performa
 
 ### 1. Benchmark File Structure
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/cpu_gpu_hybrid_benchmark.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/cpu_gpu_hybrid_benchmark.rs`
 
 ```
 Lines of Code: 461
@@ -444,21 +444,21 @@ ATR:       180μs →  70μs (2.6x speedup)
 All files use absolute paths as required:
 
 ### Benchmark Files
-- **Main benchmark**: `/home/kim-asplund/projects/kimsfinance/rust/benches/cpu_gpu_hybrid_benchmark.rs`
-- **Documentation**: `/home/kim-asplund/projects/kimsfinance/rust/benches/README.md`
-- **Usage guide**: `/home/kim-asplund/projects/kimsfinance/rust/benches/BENCHMARK_USAGE.md`
+- **Main benchmark**: `/home/kim/projects/kimsfinance/rust/benches/cpu_gpu_hybrid_benchmark.rs`
+- **Documentation**: `/home/kim/projects/kimsfinance/rust/benches/README.md`
+- **Usage guide**: `/home/kim/projects/kimsfinance/rust/benches/BENCHMARK_USAGE.md`
 
 ### Modified Files
-- **Cargo.toml**: `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml` (lines 88-91)
+- **Cargo.toml**: `/home/kim/projects/kimsfinance/rust/Cargo.toml` (lines 88-91)
 
 ### Related Files
-- **Strategy doc**: `/home/kim-asplund/projects/kimsfinance/rust/docs/CPU_GPU_HYBRID_STRATEGY.md`
-- **CPU implementations**: `/home/kim-asplund/projects/kimsfinance/rust/src/cpu/sequential.rs`
-- **GPU implementations**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/{ema,elder_ray,rsi,atr}.rs`
+- **Strategy doc**: `/home/kim/projects/kimsfinance/rust/docs/CPU_GPU_HYBRID_STRATEGY.md`
+- **CPU implementations**: `/home/kim/projects/kimsfinance/rust/src/cpu/sequential.rs`
+- **GPU implementations**: `/home/kim/projects/kimsfinance/rust/src/gpu/{ema,elder_ray,rsi,atr}.rs`
 
 ### Output Files (Generated)
-- **HTML reports**: `/home/kim-asplund/projects/kimsfinance/rust/target/criterion/report/index.html`
-- **Benchmark data**: `/home/kim-asplund/projects/kimsfinance/rust/target/criterion/{indicator}/*/`
+- **HTML reports**: `/home/kim/projects/kimsfinance/rust/target/criterion/report/index.html`
+- **Benchmark data**: `/home/kim/projects/kimsfinance/rust/target/criterion/{indicator}/*/`
 
 ---
 

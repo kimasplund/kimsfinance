@@ -23,7 +23,7 @@ This validation framework provides:
 ### Run Comprehensive Validation
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Make script executable
 chmod +x scripts/run_comprehensive_validation.sh

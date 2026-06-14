@@ -387,5 +387,5 @@ The strategy is **ready for paper trading validation**. After 3-6 months of succ
 
 **Report Generated**: 2025-10-30
 **Framework Version**: v1.0
-**Code Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/`
+**Code Location**: `/home/kim/projects/kimsfinance/rust/src/strategy/`
 **Contact**: See `docs/STRATEGY_DEVELOPMENT_REPORT.md` for technical details

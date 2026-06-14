@@ -18,7 +18,6 @@ import pandas as pd
 # Import at module level to avoid circular import issues
 from ..config.gpu_thresholds import get_threshold
 
-
 # ============================================================================
 # Result Types
 # ============================================================================

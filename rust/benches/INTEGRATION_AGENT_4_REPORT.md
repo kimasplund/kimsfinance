@@ -135,17 +135,17 @@ Agent 2 (Occupancy)                Agent 3 (Pinned Memory)
 ## Files Created
 
 ### Status Reports
-1. ✅ `/home/kim-asplund/projects/kimsfinance/rust/benches/INTEGRATION_STATUS.md`
+1. ✅ `/home/kim/projects/kimsfinance/rust/benches/INTEGRATION_STATUS.md`
    - Comprehensive error analysis
    - Fix recommendations
    - Performance target status
 
-2. ✅ `/home/kim-asplund/projects/kimsfinance/rust/scripts/fix_integration_errors.md`
+2. ✅ `/home/kim/projects/kimsfinance/rust/scripts/fix_integration_errors.md`
    - Step-by-step fix guide
    - Code snippets for each fix
    - Verification commands
 
-3. ✅ `/home/kim-asplund/projects/kimsfinance/rust/benches/INTEGRATION_AGENT_4_REPORT.md`
+3. ✅ `/home/kim/projects/kimsfinance/rust/benches/INTEGRATION_AGENT_4_REPORT.md`
    - This report
 
 ### Planned But Not Created (Blocked)
@@ -311,7 +311,7 @@ cargo bench --bench combined_optimizations_benchmark --features gpu
 
 ### Immediate (User Action Required)
 
-1. **Review fix guide**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/fix_integration_errors.md`
+1. **Review fix guide**: `/home/kim/projects/kimsfinance/rust/scripts/fix_integration_errors.md`
 2. **Apply fixes manually** or **request automated fix**
 3. **Verify compilation**: `cargo check --features gpu`
 
@@ -369,4 +369,4 @@ The GPU persistent kernel integration has **comprehensive design work** complete
 **Agent**: Integration Agent 4 (Testing, Validation & Benchmarking)
 **Status**: ⚠️ Compilation Blocked
 **Next Report**: After compilation fixes applied
-**Contact**: Review `/home/kim-asplund/projects/kimsfinance/rust/benches/INTEGRATION_STATUS.md` for detailed technical analysis
+**Contact**: Review `/home/kim/projects/kimsfinance/rust/benches/INTEGRATION_STATUS.md` for detailed technical analysis

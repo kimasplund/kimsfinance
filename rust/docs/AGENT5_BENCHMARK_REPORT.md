@@ -635,7 +635,7 @@ jobs:
 
 ```bash
 # Run all genetic optimizer benchmarks
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo bench --features gpu --bench genetic_optimizer_comparison
 
 # Run precision validation

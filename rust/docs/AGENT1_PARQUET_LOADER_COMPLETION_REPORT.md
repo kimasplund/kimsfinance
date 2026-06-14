@@ -19,7 +19,7 @@ Successfully implemented a zero-copy Parquet loader for tick-level Binance trade
 
 ### Files Created
 
-#### 1. `/home/kim-asplund/projects/kimsfinance/rust/src/binance/parquet_loader.rs` (NEW)
+#### 1. `/home/kim/projects/kimsfinance/rust/src/binance/parquet_loader.rs` (NEW)
 
 **Lines of Code**: 412 lines
 
@@ -49,7 +49,7 @@ Successfully implemented a zero-copy Parquet loader for tick-level Binance trade
 
 ### Files Modified
 
-#### 2. `/home/kim-asplund/projects/kimsfinance/rust/src/binance/mod.rs` (MODIFIED)
+#### 2. `/home/kim/projects/kimsfinance/rust/src/binance/mod.rs` (MODIFIED)
 
 **Lines Added**: 9 lines
 
@@ -154,7 +154,7 @@ cargo test --features data-downloaders \
     -- --ignored
 
 # Expected test paths:
-# /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/
+# /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/
 ```
 
 ---
@@ -194,7 +194,7 @@ cargo check --features data-downloaders --lib
 ### Dataset Location
 
 ```
-/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/
+/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/
 ```
 
 **Files**:
@@ -268,7 +268,7 @@ use kimsfinance_core::binance::load_parquet_month;
 
 // Load all trades from January 2024
 let trades = load_parquet_month(
-    "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
+    "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
     None  // No limit
 )?;
 

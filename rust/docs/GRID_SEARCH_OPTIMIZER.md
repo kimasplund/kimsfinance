@@ -15,12 +15,12 @@ Successfully implemented a GPU-accelerated Grid Search optimizer for kimsfinance
 
 ## Requirements Met
 
-- [✓] Created `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/grid_search.rs`
+- [✓] Created `/home/kim/projects/kimsfinance/rust/src/backtest/grid_search.rs`
 - [✓] Struct `GridSearchOptimizer` with builder pattern
 - [✓] Uses `BatchBacktestSweep` for GPU-accelerated parallel evaluation
 - [✓] Exhausts all parameter combinations systematically
 - [✓] Returns best result + full results table (sorted by fitness)
-- [✓] Registered in `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/mod.rs`
+- [✓] Registered in `/home/kim/projects/kimsfinance/rust/src/backtest/mod.rs`
 - [✓] Comprehensive unit tests validating exhaustive search
 - [✓] Example demo showcasing usage
 - [✓] Compiles without errors on Edition 2024
@@ -171,7 +171,7 @@ fn test_batch_size_validation()
 
 ### Integration Example
 
-Created `/home/kim-asplund/projects/kimsfinance/rust/examples/grid_search_demo.rs`:
+Created `/home/kim/projects/kimsfinance/rust/examples/grid_search_demo.rs`:
 
 ```bash
 $ cargo build --example grid_search_demo --features gpu --release
@@ -367,25 +367,25 @@ Based on existing `BatchBacktestSweep` benchmarks:
 
 ### Created
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/grid_search.rs` (587 lines)
+1. `/home/kim/projects/kimsfinance/rust/src/backtest/grid_search.rs` (587 lines)
    - Main optimizer implementation
    - Builder pattern API
    - Cartesian product generation
    - 7 unit tests
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/examples/grid_search_demo.rs` (194 lines)
+2. `/home/kim/projects/kimsfinance/rust/examples/grid_search_demo.rs` (194 lines)
    - Comprehensive demo showcasing usage
    - Synthetic data generation
    - Performance validation
 
-3. `/home/kim-asplund/projects/kimsfinance/rust/docs/GRID_SEARCH_OPTIMIZER.md` (this file)
+3. `/home/kim/projects/kimsfinance/rust/docs/GRID_SEARCH_OPTIMIZER.md` (this file)
    - Implementation report
    - API documentation
    - Performance analysis
 
 ### Modified
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/mod.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/backtest/mod.rs`
    - Added `pub mod grid_search;`
    - Added `pub use grid_search::GridSearchOptimizer;`
 

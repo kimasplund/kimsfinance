@@ -64,7 +64,7 @@ nvcc --version  # Should show 12.4
 
 ```bash
 # Navigate to Rust project
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Clean previous builds
 cargo clean

@@ -968,7 +968,9 @@ class TestElderRayGPUCPUParity:
         # NumPy 2.x arrays have .device attribute showing "cpu"
         # CuPy arrays show "<CUDA Device N>"
         assert str(bull_gpu.device) == "cpu", f"Expected CPU device, got {bull_gpu.device}"
-        assert str(bear_gpu.device) == "cpu", f"Expected CPU device, got {bear_gpu.device}"  # Not a cupy array
+        assert (
+            str(bear_gpu.device) == "cpu"
+        ), f"Expected CPU device, got {bear_gpu.device}"  # Not a cupy array
 
     @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
     def test_gpu_handles_nan_inputs(self, sample_prices):
@@ -1127,7 +1129,9 @@ class TestElderRayPerformance:
         elapsed = time.perf_counter() - start
 
         # Should complete quickly (<0.5s for 5 periods on 100 candles, lenient for parallel execution)
-        assert elapsed < 0.5, f"Multiple periods too slow: {elapsed:.3f}s"  # 5x lenient for pytest-xdist
+        assert (
+            elapsed < 0.5
+        ), f"Multiple periods too slow: {elapsed:.3f}s"  # 5x lenient for pytest-xdist
 
         # All results should be valid
         for bull, bear in results:

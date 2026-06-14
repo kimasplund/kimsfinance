@@ -1,6 +1,6 @@
 # Parameter Sweep Batch API
 
-**Status**: Implemented (v0.1.0)
+**Status**: Implemented (v0.2.0)
 **Module**: `kimsfinance_core::gpu::sweep`
 **Feature**: Requires `gpu` feature flag
 
@@ -567,5 +567,5 @@ cargo bench --features gpu --bench parameter_sweep_benchmark
 ---
 
 **Last Updated**: 2025-01-25
-**Version**: 0.1.0
+**Version**: 0.2.0
 **Author**: kimsfinance GPU team

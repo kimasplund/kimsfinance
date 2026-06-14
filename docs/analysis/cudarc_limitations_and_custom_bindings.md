@@ -122,7 +122,7 @@ for _ in 0..1000 {
 - ✅ **Backtesting**: Repeated indicator calculations → **amortized 89% savings**
 - ✅ **Optimization sweeps**: 100+ parameter combinations → **massive savings**
 
-**Current Status**: Placeholder API in `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)  
+**Current Status**: Placeholder API in `/home/kim/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)  
 **Required**: Direct CUDA Driver API FFI (`cudaGraphCreate`, `cudaGraphLaunch`)
 
 #### 2.2.2 Stream-Ordered Memory Allocator (10-20% Allocation Speedup)
@@ -142,7 +142,7 @@ for _ in 0..1000 {
 - Current: GpuMemoryPool allocates **20 buffers** (5 inputs + 15 outputs) at startup → **200-1000μs**
 - With stream-ordered: **100-500μs** (10-20% faster) + better concurrency for multi-stream execution
 
-**Current Status**: Placeholder in `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/device.rs:122-136`  
+**Current Status**: Placeholder in `/home/kim/projects/kimsfinance/rust/src/gpu/device.rs:122-136`  
 **Required**: Direct CUDA Driver API FFI (`cudaMallocAsync`, `cudaFreeAsync`)
 
 #### 2.2.3 Cooperative Groups (5-15% for Grid-Wide Sync)
@@ -792,21 +792,21 @@ impl Drop for CudaGraph {
 ### Appendix C: Code References
 
 **Existing Placeholder APIs** (ready for implementation):
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/cuda_graphs.rs` (lines 1-501)
    - CUDA Graphs architecture documented
    - Break-even calculations implemented
    - API design complete (needs FFI backend)
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/device.rs` (lines 122-136)
+2. `/home/kim/projects/kimsfinance/rust/src/gpu/device.rs` (lines 122-136)
    - `alloc_stream_ordered()` placeholder
    - Performance expectations documented
    - Fallback logic ready
 
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/memory_pool.rs` (lines 1-599)
+3. `/home/kim/projects/kimsfinance/rust/src/gpu/memory_pool.rs` (lines 1-599)
    - Pre-allocated buffer architecture
    - Ready for stream-ordered allocation integration
 
-4. `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs` (lines 1-79)
+4. `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs` (lines 1-79)
    - Benchmark infrastructure ready
    - Traditional approach measured
    - Persistent kernel placeholder (related to CUDA Graphs)

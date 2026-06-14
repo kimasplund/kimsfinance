@@ -44,7 +44,7 @@ cat ~/.kaggle/kaggle.json
 ### Step 3: Run the Import Script
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 source ../.venv/bin/activate
 python scripts/import_kaggle_options.py
 ```

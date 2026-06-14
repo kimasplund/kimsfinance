@@ -568,7 +568,7 @@ This implementation is part of the kimsfinance_core library.
 
 For issues, feature requests, or questions:
 - GitHub Issues: [kimsfinance repository]
-- Documentation: `/home/kim-asplund/projects/kimsfinance/rust/docs/`
+- Documentation: `/home/kim/projects/kimsfinance/rust/docs/`
 
 ---
 

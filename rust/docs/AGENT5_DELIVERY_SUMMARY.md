@@ -39,7 +39,7 @@
 
 **Usage**:
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 ./scripts/generate_cuda_ext_report.sh
 # Results: target/benchmark_reports/<timestamp>/
 ```

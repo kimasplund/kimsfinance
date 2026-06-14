@@ -609,7 +609,7 @@ cargo test --features gpu --release test_statistical_analysis -- --nocapture
 
 ```bash
 # Run full A/B test workflow
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Step 1: Baseline
 export KIMSFINANCE_GPU_ARCH=compute_75

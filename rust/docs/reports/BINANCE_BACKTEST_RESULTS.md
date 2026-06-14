@@ -2,7 +2,7 @@
 
 ## Test Configuration
 
-- **Data Source**: /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip
+- **Data Source**: /home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip
 - **Date**: 2024-05-31 (1 day)
 - **Initial Capital**: $10,000
 - **Trading Fee**: 0.1% (Binance futures taker fee)

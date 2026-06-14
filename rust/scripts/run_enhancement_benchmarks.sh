@@ -3,7 +3,7 @@
 # Enhancement Benchmarks Runner
 #
 # Purpose: Validate all three GPU persistent kernel enhancements
-# Location: /home/kim-asplund/projects/kimsfinance/rust/scripts/run_enhancement_benchmarks.sh
+# Location: /home/kim/projects/kimsfinance/rust/scripts/run_enhancement_benchmarks.sh
 #
 # Enhancements tested:
 #   1. Multi-indicator support (infrastructure)
@@ -21,7 +21,7 @@ BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-PROJECT_ROOT="/home/kim-asplund/projects/kimsfinance/rust"
+PROJECT_ROOT="/home/kim/projects/kimsfinance/rust"
 
 echo -e "${MAGENTA}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${MAGENTA}║     GPU Persistent Kernel Enhancement Benchmark Suite     ║${NC}"

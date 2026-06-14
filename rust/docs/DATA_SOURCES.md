@@ -86,7 +86,7 @@ python scripts/download_options_daily_historical.py
 
 **Cron Setup** (4:15 PM ET, Mon-Fri):
 ```bash
-15 16 * * 1-5 cd /home/kim-asplund/projects/kimsfinance/rust && source ../.venv/bin/activate && python scripts/download_options_daily_historical.py >> logs/options_daily.log 2>&1
+15 16 * * 1-5 cd /home/kim/projects/kimsfinance/rust && source ../.venv/bin/activate && python scripts/download_options_daily_historical.py >> logs/options_daily.log 2>&1
 ```
 
 ## Paid/Limited Data Sources

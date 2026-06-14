@@ -17,7 +17,7 @@ Currently, the repository contains TWO separate implementations:
   - Python-based technical indicators
   - High-level plotting API
 - **Import**: `import kimsfinance as mfp`
-- **Status**: Feature-complete, 329+ tests, 77% coverage
+- **Status**: Feature-complete, 1,500+ tests (suite grew ~5x since original report)
 
 ### 2. **Rust Package** (`/rust/`)
 - **Purpose**: GPU-accelerated Rust indicators with Python bindings
@@ -122,7 +122,7 @@ These are **NOT** the same project:
 ### 1. Clean Up Virtual Environments
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Remove duplicate Python 3.14 venvs (keep rust/.venv314t)
 rm -rf .venv-freethreaded
@@ -158,7 +158,7 @@ __pycache__/
 ### 3. Verify Python Package Still Works
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Activate Python venv
 source .venv/bin/activate
@@ -171,7 +171,7 @@ pytest tests/ -v
 ### 4. Verify Rust Package Still Works
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Test Rust package
 cargo test --features gpu

@@ -287,8 +287,8 @@ mod tests {
                 option_type: OptionType::Call,
                 spot_price: 50000.0,
                 risk_free_rate: 0.05,
-                bid: Some(1900.0),
-                ask: Some(2100.0),
+                bid: Some(1950.0),
+                ask: Some(2050.0),
                 last: None,
                 implied_vol: Some(0.75),
                 volume: 200.0,
@@ -302,7 +302,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_valid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -319,7 +319,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_invalid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -335,7 +335,7 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_gradient_computation() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_vec_to_params() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
         let options = create_test_options();
         let objective = HestonObjective::new(pricer, options);
 

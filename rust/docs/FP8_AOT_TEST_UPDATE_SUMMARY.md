@@ -6,7 +6,7 @@ Updated FP8 WMMA test suite (`tests/fp8_wmma_tests.rs`) to support AOT-compiled 
 
 **Date**: 2025-11-01
 **Status**: Complete
-**Test File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
+**Test File**: `/home/kim/projects/kimsfinance/rust/tests/fp8_wmma_tests.rs`
 **Lines**: 599 (comprehensive test suite)
 
 ---

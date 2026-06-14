@@ -163,7 +163,7 @@ breakdown.print_report("ATR");
 ### Run Benchmark
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Build release version
 cargo build --release --features gpu --example benchmark_gpu_kernel_timing

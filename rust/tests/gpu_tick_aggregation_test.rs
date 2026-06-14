@@ -118,56 +118,26 @@ mod gpu_tick_aggregation_tests {
             );
 
             // OHLC prices
-            assert_abs_diff_eq!(
-                g.open,
-                c.open,
-                epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Open mismatch",
-                name,
-                i
-            );
-            assert_abs_diff_eq!(
-                g.high,
-                c.high,
-                epsilon = PRICE_TOLERANCE,
-                "{} candle {}: High mismatch",
-                name,
-                i
-            );
-            assert_abs_diff_eq!(
-                g.low,
-                c.low,
-                epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Low mismatch",
-                name,
-                i
-            );
-            assert_abs_diff_eq!(
-                g.close,
-                c.close,
-                epsilon = PRICE_TOLERANCE,
-                "{} candle {}: Close mismatch",
-                name,
-                i
-            );
+            if (g.open - c.open).abs() > PRICE_TOLERANCE {
+                panic!("{} candle {}: Open mismatch: gpu={}, cpu={}", name, i, g.open, c.open);
+            }
+            if (g.high - c.high).abs() > PRICE_TOLERANCE {
+                panic!("{} candle {}: High mismatch: gpu={}, cpu={}", name, i, g.high, c.high);
+            }
+            if (g.low - c.low).abs() > PRICE_TOLERANCE {
+                panic!("{} candle {}: Low mismatch: gpu={}, cpu={}", name, i, g.low, c.low);
+            }
+            if (g.close - c.close).abs() > PRICE_TOLERANCE {
+                panic!("{} candle {}: Close mismatch: gpu={}, cpu={}", name, i, g.close, c.close);
+            }
 
             // Volume
-            assert_abs_diff_eq!(
-                g.volume,
-                c.volume,
-                epsilon = VOLUME_TOLERANCE,
-                "{} candle {}: Volume mismatch",
-                name,
-                i
-            );
-            assert_abs_diff_eq!(
-                g.quote_volume,
-                c.quote_volume,
-                epsilon = VOLUME_TOLERANCE,
-                "{} candle {}: Quote volume mismatch",
-                name,
-                i
-            );
+            if (g.volume - c.volume).abs() > VOLUME_TOLERANCE {
+                panic!("{} candle {}: Volume mismatch: gpu={}, cpu={}", name, i, g.volume, c.volume);
+            }
+            if (g.quote_volume - c.quote_volume).abs() > VOLUME_TOLERANCE {
+                panic!("{} candle {}: Quote volume mismatch: gpu={}, cpu={}", name, i, g.quote_volume, c.quote_volume);
+            }
 
             // Trade count must match exactly
             assert_eq!(
