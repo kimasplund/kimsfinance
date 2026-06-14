@@ -905,4 +905,73 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    #[ignore] // Requires GPU; quantifies the device-residency lever (profiling §10)
+    fn bench_sma_device_resident_vs_reupload() {
+        // Simulates a parameter sweep over the SAME close[]: the current path
+        // re-uploads close per evaluation (H2D+kernel+D2H each time); the
+        // device-resident path uploads once and reuses the on-device buffer.
+        use std::time::Instant;
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let n = 1_000_000usize;
+        let period = 20usize;
+        let m = 50usize; // 50-parameter sweep
+        let close: Array1<f64> =
+            Array1::from_iter((0..n).map(|i| 30_000.0 + ((i as f64) * 0.001).sin()));
+
+        // Path A: re-upload per evaluation (current sweep behavior).
+        let _ = sma_gpu(&device, &close, period, None).unwrap(); // warmup
+        let ta = Instant::now();
+        for _ in 0..m {
+            let _ = sma_gpu(&device, &close, period, None).unwrap();
+        }
+        let reupload_ms = ta.elapsed().as_secs_f64() * 1000.0;
+
+        // Path B: upload once, run M kernels on the resident buffer.
+        let ptx = Arc::unwrap_or_clone(compile_ptx_optimized_cached(SMA_KERNEL_F32).unwrap());
+        let module = device.context().load_module(ptx).unwrap();
+        let kernel = module.load_function("sma_kernel_f32").unwrap();
+        let stream = &device.stream;
+        let close_f32: Vec<f32> = close.iter().map(|&x| x as f32).collect();
+        let mut d_close = device.alloc_uninit::<f32>(n).unwrap();
+        stream.memcpy_htod(&close_f32[..n], &mut d_close).unwrap();
+        let mut d_out = device.alloc_uninit::<f32>(n).unwrap();
+        let n_i32 = n as i32;
+        let period_i32 = period as i32;
+        let config = LaunchConfig::for_num_elems(n as u32);
+        {
+            let mut b = stream.launch_builder(&kernel);
+            b.arg(&d_close);
+            b.arg(&mut d_out);
+            b.arg(&n_i32);
+            b.arg(&period_i32);
+            unsafe {
+                b.launch(config).unwrap();
+            }
+        }
+        stream.synchronize().unwrap();
+        let tb = Instant::now();
+        for _ in 0..m {
+            let mut b = stream.launch_builder(&kernel);
+            b.arg(&d_close);
+            b.arg(&mut d_out);
+            b.arg(&n_i32);
+            b.arg(&period_i32);
+            unsafe {
+                b.launch(config).unwrap();
+            }
+        }
+        stream.synchronize().unwrap();
+        let resident_ms = tb.elapsed().as_secs_f64() * 1000.0;
+
+        println!(
+            "SMA sweep m={} n={}: re-upload {:.2} ms | device-resident {:.2} ms | {:.1}x",
+            m,
+            n,
+            reupload_ms,
+            resident_ms,
+            reupload_ms / resident_ms
+        );
+    }
 }
