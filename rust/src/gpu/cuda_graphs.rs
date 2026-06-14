@@ -228,13 +228,19 @@ impl IndicatorGraphBuilder {
             )));
         }
 
-        // Begin capture on the appropriate stream
+        // Begin capture on the appropriate stream.
         let stream = self.stream_mgr.get_stream(speed);
 
-        // Use CUstreamCaptureMode::Global for maximum flexibility
-        // This allows kernels launched on other streams to be automatically included
+        // THREAD_LOCAL, not GLOBAL: this builder records launches issued on its
+        // own stream/thread, so the capture's safety checks should apply only to
+        // this thread. GLOBAL mode makes the whole process unsafe for the
+        // capture's duration -- any OTHER thread doing a synchronous op (e.g. a
+        // plain cuMemAlloc in a concurrent indicator/batch call) fails with
+        // CUDA_ERROR_STREAM_CAPTURE_UNSUPPORTED. Since all GpuDevices share the
+        // CUDA primary context, GLOBAL capture in one thread would break GPU work
+        // everywhere. THREAD_LOCAL confines the restriction to the capturing thread.
         stream
-            .begin_capture(sys::CUstreamCaptureMode::CU_STREAM_CAPTURE_MODE_GLOBAL)
+            .begin_capture(sys::CUstreamCaptureMode::CU_STREAM_CAPTURE_MODE_THREAD_LOCAL)
             .map_err(|e| {
                 GpuError::ExecutionError(format!("Failed to begin graph capture: {:?}", e))
             })?;

@@ -231,10 +231,11 @@ mod tests {
             wma[2]
         );
 
-        // wma[3] = (102*1 + 104*2 + 106*3) / 6 = 630 / 6 = 105.0
+        // wma[3] = (102*1 + 104*2 + 106*3) / 6 = (102 + 208 + 318) / 6 = 628 / 6 = 104.6667
+        // (the previous expected value of 105.0 was an arithmetic slip: 102+208+318 is 628, not 630)
         assert!(
-            (wma[3] - 105.0).abs() < 0.01,
-            "wma[3] = {}, expected 105.0",
+            (wma[3] - 104.6667).abs() < 0.01,
+            "wma[3] = {}, expected 104.6667",
             wma[3]
         );
 
