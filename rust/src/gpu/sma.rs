@@ -14,6 +14,7 @@
 //! is needed.
 
 use super::device::{GpuDevice, GpuError};
+use super::precision::{NumericalClass, Precision};
 use crate::gpu::compile::compile_ptx_optimized_cached;
 use cudarc::driver::{CudaSlice, CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
@@ -268,6 +269,22 @@ pub fn sma_gpu(
     stream: Option<&Arc<CudaStream>>,
 ) -> Result<Array1<f64>, GpuError> {
     sma_gpu_f32(device, close, period, stream)
+}
+
+/// SMA with an explicit [`Precision`] policy. SMA is a bounded-window indicator,
+/// so `Precision::Auto` resolves to FP32 (the default [`sma_gpu`] path); pass
+/// `Precision::F64` to force the exact FP64 reference.
+pub fn sma_gpu_prec(
+    device: &GpuDevice,
+    close: &Array1<f64>,
+    period: usize,
+    precision: Precision,
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<Array1<f64>, GpuError> {
+    match precision.resolve(NumericalClass::BoundedWindow) {
+        Precision::F64 => sma_gpu_f64(device, close, period, stream),
+        _ => sma_gpu_f32(device, close, period, stream),
+    }
 }
 
 // ============================================================================
@@ -1127,5 +1144,37 @@ mod tests {
             resident_ms,
             naive_ms / resident_ms
         );
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_sma_gpu_prec() {
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let n = 10_000usize;
+        let close: Array1<f64> =
+            Array1::from_iter((0..n).map(|i| 30_000.0 + ((i as f64) * 0.01).sin()));
+        let period = 20usize;
+
+        // F64 -> exact reference path.
+        let f64v = sma_gpu_prec(&device, &close, period, Precision::F64, None).unwrap();
+        let f64ref = sma_gpu_f64(&device, &close, period, None).unwrap();
+        for i in 0..n {
+            if f64ref[i].is_nan() {
+                assert!(f64v[i].is_nan());
+            } else {
+                assert!((f64v[i] - f64ref[i]).abs() < 1e-12);
+            }
+        }
+
+        // Auto (and F32) -> the f32 path, identical to the default sma_gpu.
+        let autov = sma_gpu_prec(&device, &close, period, Precision::Auto, None).unwrap();
+        let defaultv = sma_gpu(&device, &close, period, None).unwrap();
+        for i in 0..n {
+            if defaultv[i].is_nan() {
+                assert!(autov[i].is_nan());
+            } else {
+                assert!((autov[i] - defaultv[i]).abs() < 1e-6);
+            }
+        }
     }
 }
