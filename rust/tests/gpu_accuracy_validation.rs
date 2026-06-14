@@ -197,9 +197,13 @@ mod gpu_accuracy_tests {
             let close = generate_realistic_prices(size, 123);
             let close_array = Array1::from_vec(close.clone());
 
-            // GPU version
-            let gpu_result = kimsfinance_core::gpu::sma::sma_gpu(&device, &close_array, 14, None)
-                .expect("GPU SMA failed");
+            // Strict algorithm-correctness check uses the FP64 reference path.
+            // The production sma_gpu now computes in FP32 for speed; its accuracy
+            // is validated against FP64 within 1e-4 relative tolerance in
+            // gpu::sma::tests::test_sma_f32_matches_f64.
+            let gpu_result =
+                kimsfinance_core::gpu::sma::sma_gpu_f64(&device, &close_array, 14, None)
+                    .expect("GPU SMA failed");
 
             // CPU reference
             let cpu_result = cpu::sma_cpu(&close_array, 14).expect("CPU SMA failed");

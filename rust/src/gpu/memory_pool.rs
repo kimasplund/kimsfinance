@@ -339,11 +339,19 @@ impl GpuMemoryPool {
         for indicator in indicators {
             let buffer = self.get_output_buffer(*indicator)?;
 
-            // Copy only actual_candles elements
+            // Copy only actual_candles elements.
+            //
+            // The output buffer is allocated for `max_candles`, but only the
+            // first `actual_candles` elements are valid. cudarc's `memcpy_dtoh`
+            // asserts `dst.len() >= src.len()`, so we must slice the device
+            // buffer down to `actual_candles` before the copy; passing the full
+            // `max_candles` buffer against an `actual_candles`-sized host slice
+            // would otherwise trip that assertion (panic).
             let mut host_data = vec![0.0; self.actual_candles];
+            let src = buffer.slice(0..self.actual_candles);
             self.device
                 .stream
-                .memcpy_dtoh(buffer, &mut host_data)
+                .memcpy_dtoh(&src, &mut host_data)
                 .map_err(|e| {
                     GpuError::MemoryCopyError(format!(
                         "Failed to copy {:?} from device: {:?}",

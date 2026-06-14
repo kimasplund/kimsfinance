@@ -723,18 +723,21 @@ mod tests {
     fn test_ema_gpu_smoothness() {
         let device = GpuDevice::new().expect("Failed to initialize GPU");
 
-        // Create volatile data with sudden spikes
+        // Create volatile data with a sudden spike. The spike sits at index 5
+        // (>= period-1 = 4) so a *valid* EMA exists at spike_idx - 1; the
+        // original spike at index 3 made `ema[spike_idx - 1]` fall inside the
+        // NaN warmup region, so the "influenced by spike" comparison below was
+        // always against NaN (a guaranteed-false assertion).
         let close = arr1(&[
-            100.0, 100.5, 101.0, 150.0, // spike
-            101.5, 102.0, 102.5, 103.0, 103.5, 104.0,
+            100.0, 100.5, 101.0, 101.5, 102.0, 150.0, // spike at index 5
+            102.5, 103.0, 103.5, 104.0,
         ]);
 
         let period = 5;
         let ema = ema_gpu(&device, &close, period, None).expect("EMA GPU calculation failed");
 
         // Verify EMA is smoother than raw prices (dampens the spike)
-        // The spike at index 3 (150.0) should be smoothed
-        let spike_idx = 3;
+        let spike_idx = 5;
         let ema_after_spike = ema[spike_idx + 1];
 
         // EMA should be less than the spike value due to smoothing
@@ -743,7 +746,12 @@ mod tests {
             "EMA should smooth out spikes"
         );
 
-        // EMA should still be influenced by spike (higher than previous)
+        // EMA should still be influenced by spike (higher than the valid
+        // pre-spike EMA)
+        assert!(
+            !ema[spike_idx - 1].is_nan(),
+            "pre-spike EMA must be valid for a meaningful comparison"
+        );
         assert!(
             ema_after_spike > ema[spike_idx - 1],
             "EMA should be influenced by spike"

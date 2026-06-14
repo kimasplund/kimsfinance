@@ -528,17 +528,27 @@ mod tests {
 
         assert_eq!(vwap.len(), n);
 
-        // Verify all values are valid and within price range
+        // Session VWAP is a cumulative volume-weighted average of typical prices
+        // from index 0, so in a trending series it legitimately sits just below
+        // the current bar's low (the early, lower prices drag the average down).
+        // The correct invariant is that it stays within the price range seen so
+        // far, [min low, max high] over [0..=i]. (The old per-bar [low, high*1.01]
+        // check failed at i=102: VWAP=100.017 vs low=100.02 -- correct, but below
+        // the instantaneous low by 0.003.)
+        let mut min_low = f64::INFINITY;
+        let mut max_high = f64::NEG_INFINITY;
         for i in 0..n {
+            min_low = min_low.min(low[i]);
+            max_high = max_high.max(high[i]);
             assert!(!vwap[i].is_nan(), "VWAP[{}] should not be NaN", i);
             assert!(vwap[i] > 0.0, "VWAP[{}] should be positive", i);
             assert!(
-                vwap[i] >= low[i] && vwap[i] <= high[i] * 1.01, // small tolerance for cumulative
-                "VWAP[{}] = {} should be near price range [{}, {}]",
+                vwap[i] >= min_low - 1e-6 && vwap[i] <= max_high + 1e-6,
+                "VWAP[{}] = {} should be within cumulative price range [{}, {}]",
                 i,
                 vwap[i],
-                low[i],
-                high[i]
+                min_low,
+                max_high
             );
         }
     }

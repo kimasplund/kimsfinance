@@ -143,7 +143,9 @@ Thumbs.db
 
 # Archives and dev artifacts (from cleanup)
 archive/
-research/
+research/*
+# Keep curated, version-controlled research (scratch elsewhere in research/ stays ignored)
+!research/gpu-cuda-cores/
 
 # Temporary files
 *.backup

@@ -922,9 +922,21 @@ mod tests {
 
     // ==================== GPU tests (require device) ====================
 
+    /// Bind a CUDA primary context to THIS test thread and keep it retained for
+    /// the test's duration. `PinnedBuffer`/`PinnedBufferPool` allocate via
+    /// `cuMemHostAlloc`, which requires a current context, and cudarc binds
+    /// contexts thread-locally -- so every pinned GPU test (cargo runs each on
+    /// its own thread) must hold a live device or `cuMemHostAlloc` returns
+    /// CUDA_ERROR_INVALID_CONTEXT. In production this is guaranteed because
+    /// pinned buffers are only allocated via a live `GpuDevice`.
+    fn pinned_ctx() -> GpuDevice {
+        GpuDevice::new().expect("GPU required for pinned-memory test")
+    }
+
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_allocation() {
+        let _ctx = pinned_ctx();
         let buffer = PinnedBuffer::<f64>::new(1000).expect("Pinned allocation failed");
         assert_eq!(buffer.len(), 1000);
         assert!(!buffer.is_empty());
@@ -933,6 +945,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_copy() {
+        let _ctx = pinned_ctx();
         let mut buffer = PinnedBuffer::<f64>::new(5).expect("Pinned allocation failed");
 
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
@@ -947,6 +960,7 @@ mod tests {
     #[ignore] // Requires GPU
     #[should_panic(expected = "does not match")]
     fn test_pinned_buffer_copy_size_mismatch() {
+        let _ctx = pinned_ctx();
         let mut buffer = PinnedBuffer::<f64>::new(5).expect("Pinned allocation failed");
         let data = vec![1.0, 2.0, 3.0]; // Wrong size
         buffer.copy_from_slice(&data); // Should panic
@@ -955,6 +969,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_mutability() {
+        let _ctx = pinned_ctx();
         let mut buffer = PinnedBuffer::<f64>::new(3).expect("Pinned allocation failed");
 
         // Modify via mutable slice
@@ -975,6 +990,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_pool_creation() {
+        let _ctx = pinned_ctx();
         let pool = PinnedBufferPool::<f64>::new(5, 1000).expect("Pool creation failed");
         assert_eq!(pool.available_count(), 5);
         assert_eq!(pool.pending_count(), 0);
@@ -984,6 +1000,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_pool_tiers() {
+        let _ctx = pinned_ctx();
         let mut pool =
             PinnedBufferPool::<f64>::with_tiers(&[(2, 1_000), (1, 8_000)]).expect("Pool creation");
         assert_eq!(pool.available_count(), 3);
@@ -1004,6 +1021,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_pool_acquire_release() {
+        let _ctx = pinned_ctx();
         let mut pool = PinnedBufferPool::<f64>::new(3, 1000).expect("Pool creation failed");
 
         // Acquire buffer
@@ -1018,6 +1036,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_pool_exhaust() {
+        let _ctx = pinned_ctx();
         let mut pool = PinnedBufferPool::<f64>::new(2, 1000).expect("Pool creation failed");
 
         // Acquire all buffers
@@ -1042,6 +1061,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_buffer_pool_oversize_fallback() {
+        let _ctx = pinned_ctx();
         let mut pool = PinnedBufferPool::<f64>::new(2, 1000).expect("Pool creation failed");
 
         // Request smaller size (pooled path)
@@ -1068,6 +1088,7 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_pinned_guard_drop_returns_buffer() {
+        let _ctx = pinned_ctx();
         let pool = Arc::new(Mutex::new(
             PinnedBufferPool::<f64>::new(2, 1000).expect("Pool creation failed"),
         ));

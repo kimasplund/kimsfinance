@@ -236,7 +236,14 @@ extern "C" __global__ void persistent_time_bars_kernel(
                 if (bucket > max_bucket) max_bucket = bucket;
             }
 
-            int num_buckets = (int)(max_bucket - min_bucket + 1);
+            // Guard the empty-input case: with n == 0 the min/max loop above
+            // never runs, leaving min_bucket = LONG_MAX and max_bucket = LONG_MIN.
+            // (max_bucket - min_bucket + 1) then signed-overflows to a small
+            // positive int, so a naive `num_buckets > 0` check would pass and the
+            // init loop would write into a zero-length output buffer -> illegal
+            // memory access (which poisons the sticky CUDA context for the whole
+            // process). Force 0 buckets when there are no trades.
+            int num_buckets = (n > 0) ? (int)(max_bucket - min_bucket + 1) : 0;
 
             // Only process if we have valid buckets
             if (num_buckets > 0) {

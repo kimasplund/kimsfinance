@@ -328,36 +328,40 @@ where
             )));
         }
 
-        // Rotate buffers: 0→1, 1→2, 2→0
+        // Buffer rotation. Each cycle one buffer enters H2D, the buffer that did
+        // H2D last cycle runs its kernel, and the buffer that ran its kernel last
+        // cycle starts its D2H. The buffer being reused for H2D (h2d_idx) is the
+        // oldest one -- it holds a completed D2H result from three cycles ago that
+        // MUST be read before start_h2d clobbers it.
         let h2d_idx = self.current_idx;
-        let kernel_idx = (self.current_idx + 2) % 3; // Previous H2D
-        let d2h_idx = (self.current_idx + 1) % 3; // Previous kernel
+        let kernel_idx = (self.current_idx + 2) % 3; // ran H2D last cycle
+        let d2h_idx = (self.current_idx + 1) % 3; // ran kernel last cycle
+        let complete_idx = self.current_idx; // == h2d_idx: read before reuse
 
-        // Step 1: Start H2D transfer for new batch (stream 0)
+        // Step 0: Drain the buffer we are about to overwrite. (Previously this
+        // read (current+2)%3 == kernel_idx AFTER start_h2d, which is the buffer
+        // whose kernel was just launched -- never in D2H -- so process_batch never
+        // returned a result and the oldest result was clobbered unread.)
+        let mut result = None;
+        if self.stages[complete_idx] == PipelineStage::D2H {
+            if let Some(ref event) = self.events[complete_idx].d2h_complete {
+                event.synchronize()?;
+            }
+            result = Some(self.read_results(complete_idx)?);
+            self.stages[complete_idx] = PipelineStage::Idle;
+        }
+
+        // Step 1: Start H2D transfer for the new batch (stream 0)
         self.start_h2d_transfer(h2d_idx, batch_data)?;
 
-        // Step 2: Launch kernel on previous H2D (stream 1)
+        // Step 2: Launch kernel on last cycle's H2D buffer (stream 1)
         if self.stages[kernel_idx] == PipelineStage::H2D {
             self.start_kernel_execution(kernel_idx)?;
         }
 
-        // Step 3: Start D2H transfer for completed kernel (stream 2)
+        // Step 3: Start D2H transfer for last cycle's kernel buffer (stream 2)
         if self.stages[d2h_idx] == PipelineStage::Kernel {
             self.start_d2h_transfer(d2h_idx)?;
-        }
-
-        // Step 4: Check if oldest batch completed D2H
-        let mut result = None;
-        let complete_idx = (self.current_idx + 2) % 3;
-        if self.stages[complete_idx] == PipelineStage::D2H {
-            // Wait for D2H to complete
-            if let Some(ref event) = self.events[complete_idx].d2h_complete {
-                event.synchronize()?;
-            }
-
-            // Read results
-            result = Some(self.read_results(complete_idx)?);
-            self.stages[complete_idx] = PipelineStage::Idle;
         }
 
         // Advance current index
@@ -389,21 +393,37 @@ where
     /// results.extend(executor.finish()?);
     /// ```
     pub fn finish(&mut self) -> Result<Vec<Vec<T>>, GpuError> {
-        let mut results = Vec::with_capacity(2);
+        let mut results = Vec::with_capacity(3);
 
-        // Synchronize all streams
+        // Drain every in-flight batch through its REMAINING pipeline stages.
+        // process_batch advances each batch only one stage per call, so when the
+        // input ends, batches are stranded at H2D and/or Kernel (the single-batch
+        // case leaves exactly one buffer at H2D with its kernel never launched).
+        // Carry each to completion in pipeline order, THEN read -- a buffer still
+        // at H2D would otherwise be silently dropped and its kernel never run.
+
+        // Stage 1: launch the kernel for any buffer still at H2D.
+        for i in 0..3 {
+            if self.stages[i] == PipelineStage::H2D {
+                self.start_kernel_execution(i)?;
+            }
+        }
+        // Stage 2: start the D2H transfer for any buffer now at Kernel.
+        for i in 0..3 {
+            if self.stages[i] == PipelineStage::Kernel {
+                self.start_d2h_transfer(i)?;
+            }
+        }
+        // Synchronize all streams so every D2H has landed before the host reads
+        // the (pinned) output buffers.
         for stream in &self.streams {
             stream.synchronize().map_err(|e| {
                 GpuError::SynchronizationError(format!("Stream sync failed: {:?}", e))
             })?;
         }
-
-        // Collect all completed buffers
+        // Read every buffer that now holds a completed D2H result.
         for i in 0..3 {
-            if self.stages[i] == PipelineStage::D2H
-                || self.stages[i] == PipelineStage::Kernel
-                || self.stages[i] == PipelineStage::Complete
-            {
+            if self.stages[i] == PipelineStage::D2H {
                 results.push(self.read_results(i)?);
                 self.stages[i] = PipelineStage::Idle;
             }

@@ -850,7 +850,9 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_sma_batch_2d_correctness() {
-        use super::super::sma::sma_gpu;
+        // The 2D batch kernel is FP64; compare against the FP64 SMA reference
+        // (sma_gpu now computes in FP32 by default).
+        use super::super::sma::sma_gpu_f64;
 
         let device = GpuDevice::new().expect("Failed to initialize GPU");
         let n_assets = 3;
@@ -866,7 +868,7 @@ mod tests {
             .iter()
             .map(|asset_data| {
                 let close = Array1::from_vec(asset_data.clone());
-                sma_gpu(&device, &close, period, None).unwrap()
+                sma_gpu_f64(&device, &close, period, None).unwrap()
             })
             .collect();
 
@@ -915,21 +917,46 @@ mod tests {
         let (rsi_fused, stoch_fused, williams_fused) =
             momentum_fusion_2d_gpu(&device, &high_arr, &low_arr, &close_arr, period).unwrap();
 
-        // Compare RSI
+        // RSI: both paths run the identical f64 hybrid (CPU Wilder smoothing
+        // feeding an f64 kernel), so they must agree to f64 round-off.
         for i in 0..n {
             if rsi_ind[i].is_nan() {
                 assert!(rsi_fused[i].is_nan());
             } else {
-                assert!((rsi_ind[i] - rsi_fused[i]).abs() < 1e-9);
+                assert!(
+                    (rsi_ind[i] - rsi_fused[i]).abs() < 1e-9,
+                    "RSI[{}]: ind {} vs fused {}",
+                    i,
+                    rsi_ind[i],
+                    rsi_fused[i]
+                );
             }
         }
+
+        // Stochastic %K / Williams %R: the standalone stochastic_gpu and
+        // williams_r_gpu run their rolling extrema in f32 on Ada (FP64 is 1/64
+        // throughput there), while momentum_fusion_2d_kernel runs in f64. The
+        // f32 path's documented error is "well under 0.01" on the bounded
+        // [0,100] / [-100,0] scale, so the fused (f64) result legitimately
+        // diverges from the f32 reference by up to ~1e-2. A 1e-9 tolerance was
+        // comparing across an f32/f64 boundary and could never pass. Use 0.01,
+        // which still catches any real algorithmic divergence between the two
+        // window-extrema implementations. (The fused path is the more precise
+        // of the two.)
+        const F32_TOL: f64 = 1e-2;
 
         // Compare Stochastic
         for i in 0..n {
             if stoch_ind[i].is_nan() {
                 assert!(stoch_fused[i].is_nan());
             } else {
-                assert!((stoch_ind[i] - stoch_fused[i]).abs() < 1e-9);
+                assert!(
+                    (stoch_ind[i] - stoch_fused[i]).abs() < F32_TOL,
+                    "Stochastic[{}]: f32 ind {} vs f64 fused {}",
+                    i,
+                    stoch_ind[i],
+                    stoch_fused[i]
+                );
             }
         }
 
@@ -938,7 +965,13 @@ mod tests {
             if williams_ind[i].is_nan() {
                 assert!(williams_fused[i].is_nan());
             } else {
-                assert!((williams_ind[i] - williams_fused[i]).abs() < 1e-9);
+                assert!(
+                    (williams_ind[i] - williams_fused[i]).abs() < F32_TOL,
+                    "Williams[{}]: f32 ind {} vs f64 fused {}",
+                    i,
+                    williams_ind[i],
+                    williams_fused[i]
+                );
             }
         }
     }

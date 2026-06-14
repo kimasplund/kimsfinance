@@ -761,9 +761,19 @@ impl GpuDevice {
         src: &CudaSlice<T>,
         pinned: &mut crate::gpu::persistent::PinnedBuffer<T>,
     ) -> Result<(), GpuError> {
+        // `memcpy_dtoh` into pinned host memory is an ASYNC DMA on the stream.
+        // Callers read the pinned buffer immediately after this returns, and
+        // host reads are NOT ordered against the async copy, so we MUST sync
+        // before returning or the host can observe stale (zero) bytes before the
+        // DMA lands. This is a release-only data race -- debug builds masked it
+        // via incidental readbacks, and it produced all-zero downloads (the
+        // "dtoh_pinned download bug" worked around in heston_pricing.rs).
+        // Note: `htod_pinned` (upload) needs no such sync because the consuming
+        // kernel is stream-ordered after the copy; only D2H-then-host-read does.
         self.stream
             .memcpy_dtoh(src, pinned.as_mut_slice())
-            .map_err(Into::into)
+            .map_err(GpuError::from)?;
+        self.synchronize()
     }
 
     /// Synchronize device (wait for all kernels to complete)

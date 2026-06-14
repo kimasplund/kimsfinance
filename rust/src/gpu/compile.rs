@@ -31,6 +31,7 @@ use cudarc::nvrtc::{CompileOptions, Ptx, compile_ptx_with_opts};
 use dashmap::DashMap;
 use sha2::{Digest, Sha256};
 use std::env;
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock, OnceLock};
 
@@ -134,23 +135,28 @@ pub fn get_compile_options() -> &'static CompileOptions {
         // Log compilation target (visible during GPU initialization)
         eprintln!("🎯 CUDA compilation target: {}", arch);
 
+        // Reproducibility: the `strict-fp` feature switches to IEEE-754-compliant
+        // compilation (no fast-math, no denormal flush, 0.5-ULP div/sqrt) so
+        // signal/backtest kernels are bit-reproducible run-to-run; the default
+        // keeps the fast path for throughput. (A per-kernel split -- deterministic
+        // signal kernels alongside fast throughput kernels -- is a future step.)
+        let fast = !cfg!(feature = "strict-fp");
+
         CompileOptions {
             // Target Ada Lovelace architecture (compute capability 8.9)
             // This enables 128 FP32 ops/cycle per SM (2x vs Ampere's 64)
             arch: Some(Box::leak(arch.into_boxed_str())),
 
-            // Enable fast math for maximum throughput
-            // Safe for financial indicators (no precision loss at typical scales)
-            use_fast_math: Some(true),
+            // Fast math for maximum throughput (disabled under `strict-fp`).
+            use_fast_math: Some(fast),
 
-            // Flush denormals to zero (faster, no impact on financial data)
-            // Denormals only occur below 2.2e-308, never in price/volume data
-            ftz: Some(true),
+            // Flush denormals to zero (disabled under `strict-fp`).
+            // Denormals only occur below 2.2e-308, never in price/volume data.
+            ftz: Some(fast),
 
-            // Prioritize speed over strict IEEE-754 compliance
-            // sqrt/div precision: 1 ULP vs 0.5 ULP (negligible for financial data)
-            prec_sqrt: Some(false),
-            prec_div: Some(false),
+            // 1-ULP fast div/sqrt by default; strict 0.5-ULP IEEE under `strict-fp`.
+            prec_sqrt: Some(!fast),
+            prec_div: Some(!fast),
 
             // Fused multiply-add is automatically enabled by use_fast_math
             // Set to None to avoid duplicate option error
@@ -170,6 +176,117 @@ pub fn get_compile_options() -> &'static CompileOptions {
             name: None,
         }
     })
+}
+
+/// CUDA include paths for kernels that pull in system headers (cooperative groups).
+///
+/// Most kernels in this crate are self-contained and compile against NVRTC's
+/// built-ins with **no** include path (see `get_compile_options`, where
+/// `include_paths` is deliberately empty — adding system paths globally makes
+/// NVRTC's built-in declarations collide with the toolkit headers and breaks
+/// the self-contained kernels). The persistent/candle kernels are the exception:
+/// they `#include <cooperative_groups.h>`, which transitively needs the libcu++
+/// `<cuda/std/...>` headers. Those two paths are returned here and applied
+/// **only** by `compile_ptx_coopgroups_cached`.
+///
+/// Detection order mirrors `build.rs`: `CUDA_HOME`, then versioned
+/// `/usr/local/cuda-13.*`, then the `/usr/local/cuda` symlink. For each root we
+/// add `<root>/include` (for `cooperative_groups.h`) and `<root>/include/cccl`
+/// (CUDA 13.x relocated libcu++/CCCL under `include/cccl/`), but only the
+/// directories that actually exist, so a missing toolkit degrades to an empty
+/// list rather than feeding NVRTC bogus paths.
+fn cuda_coopgroups_include_paths() -> &'static Vec<String> {
+    static INCLUDE_PATHS: OnceLock<Vec<String>> = OnceLock::new();
+    INCLUDE_PATHS.get_or_init(|| {
+        let mut roots: Vec<String> = Vec::new();
+        if let Ok(home) = env::var("CUDA_HOME") {
+            roots.push(home);
+        }
+        roots.push("/usr/local/cuda-13.1".to_string());
+        roots.push("/usr/local/cuda-13.0".to_string());
+        roots.push("/usr/local/cuda".to_string());
+
+        let mut paths: Vec<String> = Vec::new();
+        for root in roots {
+            let include = format!("{}/include", root);
+            let cccl = format!("{}/include/cccl", root);
+            // Require cooperative_groups.h to exist before trusting this root,
+            // so we don't add stale paths from a half-installed toolkit.
+            if Path::new(&format!("{}/cooperative_groups.h", include)).exists() {
+                if !paths.contains(&include) {
+                    paths.push(include);
+                }
+                if Path::new(&cccl).exists() && !paths.contains(&cccl) {
+                    paths.push(cccl);
+                }
+                // First good root wins; multiple roots would only add duplicate
+                // headers and risk version skew.
+                break;
+            }
+        }
+
+        if paths.is_empty() {
+            eprintln!(
+                "⚠️  Could not locate CUDA include dir for cooperative-groups kernels; \
+                 set CUDA_HOME. Persistent/candle kernels will fail to compile."
+            );
+        } else {
+            eprintln!("🧩 cooperative-groups include paths: {:?}", paths);
+        }
+        paths
+    })
+}
+
+/// Compilation options for cooperative-groups kernels: the Ada-optimized base
+/// options plus the CUDA system include paths from `cuda_coopgroups_include_paths`.
+fn coopgroups_compile_options() -> CompileOptions {
+    let mut opts = get_compile_options().clone();
+    opts.include_paths = cuda_coopgroups_include_paths().clone();
+    opts
+}
+
+/// True when an NVRTC error is the "missing system header" failure that the
+/// cooperative-groups include paths fix (as opposed to a genuine syntax error).
+///
+/// Used by the persistent/candle compile path to decide whether a no-include
+/// compile failure is worth retrying with include paths. Matching on the NVRTC
+/// log text keeps the retry surgical: real compile errors are NOT retried.
+pub fn is_missing_header_error(err: &cudarc::nvrtc::CompileError) -> bool {
+    let msg = format!("{:?}", err);
+    msg.contains("could not open source file") || msg.contains("cannot open source file")
+}
+
+/// Compile a CUDA kernel that needs system headers (cooperative groups / libcu++),
+/// with caching. Identical to `compile_ptx_optimized_cached` except the NVRTC
+/// invocation carries the CUDA include paths (`cuda_coopgroups_include_paths`).
+///
+/// Shares the process-wide `KERNEL_CACHE` with the no-include path: the cache is
+/// keyed purely by source hash, and any given kernel source compiles exactly one
+/// way, so there is no cross-contamination. After the first successful compile,
+/// later calls (from either entry point) hit the cache immediately.
+///
+/// # Errors
+///
+/// Returns a compilation error if the kernel has syntax errors or the CUDA
+/// include paths could not be located. Failed compilations are NOT cached.
+pub fn compile_ptx_coopgroups_cached<S: AsRef<str>>(
+    src: S,
+) -> Result<Arc<Ptx>, cudarc::nvrtc::CompileError> {
+    let source = src.as_ref();
+
+    let digest = source_digest(source);
+    let hash: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
+
+    if let Some(ptx) = KERNEL_CACHE.get(&hash) {
+        CACHE_HITS.fetch_add(1, Ordering::Relaxed);
+        return Ok(Arc::clone(ptx.value()));
+    }
+
+    CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
+    let ptx = compile_ptx_with_opts(source, coopgroups_compile_options())?;
+    let ptx_arc = Arc::new(ptx);
+    KERNEL_CACHE.insert(hash, Arc::clone(&ptx_arc));
+    Ok(ptx_arc)
 }
 
 /// Compile CUDA kernel with Ada-optimized settings (uncached)

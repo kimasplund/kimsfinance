@@ -33,6 +33,10 @@
 #[cfg(feature = "gpu")]
 pub mod device;
 
+/// Numerical precision policy (the configurable "accuracy limiter").
+pub mod precision;
+pub use precision::{NumericalClass, Precision};
+
 #[cfg(feature = "heston")]
 pub mod heston_pricing;
 

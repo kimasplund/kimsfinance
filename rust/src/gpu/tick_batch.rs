@@ -482,12 +482,21 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_calculate_rsi() {
         let processor = TickBatchProcessor::new().expect("GPU not available");
-        let trades = create_test_trades(1000);
+        // Trades are 1s apart; 5-minute (300s) aggregation yields ~n/300
+        // candles. RSI(14) requires >= 15 candles, so 1000 trades (~4 candles)
+        // made rsi_gpu correctly reject the input as insufficient data. 20_000
+        // trades aggregate to ~67 candles, well above the period.
+        let trades = create_test_trades(20_000);
 
         let result = processor.calculate_rsi(&trades, Timeframe::minutes(5), 14);
-        assert!(result.is_ok(), "RSI calculation failed");
+        assert!(result.is_ok(), "RSI calculation failed: {:?}", result.err());
 
         let rsi = result.unwrap();
+        assert!(
+            rsi.len() > 14,
+            "expected more candles than the RSI period, got {}",
+            rsi.len()
+        );
         println!("RSI values calculated: {} candles", rsi.len());
     }
 
@@ -495,12 +504,21 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_calculate_atr() {
         let processor = TickBatchProcessor::new().expect("GPU not available");
-        let trades = create_test_trades(1000);
+        // Trades are 1s apart; 5-minute (300s) aggregation yields ~n/300
+        // candles. ATR(14) requires >= 14 candles, so 1000 trades (~4 candles)
+        // made atr_gpu correctly reject the input as insufficient data. 20_000
+        // trades aggregate to ~67 candles, well above the period.
+        let trades = create_test_trades(20_000);
 
         let result = processor.calculate_atr(&trades, Timeframe::minutes(5), 14);
-        assert!(result.is_ok(), "ATR calculation failed");
+        assert!(result.is_ok(), "ATR calculation failed: {:?}", result.err());
 
         let atr = result.unwrap();
+        assert!(
+            atr.len() >= 14,
+            "expected at least the ATR period in candles, got {}",
+            atr.len()
+        );
         println!("ATR values calculated: {} candles", atr.len());
     }
 
