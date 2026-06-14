@@ -441,6 +441,12 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_event_creation() {
+        // A CUDA context must be current on this thread before the raw
+        // `cuEventCreate` driver call can succeed. `GpuDevice::new()` performs
+        // `cuInit` + binds the primary context to the calling thread, so it
+        // must run *before* `CudaEvent::new()`.
+        let _device = GpuDevice::new().expect("GPU required");
+
         let event = CudaEvent::new().expect("Failed to create event");
         assert!(!event.raw_event().is_null());
     }
@@ -534,11 +540,15 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_event_no_timing() {
-        let event = CudaEvent::new_no_timing().expect("Failed to create no-timing event");
-        assert!(!event.raw_event().is_null());
-
+        // The CUDA context must be current on this thread *before* the raw
+        // `cuEventCreate` driver call inside `CudaEvent::new_no_timing()`.
+        // Create the device (which performs `cuInit` + binds the primary
+        // context) first, then create the event.
         let device = GpuDevice::new().expect("GPU required");
         let stream = device.stream.clone();
+
+        let event = CudaEvent::new_no_timing().expect("Failed to create no-timing event");
+        assert!(!event.raw_event().is_null());
 
         event.record(&stream).expect("Record failed");
         device.synchronize().expect("Sync failed");

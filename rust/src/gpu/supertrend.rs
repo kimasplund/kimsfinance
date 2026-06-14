@@ -620,26 +620,21 @@ mod tests {
     fn test_supertrend_gpu_large_dataset() {
         let device = Arc::new(GpuDevice::new().expect("Failed to initialize GPU"));
 
-        // Generate large dataset with sine wave pattern
+        // Generate a large oscillating dataset that actually reverses trend.
+        // Supertrend flips only when the close crosses an ATR band, i.e. when
+        // the price swing exceeds ~2 * multiplier * ATR. The old data used
+        // 10-wide bars (ATR ~= 10) with a ±10 price swing, so the 3*ATR = 30
+        // bands were never crossed and the indicator stayed in a single
+        // (correct, but one-sided) downtrend forever — failing has_uptrend.
+        // Here the bars are narrow (ATR ~= 1) and the close oscillates with
+        // amplitude 20 at a higher frequency, so both bands are crossed
+        // repeatedly and both trends appear.
         let n = 100_000;
-        let high: Vec<f64> = (0..n)
-            .map(|i| {
-                let x = i as f64 * 0.01;
-                110.0 + 10.0 * (x * 0.1).sin()
-            })
-            .collect();
-        let low: Vec<f64> = (0..n)
-            .map(|i| {
-                let x = i as f64 * 0.01;
-                100.0 + 10.0 * (x * 0.1).sin()
-            })
-            .collect();
         let close: Vec<f64> = (0..n)
-            .map(|i| {
-                let x = i as f64 * 0.01;
-                105.0 + 10.0 * (x * 0.1).sin()
-            })
+            .map(|i| 105.0 + 20.0 * (i as f64 * 0.05).sin())
             .collect();
+        let high: Vec<f64> = close.iter().map(|&c| c + 0.5).collect();
+        let low: Vec<f64> = close.iter().map(|&c| c - 0.5).collect();
 
         let start = std::time::Instant::now();
         let (supertrend, signal) = supertrend_gpu(device, &high, &low, &close, 10, 3.0, None)
@@ -745,10 +740,14 @@ mod tests {
             );
         }
 
-        // Supertrend should be within reasonable range
+        // Supertrend tracks one of the ATR bands. With constant prices the
+        // True Range is 10 (high-low), so ATR = 10 and the bands sit at
+        // HL_mid (105) ± multiplier*ATR = 105 ± 3*10 = {75, 135}. The old
+        // [90, 120] bound excluded BOTH valid bands; [70, 140] brackets them
+        // with a small margin while still catching gross errors.
         for i in 10..30 {
             assert!(
-                supertrend[i] >= 90.0 && supertrend[i] <= 120.0,
+                supertrend[i] >= 70.0 && supertrend[i] <= 140.0,
                 "Supertrend out of range at index {}: {}",
                 i,
                 supertrend[i]
