@@ -255,6 +255,96 @@ pub fn sma_gpu(
     Ok(Array1::from_vec(sma_vec))
 }
 
+// ============================================================================
+// FP32 variant (Phase 1: FP64->FP32). Ada (sm_89) runs FP32 at full rate vs
+// FP64 at 1/64, and f32 halves DRAM + PCIe traffic. SMA sums a small window of
+// price-scale values, well within f32 range/precision, so the (lenient,
+// price-scale) tolerance is unaffected. Public API stays f64; we convert at the
+// host boundary. Benchmarked against the f64 path before promotion.
+// ============================================================================
+
+const SMA_KERNEL_F32: &str = r#"
+#define CUDART_NANF __int_as_float(0x7fc00000)
+
+extern "C" __global__ void sma_kernel_f32(
+    const float* __restrict__ close,
+    float* __restrict__ sma,
+    int n,
+    int period
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= period - 1 && idx < n) {
+        float sum = 0.0f;
+        for (int j = 0; j < period; j++) {
+            sum += close[idx - j];
+        }
+        sma[idx] = sum / (float)period;
+    } else if (idx < period - 1) {
+        sma[idx] = CUDART_NANF;
+    }
+}
+"#;
+
+/// GPU SMA computed in **FP32** (f64 public API; conversion at the host boundary).
+pub fn sma_gpu_f32(
+    device: &GpuDevice,
+    close: &Array1<f64>,
+    period: usize,
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<Array1<f64>, GpuError> {
+    let n = close.len();
+    if period < 1 {
+        return Err(GpuError::InvalidParameter("Period must be >= 1".to_string()));
+    }
+    if n < period {
+        return Err(GpuError::InvalidParameter(format!(
+            "Not enough data: need >= {} points, got {}",
+            period, n
+        )));
+    }
+
+    let ptx_arc = compile_ptx_optimized_cached(SMA_KERNEL_F32).map_err(|e| {
+        GpuError::CompilationError(format!("Failed to compile SMA f32 kernel: {:?}", e))
+    })?;
+    let ptx = Arc::unwrap_or_clone(ptx_arc);
+    let module = device
+        .context()
+        .load_module(ptx)
+        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
+    let kernel = module.load_function("sma_kernel_f32").map_err(|e| {
+        GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
+    })?;
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // H2D: narrow to f32 host-side (halves PCIe traffic) and transfer.
+    let close_f32: Vec<f32> = close.iter().map(|&x| x as f32).collect();
+    let mut d_close = device.alloc_uninit::<f32>(n)?;
+    kernel_stream.memcpy_htod(&close_f32[..n], &mut d_close)?;
+    let mut d_sma = device.alloc_uninit::<f32>(n)?;
+
+    let n_i32 = n as i32;
+    let period_i32 = period as i32;
+    let mut builder = kernel_stream.launch_builder(&kernel);
+    builder.arg(&d_close);
+    builder.arg(&mut d_sma);
+    builder.arg(&n_i32);
+    builder.arg(&period_i32);
+    let config = LaunchConfig::for_num_elems(n as u32);
+    unsafe {
+        builder.launch(config).map_err(|e| {
+            GpuError::ExecutionError(format!("SMA f32 kernel launch failed: {:?}", e))
+        })?;
+    }
+
+    // D2H: copy f32 results back and widen to the f64 public output.
+    let mut sma_f32 = vec![0.0f32; n];
+    kernel_stream.memcpy_dtoh(&d_sma, &mut sma_f32[..])?;
+    kernel_stream.synchronize().map_err(|e| {
+        GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+    })?;
+    Ok(Array1::from_iter(sma_f32.into_iter().map(|x| x as f64)))
+}
+
 /// GPU-accelerated SMA using **shared memory** optimization
 ///
 /// # Arguments
@@ -731,6 +821,70 @@ mod tests {
                     speedup
                 );
             }
+        }
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_sma_f32_matches_f64() {
+        // Spec Phase 1 f32-vs-f64 tolerance gate, realistic price-scale data.
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let n = 50_000usize;
+        let close: Array1<f64> =
+            Array1::from_iter((0..n).map(|i| 30_000.0 + 5_000.0 * ((i as f64) * 0.001).sin()));
+        for &period in &[5usize, 20, 50, 200] {
+            let f64_out = sma_gpu(&device, &close, period, None).expect("f64 SMA failed");
+            let f32_out = sma_gpu_f32(&device, &close, period, None).expect("f32 SMA failed");
+            for i in 0..n {
+                if f64_out[i].is_nan() {
+                    assert!(f32_out[i].is_nan(), "period {} idx {}: f32 not NaN", period, i);
+                    continue;
+                }
+                let rel = (f64_out[i] - f32_out[i]).abs() / f64_out[i].abs().max(1.0);
+                assert!(
+                    rel < 1e-4,
+                    "period {} idx {}: f64={} f32={} rel_err={}",
+                    period,
+                    i,
+                    f64_out[i],
+                    f32_out[i],
+                    rel
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore] // Requires GPU; perf benchmark
+    fn bench_sma_f64_vs_f32() {
+        use std::time::Instant;
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let period = 20usize;
+        for &n in &[100_000usize, 1_000_000, 10_000_000] {
+            let close: Array1<f64> =
+                Array1::from_iter((0..n).map(|i| 30_000.0 + ((i as f64) * 0.001).sin()));
+            // Warmup: compile + cache modules for both paths.
+            let _ = sma_gpu(&device, &close, period, None).unwrap();
+            let _ = sma_gpu_f32(&device, &close, period, None).unwrap();
+            let iters = 20;
+            let t0 = Instant::now();
+            for _ in 0..iters {
+                let _ = sma_gpu(&device, &close, period, None).unwrap();
+            }
+            let f64_ms = t0.elapsed().as_secs_f64() * 1000.0 / iters as f64;
+            let t1 = Instant::now();
+            for _ in 0..iters {
+                let _ = sma_gpu_f32(&device, &close, period, None).unwrap();
+            }
+            let f32_ms = t1.elapsed().as_secs_f64() * 1000.0 / iters as f64;
+            println!(
+                "SMA n={:>9} period={} | f64 {:7.3} ms | f32 {:7.3} ms | speedup {:.2}x",
+                n,
+                period,
+                f64_ms,
+                f32_ms,
+                f64_ms / f32_ms
+            );
         }
     }
 }
