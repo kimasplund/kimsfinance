@@ -40,3 +40,23 @@ The GPU suite has been substantially red on real hardware while CI stayed green.
 Establishing a GPU CI gate requires a self-hosted GPU runner (infra decision).
 The clusters suggest several shared root causes (candle compile; pinned memory),
 so the fix count is far below 47.
+
+## Repair attempt 1 (candle-compile cluster) — REVERTED
+
+Root cause of the candle/persistent compile failures: those kernels
+`#include <cooperative_groups.h>`, which transitively needs the libcu++
+`<cuda/std/...>` headers (CUDA 13.x: under `include/` + `include/cccl/`). NVRTC
+has no include path by default.
+
+Attempted fix: add the CUDA include + cccl paths to the GLOBAL NVRTC
+`CompileOptions.include_paths`. **Result: regressed 47 -> 234 failures** — the
+many self-contained kernels (cci, cmf, donchian, elder_ray, fibonacci, batch,
+...) that compiled on NVRTC's built-ins broke once a system include path was
+present (header/built-in conflicts). The original code comment ("Including
+system headers causes JIT compilation issues") was correct. **Reverted.**
+
+Correct approach (future): a SURGICAL per-kernel include path — a
+compile-with-options variant used ONLY by the cooperative-groups kernels
+(candles/persistent), leaving the global options untouched. Note the candle
+cluster also has RUNTIME failures (time_bar_empty_input/single_trade) beyond
+compile, so fixing compile alone won't fully green it.
