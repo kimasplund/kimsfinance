@@ -77,20 +77,20 @@ id,price,qty,quote_qty,time,is_buyer_maker
 ### Step 1: Convert ZIP to Parquet
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 
 # Activate venv with Polars
 source .venv/bin/activate
 
 # Convert all trades (1,041 files, 52GB raw)
 python rust/scripts/convert_trades_to_parquet.py \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet \
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades \
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet \
     --parallel 8
 
 # Convert sample (testing)
 python rust/scripts/convert_trades_to_parquet.py \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades \
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades \
     /tmp/test_trades_parquet \
     --sample 5 \
     --parallel 2
@@ -111,7 +111,7 @@ Total Parquet size: ~40GB (from 52GB ZIP)
 Months covered: 48 (2021-01 → 2025-04)
 Compression ratio: 1.3x
 
-Output directory: /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet
+Output directory: /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet
 Partition structure: /path/<YYYY-MM>/<file>.parquet
 ```
 
@@ -135,7 +135,7 @@ python rust/scripts/demo_tick_backtest.py \
 
 # Full month backtest
 python rust/scripts/demo_tick_backtest.py \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet \
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet \
     2021-01
 ```
 
@@ -424,7 +424,7 @@ Rust implementation expected: 5-10M ticks/sec (7-14x faster)
 
 **Fix**: Activate kimsfinance venv
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 source .venv/bin/activate
 ```
 

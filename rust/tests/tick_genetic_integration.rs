@@ -11,7 +11,7 @@
 //! # Test Data
 //!
 //! Tests use actual BTCUSDT futures data from:
-//! `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
+//! `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
 //!
 //! # Test Categories
 //!
@@ -212,7 +212,7 @@ fn load_parquet_month(month_dir: &str, limit: Option<usize>) -> Result<Vec<Trade
 #[test]
 #[ignore = "Requires actual parquet data files"]
 fn test_load_parquet_single_file() {
-    let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
+    let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
 
     let result = load_parquet_trades(path, Some(10_000));
 
@@ -236,7 +236,7 @@ fn test_load_parquet_single_file() {
 #[ignore = "Requires actual parquet data files"]
 fn test_load_parquet_month() {
     let month_dir =
-        "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
     let result = load_parquet_month(month_dir, Some(1_000_000));
 
@@ -296,7 +296,7 @@ fn test_tick_backtest_synthetic_data() {
 #[test]
 #[ignore = "Requires actual parquet data files"]
 fn test_tick_backtest_real_data() {
-    let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
+    let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet";
 
     let result = load_parquet_trades(path, Some(1_000_000));
 
@@ -448,7 +448,7 @@ fn test_rust_vs_python_comparison() {
 #[ignore = "Requires actual parquet data - expensive test"]
 fn test_full_month_optimization() {
     let month_dir =
-        "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
     let result = load_parquet_month(month_dir, Some(10_000_000));
 

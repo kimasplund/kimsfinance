@@ -2,7 +2,7 @@
 
 ## Summary
 
-Updated `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs` to use **cached JIT compilation** instead of AOT pre-compilation. This provides the benefits of fast initialization without requiring build-time nvcc availability.
+Updated `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs` to use **cached JIT compilation** instead of AOT pre-compilation. This provides the benefits of fast initialization without requiring build-time nvcc availability.
 
 ## Changes Made
 
@@ -223,14 +223,14 @@ cargo test --features gpu test_fp8_support_detection
 
 ## Files Modified
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
    - Main implementation file
    - 591 lines total
    - Changes: Removed NVRTC direct calls, added cached compilation
 
 ## Files Created
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_WMMA_UPDATE_REPORT.md`
+1. `/home/kim/projects/kimsfinance/rust/docs/FP8_WMMA_UPDATE_REPORT.md`
    - This report
    - Documents all changes and rationale
 

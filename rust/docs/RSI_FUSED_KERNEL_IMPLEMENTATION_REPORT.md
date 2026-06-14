@@ -27,7 +27,7 @@ Implemented complete fused RSI kernel using CUB DeviceScan for parallel Wilder's
 
 ### 1. Fused Kernel Architecture
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
 
 **Design**: Single GPU pass with 3 fused stages:
 1. **Calculate gains/losses** (parallel) - ~20μs
@@ -50,7 +50,7 @@ struct WildersOp {
 
 ### 2. Rust Integration
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi_fused.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/rsi_fused.rs`
 
 **API**:
 ```rust
@@ -70,7 +70,7 @@ pub fn rsi_fused_gpu(
 
 ### 3. Build System
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/build.rs` (updated)
+**File**: `/home/kim/projects/kimsfinance/rust/build.rs` (updated)
 
 **Compilation**:
 - Compiles to shared library (`librsi_fused.so`) for FFI
@@ -90,7 +90,7 @@ nvcc -shared -arch=sm_89 -std=c++17 \
 
 ### 4. Benchmark Suite
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/rsi_fused_benchmark.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/rsi_fused_benchmark.rs`
 
 **Tests**:
 - Performance comparison (hybrid vs fused)
@@ -342,37 +342,37 @@ assert!(max_error < 1e-6);  // Numerical accuracy
 
 ### New Files
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`**
    - Fused CUDA kernel with CUB DeviceScan
    - 400+ lines, fully documented
    - Implements parallel Wilder's smoothing
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi_fused.rs`**
+2. **`/home/kim/projects/kimsfinance/rust/src/gpu/rsi_fused.rs`**
    - Rust FFI bindings
    - 350+ lines, full error handling
    - Async transfers, stream support
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/benches/rsi_fused_benchmark.rs`**
+3. **`/home/kim/projects/kimsfinance/rust/benches/rsi_fused_benchmark.rs`**
    - Criterion benchmark suite
    - Performance + accuracy validation
    - Comparison vs hybrid
 
-4. **`/home/kim-asplund/projects/kimsfinance/rust/docs/RSI_FUSED_KERNEL_IMPLEMENTATION_REPORT.md`**
+4. **`/home/kim/projects/kimsfinance/rust/docs/RSI_FUSED_KERNEL_IMPLEMENTATION_REPORT.md`**
    - This document
    - Implementation details + workarounds
 
 ### Modified Files
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/build.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/build.rs`**
    - Added `compile_rsi_fused_kernel()` function
    - Integrated into build pipeline
    - Graceful degradation on failure
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`**
+2. **`/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`**
    - Added `pub mod rsi_fused;`
    - Exported `is_fused_available()` and `rsi_fused_gpu()`
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`**
+3. **`/home/kim/projects/kimsfinance/rust/Cargo.toml`**
    - Added `rsi_fused_benchmark` bench target
 
 ---
@@ -483,7 +483,7 @@ assert!(max_error < 1e-6);  // Numerical accuracy
 2. **Decoupled Lookback**: https://research.nvidia.com/publication/2016-03_single-pass-parallel-prefix-scan-decoupled-look-back
 3. **CUDA Math Header Issue**: NVIDIA Bug 4536035 (internal)
 4. **Wilder's Smoothing**: https://school.stockcharts.com/doku.php?id=technical_indicators:relative_strength_index_rsi
-5. **Project RSI Hybrid**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi.rs`
+5. **Project RSI Hybrid**: `/home/kim/projects/kimsfinance/rust/src/gpu/rsi.rs`
 
 ---
 

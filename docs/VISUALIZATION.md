@@ -1,6 +1,6 @@
 # Visualization Guide
 
-**kimsfinance v0.1.0** - Ultra-Fast Timeseries and Backtest Visualization
+**kimsfinance v0.2.0** - Ultra-Fast Timeseries and Backtest Visualization
 
 This guide covers timeseries chart rendering and backtest visualization functions that achieve **200-300x speedup** over matplotlib using kimsfinance's optimized PIL renderer.
 

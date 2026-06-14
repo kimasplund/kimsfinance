@@ -2,7 +2,7 @@
 
 **Purpose**: Comprehensive performance benchmarking for GPU-accelerated technical indicators
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/benches/`
+**Location**: `/home/kim/projects/kimsfinance/rust/benches/`
 
 ---
 
@@ -38,7 +38,7 @@ This directory contains benchmarks for validating performance claims and identif
 
 ```bash
 # Run all launch overhead benchmarks
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo bench --bench launch_overhead --features gpu
 
 # Or use the convenient script
@@ -62,7 +62,7 @@ cargo bench --bench launch_overhead --features gpu
 
 - **Guide**: `LAUNCH_OVERHEAD_BENCHMARK.md` (how to run and interpret)
 - **Results Template**: `LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md` (document findings)
-- **Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh`
+- **Script**: `/home/kim/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh`
 
 ### Implementation Status
 
@@ -95,7 +95,7 @@ nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
 ### Common Commands
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run all GPU benchmarks
 cargo bench --features gpu
@@ -438,7 +438,7 @@ jobs:
 
 **Benchmark Patterns**: `/home/kim/.claude/agents-library/refs/kimsfinance-benchmark-patterns.md`
 
-**Project CLAUDE.md**: `/home/kim-asplund/projects/kimsfinance/CLAUDE.md`
+**Project CLAUDE.md**: `/home/kim/projects/kimsfinance/CLAUDE.md`
 
 ---
 

@@ -270,11 +270,11 @@ binance-data/futures/BTCUSDT/
 ### 1. Validate Dataset
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 source .venv/bin/activate
 
 python rust/scripts/validate_trades_dataset.py \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet
 ```
 
 ### 2. Read Single Month
@@ -283,7 +283,7 @@ python rust/scripts/validate_trades_dataset.py \
 import polars as pl
 
 df = pl.read_parquet(
-    '/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01/*.parquet'
+    '/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2021-01/*.parquet'
 )
 
 print(f"Trades: {len(df):,}")
@@ -295,7 +295,7 @@ print(f"Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
 
 ```bash
 python rust/scripts/demo_tick_backtest.py \
-    /home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet \
+    /home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet \
     2021-01 \
     --max-ticks 1000000
 ```

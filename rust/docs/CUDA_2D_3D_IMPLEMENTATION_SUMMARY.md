@@ -9,9 +9,9 @@
 ## Executive Summary
 
 **Deliverables**:
-1. **Analysis Document**: `/home/kim-asplund/projects/kimsfinance/rust/docs/CUDA_2D_3D_KERNEL_ANALYSIS.md` (12,800+ words)
-2. **2D Kernels**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_2d.rs` (600+ lines)
-3. **3D Kernels**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_3d.rs` (550+ lines)
+1. **Analysis Document**: `/home/kim/projects/kimsfinance/rust/docs/CUDA_2D_3D_KERNEL_ANALYSIS.md` (12,800+ words)
+2. **2D Kernels**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_2d.rs` (600+ lines)
+3. **3D Kernels**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_3d.rs` (550+ lines)
 
 **Custom Kernel Count**: 12 production-ready kernels (6 in 2D, 6 in 3D)
 
@@ -619,10 +619,10 @@ ncu --set full --export rsi_2d_profile \
 ---
 
 **Files Delivered**:
-1. `/home/kim-asplund/projects/kimsfinance/rust/docs/CUDA_2D_3D_KERNEL_ANALYSIS.md`
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_2d.rs`
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_3d.rs`
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/CUDA_2D_3D_IMPLEMENTATION_SUMMARY.md` (this file)
+1. `/home/kim/projects/kimsfinance/rust/docs/CUDA_2D_3D_KERNEL_ANALYSIS.md`
+2. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_2d.rs`
+3. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_3d.rs`
+4. `/home/kim/projects/kimsfinance/rust/docs/CUDA_2D_3D_IMPLEMENTATION_SUMMARY.md` (this file)
 
 **Author**: Claude (CUDA Python Development Specialist)
 **Date**: 2025-10-26

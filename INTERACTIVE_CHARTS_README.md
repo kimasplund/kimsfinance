@@ -154,5 +154,5 @@ For questions or issues:
 ---
 
 **Status**: Production Ready
-**Version**: 0.1.0
+**Version**: 0.2.0
 **Date**: 2025-11-03

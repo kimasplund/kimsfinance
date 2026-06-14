@@ -754,7 +754,7 @@ criterion_main!(grid_search_benches, euler_search_benches, genetic_benches,);
 //    ```
 //
 // 6. **Recommendations**:
-//    - Update `/home/kim-asplund/projects/kimsfinance/rust/docs/OPTIMIZER_COMPARISON.md`
+//    - Update `/home/kim/projects/kimsfinance/rust/docs/OPTIMIZER_COMPARISON.md`
 //    - Include speedup calculations (Grid vs Euler vs Genetic)
 //    - Document GPU utilization (should be >70% for batch operations)
 //    - Add convergence plots (use gnuplot or matplotlib)

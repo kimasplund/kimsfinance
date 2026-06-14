@@ -44,7 +44,7 @@ Successfully implemented **FP32 TF32 tensor core kernel** (`fp32_mma_ptx.cu`) us
 
 ### File Created
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp32_mma_ptx.cu`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp32_mma_ptx.cu`
 
 **Lines of Code**: 180 (identical structure to FP16/FP8 kernels)
 
@@ -393,17 +393,17 @@ fp32_kernel(grid, block, (A_gpu, B_gpu, C_gpu, m, n, k))
 
 ## Files Modified
 
-### 1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp32_mma_ptx.cu` (NEW)
+### 1. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp32_mma_ptx.cu` (NEW)
 - **Lines**: 180
 - **Purpose**: FP32 TF32 tensor core matrix multiplication kernel
 - **Status**: Created ✅
 
-### 2. `/home/kim-asplund/projects/kimsfinance/rust/docs/TENSOR_CORE_KERNELS_SUMMARY.md` (NEW)
+### 2. `/home/kim/projects/kimsfinance/rust/docs/TENSOR_CORE_KERNELS_SUMMARY.md` (NEW)
 - **Lines**: 450+
 - **Purpose**: Comprehensive comparison of all three tensor core kernels
 - **Status**: Created ✅
 
-### 3. `/home/kim-asplund/projects/kimsfinance/rust/docs/FP32_TF32_KERNEL_IMPLEMENTATION_REPORT.md` (THIS FILE)
+### 3. `/home/kim/projects/kimsfinance/rust/docs/FP32_TF32_KERNEL_IMPLEMENTATION_REPORT.md` (THIS FILE)
 - **Purpose**: Detailed implementation report for TF32 kernel
 - **Status**: Created ✅
 

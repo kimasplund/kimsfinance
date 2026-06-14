@@ -23,7 +23,7 @@ except ImportError:
 
 # Import Python implementation
 try:
-    sys.path.insert(0, '/home/kim-asplund/projects/kimsfinance')
+    sys.path.insert(0, '/home/kim/projects/kimsfinance')
     from kimsfinance.ops.indicators.vwap import calculate_vwap_anchored
     PYTHON_AVAILABLE = True
 except ImportError:

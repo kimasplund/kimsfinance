@@ -26,7 +26,7 @@ Successfully implemented **interactive charting capabilities** for kimsfinance, 
 
 ### 1. Core Module: `kimsfinance/plotting/interactive.py`
 
-**File**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/plotting/interactive.py`
+**File**: `/home/kim/projects/kimsfinance/kimsfinance/plotting/interactive.py`
 **Lines**: ~950 lines
 **Status**: Complete
 
@@ -89,7 +89,7 @@ Fully supported indicator types:
 ### 3. Examples and Documentation
 
 #### A. Python Examples
-**File**: `/home/kim-asplund/projects/kimsfinance/examples/interactive_charts.py`
+**File**: `/home/kim/projects/kimsfinance/examples/interactive_charts.py`
 **Lines**: ~400 lines
 
 Examples included:
@@ -103,7 +103,7 @@ Examples included:
 8. Export to different formats
 
 #### B. Jupyter Notebook
-**File**: `/home/kim-asplund/projects/kimsfinance/notebooks/interactive_charting.ipynb`
+**File**: `/home/kim/projects/kimsfinance/notebooks/interactive_charting.ipynb`
 **Cells**: 12 cells
 
 Content:
@@ -117,7 +117,7 @@ Content:
 - Best practices guide
 
 #### C. Comprehensive Documentation
-**File**: `/home/kim-asplund/projects/kimsfinance/docs/INTERACTIVE_CHARTS.md`
+**File**: `/home/kim/projects/kimsfinance/docs/INTERACTIVE_CHARTS.md`
 **Lines**: ~600 lines
 
 Sections:
@@ -134,7 +134,7 @@ Sections:
 
 ### 4. Testing
 
-**File**: `/home/kim-asplund/projects/kimsfinance/tests/plotting/test_interactive.py`
+**File**: `/home/kim/projects/kimsfinance/tests/plotting/test_interactive.py`
 **Lines**: ~460 lines
 **Tests**: 30+ test cases
 
@@ -154,7 +154,7 @@ Test Coverage:
 
 ### 5. Performance Benchmarks
 
-**File**: `/home/kim-asplund/projects/kimsfinance/benchmarks/benchmark_interactive.py`
+**File**: `/home/kim/projects/kimsfinance/benchmarks/benchmark_interactive.py`
 **Lines**: ~270 lines
 
 Benchmark Results:
@@ -175,7 +175,7 @@ Benchmark Results:
 #### Updated Files:
 
 **A. Package Exports**
-**File**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/plotting/__init__.py`
+**File**: `/home/kim/projects/kimsfinance/kimsfinance/plotting/__init__.py`
 
 Added exports:
 ```python
@@ -189,7 +189,7 @@ from .interactive import (
 ```
 
 **B. Dependencies**
-**File**: `/home/kim-asplund/projects/kimsfinance/pyproject.toml`
+**File**: `/home/kim/projects/kimsfinance/pyproject.toml`
 
 Added optional dependency group:
 ```toml

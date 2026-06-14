@@ -5,7 +5,7 @@
 Implementation of Black-Scholes option pricing and Newton-Raphson implied volatility solver for the options strategy backtesting framework (Phase 1.2).
 
 **Status**: ✅ Complete
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
 **Tests**: 26 comprehensive unit tests
 **Lines of Code**: 576 (including tests and documentation)
 
@@ -373,13 +373,13 @@ fn should_enter_trade(contract: &OptionContract, iv_history: &[f64]) -> bool {
 ## Files Created/Modified
 
 ### New Files
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/black_scholes.rs` (576 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/tests/black_scholes_test.rs` (280 lines)
-3. `/home/kim-asplund/projects/kimsfinance/rust/examples/test_black_scholes.rs` (150 lines)
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/BLACK_SCHOLES_IMPLEMENTATION.md` (this file)
+1. `/home/kim/projects/kimsfinance/rust/src/strategy/black_scholes.rs` (576 lines)
+2. `/home/kim/projects/kimsfinance/rust/tests/black_scholes_test.rs` (280 lines)
+3. `/home/kim/projects/kimsfinance/rust/examples/test_black_scholes.rs` (150 lines)
+4. `/home/kim/projects/kimsfinance/rust/docs/BLACK_SCHOLES_IMPLEMENTATION.md` (this file)
 
 ### Modified Files
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/mod.rs` (added black_scholes module export)
+1. `/home/kim/projects/kimsfinance/rust/src/strategy/mod.rs` (added black_scholes module export)
 
 ---
 

@@ -421,11 +421,11 @@ python scripts/validate_batch_accuracy.py
 
 ### 9.3 Benchmark Script
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/benches/batch_backtest_benchmark.rs`
 
-**Test Data Generator**: `/home/kim-asplund/projects/kimsfinance/rust/benches/test_data_generator.rs`
+**Test Data Generator**: `/home/kim/projects/kimsfinance/rust/benches/test_data_generator.rs`
 
-**Validation Script**: `/home/kim-asplund/projects/kimsfinance/scripts/validate_batch_accuracy.py`
+**Validation Script**: `/home/kim/projects/kimsfinance/scripts/validate_batch_accuracy.py`
 
 ---
 

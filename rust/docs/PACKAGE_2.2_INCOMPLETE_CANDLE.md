@@ -177,13 +177,13 @@ This package UNBLOCKS:
 ## Files Reference
 
 ### Created
-- `/home/kim-asplund/projects/kimsfinance/rust/src/binance/incomplete_candle.rs`
-- `/home/kim-asplund/projects/kimsfinance/rust/tests/incomplete_candle_parity.rs`
-- `/home/kim-asplund/projects/kimsfinance/rust/benches/incomplete_candle_bench.rs`
+- `/home/kim/projects/kimsfinance/rust/src/binance/incomplete_candle.rs`
+- `/home/kim/projects/kimsfinance/rust/tests/incomplete_candle_parity.rs`
+- `/home/kim/projects/kimsfinance/rust/benches/incomplete_candle_bench.rs`
 
 ### Modified
-- `/home/kim-asplund/projects/kimsfinance/rust/src/binance/mod.rs`
-- `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml`
+- `/home/kim/projects/kimsfinance/rust/src/binance/mod.rs`
+- `/home/kim/projects/kimsfinance/rust/Cargo.toml`
 
 ## Confidence Level: HIGH
 

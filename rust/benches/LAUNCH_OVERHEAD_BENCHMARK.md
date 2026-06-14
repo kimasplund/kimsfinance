@@ -4,7 +4,7 @@
 
 This benchmark validates the **2-4x speedup claim** for persistent kernels by measuring launch overhead reduction in GPU kernel execution.
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs`
 
 ## Problem Statement
 
@@ -77,7 +77,7 @@ nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
 ### Commands
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # 1. Run all benchmarks (generates HTML report)
 cargo bench --bench launch_overhead --features gpu
@@ -100,9 +100,9 @@ cargo bench --bench launch_overhead --features gpu -- --quick
 
 ### Output Location
 
-- **HTML reports**: `/home/kim-asplund/projects/kimsfinance/rust/target/criterion/`
+- **HTML reports**: `/home/kim/projects/kimsfinance/rust/target/criterion/`
 - **Text summary**: Console output
-- **Baseline data**: `/home/kim-asplund/projects/kimsfinance/rust/target/criterion/*/base/`
+- **Baseline data**: `/home/kim/projects/kimsfinance/rust/target/criterion/*/base/`
 
 ## Expected Results
 
@@ -280,7 +280,7 @@ Persistent kernels provide maximum value for:
 
 ### Phase 1: Implement Persistent Kernel Execution (TODO)
 
-Location: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs`
+Location: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs`
 
 Add `execute_batch()` method to `PersistentKernelManager`:
 ```rust
@@ -316,9 +316,9 @@ cargo bench --bench launch_overhead --features gpu -- --baseline after
 ### Phase 4: Update Documentation
 
 Update performance claims in:
-- `/home/kim-asplund/projects/kimsfinance/rust/README.md`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs` (module docs)
-- Project documentation: `/home/kim-asplund/projects/kimsfinance/CLAUDE.md`
+- `/home/kim/projects/kimsfinance/rust/README.md`
+- `/home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs` (module docs)
+- Project documentation: `/home/kim/projects/kimsfinance/CLAUDE.md`
 
 ## References
 
@@ -328,9 +328,9 @@ Update performance claims in:
 
 **Criterion Documentation**: https://bheisler.github.io/criterion.rs/book/
 
-**Benchmark File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs`
+**Benchmark File**: `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs`
 
-**Persistent Kernel Module**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs`
+**Persistent Kernel Module**: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs`
 
 ---
 

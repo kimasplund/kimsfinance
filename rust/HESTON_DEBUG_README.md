@@ -3,7 +3,7 @@
 ## Quick Start (TL;DR)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 chmod +x RUN_HESTON_DEBUG.sh
 ./RUN_HESTON_DEBUG.sh
 ```
@@ -89,7 +89,7 @@ One-click solution:
 ### Option 1: Automated (Recommended)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 ./RUN_HESTON_DEBUG.sh
 ```
 
@@ -98,7 +98,7 @@ Review the output to see where imaginary parts first become zero.
 ### Option 2: Manual Steps
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Build and run
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee debug_output.txt
@@ -113,7 +113,7 @@ grep "idx=1" cuda_debug.txt | grep -E "\(.*,\s*0\.000000\)"
 ### Option 3: Interactive Analysis
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run test
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee debug_output.txt

@@ -4,7 +4,7 @@ This document outlines the future development plans for kimsfinance.
 
 ---
 
-## v0.1.0 (Current - Beta Release)
+## v0.2.0 (Current - Beta Release)
 
 **Status**: In Beta Testing
 **Release Date**: October 2025
@@ -229,4 +229,4 @@ Features may be added, removed, or rescheduled as priorities evolve.
 ---
 
 **Last Updated**: 2025-10-23
-**Version**: v0.1.0 Beta
+**Version**: v0.2.0 Beta

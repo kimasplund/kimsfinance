@@ -342,7 +342,7 @@ impl CudaGraph {
 }
 ```
 
-**Location**: `/home/kim-asplund/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cudarc-0.17.3/src/driver/safe/graph.rs`
+**Location**: `/home/kim/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cudarc-0.17.3/src/driver/safe/graph.rs`
 
 **Modes**:
 - `CU_STREAM_CAPTURE_MODE_GLOBAL`: Maximum flexibility (used)
@@ -534,7 +534,7 @@ The implementation is **production-ready** for batch backtesting, optimization s
 ## 14. References
 
 - **CUDA Graphs Programming Guide**: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-graphs
-- **cudarc 0.17.3 Graph API**: `/home/kim-asplund/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cudarc-0.17.3/src/driver/safe/graph.rs`
+- **cudarc 0.17.3 Graph API**: `/home/kim/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cudarc-0.17.3/src/driver/safe/graph.rs`
 - **CUDA 13.0 Release Notes**: Stream-ordered memory, improved graph performance
 - **StreamManager**: `src/gpu/streams.rs` (3 CUDA streams: Fast/Medium/Slow)
 - **Batch System**: `src/gpu/batch.rs` (existing batch processing infrastructure)

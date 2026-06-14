@@ -1186,5 +1186,5 @@ Want to add a custom strategy? See the "Custom Strategy Implementation" section 
 ---
 
 **Last Updated**: 2025-10-27
-**Version**: 0.1.0 (Draft - pending implementation)
+**Version**: 0.2.0 (Implemented)
 **Status**: Documentation draft - performance numbers TBD after implementation

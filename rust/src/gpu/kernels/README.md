@@ -78,7 +78,7 @@ kernel((blocks,), (threads,), (input_fp32, output_fp16, n))
 
 ```bash
 # Run CuPy test suite (recommended)
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp16_conversions_cupy.py
 
 # Expected output:

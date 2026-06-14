@@ -329,7 +329,7 @@ for pair in pairs:
 
 ### Python API Reference
 
-Updated `/home/kim-asplund/projects/kimsfinance/python/kimsfinance/__init__.py`:
+Updated `/home/kim/projects/kimsfinance/kimsfinance/__init__.py`:
 
 ```python
 __all__ = [

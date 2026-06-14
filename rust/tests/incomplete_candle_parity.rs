@@ -437,7 +437,7 @@ fn test_parity_real_binance_data() {
     use kimsfinance_core::binance::process_binance_month;
 
     // Test with real Binance data (1 day = ~4.6M trades)
-    let path = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
+    let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
 
     // Skip if file doesn't exist
     if !std::path::Path::new(path).exists() {

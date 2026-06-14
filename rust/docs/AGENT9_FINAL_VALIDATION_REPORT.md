@@ -95,7 +95,7 @@ After comprehensive validation, I've discovered that the project has **TWO SEPAR
 #### Compilation Verification
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features gpu --lib
 # Result: ✅ SUCCESS (0 errors, 28 cosmetic warnings)
 ```
@@ -395,7 +395,7 @@ Phase 1 complete: 74.9x parallel speedup achieved."
 ### Genetic Optimizer
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features gpu --lib
 # Result: ✅ SUCCESS
 # Warnings: 28 (cosmetic, unused imports/variables)
@@ -405,7 +405,7 @@ cargo build --release --features gpu --lib
 ### cuda-ext
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust/cuda-ext
+cd /home/kim/projects/kimsfinance/rust/cuda-ext
 cargo build --release
 # Result: ✅ SUCCESS
 # Warnings: 0
@@ -434,7 +434,7 @@ cargo test --release --features gpu --test genetic_optimizer_integration
 ### cuda-ext Tests
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust/cuda-ext
+cd /home/kim/projects/kimsfinance/rust/cuda-ext
 cargo test
 # Result: No GPU-specific tests implemented yet (Agent 4 task)
 ```

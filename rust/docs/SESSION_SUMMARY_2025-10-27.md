@@ -106,7 +106,7 @@
 4. **Real Data Integration** ✅
    - Updated `candles_full_demo.rs` to load Binance OHLC data
    - Added `load_binance_ohlc()` function
-   - Uses `/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv`
+   - Uses `/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv`
 
 ### Known Issues (Documented)
 

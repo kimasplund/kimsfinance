@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Example 1: Load Q1 2021 (3 months) ===");
     println!("Using process_binance_directory() to automatically discover files\n");
 
-    let data_dir = "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades/";
+    let data_dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/";
     let start_date = "2021-01-01";
     let end_date = "2021-03-31";
     let timeframe = Timeframe::parse("5m")?;

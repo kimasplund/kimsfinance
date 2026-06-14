@@ -279,7 +279,7 @@ mod tests {
     #[ignore] // Requires actual Parquet files
     fn test_load_parquet_file() {
         let trades = load_parquet_file(
-            "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01.parquet"
+            "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01.parquet"
         ).unwrap();
 
         assert!(trades.len() > 0);
@@ -291,7 +291,7 @@ mod tests {
     #[ignore] // Requires actual Parquet files
     fn test_load_parquet_month() {
         let trades = load_parquet_month(
-            "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
+            "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
             Some(100_000) // Limit for fast test
         ).unwrap();
 
@@ -623,7 +623,7 @@ use kimsfinance_core::backtest::{backtest_ticks, IntraCandleMomentum};
 
 fn load_test_data(num_ticks: usize) -> Vec<Trade> {
     load_parquet_month(
-        "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
         Some(num_ticks)
     ).unwrap()
 }
@@ -688,7 +688,7 @@ fn test_tick_genetic_optimization_btcusdt() {
 
     // Load tick data
     let trades = load_parquet_month(
-        "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
         Some(500_000) // 500K ticks for fast test
     ).expect("Failed to load Parquet");
 
@@ -722,7 +722,7 @@ fn test_tick_genetic_optimization_btcusdt() {
 fn test_compare_rust_vs_python() {
     // Load same dataset as Python benchmark
     let trades = load_parquet_month(
-        "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01",
         Some(1_000_000)
     ).unwrap();
 
@@ -844,7 +844,7 @@ fn test_compare_rust_vs_python() {
 
 **Mitigation**: Validate against Python-generated Parquet first
 
-**Test**: Use actual dataset from `/home/kim-asplund/projects/binance-data/`
+**Test**: Use actual dataset from `/home/kim/projects/binance-data/`
 
 ---
 

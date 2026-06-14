@@ -23,7 +23,7 @@ Status: Investigation Complete, Partial Optimization Implemented
 
 ### 1.1 Bottleneck Identification
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/obv.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/obv.rs`
 **Lines**: 50-64 (cumsum kernel)
 
 ```cuda
@@ -75,7 +75,7 @@ extern "C" __global__ void obv_cumsum_kernel(
 
 ### 2.1 Parallel Prefix Sum (Hillis-Steele Scan)
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/obv_optimized.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/obv_optimized.rs`
 
 **Algorithm**: Replaced single-threaded cumulative sum with parallel prefix sum.
 

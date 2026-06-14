@@ -364,7 +364,7 @@ ABTestConfig {
 
 **Step 1: Baseline (compute_75)**
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 export KIMSFINANCE_GPU_ARCH=compute_75
 cargo bench --features gpu --bench ab_test_cuda -- --save-baseline phase1_baseline
 ```

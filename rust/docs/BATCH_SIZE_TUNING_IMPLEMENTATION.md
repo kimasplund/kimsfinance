@@ -19,7 +19,7 @@ Implemented dynamic threshold calculation and per-phase block size selection for
 
 ### Implementation
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
 **Lines Added**: ~60 lines
 **Complexity**: Low
 
@@ -86,7 +86,7 @@ pub fn execute(mut self) -> Result<BatchBacktestResults, GpuError> {
 
 ### Testing
 
-**Test File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/test_batch_tuning.rs`
+**Test File**: `/home/kim/projects/kimsfinance/rust/tests/test_batch_tuning.rs`
 
 ```rust
 #[test]
@@ -112,7 +112,7 @@ fn test_dynamic_threshold_large_dataset() {
 
 ### Implementation
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/mod.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/mod.rs`
 **Lines Added**: ~100 lines
 **Complexity**: Low
 
@@ -204,7 +204,7 @@ fn test_block_size_ordering() {
 
 ### Benchmark
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/benches/tuning_comparison.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/benches/tuning_comparison.rs`
 
 ```rust
 fn bench_threshold_calculation(c: &mut Criterion) {
@@ -241,9 +241,9 @@ The project has pre-existing compilation errors in GPU modules:
 
 ### Files Modified (No Compilation Errors)
 
-✅ `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
-✅ `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/mod.rs`
-✅ `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/mod.rs`
+✅ `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
+✅ `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/mod.rs`
+✅ `/home/kim/projects/kimsfinance/rust/src/backtest/mod.rs`
 
 ### Recommendation
 
@@ -340,18 +340,18 @@ cargo bench tuning_comparison --features gpu
 ### Code Files
 
 1. **Implementation**:
-   - `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs` (+60 lines)
-   - `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/mod.rs` (+100 lines)
-   - `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/mod.rs` (+3 lines)
+   - `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs` (+60 lines)
+   - `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/mod.rs` (+100 lines)
+   - `/home/kim/projects/kimsfinance/rust/src/backtest/mod.rs` (+3 lines)
 
 2. **Tests**:
-   - `/home/kim-asplund/projects/kimsfinance/rust/tests/test_batch_tuning.rs` (new file, 236 lines)
+   - `/home/kim/projects/kimsfinance/rust/tests/test_batch_tuning.rs` (new file, 236 lines)
 
 3. **Benchmarks**:
-   - `/home/kim-asplund/projects/kimsfinance/rust/benches/tuning_comparison.rs` (new file, 48 lines)
+   - `/home/kim/projects/kimsfinance/rust/benches/tuning_comparison.rs` (new file, 48 lines)
 
 4. **Documentation**:
-   - This file: `/home/kim-asplund/projects/kimsfinance/rust/docs/BATCH_SIZE_TUNING_IMPLEMENTATION.md`
+   - This file: `/home/kim/projects/kimsfinance/rust/docs/BATCH_SIZE_TUNING_IMPLEMENTATION.md`
 
 ### Summary
 

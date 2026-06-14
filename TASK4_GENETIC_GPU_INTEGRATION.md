@@ -227,7 +227,7 @@ print(f"Parameters: {best['params']}")
 ### Running the Example
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python examples/genetic_optimization_example.py
 ```
 
@@ -427,7 +427,7 @@ logger.debug("GPU unavailable or disabled, using sequential CPU evaluation")
 
 ```bash
 # Full test suite
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 pytest tests/optimization/test_genetic_gpu.py -v
 
 # Skip slow tests

@@ -24,7 +24,7 @@ After thorough investigation, I discovered that **my assigned task has already b
 
 ### ✅ CUDA Batch Backtest Kernel: COMPLETE
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
 
 **Implementation Status**: 618 lines of production-ready CUDA code
 
@@ -65,7 +65,7 @@ After thorough investigation, I discovered that **my assigned task has already b
 ### Test 1: Example Execution
 
 ```bash
-$ cd /home/kim-asplund/projects/kimsfinance/rust
+$ cd /home/kim/projects/kimsfinance/rust
 $ cargo run --features gpu --example test_batch_backtest
 ```
 

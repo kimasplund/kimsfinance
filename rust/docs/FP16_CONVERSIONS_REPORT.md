@@ -32,7 +32,7 @@
 ### Phase 2: Implementation & Optimization
 
 **Implementation Approach**:
-- File created: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp16_conversions.cu`
+- File created: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp16_conversions.cu`
 - Test scripts: `scripts/test_fp16_conversions_cupy.py` (CuPy-based)
 - Documentation: `docs/FP16_CONVERSIONS.md` (comprehensive guide)
 - Report: `docs/FP16_CONVERSIONS_REPORT.md` (this file)
@@ -212,7 +212,7 @@ Created comprehensive test script `test_fp16_conversions_cupy.py`:
 
 **New Files Created**:
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp16_conversions.cu`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp16_conversions.cu`**
    - Main kernel implementation (10 kernels total)
    - Hardware intrinsic versions (preferred)
    - Manual bitwise versions (fallback)
@@ -221,20 +221,20 @@ Created comprehensive test script `test_fp16_conversions_cupy.py`:
    - Benchmark kernels (performance)
    - Size: ~500 lines of CUDA C
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp16_conversions_cupy.py`**
+2. **`/home/kim/projects/kimsfinance/rust/scripts/test_fp16_conversions_cupy.py`**
    - CuPy-based test suite (recommended)
    - NVRTC compilation validation
    - Comprehensive accuracy tests
    - Performance benchmarks
    - Size: ~450 lines of Python
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp16_conversions.py`**
+3. **`/home/kim/projects/kimsfinance/rust/scripts/test_fp16_conversions.py`**
    - Raw CUDA Driver API test (advanced)
    - Lower-level NVRTC validation
    - Manual memory management
    - Size: ~400 lines of Python
 
-4. **`/home/kim-asplund/projects/kimsfinance/rust/docs/FP16_CONVERSIONS.md`**
+4. **`/home/kim/projects/kimsfinance/rust/docs/FP16_CONVERSIONS.md`**
    - Comprehensive documentation
    - Quick start guide
    - API reference (10 kernels)
@@ -243,7 +243,7 @@ Created comprehensive test script `test_fp16_conversions_cupy.py`:
    - Use cases and examples
    - Size: ~600 lines of Markdown
 
-5. **`/home/kim-asplund/projects/kimsfinance/rust/docs/FP16_CONVERSIONS_REPORT.md`**
+5. **`/home/kim/projects/kimsfinance/rust/docs/FP16_CONVERSIONS_REPORT.md`**
    - This implementation report
    - Three-phase development summary
    - Confidence assessment
@@ -260,7 +260,7 @@ Created comprehensive test script `test_fp16_conversions_cupy.py`:
 
 1. **Test on Target Hardware**:
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp16_conversions_cupy.py
 ```
 
@@ -384,7 +384,7 @@ ncu --set full --launch-skip 0 --launch-count 1 \
 1. **Immediate** (Hardware Validation):
    ```bash
    # Run test suite on RTX 3500 Ada
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    python scripts/test_fp16_conversions_cupy.py > validation_results.txt
    ```
 

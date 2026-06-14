@@ -1109,5 +1109,5 @@ objectives = ['sharpe', 'max_drawdown', 'win_rate', 'num_trades']
 ---
 
 **Last Updated**: 2025-10-27
-**Version**: 0.1.0 (Draft - pending implementation)
+**Version**: 0.2.0 (Implemented)
 **Status**: Documentation draft - performance numbers TBD after implementation

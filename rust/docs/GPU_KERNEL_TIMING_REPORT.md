@@ -144,7 +144,7 @@ Benchmarks 7 representative indicators:
 ### Run Benchmark
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run and display results
 cargo run --release --example benchmark_gpu_kernel_timing --features gpu

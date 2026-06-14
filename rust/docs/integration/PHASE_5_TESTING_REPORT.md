@@ -263,7 +263,7 @@ Time: 0.05s
 
 #### Task 1: Fix `strategies_delta_neutral.rs` Type Mismatches
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/strategies_delta_neutral.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/strategies_delta_neutral.rs`
 
 **Issue**: Line 224 uses `copy_to_host(&d_option_signals)` but type mismatch between `CudaSlice<i8>` and expected `CudaSlice<f64>`
 
@@ -294,7 +294,7 @@ let option_signals_raw = self.device.copy_to_host_i8(&d_option_signals)?;
 
 #### Task 2: Fix `strategies_vol_arbitrage.rs` Missing Import
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/strategies_vol_arbitrage.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/strategies_vol_arbitrage.rs`
 
 **Issue**: Lines 228-230 use `builder.arg()` but `PushKernelArg` trait not imported
 
@@ -345,7 +345,7 @@ use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync, LaunchConfig, PushKern
 ### Quick Start
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Option 1: Run all tests (automated)
 ./tests/run_integration_tests.sh

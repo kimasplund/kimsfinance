@@ -33,7 +33,7 @@
 
 ### 2. Regression Test Suite (1 file)
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/async_transfer_regression.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/tests/async_transfer_regression.rs`
 - **Lines**: 240
 - **Tests**: 7 comprehensive test cases
 - **Status**: ✅ All tests passing
@@ -233,11 +233,11 @@ Tests run automatically in:
 
 ### Created (5 files)
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/docs/ASYNC_TRANSFER_AUDIT_REPORT.md`
-2. `/home/kim-asplund/projects/kimsfinance/rust/docs/AGENT2_COMPLETION_SUMMARY.md`
-3. `/home/kim-asplund/projects/kimsfinance/rust/docs/ASYNC_TRANSFER_VISUAL_SUMMARY.txt`
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/AGENT2_NEXT_STEPS.md`
-5. `/home/kim-asplund/projects/kimsfinance/rust/tests/async_transfer_regression.rs`
+1. `/home/kim/projects/kimsfinance/rust/docs/ASYNC_TRANSFER_AUDIT_REPORT.md`
+2. `/home/kim/projects/kimsfinance/rust/docs/AGENT2_COMPLETION_SUMMARY.md`
+3. `/home/kim/projects/kimsfinance/rust/docs/ASYNC_TRANSFER_VISUAL_SUMMARY.txt`
+4. `/home/kim/projects/kimsfinance/rust/docs/AGENT2_NEXT_STEPS.md`
+5. `/home/kim/projects/kimsfinance/rust/tests/async_transfer_regression.rs`
 
 ### Modified (0 files)
 

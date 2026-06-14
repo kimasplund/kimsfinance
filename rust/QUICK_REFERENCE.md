@@ -1,6 +1,6 @@
 # kimsfinance_core Quick Reference
 
-**Version**: 0.1.0 | **Language**: Python (Rust-accelerated) | **Performance**: 3-8x faster than pandas
+**Version**: 0.2.0 | **Language**: Python (Rust-accelerated) | **Performance**: 3-8x faster than pandas
 
 ## Installation
 
@@ -40,7 +40,11 @@ atr = kimsfinance_core.calculate_atr(high, low, close, period=14)
 obv = kimsfinance_core.calculate_obv(close, volume)
 vwap = kimsfinance_core.calculate_vwap(high, low, close, volume)
 cmf = kimsfinance_core.calculate_cmf(high, low, close, volume, period=20)  # -1 to 1 range
+mfi = kimsfinance_core.calculate_mfi(high, low, close, volume, period=14)
 vp = kimsfinance_core.calculate_volume_profile(high, low, close, volume, num_bins=20)
+
+# Trend
+sar = kimsfinance_core.calculate_parabolic_sar(high, low, af_start=0.02, af_increment=0.02, af_max=0.2)
 ```
 
 ## Multi-Output Indicators (Return Dictionaries)
@@ -197,15 +201,16 @@ volume_confirm = obv[-1] > obv[-2]
 strong_signal = price_up and volume_confirm
 ```
 
-## All 24 Indicators at a Glance
+## All 26 Indicators at a Glance
 
 | Category | Count | Indicators |
 |----------|-------|-----------|
 | **Moving Averages** | 7 | SMA, EMA, WMA, VWMA, DEMA, TEMA, HMA |
 | **Momentum** | 8 | RSI, ROC, Williams %R, Stochastic, Aroon, CCI, MACD, TSI |
 | **Volatility** | 5 | ATR, Bollinger Bands, Keltner Channels, Donchian Channels, Elder Ray |
-| **Volume** | 4 | OBV, VWAP, CMF, Volume Profile |
-| **Total** | **24** | All production-ready |
+| **Volume** | 5 | OBV, VWAP, CMF, MFI, Volume Profile |
+| **Trend** | 1 | Parabolic SAR |
+| **Total** | **26** | All production-ready |
 
 ## Documentation
 
@@ -218,7 +223,7 @@ strong_signal = price_up and volume_confirm
 
 ```python
 # Version check
-print(kimsfinance_core.__version__)  # 0.1.0
+print(kimsfinance_core.__version__)  # 0.2.0
 
 # Module documentation
 print(kimsfinance_core.__doc__)

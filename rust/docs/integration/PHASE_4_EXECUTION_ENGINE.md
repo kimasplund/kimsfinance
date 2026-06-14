@@ -333,7 +333,7 @@ Performance: 1000 positions <50ms, 1000 expirations <10ms
 
 ### Complete Demo
 
-See `/home/kim-asplund/projects/kimsfinance/rust/examples/execution_engine_demo.rs`
+See `/home/kim/projects/kimsfinance/rust/examples/execution_engine_demo.rs`
 
 **Scenarios covered**:
 1. Opening multiple positions (call spreads, straddles)

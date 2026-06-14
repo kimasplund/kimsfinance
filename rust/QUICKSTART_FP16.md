@@ -10,7 +10,7 @@ Get started with high-performance FP16 ↔ FP32 conversion in 5 minutes.
 
 ```bash
 # Test the kernels (requires CuPy)
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp16_conversions_cupy.py
 
 # Expected: All tests pass ✓

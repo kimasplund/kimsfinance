@@ -18,26 +18,26 @@ Complete the full Phase 5 implementation by connecting TripleBufferedExecutor to
 ### 1. Comprehensive System Analysis (1 hour)
 
 **Files Analyzed**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/triple_buffer.rs` (595 lines)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/triple_buffer.rs` (595 lines)
   - Generic `TripleBufferedExecutor<T>` infrastructure
   - 3 buffer sets with rotation logic
   - CUDA event synchronization
   - Async H2D/D2H transfer methods
   - Pipeline state management
 
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/async_transfers.rs` (548 lines)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/async_transfers.rs` (548 lines)
   - `CudaEvent` wrapper with RAII cleanup
   - `AsyncTransferExt` trait for async operations
   - Pinned memory support (20-30% faster transfers)
   - Cross-stream synchronization
 
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu` (445 lines)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu` (445 lines)
   - Persistent kernel combining 4 phases
   - Cooperative grid synchronization
   - Device functions for RSI, ATR, SMA
   - **Status**: Production-ready, tested
 
-- `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs` (1191 lines)
+- `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs` (1191 lines)
   - `execute_async()` method with mini-batching
   - Integration point identified (lines 555-583)
   - **Current**: Sequential processing (placeholder)
@@ -96,20 +96,20 @@ Triple-Buffered (Pipelined):
 
 **Files Created**:
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/docs/PHASE_5_TRIPLE_BUFFER_STATUS.md`**
+1. **`/home/kim/projects/kimsfinance/rust/docs/PHASE_5_TRIPLE_BUFFER_STATUS.md`**
    - Complete implementation status (85% complete)
    - Detailed architecture diagram
    - Code snippets for integration
    - Performance targets and validation steps
    - Success criteria checklist
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/scripts/profile_triple_buffer_timeline.sh`** (executable)
+2. **`/home/kim/projects/kimsfinance/rust/scripts/profile_triple_buffer_timeline.sh`** (executable)
    - Nsight Systems profiling script
    - Timeline validation
    - GPU utilization metrics
    - Expected visualization guide
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/docs/AGENT_5_COMPLETION_REPORT.md`** (this file)
+3. **`/home/kim/projects/kimsfinance/rust/docs/AGENT_5_COMPLETION_REPORT.md`** (this file)
    - Comprehensive summary
    - What was accomplished
    - What remains

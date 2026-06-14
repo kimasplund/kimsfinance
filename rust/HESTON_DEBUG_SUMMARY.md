@@ -3,7 +3,7 @@
 ## Files Modified
 
 ### 1. CUDA Kernel (Primary)
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda/heston/characteristic_function.cu`
+**File:** `/home/kim/projects/kimsfinance/rust/src/gpu/cuda/heston/characteristic_function.cu`
 
 **Changes:**
 - Added comprehensive printf debugging at every calculation step
@@ -28,22 +28,22 @@
 14. phi = exp(exponent) [FINAL OUTPUT]
 
 ### 2. Test Files (New)
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/examples/test_heston_debug.rs`
+**File:** `/home/kim/projects/kimsfinance/rust/examples/test_heston_debug.rs`
 - Minimal test that prices a single ATM call option
 - Uses small FFT size (16 points) for faster debug
 - Designed to trigger kernel and capture debug output
 
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_heston_debug.sh`
+**File:** `/home/kim/projects/kimsfinance/rust/scripts/test_heston_debug.sh`
 - Bash script to build and run the debug test
 - Captures all output (stdout + stderr)
 
 ### 3. Documentation (New)
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/DEBUG_HESTON_IMAG_ZERO.md`
+**File:** `/home/kim/projects/kimsfinance/rust/DEBUG_HESTON_IMAG_ZERO.md`
 - Complete problem statement and investigation plan
 - Debug strategy and expected output format
 - Root cause analysis decision tree
 
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/HESTON_DEBUG_QUICK_REF.md`
+**File:** `/home/kim/projects/kimsfinance/rust/HESTON_DEBUG_QUICK_REF.md`
 - Quick reference card for interpreting debug output
 - Expected values for first few calculations
 - Key insight: u=0 naturally produces zero imaginary parts!
@@ -52,19 +52,19 @@
 
 ### Method 1: Quick Test (Recommended)
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_heston_debug --features heston --release 2>&1 | grep CUDA_DEBUG
 ```
 
 ### Method 2: Full Output
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee heston_debug_full.txt
 ```
 
 ### Method 3: Scripted
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 bash scripts/test_heston_debug.sh | tee heston_debug_output.txt
 ```
 
@@ -175,7 +175,7 @@ Once buggy operator identified:
 
 ## Files to Review After Debug
 
-- `/home/kim-asplund/projects/kimsfinance/rust/heston_debug_output.txt` - Full output
+- `/home/kim/projects/kimsfinance/rust/heston_debug_output.txt` - Full output
 - Look for: `CUDA_DEBUG [idx=1]:` lines
 - Compare: idx=0 vs idx=1 imaginary parts
 - Identify: First calculation where idx=1 imag becomes zero
@@ -191,7 +191,7 @@ Once buggy operator identified:
 
 ```bash
 # Build and run debug test
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_heston_debug --features heston --release 2>&1 | tee debug_output.txt
 
 # Extract only CUDA debug lines

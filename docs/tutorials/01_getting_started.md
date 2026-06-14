@@ -121,7 +121,7 @@ python -c "import kimsfinance; print(f'kimsfinance {kimsfinance.__version__} ins
 
 Expected output:
 ```
-kimsfinance 0.1.0 installed successfully!
+kimsfinance 0.2.0 installed successfully!
 ```
 
 ---

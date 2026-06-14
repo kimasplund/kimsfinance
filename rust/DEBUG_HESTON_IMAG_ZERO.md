@@ -66,19 +66,19 @@ The kernel now prints these intermediate values at each step of the computation:
 
 ### Option 1: Minimal Test (Fastest)
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_heston_debug --features heston --release 2>&1 | grep CUDA_DEBUG
 ```
 
 ### Option 2: Full Test Script
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 bash scripts/test_heston_debug.sh
 ```
 
 ### Option 3: Original FFT Test
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_fft_pricing --features heston --release 2>&1 | grep CUDA_DEBUG
 ```
 

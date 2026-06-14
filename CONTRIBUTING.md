@@ -67,7 +67,7 @@ Code contributions are welcome! Areas where we'd love help:
 - **New chart types** - Line charts, area charts, Renko, Point & Figure
 - **Technical indicators** - SMA, EMA, RSI, MACD, Bollinger Bands
 - **GPU optimizations** - CuPy/cuDF improvements
-- **Test coverage** - Expand our 329+ test suite
+- **Test coverage** - Expand our 1,500+ test suite
 - **Platform support** - Windows, macOS, ARM architecture
 
 ### 5. Help Others
@@ -162,7 +162,7 @@ pip install -e ".[dev,gpu,jit,test]"
 # Run tests to ensure everything works
 pytest tests/
 
-# Should see: 329+ tests passed
+# Should see: 1,500+ tests passed
 ```
 
 ---
@@ -307,7 +307,7 @@ body_heights = np.array([abs(c - o) for c, o in zip(close, open)])
 
 ## Testing Requirements
 
-All code contributions must include tests. We maintain **329+ tests** with comprehensive coverage.
+All code contributions must include tests. We maintain **1,500+ tests** with comprehensive coverage.
 
 ### Running Tests
 

@@ -39,7 +39,7 @@ Successfully implemented stream-ordered memory allocation in cudarc fork with co
    - Migration guide
    - Ecosystem impact analysis
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/cuda-ext/docs/UPSTREAM_MIGRATION.md`**
+3. **`/home/kim/projects/kimsfinance/rust/cuda-ext/docs/UPSTREAM_MIGRATION.md`**
    - Migration path for kimsfinance
    - Timeline estimates
    - Compatibility matrix
@@ -344,7 +344,7 @@ Features:
 ### 2. Documentation
 - `/tmp/cudarc/README.md` - Updated with examples
 - `/tmp/STREAM_ORDERED_MALLOC_PR.md` - PR description
-- `/home/kim-asplund/projects/kimsfinance/rust/cuda-ext/docs/UPSTREAM_MIGRATION.md` - Migration guide
+- `/home/kim/projects/kimsfinance/rust/cuda-ext/docs/UPSTREAM_MIGRATION.md` - Migration guide
 
 ### 3. Git Artifacts
 - `/tmp/stream-malloc.patch` - Patch file (439 lines)

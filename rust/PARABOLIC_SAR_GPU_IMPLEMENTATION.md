@@ -271,37 +271,37 @@ Use **CPU** for:
 ## Files Created
 
 ### Core Implementation
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/parabolic_sar.rs` (800 lines)
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/parabolic_sar.rs` (800 lines)
    - 4 CUDA kernels (embedded source)
    - Hybrid CPU-GPU function
    - Comprehensive error handling
    - 6 test cases
 
 ### Module Export
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs` (updated)
+2. `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs` (updated)
    - Added `pub mod parabolic_sar;`
    - Added `pub use parabolic_sar::parabolic_sar_gpu;`
 
 ### Examples
-3. `/home/kim-asplund/projects/kimsfinance/rust/examples/benchmark_parabolic_sar.rs` (200 lines)
+3. `/home/kim/projects/kimsfinance/rust/examples/benchmark_parabolic_sar.rs` (200 lines)
    - CPU vs GPU benchmark
    - Multiple dataset sizes
    - Performance analysis
 
-4. `/home/kim-asplund/projects/kimsfinance/rust/examples/test_parabolic_sar_gpu.rs` (180 lines)
+4. `/home/kim/projects/kimsfinance/rust/examples/test_parabolic_sar_gpu.rs` (180 lines)
    - Validation against CPU reference
    - 4 test scenarios
    - Correctness verification
 
 ### Documentation
-5. `/home/kim-asplund/projects/kimsfinance/rust/docs/GPU_PARABOLIC_SAR.md` (500 lines)
+5. `/home/kim/projects/kimsfinance/rust/docs/GPU_PARABOLIC_SAR.md` (500 lines)
    - Architecture overview
    - Algorithm breakdown
    - Performance analysis
    - Usage examples
    - Future optimizations
 
-6. `/home/kim-asplund/projects/kimsfinance/rust/PARABOLIC_SAR_GPU_IMPLEMENTATION.md` (this file)
+6. `/home/kim/projects/kimsfinance/rust/PARABOLIC_SAR_GPU_IMPLEMENTATION.md` (this file)
    - Complete implementation report
    - Requirements checklist
    - Confidence assessment

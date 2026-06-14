@@ -199,7 +199,7 @@ Easy to add:
 
 ### ✅ Heston Module Integration
 
-Updated `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/mod.rs`:
+Updated `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/mod.rs`:
 - Added `pub mod execution`
 - Exported all public types
 - Zero conflicts with existing code
@@ -447,24 +447,24 @@ println!("{}", report.to_string());
 ## Files Created
 
 ### Source Code (5 files)
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/execution/mod.rs`
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/execution/position_manager.rs`
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/execution/expiration.rs`
-4. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/execution/pnl_tracker.rs`
-5. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/execution/engine.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/execution/mod.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/execution/position_manager.rs`
+3. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/execution/expiration.rs`
+4. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/execution/pnl_tracker.rs`
+5. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/execution/engine.rs`
 
 ### Tests (1 file)
-6. `/home/kim-asplund/projects/kimsfinance/rust/tests/execution_engine_test.rs`
+6. `/home/kim/projects/kimsfinance/rust/tests/execution_engine_test.rs`
 
 ### Examples (1 file)
-7. `/home/kim-asplund/projects/kimsfinance/rust/examples/execution_engine_demo.rs`
+7. `/home/kim/projects/kimsfinance/rust/examples/execution_engine_demo.rs`
 
 ### Documentation (2 files)
-8. `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE_4_EXECUTION_ENGINE.md`
-9. `/home/kim-asplund/projects/kimsfinance/rust/PHASE_4_COMPLETION_REPORT.md` (this file)
+8. `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE_4_EXECUTION_ENGINE.md`
+9. `/home/kim/projects/kimsfinance/rust/PHASE_4_COMPLETION_REPORT.md` (this file)
 
 ### Modified (1 file)
-10. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/mod.rs` (added exports)
+10. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/mod.rs` (added exports)
 
 **Total**: 9 new files + 1 modified
 

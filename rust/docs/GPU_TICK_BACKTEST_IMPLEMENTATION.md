@@ -12,9 +12,9 @@
 - **Accuracy**: <0.01% deviation from CPU backtest ✅
 
 **Files Delivered**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/tick_backtest_batch.cu` (CUDA kernel)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_backtest_batch.rs` (Rust FFI bindings)
-- `/home/kim-asplund/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs` (Validation script)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/tick_backtest_batch.cu` (CUDA kernel)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/tick_backtest_batch.rs` (Rust FFI bindings)
+- `/home/kim/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs` (Validation script)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ### Environment Verification
 
-✅ **Working Directory**: `/home/kim-asplund/projects/kimsfinance/rust`
+✅ **Working Directory**: `/home/kim/projects/kimsfinance/rust`
 ✅ **GPU**: NVIDIA RTX 3500 Ada (12GB VRAM)
 ✅ **CUDA**: 13.0+
 ✅ **Reference Implementation**: `batch_backtest.cu` (lines 76-99, 325-410)
@@ -271,7 +271,7 @@ kernel.launch(
 
 ### Correctness Validation
 
-**Test Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs`
+**Test Script**: `/home/kim/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs`
 
 **Validation Criteria**:
 
@@ -475,14 +475,14 @@ cargo run --release --features gpu --bin gpu_tick_pipeline_test
 
 ### Created Files
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/tick_backtest_batch.cu`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/kernels/tick_backtest_batch.cu`**
    - CUDA kernel implementation (680 lines)
    - Pending orders circular buffer
    - Position tracking (exact CPU match)
    - Welford's algorithm for Sharpe ratio
    - Main processing loop with 10ms delay
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_backtest_batch.rs`**
+2. **`/home/kim/projects/kimsfinance/rust/src/gpu/tick_backtest_batch.rs`**
    - Rust FFI bindings (540 lines)
    - `TickBacktestBatch` struct and API
    - `BacktestConfig` and `BacktestResult` structs
@@ -490,7 +490,7 @@ cargo run --release --features gpu --bin gpu_tick_pipeline_test
    - Benchmark utilities
    - Unit tests (4 tests)
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs`**
+3. **`/home/kim/projects/kimsfinance/rust/scripts/validate_gpu_tick_backtest.rs`**
    - CPU vs GPU validation script (420 lines)
    - Accuracy validation (<0.01% tolerance)
    - Performance comparison
@@ -499,7 +499,7 @@ cargo run --release --features gpu --bin gpu_tick_pipeline_test
 
 ### Modified Files
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`**
    - Added `tick_backtest_batch` module export
    - Exposed public API types
 

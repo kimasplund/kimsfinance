@@ -40,7 +40,7 @@ account = "DU1234567"  # Your paper trading account ID (change this!)
 ### 2. Start the Bot
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Activate Python environment
 source ../.venv/bin/activate
@@ -214,9 +214,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=kim-asplund
-WorkingDirectory=/home/kim-asplund/projects/kimsfinance/rust
-ExecStart=/home/kim-asplund/projects/kimsfinance/.venv/bin/python scripts/automated_trading_bot.py
+User=kim
+WorkingDirectory=/home/kim/projects/kimsfinance/rust
+ExecStart=/home/kim/projects/kimsfinance/.venv/bin/python scripts/automated_trading_bot.py
 Restart=always
 RestartSec=10
 
@@ -405,7 +405,7 @@ The bot is production-ready for paper trading. It won't crash, handles disconnec
 
 ```bash
 # Start now:
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 source ../.venv/bin/activate
 python scripts/automated_trading_bot.py
 ```

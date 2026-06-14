@@ -560,6 +560,6 @@ MIT License - Same as kimsfinance project
 For questions or issues, please open an issue in the kimsfinance repository.
 
 **Related Documentation**:
-- Main README: `/home/kim-asplund/projects/kimsfinance/README.md`
-- Backtest Module: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/`
-- Examples: `/home/kim-asplund/projects/kimsfinance/rust/examples/`
+- Main README: `/home/kim/projects/kimsfinance/README.md`
+- Backtest Module: `/home/kim/projects/kimsfinance/rust/src/backtest/`
+- Examples: `/home/kim/projects/kimsfinance/rust/examples/`

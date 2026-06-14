@@ -258,17 +258,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Files Created/Modified
 
 ### Created Files
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/data/mod.rs`
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/data/common.rs`
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/data/deribit/mod.rs`
-4. `/home/kim-asplund/projects/kimsfinance/rust/src/data/ibkr/mod.rs`
-5. `/home/kim-asplund/projects/kimsfinance/rust/tests/data_connectors_test.rs`
-6. `/home/kim-asplund/projects/kimsfinance/rust/docs/DATA_CONNECTORS_SETUP.md`
-7. `/home/kim-asplund/projects/kimsfinance/rust/docs/DATA_CONNECTORS_IMPLEMENTATION.md`
+1. `/home/kim/projects/kimsfinance/rust/src/data/mod.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/data/common.rs`
+3. `/home/kim/projects/kimsfinance/rust/src/data/deribit/mod.rs`
+4. `/home/kim/projects/kimsfinance/rust/src/data/ibkr/mod.rs`
+5. `/home/kim/projects/kimsfinance/rust/tests/data_connectors_test.rs`
+6. `/home/kim/projects/kimsfinance/rust/docs/DATA_CONNECTORS_SETUP.md`
+7. `/home/kim/projects/kimsfinance/rust/docs/DATA_CONNECTORS_IMPLEMENTATION.md`
 
 ### Modified Files
-1. `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml` - Added dependencies and feature flags
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs` - Registered data module
+1. `/home/kim/projects/kimsfinance/rust/Cargo.toml` - Added dependencies and feature flags
+2. `/home/kim/projects/kimsfinance/rust/src/lib.rs` - Registered data module
 
 ---
 

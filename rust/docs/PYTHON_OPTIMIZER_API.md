@@ -325,7 +325,7 @@ Performance:
 ## Type Stubs
 
 Full type stubs available at:
-- `/home/kim-asplund/projects/kimsfinance/rust/kimsfinance_core.pyi`
+- `/home/kim/projects/kimsfinance/rust/kimsfinance_core.pyi`
 
 Includes:
 - Full type hints for all methods
@@ -364,18 +364,18 @@ Includes:
 ## Source Files
 
 ### Rust Implementation
-- `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/grid_search.rs`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/euler_search.rs`
+- `/home/kim/projects/kimsfinance/rust/src/backtest/grid_search.rs`
+- `/home/kim/projects/kimsfinance/rust/src/backtest/euler_search.rs`
 
 ### Python Bindings
-- `/home/kim-asplund/projects/kimsfinance/rust/src/optimizer_py.rs`
+- `/home/kim/projects/kimsfinance/rust/src/optimizer_py.rs`
 
 ### Type Stubs
-- `/home/kim-asplund/projects/kimsfinance/rust/kimsfinance_core.pyi`
+- `/home/kim/projects/kimsfinance/rust/kimsfinance_core.pyi`
 
 ### Examples
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/python_grid_search_demo.py`
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/python_euler_search_demo.py`
+- `/home/kim/projects/kimsfinance/rust/examples/python_grid_search_demo.py`
+- `/home/kim/projects/kimsfinance/rust/examples/python_euler_search_demo.py`
 
 ## Future Enhancements
 

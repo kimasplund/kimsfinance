@@ -303,7 +303,7 @@ The IBKR integration is **complete and ready**. You can now:
 
 **To test now:**
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo run --example test_ibkr_paper_trading --features data-ibkr --release
 ```
 

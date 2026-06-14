@@ -344,19 +344,19 @@ Phase 3b implementation is **COMPLETE** and **PRODUCTION-READY**.
 ## Appendix: File Locations
 
 ### Source Code
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda/strategies/covered_call.cu`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/cuda/strategies/iron_condor.cu`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/strategies_gpu.rs`
+- `/home/kim/projects/kimsfinance/rust/src/gpu/cuda/strategies/covered_call.cu`
+- `/home/kim/projects/kimsfinance/rust/src/gpu/cuda/strategies/iron_condor.cu`
+- `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/strategies_gpu.rs`
 
 ### Tests
-- `/home/kim-asplund/projects/kimsfinance/rust/tests/income_strategies_test.rs`
+- `/home/kim/projects/kimsfinance/rust/tests/income_strategies_test.rs`
 
 ### Examples
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/income_strategies_demo.rs`
+- `/home/kim/projects/kimsfinance/rust/examples/income_strategies_demo.rs`
 
 ### Documentation
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE_3B_IMPLEMENTATION.md`
-- `/home/kim-asplund/projects/kimsfinance/rust/PHASE_3B_SUMMARY.md`
-- `/home/kim-asplund/projects/kimsfinance/rust/PHASE_3B_QUICKSTART.md`
-- `/home/kim-asplund/projects/kimsfinance/rust/PHASE_3B_COMPLETION_REPORT.md`
+- `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE_3B_IMPLEMENTATION.md`
+- `/home/kim/projects/kimsfinance/rust/PHASE_3B_SUMMARY.md`
+- `/home/kim/projects/kimsfinance/rust/PHASE_3B_QUICKSTART.md`
+- `/home/kim/projects/kimsfinance/rust/PHASE_3B_COMPLETION_REPORT.md`
 

@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("📊 Step 1: Loading BTC OHLC data from Binance...");
 
     // Path to real Binance data (1-minute OHLC candles from 2024)
-    let binance_path = "/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv";
+    let binance_path = "/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv";
 
     // For demo, we'll generate trade data from OHLC to test TimeBar aggregator
     // In production, you'd use actual trade-level data

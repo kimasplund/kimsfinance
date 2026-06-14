@@ -16,7 +16,7 @@
 ## File Structure
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/
+/home/kim/projects/kimsfinance/rust/
 │
 ├── RUN_HESTON_DEBUG.sh              ← START HERE (master script)
 │
@@ -77,7 +77,7 @@ You're probably overthinking this. Just run:
 ## One-Minute Quick Start
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 chmod +x RUN_HESTON_DEBUG.sh
 ./RUN_HESTON_DEBUG.sh
 ```

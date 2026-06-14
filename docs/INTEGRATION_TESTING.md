@@ -666,11 +666,11 @@ After completing integration testing:
 
 ## References
 
-- **Implementation Plan**: `/home/kim-asplund/projects/kimsfinance/integrated-reasoning/gpu_batch_backtesting_implementation_plan.md`
-- **Python API**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/batch.py`
-- **Rust API**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
-- **CUDA Kernels**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
-- **Genetic Optimizer**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/optimization/genetic.py`
+- **Implementation Plan**: `/home/kim/projects/kimsfinance/integrated-reasoning/gpu_batch_backtesting_implementation_plan.md`
+- **Python API**: `/home/kim/projects/kimsfinance/kimsfinance/batch.py`
+- **Rust API**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
+- **CUDA Kernels**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
+- **Genetic Optimizer**: `/home/kim/projects/kimsfinance/kimsfinance/optimization/genetic.py`
 
 ---
 

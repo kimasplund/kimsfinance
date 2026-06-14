@@ -43,12 +43,12 @@ numpy = "0.27.0"
 - ✅ `PyDict::new(py)` - Multiple occurrences (CORRECT)
 
 **Files verified**:
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/patterns_py.rs` - ✅ CORRECT
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs` - ✅ CORRECT
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/orderflow_py.rs` - ✅ CORRECT
-4. `/home/kim-asplund/projects/kimsfinance/rust/src/tick_backtest_py.rs` - ✅ CORRECT
-5. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu_tick_py.rs` - ✅ CORRECT
-6. `/home/kim-asplund/projects/kimsfinance/rust/src/batch_backtest_py.rs` - ✅ CORRECT
+1. `/home/kim/projects/kimsfinance/rust/src/patterns_py.rs` - ✅ CORRECT
+2. `/home/kim/projects/kimsfinance/rust/src/lib.rs` - ✅ CORRECT
+3. `/home/kim/projects/kimsfinance/rust/src/orderflow_py.rs` - ✅ CORRECT
+4. `/home/kim/projects/kimsfinance/rust/src/tick_backtest_py.rs` - ✅ CORRECT
+5. `/home/kim/projects/kimsfinance/rust/src/gpu_tick_py.rs` - ✅ CORRECT
+6. `/home/kim/projects/kimsfinance/rust/src/batch_backtest_py.rs` - ✅ CORRECT
 
 ---
 
@@ -81,7 +81,7 @@ $ maturin build --release
 **Documentation Build**:
 ```bash
 $ cargo doc --lib --no-deps
-   Generated /home/kim-asplund/projects/kimsfinance/rust/target/doc/kimsfinance_core/index.html
+   Generated /home/kim/projects/kimsfinance/rust/target/doc/kimsfinance_core/index.html
 ```
 - ✅ Documentation generated successfully
 

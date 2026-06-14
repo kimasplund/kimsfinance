@@ -11,7 +11,7 @@ This benchmark comprehensively compares Rust-accelerated indicators against Pyth
 ### 1. Build Rust Extension
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 maturin develop --release
 ```
 
@@ -26,7 +26,7 @@ pip install numpy scipy
 ## Running the Benchmark
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python benchmarks/benchmark_indicators_rust.py
 ```
 
@@ -166,7 +166,7 @@ Build with: cd rust && maturin develop --release
 
 **Solution**:
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 maturin develop --release
 ```
 
@@ -299,10 +299,10 @@ To add new indicator benchmarks:
 
 ## References
 
-- **Rust Implementation**: `/home/kim-asplund/projects/kimsfinance/rust/`
-- **Python Implementation**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/ops/indicators/`
-- **Engine Manager**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/core/engine.py`
-- **kimsfinance Docs**: `/home/kim-asplund/projects/kimsfinance/docs/`
+- **Rust Implementation**: `/home/kim/projects/kimsfinance/rust/`
+- **Python Implementation**: `/home/kim/projects/kimsfinance/kimsfinance/ops/indicators/`
+- **Engine Manager**: `/home/kim/projects/kimsfinance/kimsfinance/core/engine.py`
+- **kimsfinance Docs**: `/home/kim/projects/kimsfinance/docs/`
 
 ---
 

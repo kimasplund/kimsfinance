@@ -739,5 +739,5 @@ AGPL-3.0 (open source) + Commercial License available
 ---
 
 **Last Updated:** October 20, 2025
-**Version:** kimsfinance v0.1.0+
+**Version:** kimsfinance v0.2.0+
 **Author:** kimsfinance contributors

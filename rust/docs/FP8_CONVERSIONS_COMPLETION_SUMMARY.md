@@ -17,7 +17,7 @@ Successfully created FP32 ↔ FP8 E4M3 conversion kernels using **pure bitwise o
 
 ### 1. **Core Kernel Implementation** ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`
 
 **Line Count**: 456 lines of CUDA C++
 
@@ -46,7 +46,7 @@ Successfully created FP32 ↔ FP8 E4M3 conversion kernels using **pure bitwise o
 
 ### 2. **Test Suite** ✅
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp8_conversions.py`
+**File**: `/home/kim/projects/kimsfinance/rust/scripts/test_fp8_conversions.py`
 
 **Line Count**: 387 lines of Python
 
@@ -103,7 +103,7 @@ Passed: 3/3
 
 #### 3.1 Full Implementation Report
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md`
+**File**: `/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md`
 
 **Sections**:
 - Executive Summary
@@ -120,7 +120,7 @@ Passed: 3/3
 
 #### 3.2 Quick Reference Card
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_QUICKREF.md`
+**File**: `/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_QUICKREF.md`
 
 **Sections**:
 - Kernel API reference
@@ -328,7 +328,7 @@ print(f"Result: {C_fp32}")
 
 **To be validated** by running:
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp8_conversions.py
 ```
 
@@ -427,7 +427,7 @@ python scripts/test_fp8_conversions.py
 
 1. **Run Test Suite** ⚡
    ```bash
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    python scripts/test_fp8_conversions.py
    ```
    - **Expected**: ✅ ALL TESTS PASSED (3/3)
@@ -485,11 +485,11 @@ python scripts/test_fp8_conversions.py
 ### File Paths (Absolute)
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu
-/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp8_conversions.py
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_QUICKREF.md
-/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_COMPLETION_SUMMARY.md
+/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu
+/home/kim/projects/kimsfinance/rust/scripts/test_fp8_conversions.py
+/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md
+/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_QUICKREF.md
+/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_COMPLETION_SUMMARY.md
 ```
 
 ---

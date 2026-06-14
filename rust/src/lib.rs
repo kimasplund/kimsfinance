@@ -2080,7 +2080,7 @@ fn kimsfinance_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add(
         "__doc__",
-        "High-performance Rust implementation for kimsfinance (coordinates + 24 technical indicators + batch API + backtesting + 35 candlestick patterns)"
+        "High-performance Rust implementation for kimsfinance (coordinates + 26 standalone technical indicators + batch API + backtesting + 35 candlestick patterns)"
     )?;
 
     Ok(())

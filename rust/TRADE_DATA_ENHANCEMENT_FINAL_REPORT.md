@@ -402,7 +402,7 @@ Timeframe::minutes(5)
 
 **Impact**: LOW (algorithms are well-established)
 
-**Recommendation**: Test with real Binance data at `/home/kim-asplund/projects/binance-data/`
+**Recommendation**: Test with real Binance data at `/home/kim/projects/binance-data/`
 
 **Command**:
 ```bash
@@ -537,7 +537,7 @@ use kimsfinance_core::binance::process_binance_directory;
 
 // Load entire year automatically
 let candles = process_binance_directory(
-    "/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades",
+    "/home/kim/projects/binance-data/futures/BTCUSDT/trades",
     "2021-01-01",
     "2021-12-31",
     Timeframe::minutes(5)
@@ -628,7 +628,7 @@ for (i, level) in levels.iter().take(5).enumerate() {
    - Ensure all examples compile
 
 3. **Real Data Validation** (1-2 hours)
-   - Test with Binance data at `/home/kim-asplund/projects/binance-data/`
+   - Test with Binance data at `/home/kim/projects/binance-data/`
    - Run `cargo run --example tick_backtest_btc --release`
    - Verify results match expectations
 

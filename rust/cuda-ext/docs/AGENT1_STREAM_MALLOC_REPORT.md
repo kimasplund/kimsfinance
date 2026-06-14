@@ -159,7 +159,7 @@ unsafe {
 
 ### Replacing Existing AsyncAllocator
 
-Current `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/async_alloc.rs` has:
+Current `/home/kim/projects/kimsfinance/rust/src/gpu/async_alloc.rs` has:
 - ❌ Limited by cudarc's `CudaSlice` wrapper (can't use cudaMallocAsync)
 - ❌ No actual speedup (falls back to standard allocation)
 

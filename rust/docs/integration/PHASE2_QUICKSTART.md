@@ -33,7 +33,7 @@ let sweep = BatchBacktestSweep::new(device)
 ```
 
 **Key Files**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs` (Lines 264-796)
+- `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs` (Lines 264-796)
 
 ---
 
@@ -55,7 +55,7 @@ for (i, g) in greeks.iter().enumerate() {
 ```
 
 **Key Files**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs` (Lines 135-344)
+- `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs` (Lines 135-344)
 
 ---
 
@@ -79,7 +79,7 @@ TOTAL: 175ms (under 250ms target)
 
 ## Integration Tests
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/tests/heston_integration_test.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/tests/heston_integration_test.rs`
 
 **New Tests** (Lines 605-785):
 1. `test_phase2_heston_batch_greeks_accuracy()` - Validates <1% error
@@ -234,7 +234,7 @@ results.print_summary();
 ## Contact & Support
 
 **Phase 2 Implementation**: Claude (Senior Rust Developer Agent)
-**Full Report**: `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE2_IMPLEMENTATION_REPORT.md`
-**Integration Plan**: `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/HESTON_BACKTEST_INTEGRATION_PLAN.md`
+**Full Report**: `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE2_IMPLEMENTATION_REPORT.md`
+**Integration Plan**: `/home/kim/projects/kimsfinance/rust/docs/integration/HESTON_BACKTEST_INTEGRATION_PLAN.md`
 
 **Status**: Ready for Phase 1 handoff ✅

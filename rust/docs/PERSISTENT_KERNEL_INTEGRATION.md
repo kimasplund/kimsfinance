@@ -29,7 +29,7 @@ Speedup: 2-4x faster! (235ms → 125ms)
 
 ### CUDA Kernel
 
-Located at: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
+Located at: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
 
 ```cuda
 extern "C" __global__ void persistent_batch_backtest_kernel(
@@ -84,7 +84,7 @@ extern "C" __global__ void persistent_batch_backtest_kernel(
 
 ### Rust Integration
 
-Located at: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/persistent.rs`
+Located at: `/home/kim/projects/kimsfinance/rust/src/backtest/persistent.rs`
 
 ```rust
 pub fn execute_persistent(
@@ -98,7 +98,7 @@ pub fn execute_persistent(
 
 ### Auto-Selection
 
-Located at: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+Located at: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
 
 ```rust
 pub fn execute(self) -> Result<BatchBacktestResults, GpuError> {
@@ -179,7 +179,7 @@ let results = execute_persistent(
 ### Run Integration Test
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Compile and run test
 ./scripts/test_persistent_integration.sh
@@ -372,35 +372,35 @@ if vram_mb > 10_000.0 {
 
 ### Created
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/persistent/kernels/batch_backtest.cu`
    - Persistent kernel with all 4 phases
    - 467 lines of CUDA code
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/persistent.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/backtest/persistent.rs`
    - Rust integration for persistent execution
    - 317 lines of Rust code
 
-3. `/home/kim-asplund/projects/kimsfinance/rust/examples/test_persistent_backtest.rs`
+3. `/home/kim/projects/kimsfinance/rust/examples/test_persistent_backtest.rs`
    - Integration test example
    - 125 lines of Rust code
 
-4. `/home/kim-asplund/projects/kimsfinance/rust/benches/persistent_vs_traditional.rs`
+4. `/home/kim/projects/kimsfinance/rust/benches/persistent_vs_traditional.rs`
    - Benchmark comparison
    - 181 lines of Rust code
 
-5. `/home/kim-asplund/projects/kimsfinance/rust/scripts/test_persistent_integration.sh`
+5. `/home/kim/projects/kimsfinance/rust/scripts/test_persistent_integration.sh`
    - Test execution script
    - 23 lines of bash
 
-6. `/home/kim-asplund/projects/kimsfinance/rust/docs/PERSISTENT_KERNEL_INTEGRATION.md`
+6. `/home/kim/projects/kimsfinance/rust/docs/PERSISTENT_KERNEL_INTEGRATION.md`
    - This documentation file
 
 ### Modified
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/mod.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/backtest/mod.rs`
    - Added `pub mod persistent;`
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
    - Modified `execute()` to auto-select persistent/traditional
    - Renamed original `execute()` to `execute_traditional()`
    - 60 lines modified

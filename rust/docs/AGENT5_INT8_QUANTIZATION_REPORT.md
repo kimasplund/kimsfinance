@@ -12,10 +12,10 @@ Successfully implemented INT8 quantization infrastructure for orderflow features
 
 ### Deliverables
 
-✅ **Core Module**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/quantization.rs` (582 lines)
-✅ **CUDA Kernels**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/quantize_int8.cu` (451 lines)
-✅ **Accuracy Tests**: `/home/kim-asplund/projects/kimsfinance/rust/tests/quantization_accuracy.rs` (354 lines)
-✅ **Module Export**: Updated `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`
+✅ **Core Module**: `/home/kim/projects/kimsfinance/rust/src/gpu/quantization.rs` (582 lines)
+✅ **CUDA Kernels**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/quantize_int8.cu` (451 lines)
+✅ **Accuracy Tests**: `/home/kim/projects/kimsfinance/rust/tests/quantization_accuracy.rs` (354 lines)
+✅ **Module Export**: Updated `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`
 
 ### Key Achievements
 
@@ -394,9 +394,9 @@ If RMSE > 0.001:
 
 ### Code Patterns
 
-- **FP8 quantization**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
-- **GPU aggregation**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/aggregation.rs`
-- **Orderflow architecture**: `/home/kim-asplund/projects/kimsfinance/rust/docs/GPU_TICK_ARCHITECTURE.md`
+- **FP8 quantization**: `/home/kim/projects/kimsfinance/rust/src/gpu/fp8_wmma.rs`
+- **GPU aggregation**: `/home/kim/projects/kimsfinance/rust/src/gpu/aggregation.rs`
+- **Orderflow architecture**: `/home/kim/projects/kimsfinance/rust/docs/GPU_TICK_ARCHITECTURE.md`
 
 ---
 

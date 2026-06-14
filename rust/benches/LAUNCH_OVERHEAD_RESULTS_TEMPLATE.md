@@ -232,7 +232,7 @@ Maximum tasks/second achievable.
 Based on benchmark results, recommended thresholds for `EngineManager`:
 
 ```rust
-// In: /home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs
+// In: /home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs
 
 pub fn should_use_persistent_kernel(num_tasks: usize, data_size: usize) -> bool {
     // Use persistent kernels when:
@@ -298,7 +298,7 @@ pub fn should_use_persistent_kernel(num_tasks: usize, data_size: usize) -> bool 
 ### Benchmark Command
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo bench --bench launch_overhead --features gpu
 ```
 
@@ -372,11 +372,11 @@ nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader
 
 ## References
 
-**Benchmark Code**: `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs`
+**Benchmark Code**: `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs`
 
-**Persistent Kernel Module**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs`
+**Persistent Kernel Module**: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs`
 
-**Benchmark Guide**: `/home/kim-asplund/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md`
+**Benchmark Guide**: `/home/kim/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md`
 
 **Pattern Documentation**: `/home/kim/.claude/agents-library/refs/kimsfinance-benchmark-patterns.md`
 

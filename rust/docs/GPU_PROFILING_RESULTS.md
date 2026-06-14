@@ -211,6 +211,6 @@ cargo run --example profile_transfer_overhead --features gpu --release
 
 ## Files Created
 
-- `/home/kim-asplund/projects/kimsfinance/rust/examples/profile_transfer_overhead.rs` - Main profiler
-- `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_transfer_profiler.sh` - Runner script
-- `/home/kim-asplund/projects/kimsfinance/rust/docs/GPU_PROFILING_RESULTS.md` - This document
+- `/home/kim/projects/kimsfinance/rust/examples/profile_transfer_overhead.rs` - Main profiler
+- `/home/kim/projects/kimsfinance/rust/scripts/run_transfer_profiler.sh` - Runner script
+- `/home/kim/projects/kimsfinance/rust/docs/GPU_PROFILING_RESULTS.md` - This document

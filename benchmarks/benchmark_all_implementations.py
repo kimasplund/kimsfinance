@@ -34,7 +34,7 @@ class Colors:
 
 def load_binance_data(limit: int = None) -> pd.DataFrame:
     """Load Binance BTCUSDT 2024 1-minute OHLC data."""
-    data_path = Path("/home/kim-asplund/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv")
+    data_path = Path("/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv")
 
     print(f"\n{Colors.OKCYAN}Loading Binance BTCUSDT 2024 data...{Colors.ENDC}")
     df = pd.read_csv(data_path)
@@ -144,7 +144,7 @@ def benchmark_kimsfinance_python(df: pd.DataFrame) -> Dict[str, Tuple[float, flo
     results = {}
 
     try:
-        sys.path.insert(0, '/home/kim-asplund/projects/kimsfinance')
+        sys.path.insert(0, '/home/kim/projects/kimsfinance')
         import kimsfinance as mfp
 
         print(f"\n{Colors.HEADER}{'='*60}{Colors.ENDC}")
@@ -203,7 +203,7 @@ def benchmark_kimsfinance_python_gpu(df: pd.DataFrame) -> Dict[str, Tuple[float,
     results = {}
 
     try:
-        sys.path.insert(0, '/home/kim-asplund/projects/kimsfinance')
+        sys.path.insert(0, '/home/kim/projects/kimsfinance')
         import kimsfinance as mfp
 
         print(f"\n{Colors.HEADER}{'='*60}{Colors.ENDC}")

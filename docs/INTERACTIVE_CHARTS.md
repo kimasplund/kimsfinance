@@ -613,5 +613,5 @@ Commercial licenses available - contact: hello@asplund.kim
 
 ---
 
-**Version**: 0.1.0
+**Version**: 0.2.0
 **Last Updated**: 2025-11-03

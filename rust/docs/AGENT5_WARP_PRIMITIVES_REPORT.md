@@ -36,7 +36,7 @@ Successfully implemented warp-level shuffle primitives to replace inefficient sh
 
 ### 1. Warp Primitives Library
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/warp_primitives.cuh`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/warp_primitives.cuh`
 
 **Purpose**: Provide high-performance warp shuffle primitives as drop-in replacements for shared memory reductions.
 
@@ -89,7 +89,7 @@ __device__ void block_reduce_sum_pair(T val1, T val2, T& result1, T& result2);
 
 ### 2. Optimized Kernel
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
+**File**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels_backtest.cu`
 
 **Kernel**: `metrics_calculation_kernel` (lines 490-617)
 

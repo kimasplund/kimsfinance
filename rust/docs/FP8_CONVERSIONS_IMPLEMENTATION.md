@@ -24,7 +24,7 @@ Successfully implemented FP32 ↔ FP8 E4M3 conversion kernels using **pure bitwi
 ### File Location
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu
+/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu
 ```
 
 ### Kernel Functions
@@ -254,7 +254,7 @@ Output: FP32 value (32 bits)
 ### Test Suite Location
 
 ```
-/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp8_conversions.py
+/home/kim/projects/kimsfinance/rust/scripts/test_fp8_conversions.py
 ```
 
 ### Test Coverage
@@ -297,7 +297,7 @@ Output: FP32 value (32 bits)
 ### Running Tests
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 python scripts/test_fp8_conversions.py
 ```
 
@@ -595,18 +595,18 @@ except Exception as e:
 
 ### Created Files
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/kernels/fp8_conversions.cu`**
    - FP32 ↔ FP8 E4M3 conversion kernels (5 kernels)
    - 456 lines of CUDA C++
    - NVRTC compatible, no special headers
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/scripts/test_fp8_conversions.py`**
+2. **`/home/kim/projects/kimsfinance/rust/scripts/test_fp8_conversions.py`**
    - Comprehensive test suite
    - NVRTC compilation + kernel execution
    - NumPy reference implementation for validation
    - Performance benchmarking
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md`**
+3. **`/home/kim/projects/kimsfinance/rust/docs/FP8_CONVERSIONS_IMPLEMENTATION.md`**
    - This documentation
    - Algorithm details, usage guide, benchmarks
 
@@ -618,7 +618,7 @@ except Exception as e:
 
 ```bash
 # Navigate to project root
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run test suite
 python scripts/test_fp8_conversions.py

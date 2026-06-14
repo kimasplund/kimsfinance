@@ -425,7 +425,7 @@ CUDA Driver: 580.82.07 (CUDA 13.0)
 
 ## Appendix C: Benchmark Code
 
-Source: `/home/kim-asplund/projects/kimsfinance/rust/benches/pinned_vs_standard_memory.rs`
+Source: `/home/kim/projects/kimsfinance/rust/benches/pinned_vs_standard_memory.rs`
 
 ---
 

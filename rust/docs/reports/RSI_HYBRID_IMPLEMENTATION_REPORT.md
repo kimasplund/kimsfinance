@@ -61,11 +61,11 @@ Output: rsi (Array1<f64>)
 ### 2. Files Modified/Created
 
 #### Created:
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/cpu/mod.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/cpu/mod.rs`**
    - New CPU module for sequential algorithms
    - Exports: `ema_cpu`, `sma_cpu`, `wilders_smoothing_cpu`
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/cpu/sequential.rs`**
+2. **`/home/kim/projects/kimsfinance/rust/src/cpu/sequential.rs`**
    - **Lines**: 513 (comprehensive with tests and docs)
    - **Functions**:
      - `sma_cpu(input, period)` - Simple Moving Average
@@ -78,7 +78,7 @@ Output: rsi (Array1<f64>)
      - Wilder's: ~635μs
 
 #### Modified:
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/rsi.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/gpu/rsi.rs`**
    - **Lines changed**: ~150
    - **Changes**:
      - Removed `wilders_smoothing_kernel` (single-thread GPU kernel)
@@ -91,17 +91,17 @@ Output: rsi (Array1<f64>)
      - ❌ Removed: `wilders_smoothing_kernel` (single-thread anti-pattern)
      - ✅ Kept: `calculate_rsi_kernel` (parallel)
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/device.rs`**
+2. **`/home/kim/projects/kimsfinance/rust/src/gpu/device.rs`**
    - **Lines changed**: ~13 (removed, then simplified)
    - **Changes**: Initially added conversion from SequentialError to GpuError, but removed after linter refactored sequential.rs to use GpuError directly
 
-3. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`**
+3. **`/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`**
    - **Lines changed**: 2
    - **Changes**:
      - Added `GpuError` export: `pub use device::{GpuDevice, GpuError};`
      - Removed EMA CPU/hybrid exports (kept only `ema_gpu`)
 
-4. **`/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs`**
+4. **`/home/kim/projects/kimsfinance/rust/src/lib.rs`**
    - **Lines changed**: 1
    - **Changes**: Added `pub mod cpu;` to expose CPU sequential module
 

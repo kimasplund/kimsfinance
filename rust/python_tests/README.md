@@ -6,7 +6,7 @@ This directory contains Python tests and examples for the `kimsfinance_core` bac
 
 1. **Build the Rust extension**:
    ```bash
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    maturin develop --release
    ```
 

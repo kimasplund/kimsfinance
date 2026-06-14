@@ -12,7 +12,7 @@
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| **Working Directory** | `/home/kim-asplund/projects/kimsfinance/rust` | ✅ |
+| **Working Directory** | `/home/kim/projects/kimsfinance/rust` | ✅ |
 | **GPU** | NVIDIA RTX 3500 Ada (12GB VRAM) | ✅ |
 | **Compute Capability** | 8.9 (Ada Lovelace) | ✅ |
 | **CUDA Toolkit** | 13.0 | ✅ |
@@ -27,7 +27,7 @@
 - Operation: Hash-based aggregation with atomic operations
 
 **Existing Pattern**:
-- Reference: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/aggregation.rs`
+- Reference: `/home/kim/projects/kimsfinance/rust/src/gpu/aggregation.rs`
 - Current: Two-pass (binning + global memory atomics)
 - Limitation: Global memory atomic contention
 
@@ -49,25 +49,25 @@
 
 ### Files Created
 
-1. **CUDA Kernel**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu`
+1. **CUDA Kernel**: `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu`
    - Kernel 1: `bin_trades_kernel` - Parallel binning (O(N), no contention)
    - Kernel 2: `aggregate_ohlcv_hash_kernel` - Hash-based aggregation (shared memory)
    - Kernel 3: `aggregate_ohlcv_direct_kernel` - Fallback (global memory atomics)
    - Kernel 4: `quantize_to_int8_kernel` - Post-aggregation compression (INT8)
    - Kernel 5: `dequantize_from_int8_kernel` - Decompression for validation
 
-2. **Rust Bindings**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_aggregation.rs`
+2. **Rust Bindings**: `/home/kim/projects/kimsfinance/rust/src/gpu/tick_aggregation.rs`
    - `TickAggregator` - Main aggregator struct
    - `AggregatedCandles` - SoA output structure (Agent 2 compatible)
    - Memory transfer helpers (async pinned memory)
    - Bucket mapping logic
 
-3. **Validation Tests**: `/home/kim-asplund/projects/kimsfinance/rust/tests/tick_aggregation_validation.rs`
+3. **Validation Tests**: `/home/kim/projects/kimsfinance/rust/tests/tick_aggregation_validation.rs`
    - Correctness: GPU vs CPU comparison
    - Edge cases: Empty, single trade, many candles
    - Performance: 1M, 10M, 106M trade benchmarks
 
-4. **Module Registration**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`
+4. **Module Registration**: `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`
    - Added `pub mod tick_aggregation`
    - Exported `TickAggregator` and `AggregatedCandles`
 
@@ -450,29 +450,29 @@ let orderflow = orderflow_kernel.process(&candles)?;
 
 ### Created
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu`
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu`
    - 5 CUDA kernels (binning, hash aggregation, direct aggregation, quantization, dequantization)
    - 600 lines of heavily documented CUDA code
    - Optimized for Ada Lovelace (compute_89)
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/tick_aggregation.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/gpu/tick_aggregation.rs`
    - `TickAggregator` struct with kernel bindings
    - `AggregatedCandles` output structure
    - Memory transfer helpers
    - 700 lines of Rust code with tests
 
-3. `/home/kim-asplund/projects/kimsfinance/rust/tests/tick_aggregation_validation.rs`
+3. `/home/kim/projects/kimsfinance/rust/tests/tick_aggregation_validation.rs`
    - Correctness validation tests
    - Performance benchmarks (1M, 10M, 106M trades)
    - GPU vs CPU comparison
    - 400 lines of test code
 
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/TICK_AGGREGATION_REPORT.md`
+4. `/home/kim/projects/kimsfinance/rust/docs/TICK_AGGREGATION_REPORT.md`
    - This comprehensive report
 
 ### Modified
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`
    - Added `pub mod tick_aggregation`
    - Exported `TickAggregator` and `AggregatedCandles`
 

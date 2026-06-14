@@ -188,7 +188,7 @@ Speedup: 12.7x
 
 **Test: `test_load_parquet_single_file`**
 - Loads single day of BTCUSDT data
-- Path: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet`
+- Path: `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet`
 - Limit: 10K records
 - Status: ✅ Implemented (marked `#[ignore]`, requires real data)
 
@@ -324,7 +324,7 @@ error[E0277]: the size for values of type `dyn TickStrategy` cannot be known at 
 - **OS**: Linux 6.17.0-5-generic
 
 **Data Location**:
-- **Path**: `/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
+- **Path**: `/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01/`
 - **Format**: Parquet files (daily splits)
 - **Size**: ~920MB for January 2024
 - **Records**: ~30-50M trades/month

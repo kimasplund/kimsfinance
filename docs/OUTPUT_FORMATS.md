@@ -774,5 +774,5 @@ print(f"Generated 1000 charts in {elapsed:.2f}s")
 ---
 
 **Last Updated**: 2025-10-20
-**kimsfinance Version**: 0.1.0
+**kimsfinance Version**: 0.2.0
 **Supported Formats**: 8 (SVGZ, SVG, WebP, PNG, JPEG, BMP, TIFF, original)

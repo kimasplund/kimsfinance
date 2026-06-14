@@ -7,9 +7,9 @@ The batch indicator API allows calculating multiple technical indicators in a si
 ## Implementation Details
 
 ### Files Modified
-- `/home/kim-asplund/projects/kimsfinance/rust/Cargo.toml` - Added `serde_json = "1.0"`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/lib.rs` - Added batch module import and `calculate_indicators_batch()` function
-- `/home/kim-asplund/projects/kimsfinance/rust/src/batch.rs` - Added clippy allow for acronyms, `#[allow(dead_code)]` for `open` field
+- `/home/kim/projects/kimsfinance/rust/Cargo.toml` - Added `serde_json = "1.0"`
+- `/home/kim/projects/kimsfinance/rust/src/lib.rs` - Added batch module import and `calculate_indicators_batch()` function
+- `/home/kim/projects/kimsfinance/rust/src/batch.rs` - Added clippy allow for acronyms, `#[allow(dead_code)]` for `open` field
 
 ### Python API
 

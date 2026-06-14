@@ -244,14 +244,14 @@ device.pinned_pool.lock().release(pinned);
 ## Appendix: Quick Reference
 
 **Benchmark Files:**
-- Source: `/home/kim-asplund/projects/kimsfinance/rust/benches/pinned_vs_standard_memory.rs`
+- Source: `/home/kim/projects/kimsfinance/rust/benches/pinned_vs_standard_memory.rs`
 - Results: `/tmp/pinned_vs_standard_results.txt`
-- Analysis: `/home/kim-asplund/projects/kimsfinance/rust/scripts/analyze_pinned_memory_results.py`
-- Full Report: `/home/kim-asplund/projects/kimsfinance/rust/docs/PINNED_MEMORY_VALIDATION_REPORT.md`
+- Analysis: `/home/kim/projects/kimsfinance/rust/scripts/analyze_pinned_memory_results.py`
+- Full Report: `/home/kim/projects/kimsfinance/rust/docs/PINNED_MEMORY_VALIDATION_REPORT.md`
 
 **Run Benchmark:**
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo bench --bench pinned_vs_standard_memory --features gpu
 ```
 

@@ -298,7 +298,7 @@ graph.synchronize()?;
 
 - **Full Implementation Report**: `docs/CUDA_GRAPHS_INTEGRATION_REPORT.md`
 - **CUDA Graphs Guide**: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-graphs
-- **cudarc Graph API**: `/home/kim-asplund/.cargo/registry/.../cudarc-0.17.3/src/driver/safe/graph.rs`
+- **cudarc Graph API**: `/home/kim/.cargo/registry/.../cudarc-0.17.3/src/driver/safe/graph.rs`
 - **StreamManager**: `src/gpu/streams.rs`
 - **Batch System**: `src/gpu/batch.rs`
 

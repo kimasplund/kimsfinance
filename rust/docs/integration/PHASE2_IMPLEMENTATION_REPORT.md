@@ -40,7 +40,7 @@ Phase 2 successfully integrates the Heston GPU pricer into the batch backtest pi
 
 ### 1. BatchBacktestSweep Extensions
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
 
 #### Added Fields (Lines 264-270)
 ```rust
@@ -89,7 +89,7 @@ let phase0_ms = if self.is_options_strategy() {
 
 ### 2. GPU-Accelerated Batch Greeks
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs`
 
 #### New Method: `calculate_greeks_batch_gpu()` (Lines 135-344)
 
@@ -117,7 +117,7 @@ let phase0_ms = if self.is_options_strategy() {
 
 ### 3. Integration Tests
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/tests/heston_integration_test.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/tests/heston_integration_test.rs`
 
 #### Added 4 New Tests (Lines 605-785)
 
@@ -187,7 +187,7 @@ let phase0_ms = if self.is_options_strategy() {
 - `greeks_gpu.rs` and `strategies_gpu.rs` temporarily disabled due to old cudarc API
 - These modules are NOT part of Phase 2 scope
 - Require separate refactoring effort (estimated 4-6 hours each)
-- Disabled in `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/mod.rs` (Lines 8-16, 28-38)
+- Disabled in `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/mod.rs` (Lines 8-16, 28-38)
 
 ### 3. Batch GPU Greeks Optimization Opportunity
 - Current implementation makes separate GPU calls for vega (v±ε) due to parameter changes
@@ -321,25 +321,25 @@ cargo test --features "gpu,heston" test_phase2 --lib
 ## Deliverables Summary
 
 ### Code Files Modified
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/batch.rs`
+1. `/home/kim/projects/kimsfinance/rust/src/backtest/batch.rs`
    - Added 3 fields for options support
    - Added 3 builder methods
    - Added 2 helper methods
    - Integrated Phase 0 (Heston pricing) into pipeline
 
-2. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs`
+2. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/greeks.rs`
    - Added `calculate_greeks_batch_gpu()` method (210 lines)
    - Implements GPU-accelerated batch Greeks calculation
 
-3. `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/mod.rs`
+3. `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/mod.rs`
    - Temporarily disabled incompatible modules (not part of Phase 2)
 
 ### Test Files Modified
-4. `/home/kim-asplund/projects/kimsfinance/rust/tests/heston_integration_test.rs`
+4. `/home/kim/projects/kimsfinance/rust/tests/heston_integration_test.rs`
    - Added 4 Phase 2 integration tests (180 lines)
 
 ### Documentation Created
-5. `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE2_IMPLEMENTATION_REPORT.md`
+5. `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE2_IMPLEMENTATION_REPORT.md`
    - This comprehensive report
 
 ### Lines of Code

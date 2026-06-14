@@ -369,7 +369,7 @@ If gains are:
 
 ## File Locations
 
-All files in `/home/kim-asplund/projects/kimsfinance/`:
+All files in `/home/kim/projects/kimsfinance/`:
 
 ### Implementation
 - `rust/src/backtest/batch.rs` (Phase 1: Dynamic threshold)

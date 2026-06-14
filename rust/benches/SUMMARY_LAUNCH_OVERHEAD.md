@@ -12,34 +12,34 @@ A comprehensive benchmark suite to validate the **2-4x speedup claim** for persi
 
 ### Files Created
 
-1. **Benchmark**: `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs` ✅
+1. **Benchmark**: `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs` ✅
    - Comprehensive benchmark comparing traditional vs persistent kernel approaches
    - 5 benchmark groups covering different scenarios
    - Fully functional with `execute_batch()` integration
 
-2. **Guide**: `/home/kim-asplund/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md` ✅
+2. **Guide**: `/home/kim/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md` ✅
    - Complete guide on running and interpreting benchmarks
    - Expected results and success criteria
    - Troubleshooting and best practices
 
-3. **Results Template**: `/home/kim-asplund/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md` ✅
+3. **Results Template**: `/home/kim/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md` ✅
    - Template for documenting benchmark results
    - Statistical validation checklist
    - Performance analysis framework
 
-4. **Runner Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh` ✅
+4. **Runner Script**: `/home/kim/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh` ✅
    - Automated benchmark execution script
    - Environment verification
    - Results summary extraction
 
-5. **Benchmark Suite README**: `/home/kim-asplund/projects/kimsfinance/rust/benches/README_BENCHMARKS.md` ✅
+5. **Benchmark Suite README**: `/home/kim/projects/kimsfinance/rust/benches/README_BENCHMARKS.md` ✅
    - Overview of all benchmarks in the project
    - Quick reference for running benchmarks
    - Best practices and troubleshooting
 
 ### Code Changes
 
-1. **Export `execute_batch`**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs` ✅
+1. **Export `execute_batch`**: `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs` ✅
    - Added `execute_batch` to public exports
    - Now accessible via `kimsfinance_core::gpu::execute_batch`
 
@@ -157,7 +157,7 @@ A comprehensive benchmark suite to validate the **2-4x speedup claim** for persi
 ### Quick Start
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Run all launch overhead benchmarks
 cargo bench --bench launch_overhead --features gpu
@@ -332,17 +332,17 @@ let results = calculate_indicators_optimized(&device, &data, &indicators)?;
 
 ## References
 
-**Benchmark Code**: `/home/kim-asplund/projects/kimsfinance/rust/benches/launch_overhead.rs`
+**Benchmark Code**: `/home/kim/projects/kimsfinance/rust/benches/launch_overhead.rs`
 
-**Persistent Kernel Module**: `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/persistent.rs`
+**Persistent Kernel Module**: `/home/kim/projects/kimsfinance/rust/src/gpu/persistent.rs`
 
-**User Guide**: `/home/kim-asplund/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md`
+**User Guide**: `/home/kim/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_BENCHMARK.md`
 
-**Results Template**: `/home/kim-asplund/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md`
+**Results Template**: `/home/kim/projects/kimsfinance/rust/benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md`
 
-**Runner Script**: `/home/kim-asplund/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh`
+**Runner Script**: `/home/kim/projects/kimsfinance/rust/scripts/run_launch_overhead_benchmark.sh`
 
-**Benchmark Suite README**: `/home/kim-asplund/projects/kimsfinance/rust/benches/README_BENCHMARKS.md`
+**Benchmark Suite README**: `/home/kim/projects/kimsfinance/rust/benches/README_BENCHMARKS.md`
 
 **Pattern Documentation**: `/home/kim/.claude/agents-library/refs/kimsfinance-benchmark-patterns.md`
 

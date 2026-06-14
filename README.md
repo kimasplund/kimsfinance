@@ -5,8 +5,7 @@
 [![PyPI version](https://badge.fury.io/py/kimsfinance.svg)](https://badge.fury.io/py/kimsfinance)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13%2B%20%7C%203.14%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Tests](https://img.shields.io/badge/tests-329%2B%20passing-brightgreen)](https://github.com/kimasplund/kimsfinance/actions)
-[![Coverage](https://img.shields.io/badge/coverage-77%25-yellowgreen)](https://github.com/kimasplund/kimsfinance)
+[![Tests](https://img.shields.io/badge/tests-1%2C500%2B%20passing-brightgreen)](https://github.com/kimasplund/kimsfinance/actions)
 [![Chart Speed](https://img.shields.io/badge/Chart_Rendering-6,249_img/sec-brightgreen.svg)](https://github.com/kimasplund/kimsfinance)
 [![Speedup](https://img.shields.io/badge/Speedup-194x_Rust_CPU-blue.svg)](https://github.com/kimasplund/kimsfinance)
 [![GPU Batch](https://img.shields.io/badge/GPU_Batch-41x_persistent-orange.svg)](https://github.com/kimasplund/kimsfinance)
@@ -54,10 +53,10 @@
 - **🎨 4 Professional Themes**: Classic, Modern, TradingView, Light - production-ready aesthetics
 - **💾 79% Smaller Files**: WebP lossless compression (0.5 KB vs 2.57 KB PNG)
 - **🔧 Zero Core Dependencies**: Only Pillow + NumPy required (GPU & Rust optional)
-- **🧪 Production Ready**: 329+ tests, 77% coverage, full type safety
+- **🧪 Production Ready**: 1,500+ tests, comprehensive coverage, full type safety
 - **🎯 Developer Friendly**: Simple API, flexible output (PIL Image, numpy array, file)
 - **⚙️ GPU Acceleration**: Optional RAPIDS/CuPy support for massive datasets
-- **📈 28 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 23 more (24 with Rust GPU acceleration)
+- **📈 28 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 23 more (26 standalone functions with Rust acceleration)
 - **🐍 Python 3.14 Support**: 27% single-thread, 3.1x multi-thread speedup with free-threading
 - **📊 Backtesting Engine**: GPU-accelerated backtesting with genetic optimization
 
@@ -995,7 +994,7 @@ kimsfinance supports multiple chart types for different trading strategies:
 
 ### Technical Indicators (28 Built-in)
 
-All indicators are available in Python, with 24 having Rust GPU-accelerated implementations for massive datasets:
+All indicators are available in Python, with 26 standalone Rust-accelerated indicator functions (30+ indicators total incl. batch-only) for massive datasets:
 
 **Trend Indicators:**
 - SMA (Simple Moving Average)
@@ -1138,9 +1137,9 @@ ruff check kimsfinance/
 - [x] Variable wick width customization
 - [x] Python 3.13 compatibility
 - [x] Python 3.14 support (27% single-thread, 3.1x multi-thread)
-- [x] 329+ comprehensive tests
+- [x] 1,500+ comprehensive tests
 - [x] 6 chart types (Candlestick, OHLC, Line, Hollow, Renko, Point & Figure)
-- [x] 32 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.) - 24 with Rust GPU acceleration
+- [x] 32 technical indicators (ATR, RSI, MACD, Stochastic, Bollinger, etc.) - 26 standalone Rust indicator functions (30+ incl. batch-only)
 - [x] GPU-accelerated indicators (1.2-2.9x speedup)
 - [x] Rust implementation (194x average speedup)
 - [x] GPU persistent kernels (41x batch speedup)
@@ -1171,7 +1170,7 @@ If you use kimsfinance in your research or academic work, please cite:
   author = {Asplund, Kim},
   year = {2025},
   url = {https://github.com/kimasplund/kimsfinance},
-  version = {0.1.0},
+  version = {0.2.0},
   note = {194x average speedup (Rust CPU), 41x GPU batch processing, 6,249 charts/sec peak throughput}
 }
 ```

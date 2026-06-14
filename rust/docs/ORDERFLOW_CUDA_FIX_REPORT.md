@@ -46,7 +46,7 @@ Following the pattern used in other working kernels (e.g., `tick_aggregation.cu`
 
 ### Files Modified
 
-#### 1. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/orderflow_signals_batch.cu`
+#### 1. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/orderflow_signals_batch.cu`
 
 **Change 1: Removed `#include <cuda_runtime.h>`**
 ```diff
@@ -75,7 +75,7 @@ Functions must be declared before the calibration kernel that uses them.
   // from end of file to before calibrate_feature_ranges_kernel
 ```
 
-#### 2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
+#### 2. `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
 
 **Removed unnecessary includes** (preventive fix):
 ```diff
@@ -331,16 +331,16 @@ extern "C" __global__ void my_kernel(...) {
 ## Related Files
 
 ### Modified
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/orderflow_signals_batch.cu`
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
+- `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/orderflow_signals_batch.cu`
+- `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/rsi_fused.cu`
 
 ### Reference (Working Examples)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu` (no includes)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/compile.rs` (compilation infrastructure)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/kernels/tick_aggregation.cu` (no includes)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/compile.rs` (compilation infrastructure)
 
 ### Related
-- `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/orderflow_batch.rs` (Rust wrapper)
-- `/home/kim-asplund/projects/kimsfinance/rust/src/orderflow_py.rs` (Python bindings)
+- `/home/kim/projects/kimsfinance/rust/src/gpu/orderflow_batch.rs` (Rust wrapper)
+- `/home/kim/projects/kimsfinance/rust/src/orderflow_py.rs` (Python bindings)
 
 ---
 

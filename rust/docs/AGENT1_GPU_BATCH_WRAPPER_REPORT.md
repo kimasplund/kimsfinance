@@ -25,7 +25,7 @@ Successfully implemented GPU batch evaluation wrapper for the genetic optimizer 
 
 ### 1. GPU Batch Evaluation Method
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs:417-471`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs:417-471`
 
 ```rust
 #[cfg(feature = "gpu")]
@@ -80,7 +80,7 @@ where
 
 ### 2. Auto-Selection Logic
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs:327-415`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs:327-415`
 
 ```rust
 fn evaluate_population<S>(
@@ -138,7 +138,7 @@ where
 
 ### 3. Progress Tracking
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs:199-213`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs:199-213`
 
 ```rust
 // Print optimizer configuration
@@ -172,7 +172,7 @@ Gen 1/50 [FP8]: Fitness=1.2345, Diversity=0.3456, Mutation=0.1000
 
 **Solution**: Renamed `gen` → `generation_idx` in `IslandGeneticOptimizer`
 
-**Lines Changed**: `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs:969-1037`
+**Lines Changed**: `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs:969-1037`
 
 ```diff
 - for gen in 0..self.base.generations {
@@ -187,7 +187,7 @@ Gen 1/50 [FP8]: Fitness=1.2345, Diversity=0.3456, Mutation=0.1000
 
 ## Integration with Agent 2
 
-Agent 2 will implement the CUDA kernel by replacing the stub in `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs:398-418`:
+Agent 2 will implement the CUDA kernel by replacing the stub in `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs:398-418`:
 
 ### Current Stub (Agent 2 TODO)
 
@@ -258,14 +258,14 @@ pub fn batch_backtest_genetic(
 ## Compilation Verification
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo build --release --features gpu --lib
 ```
 
 **Status**: ✅ **SUCCESS**
 
 ```
-Compiling kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
+Compiling kimsfinance_core v0.2.0 (/home/kim/projects/kimsfinance/rust)
     Finished `release` profile [optimized] target(s) in 43.56s
 ```
 
@@ -277,7 +277,7 @@ Compiling kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
 
 ### Files Modified
 
-1. **`/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs`**
+1. **`/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs`**
    - Lines added: ~100
    - Lines modified: ~20
    - Key changes:
@@ -286,7 +286,7 @@ Compiling kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
      - Added progress tracking (lines 199-213)
      - Fixed `gen` → `generation_idx` (lines 969-1037)
 
-2. **`/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`** (no changes, stub already existed)
+2. **`/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`** (no changes, stub already existed)
 
 ### Lines of Code
 
@@ -397,7 +397,7 @@ Successfully implemented GPU batch evaluation infrastructure for the genetic alg
 
 ### 1. GPU Batch Evaluation Method
 
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs` (lines 403-464)
+**File:** `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs` (lines 403-464)
 
 **Method Signature:**
 ```rust
@@ -451,7 +451,7 @@ where
 
 ### 2. Auto-Detection and Fallback Logic
 
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs` (lines 354-365)
+**File:** `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs` (lines 354-365)
 
 **Implementation:**
 ```rust
@@ -485,7 +485,7 @@ where
 
 ### 3. GPU Batch Backtest Stub
 
-**File:** `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs` (lines 367-418)
+**File:** `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs` (lines 367-418)
 
 **Function Signature:**
 ```rust
@@ -531,13 +531,13 @@ pub fn batch_backtest_genetic(
 ### Compilation Status: ✅ PASS
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo check --features gpu --lib
 ```
 
 **Result:**
 ```
-Checking kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
+Checking kimsfinance_core v0.2.0 (/home/kim/projects/kimsfinance/rust)
 Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.77s
 ```
 
@@ -547,7 +547,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.77s
 
 ## Files Modified
 
-### 1. `/home/kim-asplund/projects/kimsfinance/rust/src/backtest/optimizer.rs`
+### 1. `/home/kim/projects/kimsfinance/rust/src/backtest/optimizer.rs`
 
 **Changes:**
 - **Lines 354-365:** GPU batch evaluation auto-detection and fallback
@@ -559,7 +559,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.77s
 - Purely additive functionality
 - Feature-gated with `#[cfg(feature = "gpu")]`
 
-### 2. `/home/kim-asplund/projects/kimsfinance/rust/src/gpu/mod.rs`
+### 2. `/home/kim/projects/kimsfinance/rust/src/gpu/mod.rs`
 
 **Changes:**
 - **Lines 367-418:** `batch_backtest_genetic()` stub function

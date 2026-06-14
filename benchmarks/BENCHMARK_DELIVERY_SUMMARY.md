@@ -143,7 +143,7 @@ MOVING AVERAGES (7 indicators)
 
 1. Build Rust extension:
    ```bash
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    maturin develop --release
    ```
 
@@ -155,7 +155,7 @@ MOVING AVERAGES (7 indicators)
 ### Running
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance
+cd /home/kim/projects/kimsfinance
 python benchmarks/benchmark_indicators_rust.py
 ```
 
@@ -277,7 +277,7 @@ def test_rust_performance_target():
 
 1. Build Rust extension (if not already done):
    ```bash
-   cd /home/kim-asplund/projects/kimsfinance/rust
+   cd /home/kim/projects/kimsfinance/rust
    maturin develop --release
    ```
 
@@ -325,10 +325,10 @@ def test_rust_performance_target():
 
 ## References
 
-- **Benchmark Script**: `/home/kim-asplund/projects/kimsfinance/benchmarks/benchmark_indicators_rust.py`
-- **Documentation**: `/home/kim-asplund/projects/kimsfinance/benchmarks/README_RUST_BENCHMARK.md`
-- **Rust Source**: `/home/kim-asplund/projects/kimsfinance/rust/`
-- **Python Source**: `/home/kim-asplund/projects/kimsfinance/kimsfinance/ops/indicators/`
+- **Benchmark Script**: `/home/kim/projects/kimsfinance/benchmarks/benchmark_indicators_rust.py`
+- **Documentation**: `/home/kim/projects/kimsfinance/benchmarks/README_RUST_BENCHMARK.md`
+- **Rust Source**: `/home/kim/projects/kimsfinance/rust/`
+- **Python Source**: `/home/kim/projects/kimsfinance/kimsfinance/ops/indicators/`
 - **Pattern Reference**: `~/.claude/agents-library/refs/kimsfinance-benchmark-patterns.md`
 
 ---

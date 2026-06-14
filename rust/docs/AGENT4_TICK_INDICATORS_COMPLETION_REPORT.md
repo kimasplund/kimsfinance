@@ -52,7 +52,7 @@ Successfully implemented a **tick-level indicator calculation system** that enab
 
 ### 1. Core Module: `tick_indicators.rs`
 
-**Location**: `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/tick_indicators.rs`
+**Location**: `/home/kim/projects/kimsfinance/rust/src/indicators/tick_indicators.rs`
 
 **Key Components:**
 
@@ -475,7 +475,7 @@ For strategies using tick indicators:
 ### Compilation
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 cargo check --lib  # ✅ Passes (warnings in other modules, not tick_indicators)
 ```
 
@@ -609,14 +609,14 @@ Successfully implemented a **production-ready tick-level indicator system** that
 
 ### Created (4 files)
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/tick_indicators.rs` (587 lines)
-2. `/home/kim-asplund/projects/kimsfinance/rust/tests/tick_indicators_integration_test.rs` (355 lines)
-3. `/home/kim-asplund/projects/kimsfinance/rust/examples/tick_indicators_strategy.rs` (320 lines)
-4. `/home/kim-asplund/projects/kimsfinance/rust/docs/AGENT4_TICK_INDICATORS_COMPLETION_REPORT.md` (this file)
+1. `/home/kim/projects/kimsfinance/rust/src/indicators/tick_indicators.rs` (587 lines)
+2. `/home/kim/projects/kimsfinance/rust/tests/tick_indicators_integration_test.rs` (355 lines)
+3. `/home/kim/projects/kimsfinance/rust/examples/tick_indicators_strategy.rs` (320 lines)
+4. `/home/kim/projects/kimsfinance/rust/docs/AGENT4_TICK_INDICATORS_COMPLETION_REPORT.md` (this file)
 
 ### Modified (1 file)
 
-1. `/home/kim-asplund/projects/kimsfinance/rust/src/indicators/mod.rs` (added module + exports)
+1. `/home/kim/projects/kimsfinance/rust/src/indicators/mod.rs` (added module + exports)
 
 **Total Lines Added**: ~1,300 lines (code + tests + docs)
 

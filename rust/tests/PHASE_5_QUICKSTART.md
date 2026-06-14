@@ -8,7 +8,7 @@
 
 ⚠️ **BLOCKED** - 5 compilation errors must be fixed before tests can run.
 
-See: `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE_5_TESTING_REPORT.md`
+See: `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE_5_TESTING_REPORT.md`
 
 ---
 
@@ -16,7 +16,7 @@ See: `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE_5_TESTI
 
 ### Fix Compilation Errors First
 
-**File 1**: `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/strategies_delta_neutral.rs`
+**File 1**: `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/strategies_delta_neutral.rs`
 ```rust
 // Line ~200: Change i8 to f64
 let mut d_option_signals = self.device.alloc_zeros::<f64>(expected_len)?;
@@ -25,7 +25,7 @@ let mut d_option_signals = self.device.alloc_zeros::<f64>(expected_len)?;
 option_signal: option_signals_raw[i] as i8,
 ```
 
-**File 2**: `/home/kim-asplund/projects/kimsfinance/rust/src/quantitative/heston/strategies_vol_arbitrage.rs`
+**File 2**: `/home/kim/projects/kimsfinance/rust/src/quantitative/heston/strategies_vol_arbitrage.rs`
 ```rust
 // Line 45: Add trait import
 use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync, LaunchConfig, PushKernelArg};
@@ -34,7 +34,7 @@ use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync, LaunchConfig, PushKern
 ### Run All Tests (Automated)
 
 ```bash
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 ./tests/run_integration_tests.sh
 ```
 
@@ -132,4 +132,4 @@ cargo bench --features 'gpu,heston' --bench heston_integration_bench
 
 ---
 
-**See Full Report**: `/home/kim-asplund/projects/kimsfinance/rust/docs/integration/PHASE_5_TESTING_REPORT.md`
+**See Full Report**: `/home/kim/projects/kimsfinance/rust/docs/integration/PHASE_5_TESTING_REPORT.md`

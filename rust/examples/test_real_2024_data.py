@@ -18,7 +18,7 @@ except ImportError as e:
 
 def load_month_data(year_month: str):
     """Load all parquet files for a given month"""
-    pattern = f"/home/kim-asplund/projects/binance-data/futures/BTCUSDT/trades_parquet/{year_month}/*.parquet"
+    pattern = f"/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/{year_month}/*.parquet"
     files = sorted(glob.glob(pattern))
 
     if not files:

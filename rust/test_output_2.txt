@@ -5,22 +5,22 @@ warning: kimsfinance_core@0.2.0: CUTLASS found at: cutlass
 warning: kimsfinance_core@0.2.0: Auto-detected GPU architecture: sm_89 (compute cap 8.9)
 warning: kimsfinance_core@0.2.0: Compiling for CUDA architecture: sm_89
 warning: kimsfinance_core@0.2.0: Compiling FP8 WMMA kernel: src/gpu/kernels_fp8_wmma.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_wmma_kernels.cubin" "src/gpu/kernels_fp8_wmma.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_wmma_kernels.cubin" "src/gpu/kernels_fp8_wmma.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile FP8 WMMA kernel (non-critical)
 warning: kimsfinance_core@0.2.0: Exit code: Some(1)
 warning: kimsfinance_core@0.2.0: nvcc stderr: /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)
 warning: kimsfinance_core@0.2.0: Compiling FP8 CUTLASS kernel: src/gpu/kernels/fp8_cutlass.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-Icutlass/include" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_kernels.cubin" "src/gpu/kernels/fp8_cutlass.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-Icutlass/include" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_kernels.cubin" "src/gpu/kernels/fp8_cutlass.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile FP8 CUTLASS kernel (non-critical)
 warning: kimsfinance_core@0.2.0: Exit code: Some(1)
 warning: kimsfinance_core@0.2.0: Note: FP8 WMMA kernel may still work. CUTLASS kernel is experimental.
 warning: kimsfinance_core@0.2.0: nvcc stderr (first 10 lines): /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)
 warning: kimsfinance_core@0.2.0: Compiling RSI fused kernel with CUB: src/gpu/kernels/rsi_fused.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-shared" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--diag-suppress=20092" "--diag-suppress=20041" "-Xcompiler=-fPIC" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/librsi_fused.so" "src/gpu/kernels/rsi_fused.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-shared" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--diag-suppress=20092" "--diag-suppress=20041" "-Xcompiler=-fPIC" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/librsi_fused.so" "src/gpu/kernels/rsi_fused.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile RSI fused kernel (non-critical, will use hybrid)
 warning: kimsfinance_core@0.2.0: Exit code: Some(2)
 warning: kimsfinance_core@0.2.0: nvcc stderr: /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)
-   Compiling kimsfinance_core v0.2.0 (/home/kim-asplund/projects/kimsfinance/rust)
+   Compiling kimsfinance_core v0.2.0 (/home/kim/projects/kimsfinance/rust)
 warning: unused import: `std::fs`
    --> src/binance/discovery.rs:300:13
     |
@@ -206,7 +206,7 @@ error[E0277]: the trait bound `&str: NdIndex<Dim<[usize; 1]>>` is not satisfied
               `(usize, usize, usize, usize, usize, usize)` implements `NdIndex<Dim<[usize; 6]>>`
             and 11 others
 note: required by a bound in `ndarray::impl_methods::<impl ArrayBase<S, D>>::get`
-   --> /home/kim-asplund/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
+   --> /home/kim/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
     |
 764 |     pub fn get<I>(&self, index: I) -> Option<&A>
     |            --- required by a bound in this associated function
@@ -221,7 +221,7 @@ error[E0599]: no method named `len` found for reference `&f64` in the current sc
      |                               ^^^
      |
 help: there is a method `le` with a similar name, but with different arguments
-    --> /home/kim-asplund/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
+    --> /home/kim/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
      |
 1417 |     fn le(&self, other: &Rhs) -> bool {
      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -281,7 +281,7 @@ error[E0277]: the trait bound `&str: NdIndex<Dim<[usize; 1]>>` is not satisfied
               `(usize, usize, usize, usize, usize, usize)` implements `NdIndex<Dim<[usize; 6]>>`
             and 11 others
 note: required by a bound in `ndarray::impl_methods::<impl ArrayBase<S, D>>::get`
-   --> /home/kim-asplund/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
+   --> /home/kim/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
     |
 764 |     pub fn get<I>(&self, index: I) -> Option<&A>
     |            --- required by a bound in this associated function
@@ -308,7 +308,7 @@ error[E0277]: the trait bound `&str: NdIndex<Dim<[usize; 1]>>` is not satisfied
               `(usize, usize, usize, usize, usize, usize)` implements `NdIndex<Dim<[usize; 6]>>`
             and 11 others
 note: required by a bound in `ndarray::impl_methods::<impl ArrayBase<S, D>>::get`
-   --> /home/kim-asplund/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
+   --> /home/kim/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ndarray-0.16.1/src/impl_methods.rs:767:12
     |
 764 |     pub fn get<I>(&self, index: I) -> Option<&A>
     |            --- required by a bound in this associated function
@@ -323,7 +323,7 @@ error[E0599]: no method named `len` found for reference `&f64` in the current sc
      |                                ^^^
      |
 help: there is a method `le` with a similar name, but with different arguments
-    --> /home/kim-asplund/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
+    --> /home/kim/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
      |
 1417 |     fn le(&self, other: &Rhs) -> bool {
      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -335,7 +335,7 @@ error[E0599]: no method named `len` found for reference `&f64` in the current sc
      |                                ^^^
      |
 help: there is a method `le` with a similar name, but with different arguments
-    --> /home/kim-asplund/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
+    --> /home/kim/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/cmp.rs:1417:5
      |
 1417 |     fn le(&self, other: &Rhs) -> bool {
      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -598,18 +598,18 @@ warning: kimsfinance_core@0.2.0: CUTLASS found at: cutlass
 warning: kimsfinance_core@0.2.0: Auto-detected GPU architecture: sm_89 (compute cap 8.9)
 warning: kimsfinance_core@0.2.0: Compiling for CUDA architecture: sm_89
 warning: kimsfinance_core@0.2.0: Compiling FP8 WMMA kernel: src/gpu/kernels_fp8_wmma.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_wmma_kernels.cubin" "src/gpu/kernels_fp8_wmma.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_wmma_kernels.cubin" "src/gpu/kernels_fp8_wmma.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile FP8 WMMA kernel (non-critical)
 warning: kimsfinance_core@0.2.0: Exit code: Some(1)
 warning: kimsfinance_core@0.2.0: nvcc stderr: /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)
 warning: kimsfinance_core@0.2.0: Compiling FP8 CUTLASS kernel: src/gpu/kernels/fp8_cutlass.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-Icutlass/include" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_kernels.cubin" "src/gpu/kernels/fp8_cutlass.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-cubin" "-arch=sm_89" "-std=c++17" "-Icutlass/include" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--Werror=cross-execution-space-call" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/fp8_kernels.cubin" "src/gpu/kernels/fp8_cutlass.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile FP8 CUTLASS kernel (non-critical)
 warning: kimsfinance_core@0.2.0: Exit code: Some(1)
 warning: kimsfinance_core@0.2.0: Note: FP8 WMMA kernel may still work. CUTLASS kernel is experimental.
 warning: kimsfinance_core@0.2.0: nvcc stderr (first 10 lines): /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)
 warning: kimsfinance_core@0.2.0: Compiling RSI fused kernel with CUB: src/gpu/kernels/rsi_fused.cu
-warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-shared" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--diag-suppress=20092" "--diag-suppress=20041" "-Xcompiler=-fPIC" "-Xcompiler=-w" "-o" "/home/kim-asplund/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/librsi_fused.so" "src/gpu/kernels/rsi_fused.cu"
+warning: kimsfinance_core@0.2.0: Running: "/usr/bin/nvcc" "-shared" "-arch=sm_89" "-std=c++17" "-I/usr/local/cuda-13.0/include" "-I/usr/local/cuda-13.0/targets/x86_64-linux/include" "-O3" "-use_fast_math" "--expt-relaxed-constexpr" "--expt-extended-lambda" "-D_FORCE_INLINES" "--diag-suppress=20092" "--diag-suppress=20041" "-Xcompiler=-fPIC" "-Xcompiler=-w" "-o" "/home/kim/projects/kimsfinance/rust/target/debug/build/kimsfinance_core-39c3e4c334f166b9/out/librsi_fused.so" "src/gpu/kernels/rsi_fused.cu"
 warning: kimsfinance_core@0.2.0: Failed to compile RSI fused kernel (non-critical, will use hybrid)
 warning: kimsfinance_core@0.2.0: Exit code: Some(2)
 warning: kimsfinance_core@0.2.0: nvcc stderr: /usr/include/x86_64-linux-gnu/bits/mathcalls.h(206): error: exception specification is incompatible with that of previous function "rsqrt" (declared at line 629 of /usr/local/cuda-13.0/include/crt/math_functions.h)

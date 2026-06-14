@@ -52,7 +52,7 @@ Sharpe Ratio: 0.8-1.5 (target for acceptable risk-adjusted returns)
 
 ### 1.1 Historical Options Data Loader
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/data_loader.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/data_loader.rs`
 
 **Capabilities**:
 - Loads daily options chains from parquet files
@@ -104,7 +104,7 @@ println!("Loaded {} contracts", chain.len());
 
 ### 1.2 OHLCV Spot Data Integration
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/spot_data.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/spot_data.rs`
 
 **Capabilities**:
 - Loads historical OHLCV data from parquet files
@@ -140,7 +140,7 @@ let (upper, lower, width) = spot_loader.calculate_bollinger_bands(symbol, date, 
 
 ### 1.3 Bull Put Spread Strategy
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/strategies.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/strategies.rs`
 
 **Strategy Definition**:
 ```
@@ -190,7 +190,7 @@ StrategyParams {
 
 ### 1.4 Backtesting Engine
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/backtest.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/backtest.rs`
 
 **Features**:
 - Walk-forward daily simulation
@@ -256,7 +256,7 @@ Round Trip: $4.80 per spread
 
 ### 1.5 Black-Scholes IV Calculator
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
 
 **Capabilities**:
 - Black-Scholes pricing for put options
@@ -309,7 +309,7 @@ pub fn implied_volatility(
 
 ### 1.6 Market Regime Detection
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/market_regime.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/market_regime.rs`
 
 **Regime Classification**:
 ```rust
@@ -367,7 +367,7 @@ if should_trade_in_regime(regime) {
 
 ### 1.7 Performance Metrics
 
-**File**: `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/metrics.rs`
+**File**: `/home/kim/projects/kimsfinance/rust/src/strategy/metrics.rs`
 
 **Calculated Metrics**:
 
@@ -1004,54 +1004,54 @@ let mut engine = BacktestEngine::new(
 ### 6.1 Core Strategy Files
 
 **Strategy Implementation**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/strategies.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/strategies.rs`
   - `BullPutSpread` struct
   - `find_candidates()` - Entry logic
   - `should_close()` - Exit logic
   - `regime_adapted_bull_put_params()` - Adaptive parameters
 
 **Backtesting Engine**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/backtest.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/backtest.rs`
   - `BacktestEngine` struct
   - `run_bull_put_spread()` - Main backtest loop
   - `run_bull_put_spread_adaptive()` - Regime-adaptive backtest
   - `calculate_required_margin()` - Risk management
 
 **Data Loading**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/data_loader.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/data_loader.rs`
   - `OptionsDataLoader` struct
   - `load_chain()` - Load options chain for a date
   - `get_available_dates()` - Query available data
 
 **Spot Data**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/spot_data.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/spot_data.rs`
   - `SpotDataLoader` struct
   - `get_spot_price()` - Get underlying price
   - `calculate_atr()` - Volatility indicator
   - `calculate_bollinger_bands()` - Regime detection
 
 **Market Regime**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/market_regime.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/market_regime.rs`
   - `RegimeDetector` struct
   - `detect_regime()` - Classify market conditions
   - `MarketRegime` enum (BullLowVol, BullHighVol, etc.)
 
 **Transaction Costs**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/transaction_costs.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/transaction_costs.rs`
   - `TransactionCostModel` struct
   - `entry_price()` - Calculate realistic entry price
   - `exit_price()` - Calculate realistic exit price
   - `round_trip_cost()` - Total cost per spread
 
 **Performance Metrics**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/metrics.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/metrics.rs`
   - `PerformanceMetrics` struct
   - `calculate()` - Compute all metrics
   - `calculate_sharpe_ratio()` - Risk-adjusted returns
   - `calculate_max_drawdown()` - Largest decline
 
 **Black-Scholes**:
-- `/home/kim-asplund/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
+- `/home/kim/projects/kimsfinance/rust/src/strategy/black_scholes.rs`
   - `BlackScholesPutPricer` struct
   - `price()` - BS pricing formula
   - `implied_volatility()` - IV solver (Newton-Raphson)
@@ -1061,7 +1061,7 @@ let mut engine = BacktestEngine::new(
 
 **Simple Backtest**:
 ```rust
-// File: /home/kim-asplund/projects/kimsfinance/rust/examples/backtest_bull_put_spread.rs
+// File: /home/kim/projects/kimsfinance/rust/examples/backtest_bull_put_spread.rs
 
 use chrono::NaiveDate;
 use kimsfinance_core::strategy::*;
@@ -1272,7 +1272,7 @@ This strategy framework has strong potential for **20-30% annual returns** with 
 ```
 Symbol: AAPL
 Days: 1,824 (2016-01-04 to 2025-10-30)
-Path: /home/kim-asplund/projects/kimsfinance/rust/data/yfinance/options_historical/AAPL/
+Path: /home/kim/projects/kimsfinance/rust/data/yfinance/options_historical/AAPL/
 Size: 224MB
 Format: Parquet (daily files)
 ```
@@ -1281,7 +1281,7 @@ Format: Parquet (daily files)
 ```
 Symbols: AAPL, SPY, TSLA, QQQ
 Bars: 9,884+ (1980s to 2025)
-Path: /home/kim-asplund/projects/kimsfinance/rust/data/yfinance/ohlcv/
+Path: /home/kim/projects/kimsfinance/rust/data/yfinance/ohlcv/
 Size: 513KB total
 Format: Parquet (one file per symbol)
 ```
@@ -1294,7 +1294,7 @@ Format: Parquet (one file per symbol)
 
 ```bash
 # Navigate to Rust project
-cd /home/kim-asplund/projects/kimsfinance/rust
+cd /home/kim/projects/kimsfinance/rust
 
 # Build with data-downloaders feature (enables parquet reading)
 cargo build --release --features data-downloaders
@@ -1312,7 +1312,7 @@ cargo run --release --features data-downloaders --example backtest_bull_put_spre
 
 ### Customizing Parameters
 
-Edit `/home/kim-asplund/projects/kimsfinance/rust/examples/backtest_bull_put_spread.rs`:
+Edit `/home/kim/projects/kimsfinance/rust/examples/backtest_bull_put_spread.rs`:
 
 ```rust
 // Change date range
@@ -1333,9 +1333,9 @@ params.profit_target_pct = Some(60.0);  // Wait for 60% profit
 
 ## Appendix C: Contact and Support
 
-**Project Repository**: `/home/kim-asplund/projects/kimsfinance`
-**Documentation**: `/home/kim-asplund/projects/kimsfinance/docs/`
-**Examples**: `/home/kim-asplund/projects/kimsfinance/rust/examples/`
+**Project Repository**: `/home/kim/projects/kimsfinance`
+**Documentation**: `/home/kim/projects/kimsfinance/docs/`
+**Examples**: `/home/kim/projects/kimsfinance/rust/examples/`
 
 **For Questions**:
 - Strategy logic: See `strategies.rs` comments
