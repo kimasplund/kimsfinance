@@ -129,10 +129,12 @@ extern "C" __global__ void calculate_di_kernel(
 
     double tr = tr_smooth[idx];
 
-    // Handle edge case: if TR is zero, set DI to NaN
+    // Flat window (smoothed true range ~0, i.e. no movement): DI is 0/0. Use 0
+    // (no directional movement) -- a FINITE neutral matching the CPU ADX -- so the
+    // downstream Wilder smoothing yields 0 instead of a NaN that poisons the tail.
     if (tr < 1e-10) {
-        plus_di[idx] = CUDART_NAN;
-        minus_di[idx] = CUDART_NAN;
+        plus_di[idx] = 0.0;
+        minus_di[idx] = 0.0;
         return;
     }
 
@@ -171,9 +173,10 @@ extern "C" __global__ void calculate_dx_kernel(
 
     double di_sum = pdi + mdi;
 
-    // Handle edge case: if sum is zero, set DX to NaN
+    // Flat window (DI+ + DI- == 0): DX is 0/0. Use 0 (no directional strength),
+    // finite, matching the CPU ADX and avoiding NaN poisoning of the smoothed ADX.
     if (di_sum < 1e-10) {
-        dx[idx] = CUDART_NAN;
+        dx[idx] = 0.0;
         return;
     }
 
