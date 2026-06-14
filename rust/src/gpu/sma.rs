@@ -15,7 +15,7 @@
 
 use super::device::{GpuDevice, GpuError};
 use crate::gpu::compile::compile_ptx_optimized_cached;
-use cudarc::driver::{CudaStream, LaunchConfig, PushKernelArg};
+use cudarc::driver::{CudaSlice, CudaStream, LaunchConfig, PushKernelArg};
 use ndarray::Array1;
 use std::sync::Arc;
 
@@ -318,17 +318,9 @@ pub fn sma_gpu_f32(
         )));
     }
 
-    let ptx_arc = compile_ptx_optimized_cached(SMA_KERNEL_F32).map_err(|e| {
-        GpuError::CompilationError(format!("Failed to compile SMA f32 kernel: {:?}", e))
-    })?;
-    let ptx = Arc::unwrap_or_clone(ptx_arc);
-    let module = device
-        .context()
-        .load_module(ptx)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
-    let kernel = module.load_function("sma_kernel_f32").map_err(|e| {
-        GpuError::ExecutionError(format!("Failed to load kernel function: {:?}", e))
-    })?;
+    // Module cache: compiled + loaded once per process, reused across calls
+    // (avoids the per-call PTX compile + module load).
+    let kernel = device.get_or_load_function(SMA_KERNEL_F32, "sma_kernel_f32")?;
     let kernel_stream = stream.unwrap_or(&device.stream);
 
     // H2D: narrow to f32 host-side (halves PCIe traffic) and transfer.
@@ -358,6 +350,45 @@ pub fn sma_gpu_f32(
         GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
     })?;
     Ok(Array1::from_iter(sma_f32.into_iter().map(|x| x as f64)))
+}
+
+/// Compute SMA from a pre-uploaded device buffer into a device output buffer,
+/// with **no host<->device transfer**.
+///
+/// This is the building block for device-resident sweeps: upload OHLCV once,
+/// then run many parameter kernels reusing the on-device buffer. Profiling shows
+/// the per-call H2D/D2H round-trip is ~93% of GPU time, so reusing a resident
+/// buffer across a parameter sweep is ~88x faster than re-uploading per call
+/// (see `bench_sma_device_resident_vs_reupload`).
+///
+/// `d_close` and `d_out` must both have length >= `n` (f32, on `device`).
+pub fn sma_on_device(
+    device: &GpuDevice,
+    d_close: &CudaSlice<f32>,
+    d_out: &mut CudaSlice<f32>,
+    n: usize,
+    period: usize,
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<(), GpuError> {
+    if period < 1 {
+        return Err(GpuError::InvalidParameter("Period must be >= 1".to_string()));
+    }
+    let kernel = device.get_or_load_function(SMA_KERNEL_F32, "sma_kernel_f32")?;
+    let kernel_stream = stream.unwrap_or(&device.stream);
+    let n_i32 = n as i32;
+    let period_i32 = period as i32;
+    let mut builder = kernel_stream.launch_builder(&kernel);
+    builder.arg(d_close);
+    builder.arg(d_out);
+    builder.arg(&n_i32);
+    builder.arg(&period_i32);
+    let config = LaunchConfig::for_num_elems(n as u32);
+    unsafe {
+        builder.launch(config).map_err(|e| {
+            GpuError::ExecutionError(format!("SMA on-device launch failed: {:?}", e))
+        })?;
+    }
+    Ok(())
 }
 
 /// GPU-accelerated SMA using **shared memory** optimization
@@ -973,5 +1004,43 @@ mod tests {
             resident_ms,
             reupload_ms / resident_ms
         );
+    }
+
+    #[test]
+    #[ignore] // Requires GPU
+    fn test_sma_on_device_matches() {
+        // The device-resident primitive must match the transfer-based f32 path.
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let n = 50_000usize;
+        let close: Array1<f64> =
+            Array1::from_iter((0..n).map(|i| 30_000.0 + 5_000.0 * ((i as f64) * 0.001).sin()));
+        let close_f32: Vec<f32> = close.iter().map(|&x| x as f32).collect();
+        for &period in &[5usize, 20, 200] {
+            let reference = sma_gpu_f32(&device, &close, period, None).unwrap();
+            let mut d_close = device.alloc_uninit::<f32>(n).unwrap();
+            device
+                .stream
+                .memcpy_htod(&close_f32[..n], &mut d_close)
+                .unwrap();
+            let mut d_out = device.alloc_uninit::<f32>(n).unwrap();
+            sma_on_device(&device, &d_close, &mut d_out, n, period, None).unwrap();
+            let mut out_f32 = vec![0.0f32; n];
+            device.stream.memcpy_dtoh(&d_out, &mut out_f32[..]).unwrap();
+            device.stream.synchronize().unwrap();
+            for i in 0..n {
+                if reference[i].is_nan() {
+                    assert!(out_f32[i].is_nan(), "period {} idx {}: not NaN", period, i);
+                } else {
+                    assert!(
+                        (reference[i] - out_f32[i] as f64).abs() < 1e-3,
+                        "period {} idx {}: ref={} dev={}",
+                        period,
+                        i,
+                        reference[i],
+                        out_f32[i]
+                    );
+                }
+            }
+        }
     }
 }
