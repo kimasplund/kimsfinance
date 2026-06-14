@@ -41,6 +41,12 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
+    # Fallbacks so module-level dataclass defaults (e.g. ``ReportConfig.page_size``)
+    # don't raise NameError when reportlab is absent. Values match
+    # ``reportlab.lib.pagesizes`` (in points). Features that actually render a PDF
+    # still require reportlab and are guarded by ``REPORTLAB_AVAILABLE``.
+    letter = (612.0, 792.0)
+    A4 = (595.2755905511812, 841.8897637795277)
 
 from .metrics import (
     calculate_performance_metrics,

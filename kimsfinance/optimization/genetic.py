@@ -59,7 +59,16 @@ Example:
 
 from typing import Dict, List, Tuple, Callable, Any, Optional
 import numpy as np
-from deap import base, creator, tools, algorithms
+
+try:
+    from deap import base, creator, tools, algorithms
+
+    DEAP_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency
+    # 'deap' is an optional dependency (the [optimization] extra). Importing this
+    # module must not hard-fail without it; GeneticOptimizer raises a clear error
+    # when actually instantiated (see __init__).
+    DEAP_AVAILABLE = False
 import multiprocessing as mp
 from functools import partial
 import logging
@@ -118,6 +127,12 @@ class GeneticOptimizer:
             tournament_size: Tournament selection size (default: 3)
             elite_size: Number of elites to preserve (default: 10)
         """
+        if not DEAP_AVAILABLE:
+            raise ImportError(
+                "GeneticOptimizer requires the optional 'deap' package. "
+                "Install it with: pip install 'kimsfinance[optimization]'"
+            )
+
         # Validate param_space
         if not param_space or len(param_space) == 0:
             raise ValueError("param_space cannot be empty")

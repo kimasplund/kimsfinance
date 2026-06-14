@@ -7,6 +7,10 @@ for strategy parameter optimization.
 
 import pytest
 import numpy as np
+
+# GeneticOptimizer requires the optional 'deap' package (the [optimization] extra).
+pytest.importorskip("deap")
+
 from kimsfinance.optimization import GeneticOptimizer, optimize_single_objective
 
 

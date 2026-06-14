@@ -11,6 +11,9 @@ import pandas as pd
 import time
 from typing import Dict, Any
 
+# GeneticOptimizer requires the optional 'deap' package (the [optimization] extra).
+pytest.importorskip("deap")
+
 from kimsfinance.optimization.genetic import GeneticOptimizer
 
 try:
