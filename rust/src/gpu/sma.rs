@@ -391,6 +391,42 @@ pub fn sma_on_device(
     Ok(())
 }
 
+/// Device-resident SMA parameter sweep: upload `close` **once**, then compute
+/// SMA for every period reusing the on-device input/output buffers (no per-period
+/// H2D). Returns one SMA series per period.
+///
+/// Eliminating the redundant per-evaluation upload is the dominant lever for
+/// parameter sweeps (profiling §10). The per-period D2H remains because each
+/// result is consumed on the host; computing the optimization metric on-device
+/// (returning only a scalar per period) is the further win.
+pub fn sma_sweep_on_device(
+    device: &GpuDevice,
+    close: &Array1<f64>,
+    periods: &[usize],
+    stream: Option<&Arc<CudaStream>>,
+) -> Result<Vec<Array1<f64>>, GpuError> {
+    let n = close.len();
+    let kernel_stream = stream.unwrap_or(&device.stream);
+
+    // Upload close ONCE; reuse across all periods.
+    let close_f32: Vec<f32> = close.iter().map(|&x| x as f32).collect();
+    let mut d_close = device.alloc_uninit::<f32>(n)?;
+    kernel_stream.memcpy_htod(&close_f32[..n], &mut d_close)?;
+    let mut d_out = device.alloc_uninit::<f32>(n)?;
+    let mut out_f32 = vec![0.0f32; n];
+
+    let mut results = Vec::with_capacity(periods.len());
+    for &period in periods {
+        sma_on_device(device, &d_close, &mut d_out, n, period, Some(kernel_stream))?;
+        kernel_stream.memcpy_dtoh(&d_out, &mut out_f32[..])?;
+        kernel_stream.synchronize().map_err(|e| {
+            GpuError::SynchronizationError(format!("Stream synchronization failed: {:?}", e))
+        })?;
+        results.push(Array1::from_iter(out_f32.iter().map(|&x| x as f64)));
+    }
+    Ok(results)
+}
+
 /// GPU-accelerated SMA using **shared memory** optimization
 ///
 /// # Arguments
@@ -1042,5 +1078,54 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    #[ignore] // Requires GPU; verifies correctness AND measures the sweep win
+    fn bench_sma_sweep_resident_vs_naive() {
+        use std::time::Instant;
+        let device = GpuDevice::new().expect("Failed to initialize GPU");
+        let n = 1_000_000usize;
+        let periods: Vec<usize> = (5..=54).collect(); // 50-parameter sweep
+        let close: Array1<f64> =
+            Array1::from_iter((0..n).map(|i| 30_000.0 + ((i as f64) * 0.001).sin()));
+
+        // Warmup both paths.
+        let _ = sma_gpu(&device, &close, 20, None).unwrap();
+        let _ = sma_sweep_on_device(&device, &close, &[20], None).unwrap();
+
+        // Naive: re-upload close per period (current sweep behavior).
+        let t0 = Instant::now();
+        let naive: Vec<_> = periods
+            .iter()
+            .map(|&p| sma_gpu(&device, &close, p, None).unwrap())
+            .collect();
+        let naive_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+        // Device-resident: upload close once.
+        let t1 = Instant::now();
+        let resident = sma_sweep_on_device(&device, &close, &periods, None).unwrap();
+        let resident_ms = t1.elapsed().as_secs_f64() * 1000.0;
+
+        // Correctness: resident must match the naive per-period result.
+        assert_eq!(naive.len(), resident.len());
+        for (a, b) in naive.iter().zip(resident.iter()) {
+            for i in 0..n {
+                if a[i].is_nan() {
+                    assert!(b[i].is_nan());
+                } else {
+                    assert!((a[i] - b[i]).abs() < 1e-3, "mismatch at {}: {} vs {}", i, a[i], b[i]);
+                }
+            }
+        }
+
+        println!(
+            "SMA sweep {} periods n={}: naive(re-upload) {:.2} ms | resident(upload-once) {:.2} ms | {:.1}x",
+            periods.len(),
+            n,
+            naive_ms,
+            resident_ms,
+            naive_ms / resident_ms
+        );
     }
 }
