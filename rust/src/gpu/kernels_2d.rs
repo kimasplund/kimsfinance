@@ -850,7 +850,9 @@ mod tests {
     #[test]
     #[ignore] // Requires GPU
     fn test_sma_batch_2d_correctness() {
-        use super::super::sma::sma_gpu;
+        // The 2D batch kernel is FP64; compare against the FP64 SMA reference
+        // (sma_gpu now computes in FP32 by default).
+        use super::super::sma::sma_gpu_f64;
 
         let device = GpuDevice::new().expect("Failed to initialize GPU");
         let n_assets = 3;
@@ -866,7 +868,7 @@ mod tests {
             .iter()
             .map(|asset_data| {
                 let close = Array1::from_vec(asset_data.clone());
-                sma_gpu(&device, &close, period, None).unwrap()
+                sma_gpu_f64(&device, &close, period, None).unwrap()
             })
             .collect();
 

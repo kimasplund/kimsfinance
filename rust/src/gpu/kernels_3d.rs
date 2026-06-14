@@ -810,7 +810,7 @@ impl SweepResult3D {
 #[cfg(test)]
 mod tests {
     use super::super::rsi::rsi_gpu;
-    use super::super::sma::sma_gpu;
+    use super::super::sma::sma_gpu_f64;
     use super::*;
 
     fn generate_test_asset(n: usize, seed: f64) -> Vec<f64> {
@@ -841,7 +841,9 @@ mod tests {
         for (period_idx, &period) in periods.iter().enumerate() {
             for asset_idx in 0..n_assets {
                 let close = Array1::from_vec(assets[asset_idx].clone());
-                let sma_ind = sma_gpu(&device, &close, period, None).unwrap();
+                // The 3D sweep kernel is FP64, so compare against the FP64 SMA
+                // reference (sma_gpu now computes in FP32 by default).
+                let sma_ind = sma_gpu_f64(&device, &close, period, None).unwrap();
 
                 for candle_idx in 0..n_candles {
                     let sweep_idx =
