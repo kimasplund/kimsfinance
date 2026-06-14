@@ -141,9 +141,11 @@ extern "C" __global__ void calculate_mfi_kernel(
     double pos_sum = sum_positive_flow[idx];
     double neg_sum = sum_negative_flow[idx];
 
-    // Handle edge case: if negative sum == 0, MFI = 100 (maximum buying pressure)
+    // No negative flow: genuine all-buying -> 100, but a FLAT/zero-flow window
+    // (positive flow also 0) is directionless -> neutral 50 (matches the CPU MFI
+    // and the RSI flat-series convention).
     if (neg_sum < 1e-10) {
-        mfi[idx] = 100.0;
+        mfi[idx] = (pos_sum < 1e-10) ? 50.0 : 100.0;
         return;
     }
 
@@ -607,11 +609,13 @@ mod tests {
         let mfi = mfi_gpu(&device, &high, &low, &close, &volume, 14, None)
             .expect("MFI GPU calculation failed");
 
-        // With zero volume, no money flow, so MFI should be 100 (no selling pressure)
+        // Zero volume => no money flow in EITHER direction -> neutral 50 (not 100,
+        // which would wrongly imply max buying pressure). Matches the CPU MFI / RSI
+        // flat-series convention.
         for i in 14..mfi.len() {
             assert!(
-                mfi[i] == 100.0 || mfi[i].is_nan(),
-                "MFI with zero volume should be 100 or NaN, got {}",
+                mfi[i] == 50.0,
+                "MFI with zero volume should be neutral 50, got {}",
                 mfi[i]
             );
         }
@@ -745,12 +749,12 @@ mod tests {
         let mfi = mfi_gpu(&device, &high, &low, &close, &volume, 14, None)
             .expect("MFI GPU calculation failed");
 
-        // With constant prices, typical price is constant, so no flow direction
-        // All flows should be zero, resulting in MFI = 100 (no selling pressure)
+        // Constant prices => typical price constant => no money flow either way
+        // => neutral 50 (directionless), not 100. Matches the CPU MFI / RSI convention.
         for i in 14..mfi.len() {
             assert!(
-                mfi[i] == 100.0 || mfi[i].is_nan(),
-                "MFI with constant prices should be 100 or NaN, got {}",
+                mfi[i] == 50.0,
+                "MFI with constant prices should be neutral 50, got {}",
                 mfi[i]
             );
         }

@@ -78,7 +78,11 @@ impl Indicator for RSI {
                 .into_par_iter()
                 .map(|i| {
                     if avg_loss[i] == 0.0 {
-                        100.0
+                        // No losses: distinguish a genuine all-gains move (RSI 100)
+                        // from a FLAT series where there are also no gains. A flat
+                        // window is directionless, so RSI is neutral (50) -- returning
+                        // 100 here wrongly flags a flat market as maximally overbought.
+                        if avg_gain[i] == 0.0 { 50.0 } else { 100.0 }
                     } else {
                         let rs = avg_gain[i] / avg_loss[i];
                         100.0 - (100.0 / (1.0 + rs))
@@ -95,7 +99,9 @@ impl Indicator for RSI {
                 .and(&avg_loss.slice(s![self.period..]))
                 .for_each(|r, &gain, &loss| {
                     *r = if loss == 0.0 {
-                        100.0
+                        // Flat window (no gains AND no losses) is directionless -> 50;
+                        // genuine all-gains -> 100. See the parallel branch above.
+                        if gain == 0.0 { 50.0 } else { 100.0 }
                     } else {
                         let rs = gain / loss;
                         100.0 - (100.0 / (1.0 + rs))
@@ -233,7 +239,10 @@ impl WilliamsR {
                     if range > 0.0 {
                         ((hh - close[i]) / range) * -100.0
                     } else {
-                        f64::NAN
+                        // Flat window (hh==ll): %R is 0/0. Use the range midpoint
+                        // (-50 on the [-100,0] scale) -- the neutral convention also
+                        // used by the GPU kernel and mirroring RSI/Stochastic flat=neutral.
+                        -50.0
                     }
                 })
                 .collect();
@@ -251,7 +260,7 @@ impl WilliamsR {
                     *r = if range > 0.0 {
                         ((hh - c) / range) * -100.0
                     } else {
-                        f64::NAN
+                        -50.0 // flat window -> neutral midpoint (see parallel branch)
                     };
                 });
         }
@@ -331,7 +340,10 @@ impl Stochastic {
                     if range > 0.0 {
                         ((close[i] - ll) / range) * 100.0
                     } else {
-                        f64::NAN
+                        // Flat window (hh==ll): %K is 0/0. Use the range midpoint (50)
+                        // -- the neutral convention used by the GPU kernel; also keeps
+                        // %D = sma(%K) finite instead of NaN-poisoning the flat region.
+                        50.0
                     }
                 })
                 .collect();
@@ -348,7 +360,7 @@ impl Stochastic {
                     *k_val = if range > 0.0 {
                         ((c - ll) / range) * 100.0
                     } else {
-                        f64::NAN
+                        50.0 // flat window -> neutral midpoint (see parallel branch)
                     };
                 });
         }
@@ -423,26 +435,39 @@ impl Aroon {
                     let high_window = high.slice(s![window_start..=i]);
                     let low_window = low.slice(s![window_start..=i]);
 
-                    // Find last occurrence of max/min (most recent)
+                    // Most-recent occurrence of the window max/min. Mirror the
+                    // sequential path's tie-break EXACTLY (`>=` for max, `<=` for
+                    // min, both keeping the LATER index). The previous
+                    // `rev().max_by(...)` returned the OLDEST index on tied highs
+                    // (max_by yields the last element on ties, which after `.rev()`
+                    // is index 0), so identical input gave different Aroon-Up
+                    // depending only on whether n crossed PARALLEL_THRESHOLD.
                     let periods_since_high = high_window
                         .iter()
                         .enumerate()
-                        .rev()
-                        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                        .map(|(idx, _)| idx)
-                        .unwrap_or(0);
+                        .fold((0usize, f64::NEG_INFINITY), |(bi, bv), (i, &v)| {
+                            if v >= bv { (i, v) } else { (bi, bv) }
+                        })
+                        .0;
 
                     let periods_since_low = low_window
                         .iter()
                         .enumerate()
-                        .rev()
-                        .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                        .map(|(idx, _)| idx)
-                        .unwrap_or(0);
+                        .fold((0usize, f64::INFINITY), |(bi, bv), (i, &v)| {
+                            if v <= bv { (i, v) } else { (bi, bv) }
+                        })
+                        .0;
 
+                    // Aroon-Up = 100 * (period - bars_since_high) / period. Here
+                    // periods_since_high is the window INDEX of the most-recent high
+                    // (0 = oldest .. period-1 = newest), i.e. exactly (period-1 -
+                    // bars_since_high), so the formula reduces to
+                    // 100 * periods_since_high / (period-1). The previous
+                    // `(period-1 - periods_since_high)` was inverted: a newest-bar
+                    // high gave Aroon-Up 0 instead of 100.
                     let period_f = (self.period - 1) as f64;
-                    let up = ((self.period - 1 - periods_since_high) as f64 / period_f) * 100.0;
-                    let down = ((self.period - 1 - periods_since_low) as f64 / period_f) * 100.0;
+                    let up = (periods_since_high as f64 / period_f) * 100.0;
+                    let down = (periods_since_low as f64 / period_f) * 100.0;
 
                     (up, down)
                 })
@@ -480,9 +505,11 @@ impl Aroon {
                     }
                 }
 
+                // See the parallel branch: Aroon-Up = 100 * periods_since_high /
+                // (period-1); the old `(period-1 - ...)` was inverted.
                 let period_f = (self.period - 1) as f64;
-                aroon_up[i] = ((self.period - 1 - periods_since_high) as f64 / period_f) * 100.0;
-                aroon_down[i] = ((self.period - 1 - periods_since_low) as f64 / period_f) * 100.0;
+                aroon_up[i] = (periods_since_high as f64 / period_f) * 100.0;
+                aroon_down[i] = (periods_since_low as f64 / period_f) * 100.0;
             }
         }
 

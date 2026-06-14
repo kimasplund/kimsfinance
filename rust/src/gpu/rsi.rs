@@ -89,9 +89,11 @@ extern "C" __global__ void calculate_rsi_kernel(
     double gain = avg_gain[idx];
     double loss = avg_loss[idx];
 
-    // Handle edge case: if loss == 0, RSI = 100
+    // Edge case: no losses. Distinguish a genuine all-gains move (RSI 100) from a
+    // FLAT window where there are also no gains -> neutral 50 (matches the CPU RSI
+    // fix; returning 100 on a flat market wrongly flags it as maximally overbought).
     if (loss < 1e-10) {
-        rsi[idx] = 100.0;
+        rsi[idx] = (gain < 1e-10) ? 50.0 : 100.0;
         return;
     }
 
@@ -471,13 +473,13 @@ mod tests {
 
         let result = rsi_gpu(&device, &close, 14, None).expect("RSI GPU calculation failed");
 
-        // With no change, RSI is undefined but we handle it as 100 (no losses)
-        // Actually, with no gains and no losses, we get 0/0 which should be handled
-        // The kernel should return 100 when loss == 0
+        // Flat series: no gains AND no losses (0/0). RSI is directionless, so the
+        // kernel returns the neutral 50 (matching the CPU RSI), NOT 100 -- a flat
+        // market is not maximally overbought.
         for i in 14..result.len() {
             assert!(
-                result[i] == 100.0 || result[i].is_nan(),
-                "Expected RSI = 100 or NaN for constant prices, got {}",
+                result[i] == 50.0,
+                "Expected neutral RSI = 50 for constant prices, got {}",
                 result[i]
             );
         }

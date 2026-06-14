@@ -42,7 +42,11 @@ impl OBV {
         let n = validate_lengths(&[close, volume])?;
 
         let mut obv = Array1::zeros(n);
-        obv[0] = volume[0];
+        // OBV[0] = 0: there is no prior close to assign a direction on the first
+        // bar (standard convention, and matches the GPU kernel which seeded 0 --
+        // previously this CPU path seeded volume[0], a constant offset that made
+        // CPU and GPU OBV disagree by volume[0] on every bar).
+        obv[0] = 0.0;
 
         // Cache-friendly single pass with predictable memory access
         for i in 1..n {
@@ -103,7 +107,9 @@ impl VWAP {
     ) -> IndicatorResult {
         let n = validate_lengths(&[high, low, close, volume])?;
 
-        let mut vwap = Array1::zeros(n);
+        // Init NaN, not 0: where cumulative volume is 0 (or non-positive) VWAP is
+        // undefined -- a 0.0 here is a false "price". Only written below when cum vol > 0.
+        let mut vwap = Array1::from_elem(n, f64::NAN);
 
         // Fused single-pass: compute typical price, accumulate sums, and calculate VWAP
         // This eliminates 3 intermediate allocations and reduces memory bandwidth by ~75%
@@ -149,7 +155,9 @@ impl VWAP {
             });
         }
 
-        let mut vwap = Array1::zeros(n);
+        // Init NaN, not 0: where cumulative volume is 0 (or non-positive) VWAP is
+        // undefined -- a 0.0 here is a false "price". Only written below when cum vol > 0.
+        let mut vwap = Array1::from_elem(n, f64::NAN);
         let mut cumsum_tp_volume = 0.0;
         let mut cumsum_volume = 0.0;
 
@@ -369,9 +377,14 @@ impl MFI {
         if sum_neg_mf > 0.0 {
             let money_ratio = sum_pos_mf / sum_neg_mf;
             mfi[self.period] = 100.0 - (100.0 / (1.0 + money_ratio));
-        } else {
-            // When no negative flow, MFI = 100 (maximum buying pressure)
+        } else if sum_pos_mf > 0.0 {
+            // No negative flow but positive flow present: maximum buying pressure.
             mfi[self.period] = 100.0;
+        } else {
+            // No flow at all (flat typical-price window) is directionless -> neutral
+            // 50, mirroring the RSI flat-series convention. Returning 100 here would
+            // wrongly flag a flat market as maximally overbought.
+            mfi[self.period] = 50.0;
         }
 
         // Roll window forward with O(n) complexity
@@ -383,8 +396,11 @@ impl MFI {
             if sum_neg_mf > 0.0 {
                 let money_ratio = sum_pos_mf / sum_neg_mf;
                 mfi[i] = 100.0 - (100.0 / (1.0 + money_ratio));
-            } else {
+            } else if sum_pos_mf > 0.0 {
                 mfi[i] = 100.0;
+            } else {
+                // Flat window: no flow either way -> neutral 50 (see first-window note).
+                mfi[i] = 50.0;
             }
         }
 
@@ -586,14 +602,15 @@ mod tests {
             .calculate_with_volume(close.view(), volume.view())
             .unwrap();
 
-        // OBV[0] = volume[0] = 1000
-        assert!((result[0] - 1000.0).abs() < 1e-10);
+        // OBV[0] = 0 (no prior close -> no direction on the first bar; standard
+        // convention, and matches the GPU kernel)
+        assert!((result[0] - 0.0).abs() < 1e-10);
 
-        // OBV[1] = OBV[0] + volume[1] (price up)
-        assert!((result[1] - 2500.0).abs() < 1e-10);
+        // OBV[1] = OBV[0] + volume[1] (price up) = 0 + 1500
+        assert!((result[1] - 1500.0).abs() < 1e-10);
 
-        // OBV[2] = OBV[1] - volume[2] (price down)
-        assert!((result[2] - 1300.0).abs() < 1e-10);
+        // OBV[2] = OBV[1] - volume[2] (price down) = 1500 - 1200
+        assert!((result[2] - 300.0).abs() < 1e-10);
     }
 
     #[test]
@@ -860,11 +877,13 @@ mod tests {
             .calculate_hlcv(high.view(), low.view(), close.view(), volume.view())
             .unwrap();
 
-        // With zero volume, no money flow, so MFI should be 100 (no selling pressure)
+        // Zero volume => no money flow in EITHER direction (pos==neg==0). That is
+        // directionless, so MFI is neutral 50 -- not 100 (which would wrongly imply
+        // maximum buying pressure). Mirrors the RSI flat-series convention.
         for i in 3..result.len() {
             assert!(
-                result[i] == 100.0 || result[i].is_nan(),
-                "MFI with zero volume should be 100 or NaN, got {}",
+                result[i] == 50.0 || result[i].is_nan(),
+                "MFI with zero volume should be neutral 50, got {}",
                 result[i]
             );
         }

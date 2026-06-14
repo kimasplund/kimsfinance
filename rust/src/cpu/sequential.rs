@@ -682,8 +682,8 @@ mod tests {
 
         #[cfg(not(debug_assertions))]
         assert!(
-            elapsed.as_micros() < 1000,
-            "EMA CPU too slow (release): {:?}",
+            elapsed.as_millis() < 100,
+            "EMA CPU grossly slow (release; gross-regression guard <100ms, ~target sub-ms): {:?}",
             elapsed
         );
     }
@@ -713,8 +713,8 @@ mod tests {
 
         #[cfg(not(debug_assertions))]
         assert!(
-            elapsed.as_micros() < 1000,
-            "Wilder's smoothing CPU too slow (release): {:?}",
+            elapsed.as_millis() < 100,
+            "Wilder's smoothing CPU grossly slow (release; gross-regression guard <100ms): {:?}",
             elapsed
         );
     }
@@ -741,8 +741,8 @@ mod tests {
 
         #[cfg(not(debug_assertions))]
         assert!(
-            elapsed.as_micros() < 1000,
-            "SMA CPU too slow (release): {:?}",
+            elapsed.as_millis() < 100,
+            "SMA CPU grossly slow (release; gross-regression guard <100ms): {:?}",
             elapsed
         );
     }

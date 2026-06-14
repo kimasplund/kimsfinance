@@ -55,17 +55,17 @@ extern "C" __global__ void cmf_kernel(
             int pos = idx - j;
             double range = high[pos] - low[pos];
 
-            // Calculate Money Flow Multiplier only if range > 0
+            // The Money Flow Multiplier is defined only when range > 0; a doji
+            // (high==low) contributes 0 money-flow volume to the numerator.
             if (range > 1e-10) {
                 // MF Multiplier = ((close - low) - (high - close)) / range
-                // Simplified: (2*close - high - low) / range
                 double mf_mult = ((close[pos] - low[pos]) - (high[pos] - close[pos])) / range;
-
-                // Money Flow Volume = MF Multiplier * volume
                 mfv_sum += mf_mult * volume[pos];
-                vol_sum += volume[pos];
             }
-            // If range is 0, skip this candle (doji - no price movement)
+            // The candle's volume is ALWAYS part of the period denominator,
+            // including dojis -- matches the CPU/standard CMF (previously the GPU
+            // skipped doji volume here, shrinking the denominator and diverging).
+            vol_sum += volume[pos];
         }
 
         // Calculate CMF: sum(MF Volume) / sum(Volume)
@@ -432,9 +432,22 @@ mod tests {
         let cmf = cmf_gpu(&device, &high, &low, &close, &volume, 20, None)
             .expect("CMF GPU calculation failed");
 
-        // All values should be NaN (no price range)
+        // All-doji window: each candle contributes 0 money-flow volume, but its
+        // volume IS still part of the period denominator (matches the CPU/standard
+        // CMF), so CMF = 0 over the valid region instead of 0/0 = NaN. Warmup
+        // (i < period-1) is not computed and stays NaN.
+        let valid_from = 20 - 1; // period - 1
         for i in 0..cmf.len() {
-            assert!(cmf[i].is_nan(), "CMF[{}] should be NaN for zero range", i);
+            if i < valid_from {
+                assert!(cmf[i].is_nan(), "CMF[{}] (warmup) should be NaN", i);
+            } else {
+                assert!(
+                    cmf[i].abs() < 1e-9,
+                    "CMF[{}] should be 0 for an all-doji window (volume still in denominator), got {}",
+                    i,
+                    cmf[i]
+                );
+            }
         }
     }
 
