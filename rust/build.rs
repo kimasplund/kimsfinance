@@ -255,7 +255,13 @@ fn compile_rsi_fused_kernel(nvcc: &Path, cuda_home: &Path, cuda_arch: &str) {
         .arg("-U_GNU_SOURCE")
         .arg("-D_XOPEN_SOURCE=700")
         .arg("-O3") // Maximum optimization
-        .arg("-use_fast_math") // Fast math operations
+        // Fast math: omitted under the `strict-fp` feature so the (signal) RSI
+        // fused kernel is bit-reproducible; default keeps it for throughput.
+        .args(if std::env::var_os("CARGO_FEATURE_STRICT_FP").is_some() {
+            &[] as &[&str]
+        } else {
+            &["-use_fast_math"] as &[&str]
+        })
         .arg("--expt-relaxed-constexpr") // Relaxed constexpr for CUB
         .arg("--expt-extended-lambda") // Extended lambda for CUB
         .arg("-D_FORCE_INLINES") // Force inline to avoid header conflicts

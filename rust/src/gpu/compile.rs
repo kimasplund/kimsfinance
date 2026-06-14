@@ -134,23 +134,28 @@ pub fn get_compile_options() -> &'static CompileOptions {
         // Log compilation target (visible during GPU initialization)
         eprintln!("🎯 CUDA compilation target: {}", arch);
 
+        // Reproducibility: the `strict-fp` feature switches to IEEE-754-compliant
+        // compilation (no fast-math, no denormal flush, 0.5-ULP div/sqrt) so
+        // signal/backtest kernels are bit-reproducible run-to-run; the default
+        // keeps the fast path for throughput. (A per-kernel split -- deterministic
+        // signal kernels alongside fast throughput kernels -- is a future step.)
+        let fast = !cfg!(feature = "strict-fp");
+
         CompileOptions {
             // Target Ada Lovelace architecture (compute capability 8.9)
             // This enables 128 FP32 ops/cycle per SM (2x vs Ampere's 64)
             arch: Some(Box::leak(arch.into_boxed_str())),
 
-            // Enable fast math for maximum throughput
-            // Safe for financial indicators (no precision loss at typical scales)
-            use_fast_math: Some(true),
+            // Fast math for maximum throughput (disabled under `strict-fp`).
+            use_fast_math: Some(fast),
 
-            // Flush denormals to zero (faster, no impact on financial data)
-            // Denormals only occur below 2.2e-308, never in price/volume data
-            ftz: Some(true),
+            // Flush denormals to zero (disabled under `strict-fp`).
+            // Denormals only occur below 2.2e-308, never in price/volume data.
+            ftz: Some(fast),
 
-            // Prioritize speed over strict IEEE-754 compliance
-            // sqrt/div precision: 1 ULP vs 0.5 ULP (negligible for financial data)
-            prec_sqrt: Some(false),
-            prec_div: Some(false),
+            // 1-ULP fast div/sqrt by default; strict 0.5-ULP IEEE under `strict-fp`.
+            prec_sqrt: Some(!fast),
+            prec_div: Some(!fast),
 
             // Fused multiply-add is automatically enabled by use_fast_math
             // Set to None to avoid duplicate option error

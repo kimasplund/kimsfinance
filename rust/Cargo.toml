@@ -109,6 +109,10 @@ simd = []
 
 gpu = ["cudarc", "half"]
 
+# IEEE-754-strict GPU compilation (no -use_fast_math / denormal-flush; 0.5-ULP
+# div/sqrt) for bit-reproducible signal/backtest kernels. Off by default (fast).
+strict-fp = []
+
 # Options data connectors
 data-ibkr = ["ibapi", "time", "tokio", "async-trait"]
 data-deribit = ["deribit", "tokio", "async-trait"]
