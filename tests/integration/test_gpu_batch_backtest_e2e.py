@@ -29,11 +29,17 @@ except ImportError:
     BATCH_AVAILABLE = False
     GPU_AVAILABLE = False
 
+try:
+    import deap  # noqa: F401
+    DEAP_AVAILABLE = True
+except ImportError:
+    DEAP_AVAILABLE = False
 
-# Skip all tests if GPU batch backtesting not available
+
+# Skip all tests if GPU batch backtesting not available or GPU hardware absent
 pytestmark = pytest.mark.skipif(
-    not BATCH_AVAILABLE,
-    reason="GPU batch backtesting not compiled. Install with: pip install kimsfinance[gpu]"
+    not BATCH_AVAILABLE or not GPU_AVAILABLE,
+    reason="GPU batch backtesting requires GPU hardware + gpu feature (pip install kimsfinance[gpu])"
 )
 
 

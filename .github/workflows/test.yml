@@ -24,13 +24,32 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
+    - name: Set up Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Rust build
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: rust
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        # [test] pulls the optional test deps (svgwrite, mplfinance, pyarrow, ...)
+        # so renderer/IO tests run instead of erroring on missing imports.
+        pip install -e ".[test]"
+        pip install maturin
+
+    - name: Build and install Rust extension (kimsfinance_core)
+      run: |
+        # Default (CPU) features only — the `gpu` feature needs CUDA/nvcc.
+        # Without this extension the Rust-backed indicator/backtest tests fail.
+        maturin build -m rust/Cargo.toml --out dist
+        pip install --no-index --find-links dist kimsfinance_core
 
     - name: Run tests
       run: |
+        # GPU-hardware tests skip automatically when no GPU is present.
         pytest tests/ -v --tb=short
 
     - name: Test import

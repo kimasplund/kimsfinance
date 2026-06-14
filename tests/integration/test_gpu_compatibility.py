@@ -26,6 +26,12 @@ except ImportError:
     BATCH_AVAILABLE = False
     GPU_AVAILABLE = False
 
+try:
+    import deap  # noqa: F401
+    DEAP_AVAILABLE = True
+except ImportError:
+    DEAP_AVAILABLE = False
+
 
 # Test GPU availability detection
 
@@ -67,6 +73,7 @@ def test_gpu_available_constant():
 # Test CPU fallback mode
 
 @pytest.mark.skipif(not BATCH_AVAILABLE, reason="Batch backtesting not available")
+@pytest.mark.skipif(not DEAP_AVAILABLE, reason="deap package not installed (pip install kimsfinance[optimization])")
 class TestCPUFallback:
     """Test CPU fallback mode for genetic optimizer."""
 
@@ -241,6 +248,7 @@ class TestGPUEnvironment:
 # Test graceful degradation
 
 @pytest.mark.skipif(not BATCH_AVAILABLE, reason="Batch backtesting not available")
+@pytest.mark.skipif(not DEAP_AVAILABLE, reason="deap package not installed (pip install kimsfinance[optimization])")
 class TestGracefulDegradation:
     """Test graceful degradation when GPU operations fail."""
 
