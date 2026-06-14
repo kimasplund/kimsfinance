@@ -43,7 +43,11 @@ jobs:
   # Quick benchmark smoke test (runs on every PR)
   cuda-smoke-test:
     runs-on: self-hosted # Requires GPU runner
-    if: github.event_name == 'pull_request'
+    # Gate on a self-hosted GPU runner being registered (set repo variable
+    # HAS_GPU_RUNNER=true). Without this guard the job is queued on every PR and,
+    # with no self-hosted runner available, sits "pending" forever -- blocking the
+    # PR's green state (the "Gap 2" CI limitation). Skips gracefully when unset.
+    if: github.event_name == 'pull_request' && vars.HAS_GPU_RUNNER == 'true'
 
     steps:
       - name: Checkout repository
@@ -80,7 +84,9 @@ jobs:
   # Full A/B test suite (runs on merge to main)
   cuda-ab-test:
     runs-on: self-hosted # Requires GPU runner
-    if: github.event_name == 'push' || github.event.inputs.run_full_suite == 'true'
+    # Requires a registered self-hosted GPU runner (repo variable
+    # HAS_GPU_RUNNER=true); otherwise it would queue forever on pushes. See cuda-smoke-test.
+    if: (github.event_name == 'push' || github.event.inputs.run_full_suite == 'true') && vars.HAS_GPU_RUNNER == 'true'
 
     steps:
       - name: Checkout repository
@@ -220,7 +226,9 @@ jobs:
   # Baseline benchmark (runs monthly to track performance over time)
   cuda-baseline:
     runs-on: self-hosted
-    if: github.event_name == 'schedule' || github.event.inputs.run_full_suite == 'true'
+    # Requires a registered self-hosted GPU runner (repo variable
+    # HAS_GPU_RUNNER=true); otherwise it would queue forever on the schedule. See cuda-smoke-test.
+    if: (github.event_name == 'schedule' || github.event.inputs.run_full_suite == 'true') && vars.HAS_GPU_RUNNER == 'true'
     # Schedule: First day of every month at 00:00 UTC
     # schedule:
     #   - cron: '0 0 1 * *'
