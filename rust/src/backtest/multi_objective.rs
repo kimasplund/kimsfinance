@@ -297,7 +297,7 @@ impl MultiObjectiveOptimizer {
             return Err(GpuError::EmptyParameterGrid);
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // Initialize population
         let mut population = self.initialize_population(param_grid, &mut rng);
@@ -398,10 +398,10 @@ impl MultiObjectiveOptimizer {
             for (name, range) in &param_grid.ranges {
                 let value = match range {
                     ParameterRange::Int { min, max, .. } => {
-                        rng.gen_range(*min as f64..=*max as f64).round()
+                        rng.random_range(*min as f64..=*max as f64).round()
                     }
-                    ParameterRange::Float { min, max, .. } => rng.gen_range(*min..=*max),
-                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
+                    ParameterRange::Float { min, max, .. } => rng.random_range(*min..=*max),
+                    ParameterRange::Values(values) => values[rng.random_range(0..values.len())],
                 };
                 parameters.insert(name.clone(), value);
             }
@@ -570,7 +570,7 @@ impl MultiObjectiveOptimizer {
             let parent2 = self.tournament_select(population, rng);
 
             // Crossover
-            let mut child = if rng.gen_bool(self.crossover_rate) {
+            let mut child = if rng.random_bool(self.crossover_rate) {
                 self.crossover(parent1, parent2, rng)
             } else {
                 parent1.clone()
@@ -591,8 +591,8 @@ impl MultiObjectiveOptimizer {
         population: &'a [Solution],
         rng: &mut ThreadRng,
     ) -> &'a Solution {
-        let idx1 = rng.gen_range(0..population.len());
-        let idx2 = rng.gen_range(0..population.len());
+        let idx1 = rng.random_range(0..population.len());
+        let idx2 = rng.random_range(0..population.len());
 
         let sol1 = &population[idx1];
         let sol2 = &population[idx2];
@@ -614,7 +614,7 @@ impl MultiObjectiveOptimizer {
         let mut parameters = HashMap::new();
 
         for (key, value1) in &parent1.parameters {
-            let value = if rng.gen_bool(0.5) {
+            let value = if rng.random_bool(0.5) {
                 *value1
             } else {
                 *parent2.parameters.get(key).unwrap_or(value1)
@@ -634,7 +634,7 @@ impl MultiObjectiveOptimizer {
     /// Polynomial mutation
     fn mutate(&self, solution: &mut Solution, param_grid: &ParameterGrid, rng: &mut ThreadRng) {
         for (name, range) in &param_grid.ranges {
-            if rng.gen_bool(self.mutation_rate) {
+            if rng.random_bool(self.mutation_rate) {
                 let current = solution.parameters.get(name).copied().unwrap_or(0.0);
 
                 let new_value = match range {
@@ -646,7 +646,7 @@ impl MultiObjectiveOptimizer {
                         let noise = rng.sample(rand_distr::Normal::new(0.0, *step).unwrap());
                         (current + noise).clamp(*min, *max)
                     }
-                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
+                    ParameterRange::Values(values) => values[rng.random_range(0..values.len())],
                 };
 
                 solution.parameters.insert(name.clone(), new_value);

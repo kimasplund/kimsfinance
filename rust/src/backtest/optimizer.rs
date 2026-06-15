@@ -187,7 +187,7 @@ impl GeneticOptimizer {
             return Err(GpuError::EmptyParameterGrid);
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // Initialize population with random parameters
         let mut population = self.initialize_population(param_grid, &mut rng);
@@ -364,10 +364,10 @@ impl GeneticOptimizer {
             for (name, range) in &param_grid.ranges {
                 let value = match range {
                     ParameterRange::Int { min, max, .. } => {
-                        rng.gen_range(*min as f64..=*max as f64).round()
+                        rng.random_range(*min as f64..=*max as f64).round()
                     }
-                    ParameterRange::Float { min, max, .. } => rng.gen_range(*min..=*max),
-                    ParameterRange::Values(values) => values[rng.gen_range(0..values.len())],
+                    ParameterRange::Float { min, max, .. } => rng.random_range(*min..=*max),
+                    ParameterRange::Values(values) => values[rng.random_range(0..values.len())],
                 };
 
                 parameters.insert(name.clone(), value);
@@ -727,7 +727,7 @@ impl GeneticOptimizer {
             let parent2 = self.tournament_selection(population, rng);
 
             // Crossover
-            let mut offspring = if rng.gen_range(0.0..1.0) < self.crossover_rate {
+            let mut offspring = if rng.random_range(0.0..1.0) < self.crossover_rate {
                 self.crossover(parent1, parent2, rng)
             } else {
                 parent1.clone()
@@ -748,10 +748,10 @@ impl GeneticOptimizer {
         population: &'a [Individual],
         rng: &mut ThreadRng,
     ) -> &'a Individual {
-        let mut best = &population[rng.gen_range(0..population.len())];
+        let mut best = &population[rng.random_range(0..population.len())];
 
         for _ in 1..self.tournament_size {
-            let candidate = &population[rng.gen_range(0..population.len())];
+            let candidate = &population[rng.random_range(0..population.len())];
             if candidate.fitness > best.fitness {
                 best = candidate;
             }
@@ -770,7 +770,7 @@ impl GeneticOptimizer {
         let mut parameters = HashMap::new();
 
         for (key, value1) in &parent1.parameters {
-            let value = if rng.gen_bool(0.5) {
+            let value = if rng.random_bool(0.5) {
                 *value1
             } else {
                 *parent2.parameters.get(key).unwrap_or(value1)
@@ -787,7 +787,7 @@ impl GeneticOptimizer {
     /// Mutate individual with Gaussian noise
     fn mutate(&self, individual: &mut Individual, param_grid: &ParameterGrid, rng: &mut ThreadRng) {
         for (name, range) in &param_grid.ranges {
-            if rng.gen_range(0.0..1.0) < self.mutation_rate {
+            if rng.random_range(0.0..1.0) < self.mutation_rate {
                 let current = individual.parameters.get(name).copied().unwrap_or(0.0);
 
                 let new_value = match range {
@@ -803,7 +803,7 @@ impl GeneticOptimizer {
                     }
                     ParameterRange::Values(values) => {
                         // Random selection from discrete values
-                        values[rng.gen_range(0..values.len())]
+                        values[rng.random_range(0..values.len())]
                     }
                 };
 
@@ -1048,14 +1048,14 @@ impl GeneticOptimizer {
             let parent2 = self.tournament_selection(population, rng);
 
             // Crossover
-            let mut offspring = if rng.gen_range(0.0..1.0) < self.crossover_rate {
+            let mut offspring = if rng.random_range(0.0..1.0) < self.crossover_rate {
                 self.crossover(parent1, parent2, rng)
             } else {
                 parent1.clone()
             };
 
             // Mutation with adaptive rate
-            if rng.gen_range(0.0..1.0) < adaptive_mutation_rate {
+            if rng.random_range(0.0..1.0) < adaptive_mutation_rate {
                 self.mutate(&mut offspring, param_grid, rng);
             }
 
@@ -1236,7 +1236,7 @@ impl IslandGeneticOptimizer {
             return Err(GpuError::EmptyParameterGrid);
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // Initialize islands
         let mut islands: Vec<Vec<Individual>> = (0..self.num_islands)
@@ -1537,7 +1537,7 @@ impl GeneticOptimizer {
             ));
         }
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // Initialize population with random parameters
         let mut population = self.initialize_population(param_grid, &mut rng);
@@ -1790,7 +1790,7 @@ mod tests {
 
     #[test]
     fn test_initialize_population() {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let mut grid = ParameterGrid::new();
         grid.add_range(
             "rsi_period",
@@ -1826,7 +1826,7 @@ mod tests {
     #[test]
     fn test_crossover() {
         let optimizer = GeneticOptimizer::new();
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         let mut parent1 = Individual::default();
         parent1.parameters.insert("a".to_string(), 10.0);
@@ -2010,7 +2010,7 @@ mod tests {
         let optimizer = GeneticOptimizer::new()
             .population_size(10)
             .elitism_rate(0.2);
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
         // Create parameter grid
         let mut grid = ParameterGrid::new();
