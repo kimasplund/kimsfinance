@@ -26,10 +26,23 @@ Example:
     >>> print(f"Best Sharpe: {best['sharpe_ratio']:.2f}")
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Union
-import pandas as pd
+from typing import List, Dict, Optional, Union, TYPE_CHECKING
 import numpy as np
+
+# pandas is optional (see the `pandas` extra). This module's public helpers take a
+# pandas DataFrame, but the import is deferred so `import kimsfinance.batch` works
+# without pandas; the annotations are lazy (PEP 563) and callers that actually pass
+# a DataFrame will have pandas installed.
+if TYPE_CHECKING:
+    import pandas as pd
+else:
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
 
 try:
     from kimsfinance_core import (

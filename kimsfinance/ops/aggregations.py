@@ -16,9 +16,20 @@ Target locations in mplfinance:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import polars as pl
-import pandas as pd
+
+# pandas is optional (see the `pandas` extra) -- used only to detect/accept pandas
+# DataFrame inputs. None at runtime when pandas isn't installed; all uses guarded.
+if TYPE_CHECKING:
+    import pandas as pd
+else:
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
 
 try:
     import cupy as cp
@@ -182,7 +193,7 @@ def ohlc_resample(
         GPU provides minimal additional benefit due to memory overhead
     """
     # Convert to Polars if needed
-    if isinstance(df, pd.DataFrame):
+    if pd is not None and isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -367,7 +378,7 @@ def group_aggregation(
         >>> group_aggregation(df, "symbol", "volume", "sum")
     """
     # Convert to Polars if needed
-    if isinstance(df, pd.DataFrame):
+    if pd is not None and isinstance(df, pd.DataFrame):
         polars_df = pl.from_pandas(df)
     elif isinstance(df, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -440,7 +451,7 @@ def tick_to_ohlc(
         - Volume-independent time frames
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd is not None and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -522,7 +533,7 @@ def volume_to_ohlc(
         Processes 1M ticks in <200ms using Polars
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd is not None and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -610,7 +621,7 @@ def range_to_ohlc(
         - Renko charts: Fixed price movement per brick (directional)
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd is not None and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -731,7 +742,7 @@ def kagi_to_ohlc(
         Kagi charts are best visualized as line charts or custom renderers.
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd is not None and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None
@@ -928,7 +939,7 @@ def three_line_break_to_ohlc(
         - Each "line" is a full OHLC bar
     """
     # Convert to Polars if needed
-    if isinstance(ticks, pd.DataFrame):
+    if pd is not None and isinstance(ticks, pd.DataFrame):
         polars_df = pl.from_pandas(ticks)
     elif isinstance(ticks, pl.LazyFrame):
         exec_engine = "gpu" if POLARS_GPU_AVAILABLE else None

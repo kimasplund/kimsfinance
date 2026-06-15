@@ -1,8 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import polars as pl
-import pandas as pd
+
+# pandas is optional (see the `pandas` extra) -- only used to convert a pandas
+# Series input. None at runtime when not installed; the use below is guarded.
+if TYPE_CHECKING:
+    import pandas as pd
+else:
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
 
 try:
     from numba import njit
@@ -37,7 +48,7 @@ def to_numpy_array(data: ArrayLike) -> np.ndarray:
         return data
     elif isinstance(data, pl.Series):
         return data.to_numpy()
-    elif isinstance(data, pd.Series):
+    elif pd is not None and isinstance(data, pd.Series):
         return data.to_numpy()
     else:
         return np.asarray(data)
