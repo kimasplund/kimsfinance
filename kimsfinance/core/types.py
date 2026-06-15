@@ -8,12 +8,23 @@ Python 3.13+ type aliases and protocols for the library.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal, Protocol, TypeGuard, Any
+from typing import Literal, Protocol, TypeGuard, Any, TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 import polars as pl
-import pandas as pd
+
+# pandas is an OPTIONAL dependency (see the `pandas` extra). It is only needed for
+# pandas interop (accepting/identifying pandas DataFrames/Series); the library's
+# core is Polars/NumPy. The type-checker always sees the real module; at runtime
+# `pd` is None when pandas isn't installed, and every use is guarded.
+if TYPE_CHECKING:
+    import pandas as pd
+else:
+    try:
+        import pandas as pd
+    except ImportError:
+        pd = None
 
 # Import at module level to avoid circular import issues
 from ..config.gpu_thresholds import get_threshold
@@ -107,15 +118,17 @@ def is_polars_dataframe(obj: object) -> TypeGuard[pl.DataFrame | pl.LazyFrame]:
 
 
 def is_pandas_dataframe(obj: object) -> TypeGuard[pd.DataFrame]:
-    """Check if object is a pandas DataFrame."""
-    return isinstance(obj, pd.DataFrame)
+    """Check if object is a pandas DataFrame (False if pandas isn't installed)."""
+    return pd is not None and isinstance(obj, pd.DataFrame)
 
 
 def is_array_like(
     obj: object,
 ) -> TypeGuard[NDArray[Any] | pl.Series | pd.Series | list[Any] | tuple[Any, ...]]:
     """Check if object is array-like."""
-    return isinstance(obj, (np.ndarray, pl.Series, pd.Series, list, tuple))
+    if isinstance(obj, (np.ndarray, pl.Series, list, tuple)):
+        return True
+    return pd is not None and isinstance(obj, pd.Series)
 
 
 def is_numpy_array(obj: object) -> TypeGuard[NDArray[Any]]:
@@ -129,5 +142,5 @@ def is_polars_series(obj: object) -> TypeGuard[pl.Series]:
 
 
 def is_pandas_series(obj: object) -> TypeGuard[pd.Series]:
-    """Check if object is a pandas Series."""
-    return isinstance(obj, pd.Series)
+    """Check if object is a pandas Series (False if pandas isn't installed)."""
+    return pd is not None and isinstance(obj, pd.Series)
