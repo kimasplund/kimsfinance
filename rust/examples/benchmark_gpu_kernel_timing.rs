@@ -69,7 +69,7 @@ fn generate_ohlcv_data(n: usize) -> (Array1<f64>, Array1<f64>, Array1<f64>, Arra
 }
 
 /// Benchmark result for one indicator
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct BenchmarkResult {
     name: &'static str,
     gpu_only_us: u64,

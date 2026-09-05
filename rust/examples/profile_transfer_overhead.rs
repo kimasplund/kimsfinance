@@ -79,7 +79,7 @@ impl CudaEvent {
     fn elapsed_time_to(&self, end: &CudaEvent) -> Result<f32, Box<dyn std::error::Error>> {
         let mut ms = 0.0f32;
         unsafe {
-            let result = sys::cuEventElapsedTime(&mut ms, self.event, end.event);
+            let result = sys::cuEventElapsedTime_v2(&mut ms, self.event, end.event);
             if result != sys::CUresult::CUDA_SUCCESS {
                 return Err(format!("Failed to get elapsed time: {:?}", result).into());
             }
@@ -297,6 +297,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         slippage: 0.0005,
         use_gpu: true,
         force_cpu: false,
+        execution_latency_ms: 0,
     };
 
     // Test 1: Small workload (50 strategies × 1K candles)
