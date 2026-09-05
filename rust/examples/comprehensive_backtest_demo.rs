@@ -16,6 +16,7 @@ use kimsfinance_core::backtest::{
 use ndarray::Array1;
 
 /// RSI Crossover Strategy
+#[derive(Clone)]
 struct RSIStrategy {
     rsi_period: usize,
     buy_threshold: f64,
@@ -252,6 +253,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         slippage: 0.0005,   // 0.05% slippage
         use_gpu: false,     // CPU-only for demo
         force_cpu: true,
+        execution_latency_ms: 0,
     };
 
     let engine = BacktestEngine::with_config(config.clone());
@@ -302,36 +304,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?
     };
 
+    // run_parameter_sweep_cpu is only compiled without the gpu feature, so a
+    // GPU build has no CPU sweep to fall back to: surface the error instead.
     #[cfg(feature = "gpu")]
-    let sweep_results = {
-        match engine.run_sweep(
-            &mut strategy2,
-            timestamps.as_slice().unwrap(),
-            &open,
-            &high,
-            &low,
-            &close,
-            &volume,
-            &grid,
-        ) {
-            Ok(results) => results,
-            Err(_) => {
-                // GPU failed, fallback to CPU
-                use kimsfinance_core::backtest::run_parameter_sweep_cpu;
-                run_parameter_sweep_cpu(
-                    &engine,
-                    &mut strategy2,
-                    timestamps.as_slice().unwrap(),
-                    &open,
-                    &high,
-                    &low,
-                    &close,
-                    &volume,
-                    &grid,
-                )?
-            }
-        }
-    };
+    let sweep_results = engine.run_sweep(
+        &mut strategy2,
+        timestamps.as_slice().unwrap(),
+        &open,
+        &high,
+        &low,
+        &close,
+        &volume,
+        &grid,
+    )?;
 
     println!("\n✓ Tested {} parameter combinations", sweep_results.len());
     println!("\nTop 5 Parameter Configurations:");
@@ -480,7 +465,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         trading_fee: 0.001,
         slippage: 0.0005,
         use_gpu: false,
-        force_cpu: true, // Force CPU-only mode
+        force_cpu: true, // Force CPU-only mode,
+        execution_latency_ms: 0,
     };
 
     let cpu_engine = BacktestEngine::with_config(cpu_config);

@@ -231,6 +231,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         slippage: 0.0005,   // 0.05% slippage
         use_gpu: cfg!(feature = "gpu"),
         force_cpu: false,
+        execution_latency_ms: 0,
     };
 
     let engine = BacktestEngine::with_config(config.clone());

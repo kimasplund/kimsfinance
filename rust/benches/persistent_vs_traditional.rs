@@ -85,6 +85,9 @@ fn benchmark_traditional(c: &mut Criterion) {
                             initial_capital: 10_000.0,
                             trading_fee: 0.001,
                             slippage: 0.0005,
+                            execution_latency_ms: 0,
+                            use_gpu: true,
+                            force_cpu: false,
                         });
 
                     // For traditional, use <100 strategies
@@ -123,6 +126,9 @@ fn benchmark_persistent(c: &mut Criterion) {
                             initial_capital: 10_000.0,
                             trading_fee: 0.001,
                             slippage: 0.0005,
+                            execution_latency_ms: 0,
+                            use_gpu: true,
+                            force_cpu: false,
                         });
 
                     let results = sweep.execute().expect("Execution failed");
@@ -156,6 +162,9 @@ fn benchmark_comparison(c: &mut Criterion) {
                     initial_capital: 10_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
+                    execution_latency_ms: 0,
+                    use_gpu: true,
+                    force_cpu: false,
                 });
 
             let results = sweep.execute().expect("Execution failed");
@@ -173,6 +182,9 @@ fn benchmark_comparison(c: &mut Criterion) {
                     initial_capital: 10_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
+                    execution_latency_ms: 0,
+                    use_gpu: true,
+                    force_cpu: false,
                 });
 
             let results = sweep.execute().expect("Execution failed");

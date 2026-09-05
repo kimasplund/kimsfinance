@@ -169,6 +169,7 @@ fn bench_backtest_execution(c: &mut Criterion) {
             slippage: 0.0005,
             use_gpu: false, // CPU-only for consistent baseline
             force_cpu: true,
+            execution_latency_ms: 0,
         });
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
@@ -206,6 +207,7 @@ fn bench_per_candle_processing(c: &mut Criterion) {
             slippage: 0.0005,
             use_gpu: false,
             force_cpu: true,
+            execution_latency_ms: 0,
         });
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
@@ -241,6 +243,7 @@ fn bench_genetic_optimizer(c: &mut Criterion) {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
+        execution_latency_ms: 0,
     });
 
     // Create parameter grid

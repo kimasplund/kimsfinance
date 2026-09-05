@@ -54,6 +54,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             initial_capital: 10_000.0,
             trading_fee: 0.001,
             slippage: 0.0005,
+            execution_latency_ms: 0,
+            use_gpu: true,
+            force_cpu: false,
         })
         .execute()?;
     let time_small = start_small.elapsed().as_secs_f64() * 1000.0;
@@ -96,6 +99,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             initial_capital: 10_000.0,
             trading_fee: 0.001,
             slippage: 0.0005,
+            execution_latency_ms: 0,
+            use_gpu: true,
+            force_cpu: false,
         })
         .execute()?;
     let time_large = start_large.elapsed().as_secs_f64() * 1000.0;

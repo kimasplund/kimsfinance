@@ -99,7 +99,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("💾 Cache saved to:");
-    let cache_file = AutoTuneProfile::cache_file()?;
+    // AutoTuneProfile::save_to_cache writes ~/.cache/kimsfinance/autotune.json
+    let cache_file = std::path::PathBuf::from(std::env::var("HOME").unwrap_or_default())
+        .join(".cache")
+        .join("kimsfinance")
+        .join("autotune.json");
     println!("   {}", cache_file.display());
     println!();
 

@@ -36,7 +36,8 @@ pub mod deribit;
 #[cfg(feature = "data-ibkr")]
 pub mod ibkr;
 
-// Data downloaders module
+// Data downloaders module (reqwest + arrow/parquet)
+#[cfg(feature = "data-downloaders")]
 pub mod downloaders;
 
 pub use common::DataError;

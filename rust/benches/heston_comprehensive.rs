@@ -101,10 +101,10 @@ fn bench_calibration(c: &mut Criterion) {
 
         group.bench_function("30_options_20_iters", |b| {
             b.iter(|| {
-                let gpu_pricer = Arc::new(
+                let gpu_pricer = Arc::new(Mutex::new(
                     HestonGpuPricer::new(device.clone(), 4096, 100)
                         .expect("Failed to create pricer"),
-                );
+                ));
                 let calibrator = HestonCalibrator::new(gpu_pricer, options.clone(), params)
                     .expect("Failed to create calibrator")
                     .with_max_iterations(20);
@@ -130,10 +130,10 @@ fn bench_calibration(c: &mut Criterion) {
 
         group.bench_function("50_options_30_iters", |b| {
             b.iter(|| {
-                let gpu_pricer = Arc::new(
+                let gpu_pricer = Arc::new(Mutex::new(
                     HestonGpuPricer::new(device.clone(), 4096, 100)
                         .expect("Failed to create pricer"),
-                );
+                ));
                 let calibrator = HestonCalibrator::new(gpu_pricer, options.clone(), params)
                     .expect("Failed to create calibrator")
                     .with_max_iterations(30);

@@ -253,19 +253,22 @@ fn test_strike_ladder(pricer: &mut HestonGpuPricer) {
 
 /// Helper: Create option quote
 fn create_option(spot: f64, strike: f64, tau: f64, option_type: OptionType) -> OptionQuote {
+    // The pricer derives time-to-expiry from `expiration` relative to now.
+    let expiration = chrono::Utc::now().timestamp() + (tau * 365.25 * 86_400.0) as i64;
     OptionQuote {
-        symbol: format!("TEST-{}-{}", strike, option_type as u8),
         underlying: "TEST".to_string(),
         strike,
-        expiry_years: tau,
+        expiration,
         option_type,
         spot_price: spot,
         risk_free_rate: 0.05,
-        bid: 0.0,
-        ask: 0.0,
-        mid_price: 0.0,
+        bid: None,
+        ask: None,
+        last: None,
         implied_vol: None,
         volume: 0.0,
+        open_interest: 0.0,
+        greeks: None,
     }
 }
 

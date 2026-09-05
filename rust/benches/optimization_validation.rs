@@ -40,7 +40,7 @@
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use kimsfinance_core::gpu::{
     device::GpuDevice,
-    persistent::{TaskBatch, execute_batch},
+    persistent::{SmaIndicator, TaskBatch, execute_batch},
 };
 use std::sync::Arc;
 
@@ -144,7 +144,7 @@ fn generate_prices(n: usize, seed: u64) -> Vec<f64> {
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let mut prices = Vec::with_capacity(n);
-    let mut price = 100.0;
+    let mut price = 100.0_f64;
 
     for _ in 0..n {
         // Random walk with mean reversion
@@ -181,14 +181,14 @@ fn execute_with_config(
     let mut batches = Vec::new();
     for i in 0..n_strategies {
         let data = generate_prices(n_candles, seed + i as u64);
-        let period = 14 + (i % 10);
+        let period = (14 + (i % 10)) as i32;
         batches.push((data, period));
     }
 
     // Execute based on configuration
     if config.memory_pool_enabled {
         // Use memory pool (batch execution with pre-allocated buffers)
-        let mut batch = TaskBatch::new();
+        let mut batch = TaskBatch::<SmaIndicator>::new();
         for (data, period) in batches {
             batch.add_task(data, period);
         }
@@ -201,7 +201,7 @@ fn execute_with_config(
         // No memory pool: execute individually (more allocations)
         let mut results = Vec::new();
         for (data, period) in batches {
-            let mut single_batch = TaskBatch::new();
+            let mut single_batch = TaskBatch::<SmaIndicator>::new();
             single_batch.add_task(data, period);
             let result = execute_batch(device, &single_batch).expect("Execution failed");
             results.extend(result.into_iter().flat_map(|r| r));

@@ -61,17 +61,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "   EMA: {} (always CPU)",
         if profile.thresholds.ema_crossover == usize::MAX {
-            "N/A"
+            "N/A".to_string()
         } else {
-            &profile.thresholds.ema_crossover.to_string()
+            profile.thresholds.ema_crossover.to_string()
         }
     );
     println!(
         "   Wilder's (RSI/ATR): {} (always CPU for sequential part)",
         if profile.thresholds.wilders_crossover == usize::MAX {
-            "N/A"
+            "N/A".to_string()
         } else {
-            &profile.thresholds.wilders_crossover.to_string()
+            profile.thresholds.wilders_crossover.to_string()
         }
     );
     println!(

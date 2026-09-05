@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Heston pricer
     println!("Compiling Heston pricer...");
     let start = Instant::now();
-    let pricer = HestonGpuPricer::new(device, 4096)?;
+    let pricer = HestonGpuPricer::new(device, 4096, 1024)?;
     println!("✓ Pricer compiled in {:?}\n", start.elapsed());
 
     // Create Greeks calculator
@@ -215,7 +215,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Create option quote for testing
 fn create_option(strike: f64, expiration: i64) -> OptionQuote {
     let spot = 48000.0;
-    let ttm = 0.25;
+    let ttm = 0.25_f64;
     let iv = 0.2;
     let intrinsic = (spot - strike).max(0.0);
     let time_value = iv * spot * ttm.sqrt() * 0.4;

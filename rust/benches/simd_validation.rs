@@ -23,7 +23,7 @@ fn calculate_returns_scalar_baseline(equity_curve: &[f64]) -> Vec<f64> {
 #[target_feature(enable = "avx2")]
 unsafe fn calculate_returns_avx2_baseline(equity_curve: &[f64]) -> Vec<f64> {
     let n = equity_curve.len();
-    let mut returns = Vec::with_capacity(n - 1);
+    let mut returns: Vec<f64> = Vec::with_capacity(n - 1);
     let num_chunks = (n - 1) / 4;
     let remainder_start = 1 + num_chunks * 4;
 

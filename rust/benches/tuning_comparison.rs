@@ -15,24 +15,21 @@ fn bench_threshold_calculation(c: &mut Criterion) {
 
     c.bench_function("threshold_small_dataset", |b| {
         b.iter(|| {
-            let threshold =
-                calculate_optimal_threshold(black_box(10), black_box(1000), black_box(&device));
+            let threshold = calculate_optimal_threshold(black_box(10), black_box(1000));
             black_box(threshold);
         })
     });
 
     c.bench_function("threshold_medium_dataset", |b| {
         b.iter(|| {
-            let threshold =
-                calculate_optimal_threshold(black_box(500), black_box(5000), black_box(&device));
+            let threshold = calculate_optimal_threshold(black_box(500), black_box(5000));
             black_box(threshold);
         })
     });
 
     c.bench_function("threshold_large_dataset", |b| {
         b.iter(|| {
-            let threshold =
-                calculate_optimal_threshold(black_box(1000), black_box(10000), black_box(&device));
+            let threshold = calculate_optimal_threshold(black_box(1000), black_box(10000));
             black_box(threshold);
         })
     });

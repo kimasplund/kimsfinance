@@ -39,6 +39,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         initial_capital: 10_000.0,
         trading_fee: 0.001,
         slippage: 0.0005,
+        execution_latency_ms: 0,
+        use_gpu: true,
+        force_cpu: false,
     };
 
     // ===== Test 1: Traditional Mode (Explicit) =====
