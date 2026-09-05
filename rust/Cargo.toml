@@ -70,7 +70,7 @@ sha2 = "0.10"  # For kernel cache hashing
 #   ✅ Math library speedups (automatic)
 #   ⚠️ Stream-ordered malloc (requires cudarc API addition)
 #   ⚠️ CUDA Graphs (requires cudarc API addition)
-cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-13000"] }
+cudarc = { version = "=0.19.9", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-13000"] }
 half = { version = "2.4", optional = true }  # For f16 support
 
 # Optimization libraries for Heston calibration
