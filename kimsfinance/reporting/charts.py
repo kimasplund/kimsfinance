@@ -8,7 +8,6 @@ All charts are optimized for PDF embedding at 300 DPI.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd

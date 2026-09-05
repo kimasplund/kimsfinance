@@ -21,11 +21,9 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_williams_r
 from _gpu import requires_polars_gpu
-from kimsfinance.core import EngineManager
 from kimsfinance.core.exceptions import ConfigurationError
 
 # ============================================================================

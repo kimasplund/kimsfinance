@@ -42,7 +42,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import polars as pl
 
 # Import kimsfinance indicators for benchmarking
@@ -250,7 +249,7 @@ def download_binance_data(date_str: str, is_monthly: bool = False) -> Path:
     urllib.request.urlretrieve(checksum_url, checksum_path)
 
     # Verify checksum
-    print(f"Verifying checksum...")
+    print("Verifying checksum...")
     with open(checksum_path, "r") as f:
         expected_checksum = f.read().strip().split()[0]
 
@@ -263,10 +262,10 @@ def download_binance_data(date_str: str, is_monthly: bool = False) -> Path:
     if actual_checksum != expected_checksum:
         raise ValueError(f"Checksum mismatch for {filename}")
 
-    print(f"✓ Checksum verified")
+    print("✓ Checksum verified")
 
     # Extract ZIP
-    print(f"Extracting...")
+    print("Extracting...")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(DATA_DIR)
 
@@ -410,7 +409,6 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # kimsfinance GPU
     try:
-        import cupy as cp
 
         timer = timeit.Timer(lambda: calculate_atr(highs, lows, closes, period=14, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
@@ -458,7 +456,6 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # kimsfinance GPU
     try:
-        import cupy as cp
 
         timer = timeit.Timer(lambda: calculate_rsi(closes, period=14, engine="gpu"))
         time_ms = timer.timeit(number=10) / 10 * 1000
@@ -510,7 +507,6 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # kimsfinance GPU
     try:
-        import cupy as cp
 
         timer = timeit.Timer(
             lambda: calculate_macd(
@@ -570,7 +566,6 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # kimsfinance GPU
     try:
-        import cupy as cp
 
         timer = timeit.Timer(
             lambda: calculate_stochastic_oscillator(highs, lows, closes, period=14, engine="gpu")
@@ -634,7 +629,6 @@ def benchmark_indicators(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     # kimsfinance GPU
     try:
-        import cupy as cp
 
         timer = timeit.Timer(
             lambda: calculate_bollinger_bands(closes, period=20, num_std=2.0, engine="gpu")
@@ -1534,7 +1528,7 @@ def benchmark_batch_indicators(
     # 3. kimsfinance GPU batch (if available)
     # ========================================================================
     gpu_available = EngineManager.check_gpu_available()
-    print(f"  [3/3] kimsfinance GPU batch...", end=" ", flush=True)
+    print("  [3/3] kimsfinance GPU batch...", end=" ", flush=True)
 
     gpu_error = None
     gpu_time_ms = None
@@ -1598,8 +1592,8 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
 
     print("\n📊 Benchmarking chart rendering...")
     print(f"  Dataset: {len(ohlcv):,} candles")
-    print(f"  Output: 800x600 WebP images")
-    print(f"  Iterations: 10 per chart type\n")
+    print("  Output: 800x600 WebP images")
+    print("  Iterations: 10 per chart type\n")
 
     # Create temporary directory for output
     temp_dir = Path(tempfile.mkdtemp())
@@ -1719,7 +1713,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
                         error="Chart type not supported by mplfinance",
                     )
                 )
-                print(f"    mplfinance: N/A")
+                print("    mplfinance: N/A")
         else:
             # Mark as unavailable (kimsfinance-only or mplfinance not installed)
             results.append(
@@ -1732,9 +1726,9 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
                 )
             )
             if not mplfinance_available:
-                print(f"    mplfinance: N/A (not installed)")
+                print("    mplfinance: N/A (not installed)")
             else:
-                print(f"    mplfinance: N/A (kimsfinance-only)")
+                print("    mplfinance: N/A (kimsfinance-only)")
 
         # Benchmark kimsfinance
         if kimsfinance_available:
@@ -1793,7 +1787,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
                         error="Chart type not implemented yet",
                     )
                 )
-                print(f"    kimsfinance: N/A (not implemented)")
+                print("    kimsfinance: N/A (not implemented)")
         else:
             results.append(
                 BenchmarkResult(
@@ -1804,7 +1798,7 @@ def benchmark_charts(ohlcv: pl.DataFrame) -> list[BenchmarkResult]:
                     error="kimsfinance not installed",
                 )
             )
-            print(f"    kimsfinance: N/A (not installed)")
+            print("    kimsfinance: N/A (not installed)")
 
     # Clean up temporary directory
     import shutil
@@ -1973,7 +1967,7 @@ def main():
     # Download data
     csv_paths = []
     if args.monthly:
-        print(f"\n📥 Downloading Binance monthly data...")
+        print("\n📥 Downloading Binance monthly data...")
         start_date = datetime(2025, 1, 1)
         date_str = start_date.strftime("%Y-%m")
         try:

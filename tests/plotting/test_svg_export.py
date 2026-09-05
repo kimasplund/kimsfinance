@@ -92,7 +92,7 @@ def validate_svg_file(svg_path: Path, chart_type: str = "candle") -> dict:
     try:
         root = ET.fromstring(svg_content)
         results["valid_xml"] = True
-        print(f"✓ Valid XML/SVG structure")
+        print("✓ Valid XML/SVG structure")
     except ET.ParseError as e:
         print(f"❌ Invalid XML: {e}")
         return results
@@ -104,7 +104,7 @@ def validate_svg_file(svg_path: Path, chart_type: str = "candle") -> dict:
     bg_rects = root.findall(".//svg:rect[@width='100%']", ns)
     if bg_rects:
         results["has_background"] = True
-        print(f"✓ Background rectangle found")
+        print("✓ Background rectangle found")
 
     # Check for candles group
     candles_group = root.find(".//svg:g[@id='candles']", ns)

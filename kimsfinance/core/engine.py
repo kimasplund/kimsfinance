@@ -13,7 +13,6 @@ import threading
 from collections.abc import Callable
 from typing import Literal, TypeVar, ParamSpec
 
-import polars as pl
 
 from .types import Engine
 from .exceptions import GPUNotAvailableError, ConfigurationError

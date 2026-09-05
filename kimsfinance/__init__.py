@@ -233,7 +233,7 @@ def info() -> None:
     print("kimsfinance: GPU-Accelerated Financial Charting")
     print("=" * 80)
     print(f"Version: {__version__}")
-    print(f"Python: 3.13+ (modern type system)")
+    print("Python: 3.13+ (modern type system)")
     print()
 
     # Engine status

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import polars as pl
 
 try:
     import cupy as cp
@@ -13,11 +12,8 @@ except ImportError:
 from ...core import (
     ArrayLike,
     ArrayResult,
-    DataFrameInput,
-    MACDResult,
     Engine,
     EngineManager,
-    GPUNotAvailableError,
 )
 from ...utils.array_utils import FASTMATH_SAFE, to_numpy_array
 

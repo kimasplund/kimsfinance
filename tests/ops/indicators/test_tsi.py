@@ -24,12 +24,9 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_tsi
 from kimsfinance.ops.indicators.moving_averages import calculate_ema
-from kimsfinance.core import EngineManager
-from kimsfinance.core.exceptions import ConfigurationError
 
 from _gpu import requires_gpu
 

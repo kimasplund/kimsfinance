@@ -41,6 +41,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     import cupy as cp
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -89,11 +90,7 @@ def generate_ohlcv_data(n: int, seed: int = 42) -> Tuple[np.ndarray, ...]:
 
 
 def benchmark_function(
-    func: Callable,
-    *args,
-    iterations: int = 10,
-    warmup: int = 2,
-    **kwargs
+    func: Callable, *args, iterations: int = 10, warmup: int = 2, **kwargs
 ) -> Tuple[float, Any]:
     """
     Benchmark a function with warmup and multiple iterations.
@@ -117,12 +114,7 @@ def benchmark_function(
 
 
 def benchmark_indicator(
-    name: str,
-    func: Callable,
-    data_sizes: list[int],
-    *args,
-    iterations: int = 10,
-    **kwargs
+    name: str, func: Callable, data_sizes: list[int], *args, iterations: int = 10, **kwargs
 ) -> Dict[str, Any]:
     """
     Benchmark an indicator across different data sizes.
@@ -182,7 +174,9 @@ def benchmark_indicator(
                 speedup = cpu_time / gpu_time
 
                 color = C.G if speedup > 1.2 else C.Y if speedup > 1.0 else C.R
-                print(f"  {color}GPU:{C.E} {gpu_time*1000:.2f} ms ({gpu_throughput:,.0f} candles/sec)")
+                print(
+                    f"  {color}GPU:{C.E} {gpu_time*1000:.2f} ms ({gpu_throughput:,.0f} candles/sec)"
+                )
                 print(f"  {color}Speedup: {speedup:.2f}x{C.E}")
 
             except Exception as e:
@@ -190,14 +184,16 @@ def benchmark_indicator(
         else:
             print(f"  {C.Y}GPU: Not available (CuPy not installed){C.E}")
 
-        results.append({
-            "size": size,
-            "cpu_time": cpu_time,
-            "cpu_throughput": cpu_throughput,
-            "gpu_time": gpu_time,
-            "gpu_throughput": gpu_throughput,
-            "speedup": speedup,
-        })
+        results.append(
+            {
+                "size": size,
+                "cpu_time": cpu_time,
+                "cpu_throughput": cpu_throughput,
+                "gpu_time": gpu_time,
+                "gpu_throughput": gpu_throughput,
+                "speedup": speedup,
+            }
+        )
 
     return {
         "name": name,
@@ -251,74 +247,51 @@ def main():
 
     # ATR (period=14)
     all_results.append(
-        benchmark_indicator(
-            "ATR", calculate_atr, data_sizes,
-            iterations=10, period=14
-        )
+        benchmark_indicator("ATR", calculate_atr, data_sizes, iterations=10, period=14)
     )
 
     # RSI (period=14)
     all_results.append(
-        benchmark_indicator(
-            "RSI", calculate_rsi, data_sizes,
-            iterations=10, period=14
-        )
+        benchmark_indicator("RSI", calculate_rsi, data_sizes, iterations=10, period=14)
     )
 
     # Stochastic (period=14)
     all_results.append(
         benchmark_indicator(
-            "Stochastic", calculate_stochastic_oscillator, data_sizes,
-            iterations=10, period=14
+            "Stochastic", calculate_stochastic_oscillator, data_sizes, iterations=10, period=14
         )
     )
 
     # CCI (period=20)
     all_results.append(
-        benchmark_indicator(
-            "CCI", calculate_cci, data_sizes,
-            iterations=10, period=20
-        )
+        benchmark_indicator("CCI", calculate_cci, data_sizes, iterations=10, period=20)
     )
 
     # TSI (long=25, short=13)
     all_results.append(
         benchmark_indicator(
-            "TSI", calculate_tsi, data_sizes,
-            iterations=10, long_period=25, short_period=13
+            "TSI", calculate_tsi, data_sizes, iterations=10, long_period=25, short_period=13
         )
     )
 
     # ROC (period=12)
     all_results.append(
-        benchmark_indicator(
-            "ROC", calculate_roc, data_sizes,
-            iterations=10, period=12
-        )
+        benchmark_indicator("ROC", calculate_roc, data_sizes, iterations=10, period=12)
     )
 
     # Aroon (period=25)
     all_results.append(
-        benchmark_indicator(
-            "Aroon", calculate_aroon, data_sizes,
-            iterations=10, period=25
-        )
+        benchmark_indicator("Aroon", calculate_aroon, data_sizes, iterations=10, period=25)
     )
 
     # Elder Ray (period=13)
     all_results.append(
-        benchmark_indicator(
-            "Elder Ray", calculate_elder_ray, data_sizes,
-            iterations=10, period=13
-        )
+        benchmark_indicator("Elder Ray", calculate_elder_ray, data_sizes, iterations=10, period=13)
     )
 
     # HMA (period=9)
     all_results.append(
-        benchmark_indicator(
-            "HMA", calculate_hma, data_sizes,
-            iterations=10, period=9
-        )
+        benchmark_indicator("HMA", calculate_hma, data_sizes, iterations=10, period=9)
     )
 
     # Print summary

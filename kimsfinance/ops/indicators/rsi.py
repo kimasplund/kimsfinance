@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import polars as pl
 
 try:
@@ -10,15 +9,11 @@ try:
 except ImportError:
     CUPY_AVAILABLE = False
 
-from ...config.gpu_thresholds import get_threshold
 from ...core import (
     ArrayLike,
     ArrayResult,
-    DataFrameInput,
-    MACDResult,
     Engine,
     EngineManager,
-    GPUNotAvailableError,
 )
 from ...utils.array_utils import to_numpy_array
 

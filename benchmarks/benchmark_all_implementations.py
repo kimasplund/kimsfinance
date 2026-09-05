@@ -16,7 +16,7 @@ import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Tuple
 import sys
 
 
@@ -552,7 +552,7 @@ def print_comparison_table(
         rust_cpu_avg_speedup = calc_avg_speedup(mplfinance_results, rust_cpu_results)
         rust_gpu_avg_speedup = calc_avg_speedup(mplfinance_results, rust_gpu_results)
 
-        print(f"  Average Speedup vs mplfinance:")
+        print("  Average Speedup vs mplfinance:")
         if kf_cpu_avg_speedup:
             print(
                 f"    kimsfinance Py CPU:  {Colors.OKGREEN}{kf_cpu_avg_speedup:6.2f}x{Colors.ENDC}"

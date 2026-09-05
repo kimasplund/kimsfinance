@@ -41,7 +41,6 @@ from typing import Tuple
 
 from kimsfinance.ops.indicators.cci import calculate_cci
 from _gpu import requires_polars_gpu
-from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
 
 # ============================================================================
 # Test Data Generators

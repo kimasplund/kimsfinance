@@ -146,7 +146,7 @@ def test_displacement():
     # Chikou[50] should equal Close[76]
     assert np.isclose(
         chikou[50], closes[76], rtol=1e-5
-    ), f"Chikou displacement incorrect at position 50"
+    ), "Chikou displacement incorrect at position 50"
     print(f"  ✓ Chikou[50] = {chikou[50]:.4f} = Close[76] = {closes[76]:.4f}")
 
 

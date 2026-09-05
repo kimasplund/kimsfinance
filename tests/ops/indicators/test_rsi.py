@@ -21,7 +21,6 @@ import numpy as np
 import polars as pl
 import pytest
 import time
-from typing import Tuple
 
 from kimsfinance.ops.indicators import calculate_rsi
 from _gpu import POLARS_GPU_AVAILABLE, requires_polars_gpu

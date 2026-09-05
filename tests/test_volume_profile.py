@@ -250,7 +250,7 @@ class TestVolumeProfile:
         np.testing.assert_allclose(cpu_result[1], gpu_result[1], rtol=1e-10)
 
         speedup = cpu_time / gpu_time if gpu_time > 0 else 0
-        print(f"\nVolume Profile Benchmark (1M rows):")
+        print("\nVolume Profile Benchmark (1M rows):")
         print(f"  CPU: {cpu_time*1000:.2f}ms")
         print(f"  GPU: {gpu_time*1000:.2f}ms")
         print(f"  Speedup: {speedup:.2f}x")

@@ -28,7 +28,6 @@ except ImportError:
 from kimsfinance.ops.indicators import (
     calculate_atr,
     calculate_rsi,
-    calculate_macd,
     calculate_bollinger_bands,
     calculate_stochastic_oscillator,
     calculate_obv,

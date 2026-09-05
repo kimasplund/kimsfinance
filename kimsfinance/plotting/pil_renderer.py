@@ -42,7 +42,6 @@ from ..config.layout_constants import (
     BOX_SIZE_ATR_MULTIPLIER,
     CENTER_OFFSET,
     CHART_HEIGHT_RATIO,
-    GRID_ALPHA,
     GRID_LINE_WIDTH,
     HORIZONTAL_GRID_DIVISIONS,
     MAX_VERTICAL_GRID_LINES,
@@ -54,7 +53,7 @@ from ..config.layout_constants import (
     VOLUME_HEIGHT_RATIO,
     WICK_WIDTH_RATIO,
 )
-from ..config.themes import THEMES, THEMES_RGBA, THEMES_RGB
+from ..config.themes import THEMES_RGBA, THEMES_RGB
 from ..data.pnf import calculate_pnf_columns
 from ..data.renko import calculate_renko_bricks
 from ..utils.color_utils import _hex_to_rgba

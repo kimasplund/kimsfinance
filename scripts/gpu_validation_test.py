@@ -7,8 +7,7 @@ Tests GPU utilization, kernel profiling, memory bandwidth, and leak detection
 import sys
 import time
 import subprocess
-from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Dict, Any, List
 import numpy as np
 
 
@@ -177,12 +176,12 @@ def install_missing_dependencies(deps: Dict[str, bool]) -> None:
     if not deps.get("torch_cuda"):
         print_status("PyTorch CUDA", "Not available - CPU-only version detected", "warn")
         print(f"  {Colors.YELLOW}Note: Install CUDA PyTorch with:{Colors.ENDC}")
-        print(f"  pip3 install torch --index-url https://download.pytorch.org/whl/cu124")
+        print("  pip3 install torch --index-url https://download.pytorch.org/whl/cu124")
 
     if not deps.get("cudf"):
         print_status("cuDF", "Not installed", "warn")
         print(f"  {Colors.YELLOW}Note: Install with:{Colors.ENDC}")
-        print(f"  pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12")
+        print("  pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12")
 
     if not deps.get("cupy"):
         to_install.append("cupy-cuda12x")

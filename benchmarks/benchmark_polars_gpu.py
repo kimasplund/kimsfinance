@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-from typing import Tuple
 
 import numpy as np
 import polars as pl
@@ -250,7 +249,7 @@ def main() -> int:
         print("  GPU engine may not be beneficial for this workload.")
         print("  Consider larger datasets or different operations.")
 
-    print(f"\nExpected: ~13x speedup for complex groupby/aggregations")
+    print("\nExpected: ~13x speedup for complex groupby/aggregations")
     print(f"Achieved: {speedup:.2f}x speedup")
 
     if speedup >= 10:

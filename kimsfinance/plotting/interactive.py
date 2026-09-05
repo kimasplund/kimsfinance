@@ -19,10 +19,8 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
-import numpy as np
 import polars as pl
 
 try:
@@ -50,7 +48,7 @@ except ImportError:
     BOKEH_AVAILABLE = False
 
 from ..config.themes import THEMES
-from ..core.types import ArrayLike, DataFrameInput
+from ..core.types import DataFrameInput
 from ..utils.array_utils import to_numpy_array
 
 # Type aliases

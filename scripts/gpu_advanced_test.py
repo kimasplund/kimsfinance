@@ -7,7 +7,6 @@ Includes CUDA kernel profiling, multi-stream testing, and performance benchmarks
 import sys
 import time
 import subprocess
-from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import numpy as np
 
@@ -42,7 +41,7 @@ def run_cmd(cmd: List[str]) -> Tuple[str, int]:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         return result.stdout.strip(), result.returncode
-    except Exception as e:
+    except Exception:
         return "", 1
 
 
@@ -456,15 +455,15 @@ def main() -> None:
     # Installation hints
     if not has_torch:
         print(f"{C.Y}Install PyTorch CUDA:{C.E}")
-        print(f"  pip3 install torch --index-url https://download.pytorch.org/whl/cu124\n")
+        print("  pip3 install torch --index-url https://download.pytorch.org/whl/cu124\n")
 
     if not has_cupy:
         print(f"{C.Y}Install CuPy:{C.E}")
-        print(f"  pip install cupy-cuda12x\n")
+        print("  pip install cupy-cuda12x\n")
 
     if not has_pynvml:
         print(f"{C.Y}Install pynvml:{C.E}")
-        print(f"  pip install pynvml\n")
+        print("  pip install pynvml\n")
 
     print(f"{C.C}Test suite completed{C.E}\n")
 

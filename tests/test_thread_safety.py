@@ -22,7 +22,6 @@ import time
 import tempfile
 import json
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Test imports
 from kimsfinance.integration import adapter

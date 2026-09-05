@@ -393,7 +393,7 @@ class GeneticOptimizer:
             List of Pareto-optimal solutions with parameters and fitness values
         """
         if verbose:
-            logger.info(f"Starting genetic optimization:")
+            logger.info("Starting genetic optimization:")
             logger.info(f"  Strategy: {strategy}")
             logger.info(f"  Parameter space: {self.param_space}")
             logger.info(f"  Objectives: {self.objectives}")
@@ -450,7 +450,7 @@ class GeneticOptimizer:
 
         if verbose:
             logger.info(f"\nOptimization complete! Found {len(solutions)} Pareto-optimal solutions")
-            logger.info(f"Top 3 solutions:")
+            logger.info("Top 3 solutions:")
             for i, sol in enumerate(solutions[:3]):
                 logger.info(f"  {i+1}. Params: {sol['params']}, Fitness: {sol['fitness']}")
 

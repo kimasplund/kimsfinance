@@ -27,7 +27,6 @@ from ..core import (
     ArrayResult,
     Engine,
     EngineManager,
-    MACDResult,
 )
 from ..core.engine import POLARS_GPU_AVAILABLE
 from ..core.exceptions import ConfigurationError

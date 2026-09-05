@@ -25,11 +25,9 @@ from __future__ import annotations
 import pytest
 import numpy as np
 import time
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_elder_ray
 from kimsfinance.ops.indicators.moving_averages import calculate_ema
-from kimsfinance.core import EngineManager
 
 
 from _gpu import requires_gpu

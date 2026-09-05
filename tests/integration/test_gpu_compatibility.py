@@ -10,7 +10,6 @@ Tests:
 """
 
 import pytest
-import sys
 import os
 
 from _backtesters import AnalyticBacktester, BatchBacktester, FailingBacktester
@@ -235,7 +234,7 @@ class TestGPUEnvironment:
             assert vram > 0, f"VRAM should be positive: {vram}"
             print(f"✅ VRAM: {vram:.1f} GB")
         else:
-            print(f"⚠️  VRAM info not available in GPU info")
+            print("⚠️  VRAM info not available in GPU info")
 
     def test_expected_speedup_reasonable(self):
         """Test that expected speedup is reasonable."""
@@ -327,13 +326,13 @@ def test_platform_detection():
                 gpu_name = result.stdout.strip()
                 print(f"   NVIDIA GPU detected: {gpu_name}")
             else:
-                print(f"   nvidia-smi failed (GPU may not be available)")
+                print("   nvidia-smi failed (GPU may not be available)")
         except (FileNotFoundError, subprocess.TimeoutExpired):
-            print(f"   nvidia-smi not found (no NVIDIA GPU)")
+            print("   nvidia-smi not found (no NVIDIA GPU)")
     elif system == "Windows":
-        print(f"   Windows platform (CUDA support depends on drivers)")
+        print("   Windows platform (CUDA support depends on drivers)")
     elif system == "Darwin":
-        print(f"   macOS platform (no CUDA support)")
+        print("   macOS platform (no CUDA support)")
 
 
 # Module-level validation
@@ -344,14 +343,14 @@ def test_module_imports():
     try:
         import kimsfinance.batch
 
-        print(f"✅ kimsfinance.batch imported successfully")
+        print("✅ kimsfinance.batch imported successfully")
     except ImportError as e:
         print(f"⚠️  kimsfinance.batch import failed: {e}")
 
     try:
         import kimsfinance.optimization.genetic
 
-        print(f"✅ kimsfinance.optimization.genetic imported successfully")
+        print("✅ kimsfinance.optimization.genetic imported successfully")
     except ImportError as e:
         print(f"⚠️  kimsfinance.optimization.genetic import failed: {e}")
 
@@ -361,14 +360,14 @@ def test_module_imports():
 
         print(f"✅ CuPy available (version: {cupy.__version__})")
     except ImportError:
-        print(f"⚠️  CuPy not available (GPU acceleration unavailable)")
+        print("⚠️  CuPy not available (GPU acceleration unavailable)")
 
     try:
         import numba.cuda
 
-        print(f"✅ Numba CUDA available")
+        print("✅ Numba CUDA available")
     except ImportError:
-        print(f"⚠️  Numba CUDA not available")
+        print("⚠️  Numba CUDA not available")
 
 
 if __name__ == "__main__":

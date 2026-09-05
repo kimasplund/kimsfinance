@@ -197,8 +197,8 @@ def main():
     start_row = 600
     print(f"Loading data from: {data_path}")
     print(f"  Starting from CSV row: {start_row}")
-    print(f"  Display candles: 100")
-    print(f"  Warmup candles: 50")
+    print("  Display candles: 100")
+    print("  Warmup candles: 50")
 
     # Need more data for 100 candle display + 100 period indicators
     df = load_data(data_path, n_candles=100, warmup_candles=100, start_row=start_row)

@@ -19,13 +19,12 @@ Baseline Storage:
 
 from __future__ import annotations
 
-import os
 import pytest
 from pathlib import Path
 from PIL import Image, ImageChops
 import numpy as np
 
-from kimsfinance.plotting import render_ohlcv_chart, save_chart
+from kimsfinance.plotting import render_ohlcv_chart
 
 # Baseline directory
 BASELINE_DIR = Path(__file__).parent / "baseline_images"

@@ -10,6 +10,7 @@ import sys
 
 try:
     from kimsfinance_core import batch_backtest, batch_backtest_info, BacktestResult
+
     print("✓ Successfully imported batch_backtest functions")
 except ImportError as e:
     print(f"✗ Failed to import: {e}")
@@ -28,7 +29,7 @@ def main():
     for key, value in info.items():
         print(f"   {key}: {value}")
 
-    if not info['gpu_available']:
+    if not info["gpu_available"]:
         print("\n✗ GPU not available. Stopping tests.")
         return
 
@@ -54,30 +55,29 @@ def main():
 
     # Test 3: Run batch backtest with 10 strategies
     print("\n3. Running batch backtest (10 RSI strategies)...")
-    parameters = [
-        [14.0, 20.0 + i * 2, 70.0 + i]
-        for i in range(10)
-    ]
+    parameters = [[14.0, 20.0 + i * 2, 70.0 + i] for i in range(10)]
 
     print(f"   Parameters: {len(parameters)} strategies")
     print(f"   Example: period={parameters[0][0]}, buy={parameters[0][1]}, sell={parameters[0][2]}")
 
     try:
         import time
+
         start = time.perf_counter()
         results = batch_backtest(
-            strategy='rsi_crossover',
+            strategy="rsi_crossover",
             ohlcv=ohlcv,
             parameters=parameters,
             initial_capital=10000.0,
             trading_fee=0.001,
-            slippage=0.0001
+            slippage=0.0001,
         )
         elapsed_ms = (time.perf_counter() - start) * 1000
         print(f"   Completed in {elapsed_ms:.1f}ms")
     except Exception as e:
         print(f"✗ Batch backtest failed: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -112,18 +112,18 @@ def main():
     print("\n6. Testing to_dict() method...")
     result_dict = results[0].to_dict()
     print(f"   Keys: {list(result_dict.keys())}")
-    print(f"   ✓ to_dict() works")
+    print("   ✓ to_dict() works")
 
     # Test 7: Test __repr__
     print("\n7. Testing __repr__...")
     repr_str = repr(results[0])
     print(f"   {repr_str}")
-    print(f"   ✓ __repr__ works")
+    print("   ✓ __repr__ works")
 
     print("\n" + "=" * 60)
     print("✓ All tests passed!")
     print("=" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

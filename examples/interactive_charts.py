@@ -242,9 +242,7 @@ def example_ohlc_bars():
 
     df = generate_sample_data(150)
 
-    chart = plot_ohlc_plotly(
-        data=df, theme="modern", title="OHLC Bar Chart", height=700
-    )
+    chart = plot_ohlc_plotly(data=df, theme="modern", title="OHLC Bar Chart", height=700)
 
     chart.save("example_ohlc_bars.html")
     print("Saved: example_ohlc_bars.html")

@@ -11,10 +11,8 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_keltner_channels, calculate_atr
-from kimsfinance.core import EngineManager
 
 
 from _gpu import requires_polars_gpu

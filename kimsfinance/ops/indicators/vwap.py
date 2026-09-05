@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import polars as pl
 
 try:
@@ -13,11 +12,8 @@ except ImportError:
 from ...core import (
     ArrayLike,
     ArrayResult,
-    DataFrameInput,
-    MACDResult,
     Engine,
     EngineManager,
-    GPUNotAvailableError,
 )
 from ...utils.array_utils import to_numpy_array
 

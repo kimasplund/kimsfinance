@@ -266,7 +266,7 @@ def regenerate_tick_chart_samples():
         plot(ohlc, type=chart_type, volume=True, savefig=str(output_path), width=800, height=600)
         print(f"  ✓ tick_all_types_{chart_type}.webp ({output_path.stat().st_size:,} bytes)")
 
-    print(f"\n✅ Generated tick chart samples")
+    print("\n✅ Generated tick chart samples")
 
 
 def regenerate_volume_chart_samples():
@@ -305,7 +305,7 @@ def regenerate_volume_chart_samples():
     )
     print(f"  ✓ Test fixture: volume_chart_10k.webp ({output_path.stat().st_size:,} bytes)")
 
-    print(f"\n✅ Generated volume chart samples")
+    print("\n✅ Generated volume chart samples")
 
 
 def regenerate_range_chart_samples():
@@ -353,7 +353,7 @@ def regenerate_range_chart_samples():
     plot(ohlc, type="ohlc", volume=True, savefig=str(output_path), width=800, height=600)
     print(f"  ✓ Test fixture: range_chart_2.0.webp ({output_path.stat().st_size:,} bytes)")
 
-    print(f"\n✅ Generated range chart samples")
+    print("\n✅ Generated range chart samples")
 
 
 def regenerate_comparison_charts():
@@ -381,7 +381,7 @@ def regenerate_comparison_charts():
         file_size = output_path.stat().st_size
         print(f"  ✓ {output_path.name} ({file_size:,} bytes, {len(ohlc_data)} bars)")
 
-    print(f"\n✅ Generated comparison charts")
+    print("\n✅ Generated comparison charts")
 
 
 def regenerate_theme_samples():
@@ -440,7 +440,6 @@ def regenerate_indicator_samples():
     print(f"  ✓ macd_candlestick.webp ({output_path.stat().st_size:,} bytes)")
 
     print("\nGenerating Stochastic chart...")
-    from kimsfinance.ops import calculate_stochastic_oscillator
 
     stoch_k, stoch_d = calculate_stochastic_oscillator(
         df["High"], df["Low"], df["Close"], period=14, engine="cpu"
@@ -450,7 +449,7 @@ def regenerate_indicator_samples():
     plot(df, type="candle", volume=True, savefig=str(output_path), width=1920, height=1080)
     print(f"  ✓ stochastic_candlestick.webp ({output_path.stat().st_size:,} bytes)")
 
-    print(f"\n✅ Generated indicator samples")
+    print("\n✅ Generated indicator samples")
     print("  Note: Multi-panel indicator charts coming in future release")
 
 
@@ -496,15 +495,15 @@ def main():
     print("    KIMSFINANCE: Regenerate All Sample Charts")
     print("=" * 70)
 
-    print(f"\nThis script will regenerate ALL sample charts:")
-    print(f"  1. Native chart types (6 types)")
-    print(f"  2. API native routing tests (6 charts)")
-    print(f"  3. Tick-based charts (multiple configs)")
-    print(f"  4. Volume-based charts (3 sizes)")
-    print(f"  5. Range-based charts (3 sizes)")
-    print(f"  6. Comparison charts (3 methods)")
-    print(f"  7. Theme samples (4 themes)")
-    print(f"  8. Indicator samples (3 indicators)")
+    print("\nThis script will regenerate ALL sample charts:")
+    print("  1. Native chart types (6 types)")
+    print("  2. API native routing tests (6 charts)")
+    print("  3. Tick-based charts (multiple configs)")
+    print("  4. Volume-based charts (3 sizes)")
+    print("  5. Range-based charts (3 sizes)")
+    print("  6. Comparison charts (3 methods)")
+    print("  7. Theme samples (4 themes)")
+    print("  8. Indicator samples (3 indicators)")
 
     try:
         # Regenerate all samples

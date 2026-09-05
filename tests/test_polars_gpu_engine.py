@@ -11,7 +11,6 @@ Validates:
 
 from __future__ import annotations
 
-import pytest
 import polars as pl
 import numpy as np
 

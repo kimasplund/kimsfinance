@@ -1,6 +1,4 @@
 import numpy as np
-import polars as pl
-import pytest
 from kimsfinance.ops.indicators.moving_averages import calculate_sma
 
 

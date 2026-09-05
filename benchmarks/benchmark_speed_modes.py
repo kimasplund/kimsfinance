@@ -167,7 +167,7 @@ def main():
         fast_speedup = results[format]["fast"]["speedup"]
         balanced_speedup = results[format]["balanced"]["speedup"]
 
-        print(f"**Key Findings:**")
+        print("**Key Findings:**")
         print(f"- `speed='fast'`: **{fast_speedup:.1f}x faster** than 'best' mode")
         print(
             f"- `speed='balanced'`: **{balanced_speedup:.1f}x faster** than 'best' mode (default)"

@@ -15,7 +15,6 @@ from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
 from ..config.layout_constants import (
     BOX_SIZE_ATR_MULTIPLIER,
-    BOX_SIZE_FALLBACK_RATIO,
     BRICK_SPACING_RATIO,
     CENTER_OFFSET,
     CHART_HEIGHT_RATIO,

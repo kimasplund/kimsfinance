@@ -16,7 +16,6 @@ Comprehensive tests for VWAP implementation including:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 import sys
 from pathlib import Path
 import time
@@ -1272,7 +1271,7 @@ def test_performance_comparison():
 
     print(f"Regular VWAP: {time_regular*1000:.3f}ms")
     print(f"Anchored VWAP: {time_anchored*1000:.3f}ms")
-    print(f"✓ Performance comparison completed")
+    print("✓ Performance comparison completed")
 
 
 # ============================================================================

@@ -22,7 +22,7 @@ import time
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
-from kimsfinance.core.autotune import find_crossover, load_tuned_thresholds, CACHE_FILE
+from kimsfinance.core.autotune import find_crossover
 from kimsfinance.config.gpu_thresholds import GPU_THRESHOLDS
 from kimsfinance.ops.batch import calculate_indicators_batch
 
@@ -57,9 +57,7 @@ def benchmark_batch_indicators(size: int, engine: str, iterations: int = 5) -> f
     times = []
     for _ in range(iterations):
         start = time.perf_counter()
-        result = calculate_indicators_batch(
-            highs, lows, closes, volumes, engine=engine
-        )
+        result = calculate_indicators_batch(highs, lows, closes, volumes, engine=engine)
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 
@@ -79,7 +77,10 @@ def find_batch_crossover(sizes=None) -> int:
             gpu_time = benchmark_batch_indicators(size, "gpu")
             speedup = cpu_time / gpu_time
 
-            print(f"    {size:>7,} rows: CPU={cpu_time*1000:>6.1f}ms, GPU={gpu_time*1000:>6.1f}ms, Speedup={speedup:.2f}x", end="")
+            print(
+                f"    {size:>7,} rows: CPU={cpu_time*1000:>6.1f}ms, GPU={gpu_time*1000:>6.1f}ms, Speedup={speedup:.2f}x",
+                end="",
+            )
 
             if gpu_time < cpu_time:
                 print(f" {C.G}← GPU WINS{C.E}")
@@ -112,8 +113,7 @@ def find_parallel_crossover(indicators: list[str], sizes=None) -> dict[str, int]
     # Use ThreadPoolExecutor to run indicators in parallel
     with ThreadPoolExecutor(max_workers=min(len(indicators), 4)) as executor:
         future_to_indicator = {
-            executor.submit(find_crossover, indicator, sizes): indicator
-            for indicator in indicators
+            executor.submit(find_crossover, indicator, sizes): indicator for indicator in indicators
         }
 
         for future in as_completed(future_to_indicator):
@@ -136,16 +136,13 @@ def main():
     print(f"{C.BOLD}{'█'*70}{C.E}\n")
 
     print(f"{C.C}This will benchmark:{C.E}")
-    print(f"  • All 9 indicators individually")
-    print(f"  • Batch indicator scenarios (6 indicators at once)")
-    print(f"  • Parallel execution (simulates real-world usage)")
-    print(f"  • Multiple CPU cores utilized\n")
+    print("  • All 9 indicators individually")
+    print("  • Batch indicator scenarios (6 indicators at once)")
+    print("  • Parallel execution (simulates real-world usage)")
+    print("  • Multiple CPU cores utilized\n")
 
     # All indicators to test
-    all_indicators = [
-        "atr", "rsi", "stochastic", "cci", "tsi",
-        "roc", "aroon", "elder_ray", "hma"
-    ]
+    all_indicators = ["atr", "rsi", "stochastic", "cci", "tsi", "roc", "aroon", "elder_ray", "hma"]
 
     print(f"{C.BOLD}{'='*70}{C.E}")
     print(f"{C.BOLD}Phase 1: Individual Indicators (Sequential){C.E}")
@@ -199,25 +196,32 @@ def main():
         print(f"{indicator:15s} | {seq:>10,} | {par:>10,} | {diff_color}{diff:>+10.1f}%{C.E}")
 
     print(f"\n{C.BOLD}Key Findings:{C.E}")
-    print(f"  • Batch threshold: {C.G}{batch_threshold:,} rows{C.E} (vs {sequential_results.get('atr', 100_000):,} individual)")
+    print(
+        f"  • Batch threshold: {C.G}{batch_threshold:,} rows{C.E} (vs {sequential_results.get('atr', 100_000):,} individual)"
+    )
 
-    batch_improvement = (sequential_results.get('atr', 100_000) / batch_threshold)
+    batch_improvement = sequential_results.get("atr", 100_000) / batch_threshold
     print(f"  • Batch GPU beneficial {C.G}{batch_improvement:.1f}x earlier{C.E} than individual")
 
-    avg_parallel_diff = np.mean([
-        ((parallel_results[ind] - sequential_results[ind]) / sequential_results[ind] * 100)
-        for ind in all_indicators
-        if ind in parallel_results and ind in sequential_results and sequential_results[ind] > 0
-    ])
+    avg_parallel_diff = np.mean(
+        [
+            ((parallel_results[ind] - sequential_results[ind]) / sequential_results[ind] * 100)
+            for ind in all_indicators
+            if ind in parallel_results and ind in sequential_results and sequential_results[ind] > 0
+        ]
+    )
 
     if abs(avg_parallel_diff) > 5:
-        print(f"  • Parallel execution changes thresholds by {C.Y}{avg_parallel_diff:+.1f}%{C.E} on average")
+        print(
+            f"  • Parallel execution changes thresholds by {C.Y}{avg_parallel_diff:+.1f}%{C.E} on average"
+        )
 
     # Save comprehensive results
     output_file = Path.home() / ".kimsfinance" / "threshold_cache_comprehensive.json"
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     import json
+
     with open(output_file, "w") as f:
         json.dump(final_results, f, indent=2)
 
@@ -226,8 +230,8 @@ def main():
     print(f"\n{C.BOLD}Recommendations:{C.E}")
     print(f"  • Use {C.G}calculate_indicators_batch(){C.E} for computing multiple indicators")
     print(f"  • Batch processing is {C.G}{batch_improvement:.1f}x more efficient{C.E} on GPU")
-    print(f"  • Consider parallel execution patterns in your application")
-    print(f"  • Re-run after hardware/driver changes")
+    print("  • Consider parallel execution patterns in your application")
+    print("  • Re-run after hardware/driver changes")
 
     print(f"\n{C.BOLD}{'='*70}{C.E}")
     print(f"{C.G}Comprehensive auto-tune complete!{C.E}")

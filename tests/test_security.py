@@ -6,7 +6,6 @@ import pytest
 import numpy as np
 import tempfile
 import os
-from pathlib import Path
 
 from kimsfinance.api import plot
 from kimsfinance.plotting import save_chart, render_ohlcv_chart

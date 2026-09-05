@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import sys
 import time
-import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Any
@@ -67,9 +66,6 @@ from kimsfinance.ops.indicators import (
     calculate_aroon,
     calculate_cci,
     calculate_tsi,
-    calculate_volume_profile,
-    calculate_parabolic_sar,
-    calculate_pivot_points,
 )
 
 # Try to import Rust implementations
@@ -744,7 +740,7 @@ def print_summary(all_results: dict[int, list[BenchmarkResult]]):
     elif rust_dominant:
         print(f"✅ Rust dominates across all tested sizes (up to {max(all_results.keys()):,})")
     else:
-        print(f"⚠️  Python/NumPy dominates across all tested sizes")
+        print("⚠️  Python/NumPy dominates across all tested sizes")
 
     print(
         "\n💡 Consider Batch API for >1,000 candles to minimize FFI overhead\n"
@@ -771,12 +767,10 @@ def main():
 
     print("\n📋 Test Plan:")
     print(f"   Dataset sizes: {', '.join(f'{s:,}' for s in sizes)} candles")
-    print(f"   Indicators tested: 24 individual + 1 batch API = 25 benchmarks per size")
-    print(
-        f"   Categories: Moving Averages (7), Momentum (8), Volatility (5), Volume (3), Batch (1)"
-    )
-    print(f"   Statistical method: Mann-Whitney U test")
-    print(f"   Confidence threshold: 95%")
+    print("   Indicators tested: 24 individual + 1 batch API = 25 benchmarks per size")
+    print("   Categories: Moving Averages (7), Momentum (8), Volatility (5), Volume (3), Batch (1)")
+    print("   Statistical method: Mann-Whitney U test")
+    print("   Confidence threshold: 95%")
 
     # Run benchmarks
     all_results = {}

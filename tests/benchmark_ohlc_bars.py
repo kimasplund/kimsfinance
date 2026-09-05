@@ -36,17 +36,17 @@ def benchmark_ohlc_bars():
     ms_per_chart = (elapsed * 1000) / num_iterations
 
     print(f"\n{'='*60}")
-    print(f"OHLC Bars Renderer Performance Benchmark")
+    print("OHLC Bars Renderer Performance Benchmark")
     print(f"{'='*60}")
-    print(f"Test configuration:")
+    print("Test configuration:")
     print(f"  - Number of bars: {num_bars}")
-    print(f"  - Image size: 800x600")
+    print("  - Image size: 800x600")
     print(f"  - Iterations: {num_iterations}")
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  - Total time: {elapsed:.2f}s")
     print(f"  - Charts/second: {charts_per_sec:,.1f}")
     print(f"  - Time per chart: {ms_per_chart:.2f}ms")
-    print(f"\nTarget: >5000 charts/sec")
+    print("\nTarget: >5000 charts/sec")
     print(f"Status: {'✓ PASS' if charts_per_sec > 5000 else '✗ FAIL'}")
     print(f"{'='*60}\n")
 

@@ -34,8 +34,6 @@ Interpretation:
 
 from __future__ import annotations
 
-import numpy as np
-from typing import Any
 
 from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine
@@ -173,7 +171,6 @@ def calculate_adx(
     validate_period(period)
 
     # Import here to get the correct array module after GPU routing
-    from ..core.decorators import get_array_module
 
     xp = get_array_module(high)
 

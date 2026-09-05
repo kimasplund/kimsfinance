@@ -10,14 +10,14 @@ threshold-based decisions, and integration with indicator functions.
 from __future__ import annotations
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import numpy as np
 import polars as pl
 
 from kimsfinance.core import EngineManager
 from kimsfinance.core.engine import GPU_CROSSOVER_THRESHOLDS
 from kimsfinance.core.exceptions import GPUNotAvailableError, ConfigurationError
-from kimsfinance.ops.indicators import calculate_atr, calculate_rsi
+from kimsfinance.ops.indicators import calculate_rsi
 
 
 class TestGPUCrossoverThresholds:

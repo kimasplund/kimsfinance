@@ -57,8 +57,8 @@ def demo_basic_svg_export():
 
     print(f"✓ Created: {output}")
     print(f"  File size: {output.stat().st_size / 1024:.2f} KB")
-    print(f"  Candles: 50")
-    print(f"  Theme: classic (default)")
+    print("  Candles: 50")
+    print("  Theme: classic (default)")
 
 
 def demo_all_themes():
@@ -98,7 +98,7 @@ def demo_custom_colors():
         down_color="#EA3943",
     )
     print(f"✓ Created: {output1}")
-    print(f"  Style: CoinGecko colors")
+    print("  Style: CoinGecko colors")
 
     # Binance-inspired colors
     output2 = Path("demo_output/svg_binance.svg")
@@ -111,7 +111,7 @@ def demo_custom_colors():
         down_color="#F6465D",
     )
     print(f"✓ Created: {output2}")
-    print(f"  Style: Binance colors")
+    print("  Style: Binance colors")
 
 
 def demo_different_resolutions():
@@ -151,13 +151,13 @@ def demo_with_without_volume():
     output1 = Path("demo_output/svg_with_volume.svg")
     plot(df, type="candle", volume=True, savefig=str(output1))
     print(f"✓ Created: {output1}")
-    print(f"  Volume panel: YES")
+    print("  Volume panel: YES")
 
     # Without volume
     output2 = Path("demo_output/svg_without_volume.svg")
     plot(df, type="candle", volume=False, savefig=str(output2))
     print(f"✓ Created: {output2}")
-    print(f"  Volume panel: NO")
+    print("  Volume panel: NO")
 
 
 def demo_scaling_comparison():

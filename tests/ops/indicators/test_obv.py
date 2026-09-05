@@ -14,7 +14,6 @@ Comprehensive tests for OBV implementation including:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 import sys
 from pathlib import Path
 
@@ -845,7 +844,7 @@ def test_obv_cpu_gpu_parity_small():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ CPU and GPU results match")
         else:
-            print(f"  Warning: CPU/GPU difference detected")
+            print("  Warning: CPU/GPU difference detected")
             print(f"  - Max difference: {np.max(np.abs(obv_cpu - obv_gpu))}")
     except Exception:
         print("✓ GPU not available, skipping comparison")
@@ -866,7 +865,7 @@ def test_obv_cpu_gpu_parity_large():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ CPU and GPU results match on large dataset")
         else:
-            print(f"  Warning: CPU/GPU difference detected")
+            print("  Warning: CPU/GPU difference detected")
             print(f"  - Max difference: {np.max(np.abs(obv_cpu - obv_gpu))}")
     except Exception:
         print("✓ GPU not available, skipping comparison")
@@ -892,7 +891,7 @@ def test_obv_cumulative_cpu_gpu():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ Cumulative operations match")
         else:
-            print(f"  Warning: Cumulative difference detected")
+            print("  Warning: Cumulative difference detected")
     except Exception:
         print("✓ GPU not available, CPU only")
 
@@ -1082,7 +1081,7 @@ def test_obv_percentage_change_analysis():
     # Calculate percentage changes
     obv_pct_change = np.diff(obv) / (np.abs(obv[:-1]) + 1e-10) * 100
 
-    print(f"✓ OBV percentage changes calculated")
+    print("✓ OBV percentage changes calculated")
     print(f"  - Mean: {np.mean(obv_pct_change):.2f}%")
     print(f"  - Std: {np.std(obv_pct_change):.2f}%")
     print(f"  - Max: {np.max(obv_pct_change):.2f}%")

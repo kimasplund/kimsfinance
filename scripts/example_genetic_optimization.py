@@ -19,7 +19,7 @@ from kimsfinance.optimization import GeneticOptimizer, optimize_single_objective
 import logging
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -35,11 +35,11 @@ def create_sample_data(n_candles=1000):
     volume = np.random.uniform(1000, 10000, n_candles)
 
     return {
-        'open': open_price,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume,
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "close": close,
+        "volume": volume,
     }
 
 
@@ -51,6 +51,7 @@ def mock_backtester():
         from rust.python.kimsfinance import BacktestEngine
         backtester = BacktestEngine()
     """
+
     class MockBacktestEngine:
         def run(self, strategy, data, params):
             """Simulate backtest with random results based on parameters."""
@@ -58,9 +59,9 @@ def mock_backtester():
             # In production, this would run real strategy on historical data
 
             # RSI example: optimal period around 14, buy threshold 30, sell threshold 70
-            rsi_period = params.get('rsi_period', 14)
-            buy_threshold = params.get('buy_threshold', 30)
-            sell_threshold = params.get('sell_threshold', 70)
+            rsi_period = params.get("rsi_period", 14)
+            buy_threshold = params.get("buy_threshold", 30)
+            sell_threshold = params.get("sell_threshold", 70)
 
             # Fitness function: penalize deviations from optimal values
             period_score = 1.0 - abs(rsi_period - 14) / 20.0
@@ -78,11 +79,11 @@ def mock_backtester():
             total_return = max(0, 0.5 * base_score + randomness * 0.2)
 
             return {
-                'sharpe_ratio': sharpe,
-                'max_drawdown': max_drawdown,
-                'win_rate': win_rate,
-                'total_return': total_return,
-                'profit_factor': max(1.0, 1.5 * base_score),
+                "sharpe_ratio": sharpe,
+                "max_drawdown": max_drawdown,
+                "win_rate": win_rate,
+                "total_return": total_return,
+                "profit_factor": max(1.0, 1.5 * base_score),
             }
 
     return MockBacktestEngine()
@@ -96,9 +97,9 @@ def example_single_objective():
 
     # Define parameter space for RSI strategy
     param_space = {
-        'rsi_period': (5, 30, int),
-        'buy_threshold': (20, 40, float),
-        'sell_threshold': (60, 80, float),
+        "rsi_period": (5, 30, int),
+        "buy_threshold": (20, 40, float),
+        "sell_threshold": (60, 80, float),
     }
 
     # Create sample data
@@ -110,15 +111,15 @@ def example_single_objective():
     # Run single-objective optimization
     best_solution = optimize_single_objective(
         param_space=param_space,
-        objective='sharpe',
-        strategy='rsi_crossover',
+        objective="sharpe",
+        strategy="rsi_crossover",
         data=data,
         backtester=backtester,
         population_size=50,
         generations=30,
     )
 
-    logger.info(f"\nBest solution found:")
+    logger.info("\nBest solution found:")
     logger.info(f"  Parameters: {best_solution['params']}")
     logger.info(f"  Sharpe Ratio: {best_solution['sharpe']:.3f}")
     logger.info("")
@@ -132,9 +133,9 @@ def example_multi_objective():
 
     # Define parameter space
     param_space = {
-        'rsi_period': (5, 30, int),
-        'buy_threshold': (20, 40, float),
-        'sell_threshold': (60, 80, float),
+        "rsi_period": (5, 30, int),
+        "buy_threshold": (20, 40, float),
+        "sell_threshold": (60, 80, float),
     }
 
     # Create sample data
@@ -148,13 +149,13 @@ def example_multi_objective():
         param_space=param_space,
         population_size=100,
         generations=50,
-        objectives=['sharpe', 'max_drawdown', 'win_rate'],
+        objectives=["sharpe", "max_drawdown", "win_rate"],
         n_islands=1,  # Single island for this example
     )
 
     # Run optimization
     pareto_front = optimizer.optimize(
-        strategy='rsi_crossover',
+        strategy="rsi_crossover",
         data=data,
         backtester=backtester,
         verbose=True,
@@ -179,9 +180,9 @@ def example_island_model():
 
     # Define parameter space
     param_space = {
-        'rsi_period': (5, 30, int),
-        'buy_threshold': (20, 40, float),
-        'sell_threshold': (60, 80, float),
+        "rsi_period": (5, 30, int),
+        "buy_threshold": (20, 40, float),
+        "sell_threshold": (60, 80, float),
     }
 
     # Create sample data
@@ -195,7 +196,7 @@ def example_island_model():
         param_space=param_space,
         population_size=50,  # 50 individuals per island
         generations=30,
-        objectives=['sharpe', 'max_drawdown', 'win_rate'],
+        objectives=["sharpe", "max_drawdown", "win_rate"],
         n_islands=4,  # 4 independent populations
         migration_rate=0.1,  # 10% migration between islands
         migration_freq=5,  # Every 5 generations
@@ -203,7 +204,7 @@ def example_island_model():
 
     # Run optimization (automatically parallel)
     pareto_front = optimizer.optimize(
-        strategy='rsi_crossover',
+        strategy="rsi_crossover",
         data=data,
         backtester=backtester,
         verbose=True,

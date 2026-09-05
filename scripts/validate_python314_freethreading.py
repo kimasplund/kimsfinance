@@ -21,7 +21,7 @@ import sys
 import time
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 
 class Colors:
@@ -139,7 +139,7 @@ def main():
     print_status(
         "Free-threading",
         "Enabled" if is_free_threaded else "Disabled (GIL active)",
-        "pass" if is_free_threaded else "warn"
+        "pass" if is_free_threaded else "warn",
     )
 
     print_status("NumPy version", np.__version__, "info")
@@ -206,26 +206,26 @@ def main():
         elif speedup_8 >= 1.5:
             print(f"  {Colors.YELLOW}⚠ Moderate multi-threading performance{Colors.ENDC}")
             print(f"    {speedup_8:.2f}x speedup is below expected 3.1x target")
-            print(f"    This may be due to:")
-            print(f"    - Thread synchronization overhead")
-            print(f"    - NumPy GIL interactions")
-            print(f"    - CPU thermal throttling")
+            print("    This may be due to:")
+            print("    - Thread synchronization overhead")
+            print("    - NumPy GIL interactions")
+            print("    - CPU thermal throttling")
         else:
             print(f"  {Colors.RED}✗ Poor multi-threading performance{Colors.ENDC}")
             print(f"    {speedup_8:.2f}x speedup is significantly below expectations")
-            print(f"    Possible issues:")
-            print(f"    - GIL may not be fully disabled")
-            print(f"    - NumPy may be using GIL-protected code paths")
-            print(f"    - Workload may not be CPU-bound")
+            print("    Possible issues:")
+            print("    - GIL may not be fully disabled")
+            print("    - NumPy may be using GIL-protected code paths")
+            print("    - Workload may not be CPU-bound")
     else:
         print_status("Mode", "Standard Python with GIL", "warn")
         print()
 
         print(f"  {Colors.YELLOW}⚠ Free-threading NOT enabled{Colors.ENDC}")
-        print(f"    Running with standard GIL-enabled Python")
+        print("    Running with standard GIL-enabled Python")
         print()
-        print(f"    Expected behavior with GIL:")
-        print(f"    - Speedup: 1.0-1.2x (limited by GIL)")
+        print("    Expected behavior with GIL:")
+        print("    - Speedup: 1.0-1.2x (limited by GIL)")
         print(f"    - Actual speedup: {speedup_8:.2f}x")
         print()
 
@@ -233,24 +233,24 @@ def main():
             print(f"  {Colors.GREEN}✓ Results consistent with GIL-enabled Python{Colors.ENDC}")
         else:
             print(f"  {Colors.YELLOW}⚠ Unexpected high speedup with GIL enabled{Colors.ENDC}")
-            print(f"    This may indicate NumPy releasing GIL for operations")
+            print("    This may indicate NumPy releasing GIL for operations")
 
     print()
     print_header("Expected Performance Targets")
 
     print(f"{Colors.BOLD}Python 3.14 with free-threading (python3.14t):{Colors.ENDC}")
-    print(f"  • Single-threaded: ~27% faster than Python 3.13")
-    print(f"  • 8-core multi-threaded: ~3.1x faster than single-threaded")
-    print(f"  • Parallel efficiency: ~39% (3.1x / 8 cores)")
+    print("  • Single-threaded: ~27% faster than Python 3.13")
+    print("  • 8-core multi-threaded: ~3.1x faster than single-threaded")
+    print("  • Parallel efficiency: ~39% (3.1x / 8 cores)")
     print()
     print(f"{Colors.BOLD}Standard Python 3.14 (with GIL):{Colors.ENDC}")
-    print(f"  • Single-threaded: Same as Python 3.13")
-    print(f"  • Multi-threaded: Limited by GIL (~1.0-1.2x speedup)")
+    print("  • Single-threaded: Same as Python 3.13")
+    print("  • Multi-threaded: Limited by GIL (~1.0-1.2x speedup)")
     print()
     print(f"{Colors.BOLD}How to enable free-threading:{Colors.ENDC}")
-    print(f"  • Build Python 3.14 with: --disable-gil")
-    print(f"  • Or use python3.14t if available")
-    print(f"  • Check with: python3.14 -c \"import sys; print(sys._is_gil_enabled())\"")
+    print("  • Build Python 3.14 with: --disable-gil")
+    print("  • Or use python3.14t if available")
+    print('  • Check with: python3.14 -c "import sys; print(sys._is_gil_enabled())"')
 
     print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 65}{Colors.ENDC}")
 
@@ -261,7 +261,7 @@ def main():
     print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 65}{Colors.ENDC}\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
@@ -270,5 +270,6 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"\n{Colors.RED}Error: {e}{Colors.ENDC}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -41,11 +41,9 @@ from __future__ import annotations
 import pytest
 import numpy as np
 import time
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_dema, calculate_tema, calculate_ema, calculate_sma
 from kimsfinance.ops.indicators.dema_tema import calculate_dema, calculate_tema
-from kimsfinance.core.types import Engine
 
 from _gpu import requires_gpu
 

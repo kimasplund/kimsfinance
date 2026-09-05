@@ -12,7 +12,6 @@ from kimsfinance.plotting import (
     save_chart,
 )
 from kimsfinance.config.themes import THEMES
-from kimsfinance.config.chart_settings import SPEED_PRESETS
 from kimsfinance.plotting import render_charts_parallel
 from kimsfinance.utils.color_utils import _hex_to_rgba
 

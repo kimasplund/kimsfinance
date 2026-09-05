@@ -26,7 +26,6 @@ Interpretation:
 
 from __future__ import annotations
 
-import numpy as np
 
 from ..config.gpu_thresholds import get_threshold
 from ..core import gpu_accelerated, ArrayLike, ArrayResult, Engine

@@ -28,14 +28,16 @@ import time
 import argparse
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
 
 def parse_args():
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description='Validate GPU batch backtesting')
-    parser.add_argument('--quick', action='store_true', help='Skip slow tests (1000 strategies, genetic optimizer)')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+    parser = argparse.ArgumentParser(description="Validate GPU batch backtesting")
+    parser.add_argument(
+        "--quick", action="store_true", help="Skip slow tests (1000 strategies, genetic optimizer)"
+    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     return parser.parse_args()
 
 
@@ -68,13 +70,7 @@ def generate_ohlcv(n_candles: int, seed: int = None) -> pd.DataFrame:
 
     volume = np.exp(np.random.randn(n_candles) * 0.5 + 10)
 
-    return pd.DataFrame({
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume
-    })
+    return pd.DataFrame({"open": open_, "high": high, "low": low, "close": close, "volume": volume})
 
 
 def generate_random_params(n: int, seed: int = None) -> List[Dict]:
@@ -84,9 +80,9 @@ def generate_random_params(n: int, seed: int = None) -> List[Dict]:
 
     return [
         {
-            'period': int(np.random.randint(10, 25)),
-            'buy_threshold': float(np.random.uniform(25, 35)),
-            'sell_threshold': float(np.random.uniform(65, 75))
+            "period": int(np.random.randint(10, 25)),
+            "buy_threshold": float(np.random.uniform(25, 35)),
+            "sell_threshold": float(np.random.uniform(65, 75)),
         }
         for _ in range(n)
     ]
@@ -124,11 +120,11 @@ def main():
 
         info = get_gpu_info()
 
-        if info['gpu_available']:
+        if info["gpu_available"]:
             print(f"✅ GPU available: {info.get('gpu_name', 'Unknown GPU')}")
-            if 'vram_gb' in info:
+            if "vram_gb" in info:
                 print(f"   VRAM: {info['vram_gb']:.1f} GB")
-            if 'expected_speedup' in info:
+            if "expected_speedup" in info:
                 print(f"   Expected speedup: {info['expected_speedup']:.0f}x")
             passed += 1
         else:
@@ -150,31 +146,33 @@ def main():
     print_test(2, total_tests, "Testing single strategy")
 
     data = generate_ohlcv(1000, seed=42)
-    params = [{'period': 14, 'buy_threshold': 30, 'sell_threshold': 70}]
+    params = [{"period": 14, "buy_threshold": 30, "sell_threshold": 70}]
 
     try:
         start = time.time()
-        results = batch_backtest('rsi_crossover', data, params)
+        results = batch_backtest("rsi_crossover", data, params)
         elapsed = time.time() - start
 
         result = results[0]
 
         # Validate result structure
-        assert 'sharpe_ratio' in result
-        assert 'max_drawdown' in result
-        assert 'win_rate' in result
-        assert 'num_trades' in result
+        assert "sharpe_ratio" in result
+        assert "max_drawdown" in result
+        assert "win_rate" in result
+        assert "num_trades" in result
 
         # Validate ranges
-        assert 0.0 <= result['win_rate'] <= 1.0
-        assert result['max_drawdown'] <= 0.0
+        assert 0.0 <= result["win_rate"] <= 1.0
+        assert result["max_drawdown"] <= 0.0
 
         # Validate no NaN/Inf
-        assert not np.isnan(result['sharpe_ratio'])
-        assert not np.isinf(result['sharpe_ratio'])
+        assert not np.isnan(result["sharpe_ratio"])
+        assert not np.isinf(result["sharpe_ratio"])
 
-        print(f"✅ Single strategy: Sharpe={result['sharpe_ratio']:.2f}, "
-              f"DD={result['max_drawdown']:.2%}, WinRate={result['win_rate']:.2%}")
+        print(
+            f"✅ Single strategy: Sharpe={result['sharpe_ratio']:.2f}, "
+            f"DD={result['max_drawdown']:.2%}, WinRate={result['win_rate']:.2%}"
+        )
         print(f"   Time: {format_time(elapsed)}")
         passed += 1
 
@@ -182,6 +180,7 @@ def main():
         print(f"❌ Single strategy failed: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         failed += 1
 
@@ -193,7 +192,7 @@ def main():
 
     try:
         start = time.time()
-        results = batch_backtest('rsi_crossover', data, params)
+        results = batch_backtest("rsi_crossover", data, params)
         elapsed = time.time() - start
 
         assert len(results) == 100
@@ -201,18 +200,18 @@ def main():
         # Validate random sample
         for i in [0, 50, 99]:
             r = results[i]
-            assert not np.isnan(r['sharpe_ratio'])
-            assert 0.0 <= r['win_rate'] <= 1.0
+            assert not np.isnan(r["sharpe_ratio"])
+            assert 0.0 <= r["win_rate"] <= 1.0
 
         elapsed_ms = elapsed * 1000
         print(f"✅ 100 strategies: {elapsed_ms:.1f}ms")
 
         if elapsed_ms < 100:
-            print(f"   🚀 Excellent performance! (target: <100ms)")
+            print("   🚀 Excellent performance! (target: <100ms)")
         elif elapsed_ms < 200:
-            print(f"   ✓ Good performance (target: <100ms, acceptable: <200ms)")
+            print("   ✓ Good performance (target: <100ms, acceptable: <200ms)")
         else:
-            print(f"   ⚠️  Slower than expected (target: <100ms)")
+            print("   ⚠️  Slower than expected (target: <100ms)")
 
         # Calculate throughput
         throughput = 100 / elapsed
@@ -224,6 +223,7 @@ def main():
         print(f"❌ 100 strategies failed: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         failed += 1
 
@@ -231,21 +231,24 @@ def main():
     print_test(4, total_tests, "Testing determinism (GPU reproducibility)")
 
     data = generate_ohlcv(1000, seed=789)
-    params = [{'period': 14, 'buy_threshold': 30, 'sell_threshold': 70}]
+    params = [{"period": 14, "buy_threshold": 30, "sell_threshold": 70}]
 
     try:
-        result1 = batch_backtest('rsi_crossover', data, params)[0]
-        result2 = batch_backtest('rsi_crossover', data, params)[0]
+        result1 = batch_backtest("rsi_crossover", data, params)[0]
+        result2 = batch_backtest("rsi_crossover", data, params)[0]
 
         # Should be exactly identical
-        assert result1['sharpe_ratio'] == result2['sharpe_ratio'], \
-            f"Non-deterministic Sharpe: {result1['sharpe_ratio']} vs {result2['sharpe_ratio']}"
-        assert result1['num_trades'] == result2['num_trades'], \
-            f"Non-deterministic trade count: {result1['num_trades']} vs {result2['num_trades']}"
-        assert result1['win_rate'] == result2['win_rate'], \
-            f"Non-deterministic win rate: {result1['win_rate']} vs {result2['win_rate']}"
+        assert (
+            result1["sharpe_ratio"] == result2["sharpe_ratio"]
+        ), f"Non-deterministic Sharpe: {result1['sharpe_ratio']} vs {result2['sharpe_ratio']}"
+        assert (
+            result1["num_trades"] == result2["num_trades"]
+        ), f"Non-deterministic trade count: {result1['num_trades']} vs {result2['num_trades']}"
+        assert (
+            result1["win_rate"] == result2["win_rate"]
+        ), f"Non-deterministic win rate: {result1['win_rate']} vs {result2['win_rate']}"
 
-        print(f"✅ Determinism validated: Results are reproducible")
+        print("✅ Determinism validated: Results are reproducible")
         passed += 1
 
     except AssertionError as e:
@@ -255,6 +258,7 @@ def main():
         print(f"❌ Determinism test failed: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         failed += 1
 
@@ -266,21 +270,18 @@ def main():
     try:
         optimizer = GeneticOptimizer(
             param_space={
-                'period': (10, 20, int),
-                'buy_threshold': (25.0, 35.0, float),
-                'sell_threshold': (65.0, 75.0, float),
+                "period": (10, 20, int),
+                "buy_threshold": (25.0, 35.0, float),
+                "sell_threshold": (65.0, 75.0, float),
             },
             population_size=20,
             generations=5,
-            objectives=['sharpe', 'max_drawdown', 'win_rate']
+            objectives=["sharpe", "max_drawdown", "win_rate"],
         )
 
         start = time.time()
         results = optimizer.optimize(
-            strategy='rsi_crossover',
-            data=data,
-            use_gpu=True,
-            verbose=args.verbose
+            strategy="rsi_crossover", data=data, use_gpu=True, verbose=args.verbose
         )
         elapsed = time.time() - start
 
@@ -288,8 +289,8 @@ def main():
         assert len(results) <= 20
 
         best = results[0]
-        assert 'sharpe' in best
-        assert 'params' in best
+        assert "sharpe" in best
+        assert "params" in best
 
         print(f"✅ Genetic optimizer: {len(results)} solutions in {format_time(elapsed)}")
         print(f"   Best solution: Sharpe={best.get('sharpe', 0):.2f}")
@@ -299,6 +300,7 @@ def main():
         print(f"❌ Genetic optimizer failed: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         failed += 1
 
@@ -311,7 +313,7 @@ def main():
 
         try:
             start = time.time()
-            results = batch_backtest('rsi_crossover', data_large, params_large)
+            results = batch_backtest("rsi_crossover", data_large, params_large)
             elapsed = time.time() - start
 
             assert len(results) == 1000
@@ -319,17 +321,17 @@ def main():
             # Validate sample
             for i in [0, 500, 999]:
                 r = results[i]
-                assert not np.isnan(r['sharpe_ratio'])
+                assert not np.isnan(r["sharpe_ratio"])
 
             elapsed_ms = elapsed * 1000
             print(f"✅ 1000 strategies: {elapsed_ms:.1f}ms")
 
             if elapsed_ms < 500:
-                print(f"   🚀 Excellent performance! (target: <500ms)")
+                print("   🚀 Excellent performance! (target: <500ms)")
             elif elapsed_ms < 1000:
-                print(f"   ✓ Good performance (target: <500ms, acceptable: <1000ms)")
+                print("   ✓ Good performance (target: <500ms, acceptable: <1000ms)")
             else:
-                print(f"   ⚠️  Slower than expected (target: <500ms)")
+                print("   ⚠️  Slower than expected (target: <500ms)")
 
             # Calculate speedup estimate
             # Assume 10ms per sequential backtest
@@ -346,6 +348,7 @@ def main():
             print(f"❌ 1000 strategies failed: {e}")
             if args.verbose:
                 import traceback
+
                 traceback.print_exc()
             failed += 1
     else:
@@ -361,21 +364,18 @@ def main():
         try:
             optimizer = GeneticOptimizer(
                 param_space={
-                    'period': (5, 30, int),
-                    'buy_threshold': (20.0, 40.0, float),
-                    'sell_threshold': (60.0, 80.0, float),
+                    "period": (5, 30, int),
+                    "buy_threshold": (20.0, 40.0, float),
+                    "sell_threshold": (60.0, 80.0, float),
                 },
                 population_size=100,
                 generations=10,
-                objectives=['sharpe', 'max_drawdown']
+                objectives=["sharpe", "max_drawdown"],
             )
 
             start = time.time()
             results = optimizer.optimize(
-                strategy='rsi_crossover',
-                data=data_prod,
-                use_gpu=True,
-                verbose=args.verbose
+                strategy="rsi_crossover", data=data_prod, use_gpu=True, verbose=args.verbose
             )
             elapsed = time.time() - start
 
@@ -390,11 +390,11 @@ def main():
             print(f"   Best Sharpe: {results[0].get('sharpe', 0):.2f}")
 
             if elapsed < 5.0:
-                print(f"   🚀 Excellent performance! (target: <5s)")
+                print("   🚀 Excellent performance! (target: <5s)")
             elif elapsed < 10.0:
-                print(f"   ✓ Good performance (target: <5s, acceptable: <10s)")
+                print("   ✓ Good performance (target: <5s, acceptable: <10s)")
             else:
-                print(f"   ⚠️  Slower than expected (target: <5s)")
+                print("   ⚠️  Slower than expected (target: <5s)")
 
             # Calculate speedup
             # Assume 10ms per sequential evaluation
@@ -408,10 +408,13 @@ def main():
             print(f"❌ Production genetic optimizer failed: {e}")
             if args.verbose:
                 import traceback
+
                 traceback.print_exc()
             failed += 1
     else:
-        print_test(7, total_tests, "Testing production genetic optimizer (SKIPPED - use without --quick)")
+        print_test(
+            7, total_tests, "Testing production genetic optimizer (SKIPPED - use without --quick)"
+        )
         skipped += 1
 
     # Summary
@@ -449,5 +452,5 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

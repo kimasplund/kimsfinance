@@ -210,7 +210,7 @@ class TestE2EPipeline:
             assert 0.0 <= r["win_rate"] <= 1.0, f"Result {i}: Invalid win_rate {r['win_rate']}"
             assert r["max_drawdown"] <= 0.0, f"Result {i}: Invalid max_drawdown {r['max_drawdown']}"
 
-        print(f"✅ 10 strategies E2E: All metrics valid")
+        print("✅ 10 strategies E2E: All metrics valid")
 
     def test_100_strategies_e2e(self):
         """Test 100 strategies (medium batch) end-to-end."""
@@ -396,7 +396,7 @@ class TestAccuracyValidation:
         assert result_gpu_1["max_drawdown"] == result_gpu_2["max_drawdown"]
         assert result_gpu_1["win_rate"] == result_gpu_2["win_rate"]
 
-        print(f"✅ GPU determinism validated")
+        print("✅ GPU determinism validated")
 
     def test_gpu_vs_cpu_10_strategies(self):
         """Statistical validation: GPU vs CPU for 10 strategies."""
@@ -420,7 +420,7 @@ class TestAccuracyValidation:
                 r1["num_trades"] == r2["num_trades"]
             ), f"Strategy {i}: Non-deterministic trade count {r1['num_trades']} vs {r2['num_trades']}"
 
-        print(f"✅ GPU determinism validated for 10 strategies")
+        print("✅ GPU determinism validated for 10 strategies")
 
     @pytest.mark.slow
     def test_gpu_vs_cpu_100_strategies_statistical(self):
@@ -447,7 +447,7 @@ class TestAccuracyValidation:
         assert mean_diff == 0.0, f"Mean Sharpe diff: {mean_diff} (expected 0.0)"
         assert max_diff == 0.0, f"Max Sharpe diff: {max_diff} (expected 0.0)"
 
-        print(f"✅ GPU determinism validated for 100 strategies")
+        print("✅ GPU determinism validated for 100 strategies")
 
 
 class TestErrorHandling:
@@ -519,7 +519,7 @@ class TestErrorHandling:
             results = batch_backtest("rsi_crossover", data, params)
             # If it succeeds, validate results
             assert len(results) == 10000
-            print(f"✅ Large batch (10K strategies) succeeded")
+            print("✅ Large batch (10K strategies) succeeded")
         except RuntimeError as e:
             # Should fail gracefully with memory-related error
             error_msg = str(e).lower()

@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -36,6 +35,7 @@ def test_imports():
             create_monthly_heatmap,
             create_rolling_sharpe,
         )
+
         print("  ✓ All imports successful")
         return True
     except ImportError as e:
@@ -56,7 +56,9 @@ def test_metrics():
     from kimsfinance.reporting import calculate_performance_metrics
 
     perf = calculate_performance_metrics(equity_curve)
-    print(f"  ✓ Performance metrics: Sharpe={perf.sharpe_ratio:.2f}, MaxDD={perf.max_drawdown*100:.2f}%")
+    print(
+        f"  ✓ Performance metrics: Sharpe={perf.sharpe_ratio:.2f}, MaxDD={perf.max_drawdown*100:.2f}%"
+    )
 
     # Test trade statistics
     from kimsfinance.reporting import calculate_trade_statistics
@@ -70,14 +72,18 @@ def test_metrics():
         }
     )
     trade_stats = calculate_trade_statistics(trades)
-    print(f"  ✓ Trade statistics: WinRate={trade_stats.win_rate*100:.1f}%, PF={trade_stats.profit_factor:.2f}")
+    print(
+        f"  ✓ Trade statistics: WinRate={trade_stats.win_rate*100:.1f}%, PF={trade_stats.profit_factor:.2f}"
+    )
 
     # Test risk metrics
     from kimsfinance.reporting import calculate_risk_metrics
 
     returns = equity_curve.pct_change().dropna()
     risk = calculate_risk_metrics(returns, equity_curve)
-    print(f"  ✓ Risk metrics: VaR95={risk.value_at_risk_95*100:.2f}%, CVaR95={risk.cvar_95*100:.2f}%")
+    print(
+        f"  ✓ Risk metrics: VaR95={risk.value_at_risk_95*100:.2f}%, CVaR95={risk.cvar_95*100:.2f}%"
+    )
 
     # Test monthly returns
     from kimsfinance.reporting import calculate_monthly_returns

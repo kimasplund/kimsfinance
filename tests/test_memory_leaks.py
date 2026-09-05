@@ -10,7 +10,6 @@ Validates that memory leak fixes are working correctly:
 """
 
 import gc
-import sys
 import numpy as np
 import pytest
 from datetime import datetime, timedelta
@@ -39,7 +38,7 @@ class TestBoundedPerformanceStats:
 
     def test_bounded_entries(self):
         """Test that entries are bounded to MAX_STATS_ENTRIES."""
-        from kimsfinance.integration.adapter import BoundedPerformanceStats, MAX_STATS_ENTRIES
+        from kimsfinance.integration.adapter import BoundedPerformanceStats
 
         stats = BoundedPerformanceStats(max_entries=100)
 
@@ -208,7 +207,6 @@ class TestByteIOBufferCleanup:
     def test_bytesio_closed_after_use(self):
         """Test that BytesIO buffers are closed."""
         from kimsfinance.plotting.parallel import _render_one_chart
-        import io
 
         # Create test data
         ohlc = {

@@ -18,14 +18,11 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 # Test both implementations
 from kimsfinance.ops.stochastic import calculate_stochastic, calculate_stochastic_rsi
 from kimsfinance.ops.indicators.stochastic_oscillator import calculate_stochastic_oscillator
 from _gpu import requires_polars_gpu
-from kimsfinance.core import EngineManager
-from kimsfinance.core.exceptions import ConfigurationError
 
 # ============================================================================
 # Test Fixtures

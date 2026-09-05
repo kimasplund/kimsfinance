@@ -201,7 +201,7 @@ def activate(*, engine: str = "auto", strict: bool = False, verbose: bool = True
             print("✓ kimsfinance activated!")
             print(f"  Engine: {engine}")
             print(f"  GPU Available: {gpu_available}")
-            print(f"  Expected Speedup: 7-10x for typical plots")
+            print("  Expected Speedup: 7-10x for typical plots")
 
             if not gpu_available and engine == "gpu":
                 warnings.warn(

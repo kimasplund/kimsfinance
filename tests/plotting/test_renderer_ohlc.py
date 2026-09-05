@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import tempfile
 import numpy as np
-import pytest
 from PIL import Image
 
 from kimsfinance.plotting import (
@@ -11,7 +10,6 @@ from kimsfinance.plotting import (
     save_chart,
 )
 from kimsfinance.config.themes import THEMES
-from kimsfinance.utils.color_utils import _hex_to_rgba
 
 # Sample test data for OHLC bars
 SAMPLE_OHLC = {

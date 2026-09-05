@@ -29,7 +29,6 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import time
-from typing import Callable, Any
 
 
 def generate_ohlcv_data(
@@ -329,12 +328,6 @@ class TestPhase1Integration:
         from kimsfinance.ops import (
             calculate_stochastic,
             calculate_vwap,
-            calculate_ichimoku,
-            calculate_adx,
-            calculate_williams_r,
-            calculate_cci,
-            calculate_mfi,
-            calculate_supertrend,
         )
 
         # Use 100K rows to trigger GPU acceleration
@@ -486,7 +479,7 @@ class TestPhase1Integration:
         # Trend confirmation: ADX > 25 (trending) and Supertrend direction
         trending = indicators["adx"][valid_idx] > 25
 
-        print(f"✓ Multi-indicator strategy compatible:")
+        print("✓ Multi-indicator strategy compatible:")
         print(f"  - Momentum oversold: {momentum_oversold}")
         print(f"  - Volume confirmation: {volume_ok}")
         print(f"  - Trending market: {trending}")

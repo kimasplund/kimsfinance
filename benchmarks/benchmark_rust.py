@@ -150,13 +150,13 @@ for n_candles in [100, 1_000, 10_000, 100_000]:
         speedup = numpy_time / rust_time
         print(f"  Speedup: {speedup:7.2f}x")
         if speedup >= 5:
-            print(f"  Status:  ✅ TARGET MET (5-10x)")
+            print("  Status:  ✅ TARGET MET (5-10x)")
         elif speedup >= 2:
-            print(f"  Status:  ⚠️  GOOD (2-5x)")
+            print("  Status:  ⚠️  GOOD (2-5x)")
         else:
-            print(f"  Status:  ❌ BELOW TARGET (<2x)")
+            print("  Status:  ❌ BELOW TARGET (<2x)")
     else:
-        print(f"  Rust:   N/A (not available)")
+        print("  Rust:   N/A (not available)")
     print()
 
 print("=" * 70)

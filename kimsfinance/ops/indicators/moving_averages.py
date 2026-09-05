@@ -26,7 +26,6 @@ Example:
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
 
 import polars as pl
 import numpy as np

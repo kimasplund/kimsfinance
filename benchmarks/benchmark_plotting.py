@@ -1059,18 +1059,18 @@ def main():
     )
 
     # Format and save results
-    print(f"\nGenerating markdown report...")
+    print("\nGenerating markdown report...")
     markdown = format_results_markdown(results, export_perf, comparison_results)
 
     output_path = Path(args.output)
     output_path.write_text(markdown)
 
     print(f"\n{'=' * 80}")
-    print(f"BENCHMARK COMPLETE")
+    print("BENCHMARK COMPLETE")
     print(f"{'=' * 80}")
     print(f"\nResults saved to: {output_path.absolute()}")
     print(f"Total scenarios tested: {len(results)}")
-    print(f"\nPreview of results:")
+    print("\nPreview of results:")
     print(f"{'─' * 80}")
 
     # Print summary stats

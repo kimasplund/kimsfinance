@@ -11,10 +11,8 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_wma
-from kimsfinance.core import EngineManager
 
 # ============================================================================
 # Test Fixtures
