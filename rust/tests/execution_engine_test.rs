@@ -132,7 +132,7 @@ fn test_multiple_positions_management() {
     // Verify portfolio Greeks
     let mut option_prices = HashMap::new();
     let mut option_greeks = HashMap::new();
-    for (position_id, _) in engine.position_manager().positions() {
+    for position_id in engine.position_manager().positions().keys() {
         option_prices.insert(position_id.clone(), 5.0);
         option_greeks.insert(
             position_id.clone(),
@@ -257,7 +257,7 @@ fn test_pnl_metrics_accuracy() {
     let config = ExecutionConfig::default();
     let mut engine = ExecutionEngine::new(10_000.0, config).unwrap();
 
-    let initial_capital = 10_000.0;
+    let _initial_capital = 10_000.0;
 
     // Execute winning trade
     let signal = OptionSignal {
@@ -372,8 +372,10 @@ fn test_performance_at_scale() {
 
 #[test]
 fn test_risk_limits_enforcement() {
-    let mut config = ExecutionConfig::default();
-    config.max_position_size = 2;
+    let config = ExecutionConfig {
+        max_position_size: 2,
+        ..Default::default()
+    };
 
     let mut engine = ExecutionEngine::new(10_000.0, config).unwrap();
 
@@ -417,7 +419,7 @@ fn test_risk_limits_enforcement() {
         timestamp: 1735000000,
     };
 
-    let result = engine.execute_signals(&[signal], &market_data);
+    let _result = engine.execute_signals(&[signal], &market_data);
     // Should still have 2 positions (3rd rejected)
     assert_eq!(engine.position_manager().position_count(), 2);
 }

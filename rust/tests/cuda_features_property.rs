@@ -57,7 +57,7 @@ fn quantize_fp8_clamped(value: f64) -> bool {
     }
 
     let quantized = quantize_fp8_sim(value);
-    quantized >= -448.0 && quantized <= 448.0
+    (-448.0..=448.0).contains(&quantized)
 }
 
 /// Simulate FP8 quantization (matches optimizer implementation)

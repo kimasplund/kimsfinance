@@ -10,7 +10,7 @@
 //! - Real-world data validation (if available)
 //! - Performance characteristics
 
-use kimsfinance_core::analysis::volume_profile::{PriceLevel, VolumeProfile, VolumeProfileBuilder};
+use kimsfinance_core::analysis::volume_profile::{PriceLevel, VolumeProfileBuilder};
 use kimsfinance_core::binance::{Timeframe, Trade};
 
 // Helper functions
@@ -313,14 +313,14 @@ fn test_value_area_calculation() {
 fn test_value_area_70_percent_property() {
     use rand::Rng;
     use rand_distr::{Distribution, Normal};
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let normal = Normal::new(100.0, 3.0).unwrap();
 
     // Generate random trades with normal distribution
     let mut trades = Vec::new();
     for i in 0..2000 {
         let price = normal.sample(&mut rng);
-        let quantity = rng.gen_range(0.1..2.0);
+        let quantity = rng.random_range(0.1..2.0);
         trades.push(make_trade(price, quantity, i * 100, false));
     }
 
@@ -341,7 +341,7 @@ fn test_value_area_70_percent_property() {
 
     // Should be approximately 70% (within 15% tolerance due to discretization)
     assert!(
-        pct >= 0.60 && pct <= 0.85,
+        (0.60..=0.85).contains(&pct),
         "Value area should contain ~70% of volume, got {:.1}%",
         pct * 100.0
     );
@@ -349,16 +349,14 @@ fn test_value_area_70_percent_property() {
 
 #[test]
 fn test_value_area_custom_percentage() {
-    let mut trades = Vec::new();
-
-    // Price 100: 2.0 volume (20%)
-    trades.push(make_trade(100.0, 2.0, 1000, false));
-
-    // Price 101: 5.0 volume (50%) - POC
-    trades.push(make_trade(101.0, 5.0, 2000, false));
-
-    // Price 102: 3.0 volume (30%)
-    trades.push(make_trade(102.0, 3.0, 3000, false));
+    let trades = vec![
+        // Price 100: 2.0 volume (20%)
+        make_trade(100.0, 2.0, 1000, false),
+        // Price 101: 5.0 volume (50%) - POC
+        make_trade(101.0, 5.0, 2000, false),
+        // Price 102: 3.0 volume (30%)
+        make_trade(102.0, 3.0, 3000, false),
+    ];
 
     // 50% value area should only include POC (101)
     let builder = VolumeProfileBuilder::new(1.0).value_area_pct(0.50);
@@ -615,15 +613,15 @@ fn test_realistic_trading_session() {
     use rand::Rng;
     use rand_distr::{Distribution, Normal};
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let normal = Normal::new(100.0, 2.0).unwrap();
 
     let mut trades = Vec::new();
     for i in 0..10_000 {
         let sampled: f64 = normal.sample(&mut rng);
         let price = sampled.clamp(90.0, 110.0);
-        let quantity = rng.gen_range(0.1..5.0);
-        let is_buyer_maker = rng.gen_bool(0.5);
+        let quantity = rng.random_range(0.1..5.0);
+        let is_buyer_maker = rng.random_bool(0.5);
 
         trades.push(Trade {
             trade_id: i,

@@ -14,7 +14,6 @@ use kimsfinance_core::backtest::{
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder, IndicatorSpeed, StreamManager};
 use ndarray::Array1;
-use std::sync::Arc;
 use std::time::Instant;
 
 // ============================================================================
@@ -483,7 +482,7 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
     let result_fp8 = optimizer_fp8
         .optimize(
             &engine,
-            &mut strategy.clone(),
+            &strategy.clone(),
             &timestamps,
             &open,
             &high,
@@ -514,7 +513,7 @@ fn test_fp8_vs_fp64_genetic_optimizer() {
     let result_fp64 = optimizer_fp64
         .optimize(
             &engine,
-            &mut strategy.clone(),
+            &strategy.clone(),
             &timestamps,
             &open,
             &high,

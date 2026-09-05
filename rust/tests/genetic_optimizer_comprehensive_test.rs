@@ -15,20 +15,20 @@
 
 use kimsfinance_core::backtest::*;
 use ndarray::Array1;
-use std::collections::HashMap;
 use std::time::Instant;
 
-/// Generate test OHLCV data
-fn generate_test_data(
-    n: usize,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+/// Generate test OHLCV data
+fn generate_test_data(n: usize) -> OhlcvArrays {
     let timestamps: Vec<i64> = (0..n as i64).map(|i| i * 3600).collect();
     let base = 50000.0;
 

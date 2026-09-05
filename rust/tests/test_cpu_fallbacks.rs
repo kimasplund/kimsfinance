@@ -16,13 +16,10 @@ struct TestStrategy {
 
 impl Strategy for TestStrategy {
     fn on_data(&mut self, _bar: &OHLCVBar, indicators: &HashMap<String, f64>) -> Signal {
-        // Just verify indicators are present
+        // Verify the configured indicator is present on every bar.
         let key = self.indicator.key();
-        if indicators.contains_key(&key) {
-            Signal::Hold
-        } else {
-            Signal::Hold
-        }
+        assert!(indicators.contains_key(&key), "Missing indicator {key}");
+        Signal::Hold
     }
 
     fn indicators(&self) -> Vec<IndicatorConfig> {
@@ -34,17 +31,18 @@ impl Strategy for TestStrategy {
     }
 }
 
-/// Helper to create test OHLCV data
-fn create_test_data(
-    n: usize,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+/// Helper to create test OHLCV data
+fn create_test_data(n: usize) -> OhlcvArrays {
     let timestamps: Vec<i64> = (0..n as i64).map(|i| i * 60).collect();
 
     // Create realistic price data with some volatility

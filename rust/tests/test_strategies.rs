@@ -6,16 +6,17 @@ use kimsfinance_core::backtest::{BacktestEngine, Strategy};
 use kimsfinance_core::strategies::*;
 use ndarray::Array1;
 
-fn generate_test_data(
-    n: usize,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+fn generate_test_data(n: usize) -> OhlcvArrays {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -52,17 +53,7 @@ fn generate_test_data(
     )
 }
 
-fn generate_trending_data(
-    n: usize,
-    trend: f64,
-) -> (
-    Vec<i64>,
-    Array1<f64>,
-    Array1<f64>,
-    Array1<f64>,
-    Array1<f64>,
-    Array1<f64>,
-) {
+fn generate_trending_data(n: usize, trend: f64) -> OhlcvArrays {
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
@@ -136,8 +127,8 @@ fn test_rsi_mean_reversion_backtest() {
 
     assert!(result.is_ok());
     let result = result.unwrap();
-    assert_eq!(result.final_equity >= 0.0, true);
-    assert!(result.equity_curve.len() > 0);
+    assert!(result.final_equity >= 0.0);
+    assert!(!result.equity_curve.is_empty());
 }
 
 #[test]
@@ -268,7 +259,7 @@ fn test_bollinger_expansion() {
     let strategy = volatility::BollingerBandsExpansion::default();
     assert_eq!(strategy.period, 20);
     assert_eq!(strategy.std_dev, 2.0);
-    assert_eq!(strategy.exit_at_middle, true);
+    assert!(strategy.exit_at_middle);
 }
 
 #[test]

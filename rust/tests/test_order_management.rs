@@ -3,7 +3,7 @@
 //! Tests all 12+ order types and complex order scenarios
 
 use kimsfinance_core::backtest::{
-    Fill, MarketSnapshot, MatchingEngine, OHLCVBar, Order, OrderGroup, OrderSide, OrderStatus,
+    MarketSnapshot, MatchingEngine, OHLCVBar, Order, OrderSide, OrderStatus,
     OrderType, TimeInForce,
 };
 
@@ -57,7 +57,7 @@ fn test_limit_order_buy() {
     assert_eq!(order.status, OrderStatus::Pending);
 
     // Price below limit - should fill
-    let mut bar2 = create_test_bar(2000, 49800.0, 100.0, 49800.0, 50000.0);
+    let bar2 = create_test_bar(2000, 49800.0, 100.0, 49800.0, 50000.0);
     let market2 = MarketSnapshot::new(2000, bar2);
     let fills2 = engine.match_orders(&market2);
 
@@ -70,7 +70,7 @@ fn test_limit_order_sell() {
     let mut engine = MatchingEngine::new();
     let order = Order::limit(0, "BTC/USD".to_string(), OrderSide::Sell, 1.0, 50100.0);
 
-    let order_id = engine.submit_order(order);
+    let _order_id = engine.submit_order(order);
 
     // Price below limit - should not fill
     let market1 = create_market_snapshot(1000, 50000.0, 100.0);
@@ -78,7 +78,7 @@ fn test_limit_order_sell() {
     assert_eq!(fills1.len(), 0);
 
     // Price above limit - should fill
-    let mut bar2 = create_test_bar(2000, 50200.0, 100.0, 50000.0, 50200.0);
+    let bar2 = create_test_bar(2000, 50200.0, 100.0, 50000.0, 50200.0);
     let market2 = MarketSnapshot::new(2000, bar2);
     let fills2 = engine.match_orders(&market2);
 
@@ -99,7 +99,7 @@ fn test_stop_order() {
     assert_eq!(fills1.len(), 0);
 
     // Price hits stop - should trigger and fill
-    let mut bar2 = create_test_bar(2000, 48900.0, 100.0, 48900.0, 50000.0);
+    let bar2 = create_test_bar(2000, 48900.0, 100.0, 48900.0, 50000.0);
     let market2 = MarketSnapshot::new(2000, bar2);
     let fills2 = engine.match_orders(&market2);
 
@@ -129,7 +129,7 @@ fn test_stop_limit_order() {
     assert_eq!(fills1.len(), 0);
 
     // Price hits stop but doesn't reach limit - triggers but doesn't fill
-    let mut bar2 = create_test_bar(2000, 48800.0, 100.0, 48800.0, 48850.0);
+    let bar2 = create_test_bar(2000, 48800.0, 100.0, 48800.0, 48850.0);
     let market2 = MarketSnapshot::new(2000, bar2);
     let fills2 = engine.match_orders(&market2);
 
@@ -138,7 +138,7 @@ fn test_stop_limit_order() {
     assert_eq!(fills2.len(), 0);
 
     // Price reaches limit - should fill
-    let mut bar3 = create_test_bar(3000, 48800.0, 100.0, 48800.0, 49500.0);
+    let bar3 = create_test_bar(3000, 48800.0, 100.0, 48800.0, 49500.0);
     let market3 = MarketSnapshot::new(3000, bar3);
     let fills3 = engine.match_orders(&market3);
 
@@ -175,7 +175,7 @@ fn test_trailing_stop_sell() {
     assert_eq!(order.trailing_high_water_mark, Some(52000.0));
 
     // Price drops below trail - should trigger and fill
-    let mut bar3 = create_test_bar(3000, 49000.0, 100.0, 49000.0, 52000.0);
+    let bar3 = create_test_bar(3000, 49000.0, 100.0, 49000.0, 52000.0);
     let market3 = MarketSnapshot::new(3000, bar3);
     let fills = engine.match_orders(&market3);
 
@@ -208,7 +208,7 @@ fn test_trailing_stop_buy() {
     assert_eq!(order.trailing_high_water_mark, Some(48000.0));
 
     // Price rises above trail - should trigger
-    let mut bar3 = create_test_bar(3000, 49500.0, 100.0, 48000.0, 49500.0);
+    let bar3 = create_test_bar(3000, 49500.0, 100.0, 48000.0, 49500.0);
     let market3 = MarketSnapshot::new(3000, bar3);
     let fills = engine.match_orders(&market3);
 
@@ -224,7 +224,7 @@ fn test_market_on_open() {
     let mut order = order;
     order.order_type = OrderType::MarketOnOpen;
 
-    let order_id = engine.submit_order(order);
+    let _order_id = engine.submit_order(order);
 
     // Regular bar - should not fill
     let market1 = create_market_snapshot(1000, 50000.0, 100.0);
@@ -247,7 +247,7 @@ fn test_market_on_close() {
     let mut order = order;
     order.order_type = OrderType::MarketOnClose;
 
-    let order_id = engine.submit_order(order);
+    let _order_id = engine.submit_order(order);
 
     // Regular bar - should not fill
     let market1 = create_market_snapshot(1000, 50000.0, 100.0);
@@ -270,7 +270,7 @@ fn test_iceberg_order() {
     let order_id = engine.submit_order(order);
 
     // First fill - should only fill visible quantity (2.0)
-    let mut bar1 = create_test_bar(1000, 49900.0, 100.0, 49900.0, 50100.0);
+    let bar1 = create_test_bar(1000, 49900.0, 100.0, 49900.0, 50100.0);
     let market1 = MarketSnapshot::new(1000, bar1);
     let fills1 = engine.match_orders(&market1);
 
@@ -298,13 +298,13 @@ fn test_twap_order() {
     // At t=5 (50%), should execute ~50
     let market2 = create_market_snapshot(5, 50100.0, 1000.0);
     let fills2 = engine.match_orders(&market2);
-    assert!(fills2.len() > 0);
+    assert!(!fills2.is_empty());
     assert!(fills2[0].quantity > 45.0 && fills2[0].quantity < 55.0);
 
     // At t=10 (100%), should execute remaining
     let market3 = create_market_snapshot(10, 50200.0, 1000.0);
     let fills3 = engine.match_orders(&market3);
-    assert!(fills3.len() > 0);
+    assert!(!fills3.is_empty());
 
     let order = engine.get_order(order_id).unwrap();
     assert_eq!(order.status, OrderStatus::Filled);

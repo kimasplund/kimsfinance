@@ -40,8 +40,7 @@
 //! - **Genetic Opt**: 10-20x vs sequential
 
 use kimsfinance_core::backtest::{
-    BacktestConfig, GeneticOptimizer, IntraCandleMomentum, OrderFlowStrategy, ParameterGrid,
-    ParameterRange, TickEngine, TickStrategy,
+    BacktestConfig, IntraCandleMomentum, OrderFlowStrategy, TickEngine, TickStrategy,
 };
 use kimsfinance_core::binance::{Timeframe, Trade};
 use std::time::Instant;
@@ -55,7 +54,7 @@ const MIN_SPEEDUP_TARGET: f64 = 5.0;
 /// Generate synthetic test data (fallback when real data unavailable)
 fn generate_test_trades(n: usize) -> Vec<Trade> {
     use rand::Rng;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let base_price = 45000.0;
     let mut current_price = base_price;
@@ -63,10 +62,10 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
 
     (0..n)
         .map(|i| {
-            let change = rng.gen_range(-0.0001..0.0001);
+            let change = rng.random_range(-0.0001..0.0001);
             current_price *= 1.0 + change;
 
-            let quantity = rng.gen_range(0.001..1.0);
+            let quantity = rng.random_range(0.001..1.0);
             let quote_quantity = current_price * quantity;
 
             Trade {
@@ -75,7 +74,7 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
                 quantity,
                 quote_quantity,
                 timestamp_ms: base_timestamp + (i as i64),
-                is_buyer_maker: rng.gen_bool(0.5),
+                is_buyer_maker: rng.random_bool(0.5),
             }
         })
         .collect()

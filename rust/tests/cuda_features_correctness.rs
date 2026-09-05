@@ -115,7 +115,7 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
     let result_fp8 = optimizer_fp8
         .optimize(
             &engine,
-            &mut strategy.clone(),
+            &strategy.clone(),
             &timestamps,
             &open,
             &high,
@@ -135,7 +135,7 @@ fn test_fp8_vs_fp64_genetic_optimizer_convergence() {
     let result_fp64 = optimizer_fp64
         .optimize(
             &engine,
-            &mut strategy.clone(),
+            &strategy.clone(),
             &timestamps,
             &open,
             &high,
@@ -292,18 +292,18 @@ fn test_async_allocator_vs_standard_same_behavior() {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/// Generate deterministic test OHLCV data with seed
-fn generate_test_data_deterministic(
-    n: usize,
-    seed: u64,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+/// Generate deterministic test OHLCV data with seed
+fn generate_test_data_deterministic(n: usize, seed: u64) -> OhlcvArrays {
     use std::collections::hash_map::RandomState;
     use std::hash::{BuildHasher, Hash, Hasher};
 

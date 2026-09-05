@@ -11,7 +11,6 @@ use kimsfinance_core::backtest::{
     ParameterGrid, ParameterRange, Signal, Strategy,
 };
 use ndarray::Array1;
-use std::collections::HashMap;
 
 /// Simple RSI strategy with tunable parameters
 #[derive(Debug, Clone)]
@@ -50,17 +49,18 @@ impl Strategy for TunableRSIStrategy {
     }
 }
 
-/// Generate synthetic oscillating price data
-fn generate_test_data(
-    n: usize,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+/// Generate synthetic oscillating price data
+fn generate_test_data(n: usize) -> OhlcvArrays {
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
@@ -141,7 +141,7 @@ fn test_genetic_optimizer_basic() {
     let engine = BacktestEngine::with_config(config);
 
     // Dummy strategy (parameters will be overridden by optimizer)
-    let mut strategy = TunableRSIStrategy {
+    let strategy = TunableRSIStrategy {
         rsi_period: 14,
         buy_threshold: 30.0,
         sell_threshold: 70.0,
@@ -152,7 +152,7 @@ fn test_genetic_optimizer_basic() {
     let result = optimizer
         .optimize(
             &engine,
-            &mut strategy,
+            &strategy,
             &timestamps,
             &open,
             &high,
@@ -254,7 +254,7 @@ fn test_fp8_fp64_quality_comparison() {
     };
     let engine = BacktestEngine::with_config(config);
 
-    let mut strategy = TunableRSIStrategy {
+    let strategy = TunableRSIStrategy {
         rsi_period: 14,
         buy_threshold: 30.0,
         sell_threshold: 70.0,
@@ -270,7 +270,7 @@ fn test_fp8_fp64_quality_comparison() {
     let result_fp8 = optimizer_fp8
         .optimize(
             &engine,
-            &mut strategy,
+            &strategy,
             &timestamps,
             &open,
             &high,
@@ -293,7 +293,7 @@ fn test_fp8_fp64_quality_comparison() {
     let result_fp64 = optimizer_fp64
         .optimize(
             &engine,
-            &mut strategy,
+            &strategy,
             &timestamps,
             &open,
             &high,
@@ -340,7 +340,7 @@ fn test_optimizer_convergence() {
     };
     let engine = BacktestEngine::with_config(config);
 
-    let mut strategy = TunableRSIStrategy {
+    let strategy = TunableRSIStrategy {
         rsi_period: 14,
         buy_threshold: 30.0,
         sell_threshold: 70.0,
@@ -355,7 +355,7 @@ fn test_optimizer_convergence() {
     let result = optimizer
         .optimize(
             &engine,
-            &mut strategy,
+            &strategy,
             &timestamps,
             &open,
             &high,
@@ -459,7 +459,7 @@ fn test_optimizer_with_empty_grid() {
     let config = BacktestConfig::default();
     let engine = BacktestEngine::with_config(config);
 
-    let mut strategy = TunableRSIStrategy {
+    let strategy = TunableRSIStrategy {
         rsi_period: 14,
         buy_threshold: 30.0,
         sell_threshold: 70.0,
@@ -469,7 +469,7 @@ fn test_optimizer_with_empty_grid() {
 
     let result = optimizer.optimize(
         &engine,
-        &mut strategy,
+        &strategy,
         &timestamps,
         &open,
         &high,
@@ -504,7 +504,7 @@ fn test_optimizer_custom_parameters() {
     let config = BacktestConfig::default();
     let engine = BacktestEngine::with_config(config);
 
-    let mut strategy = TunableRSIStrategy {
+    let strategy = TunableRSIStrategy {
         rsi_period: 14,
         buy_threshold: 30.0,
         sell_threshold: 70.0,
@@ -523,7 +523,7 @@ fn test_optimizer_custom_parameters() {
     let result = optimizer
         .optimize(
             &engine,
-            &mut strategy,
+            &strategy,
             &timestamps,
             &open,
             &high,
