@@ -78,9 +78,7 @@ def download_data():
         if all_dfs:
             final_df = pd.concat(all_dfs, ignore_index=True)
             # Convert timestamp from ms to datetime
-            final_df["open_time"] = pd.to_numeric(
-                final_df["open_time"], errors="coerce"
-            )
+            final_df["open_time"] = pd.to_numeric(final_df["open_time"], errors="coerce")
             final_df.dropna(subset=["open_time"], inplace=True)
             # If timestamp is in microseconds (e.g. 2026 data), convert to milliseconds
             final_df.loc[final_df["open_time"] > 3000000000000, "open_time"] /= 1000
