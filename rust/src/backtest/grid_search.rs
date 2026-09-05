@@ -85,11 +85,10 @@
 
 #[cfg(feature = "gpu")]
 use super::batch::{BatchBacktestSweep, StrategyType};
-use super::core::ParameterGrid;
-#[cfg(feature = "gpu")]
-use super::core::ParameterRange;
+use super::core::{ParameterGrid, ParameterRange};
 use super::engine::BacktestConfig;
 use super::optimizer::OptimizerResult;
+#[cfg(feature = "gpu")]
 use std::time::Instant;
 #[cfg(feature = "gpu")]
 use crate::gpu::GpuError;
@@ -390,7 +389,9 @@ impl GridSearchOptimizer {
     ///
     /// Order of parameters matches HashMap iteration order (unstable). For consistent
     /// parameter ordering, use sorted keys.
-    #[cfg(feature = "gpu")]
+    // Pure CPU logic; only the GPU `optimize` path calls it in production, but the unit tests
+    // exercise it on every build.
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
     fn generate_all_combinations(&self, grid: &ParameterGrid) -> Vec<Vec<f64>> {
         if grid.is_empty() {
             return vec![vec![]];

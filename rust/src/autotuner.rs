@@ -89,6 +89,7 @@ use std::sync::OnceLock;
 
 
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "gpu")]
 use ndarray::Array1;
 
 #[cfg(feature = "gpu")]

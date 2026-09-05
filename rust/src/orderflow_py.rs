@@ -40,8 +40,11 @@
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+#[cfg(feature = "gpu")]
 use pyo3::types::PyDict;
+#[cfg(feature = "gpu")]
 use numpy::{PyArray2, PyReadonlyArray1};
+#[cfg(feature = "gpu")]
 use std::sync::Arc;
 
 #[cfg(feature = "gpu")]
