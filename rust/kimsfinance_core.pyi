@@ -8,11 +8,21 @@ This module provides high-performance Rust implementations for:
 - GPU-accelerated backtesting (20-40x speedup)
 - Tick-level event-driven backtesting
 - GPU tick aggregation
+- 35 candlestick patterns (single-series and batch)
+- GPU orderflow feature extraction and signal generation
+
+Feature-gated exports (present only when the extension was built with the
+named Cargo feature): 'gpu' -> calculate_stochastic_gpu, batch_backtest,
+batch_backtest_info, BacktestResult, GridSearchOptimizer, GridSearchResult,
+EulerSearchOptimizer, EulerSearchResult, GpuTickAggregator, AggregatedCandles,
+gpu_available, gpu_info; 'data-downloaders' -> load_parquet_file_py,
+load_parquet_month_py. The orderflow classes exist in every build but are
+placeholders that raise RuntimeError without 'gpu'.
 
 All functions accept NumPy arrays and return NumPy arrays or dictionaries.
 """
 
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -291,6 +301,7 @@ def calculate_stochastic(
     """
     ...
 
+# Requires the 'gpu' feature; absent from CPU-only builds.
 def calculate_stochastic_gpu(
     high: npt.NDArray[np.float64],
     low: npt.NDArray[np.float64],
@@ -894,7 +905,7 @@ class TickBacktestEngine:
     def __repr__(self) -> str: ...
 
 # ============================================================================
-# GPU TICK AGGREGATION
+# GPU TICK AGGREGATION (requires 'gpu' feature; absent from CPU-only builds)
 # ============================================================================
 
 class AggregatedCandles:
@@ -1006,7 +1017,7 @@ def gpu_info() -> Dict[str, Any]:
     ...
 
 # ============================================================================
-# GPU BATCH BACKTESTING
+# GPU BATCH BACKTESTING (requires 'gpu' feature; absent from CPU-only builds)
 # ============================================================================
 
 class BacktestResult:
@@ -1124,7 +1135,7 @@ def batch_backtest_info() -> Dict[str, Any]:
     ...
 
 # ============================================================================
-# GPU PARAMETER OPTIMIZERS (requires 'gpu' feature)
+# GPU PARAMETER OPTIMIZERS (requires 'gpu' feature; absent from CPU-only builds)
 # ============================================================================
 
 class GridSearchOptimizer:
@@ -1405,10 +1416,222 @@ class EulerSearchResult:
     def __repr__(self) -> str: ...
 
 # ============================================================================
-# PARQUET DATA LOADER (requires 'data-downloaders' feature)
+# CANDLESTICK PATTERN RECOGNITION (35 patterns)
 # ============================================================================
 
-def load_parquet_file(parquet_path: str) -> List[Dict[str, Any]]:
+def recognize_candlestick_patterns(
+    open: npt.NDArray[np.float64],
+    high: npt.NDArray[np.float64],
+    low: npt.NDArray[np.float64],
+    close: npt.NDArray[np.float64],
+    volume: npt.NDArray[np.float64],
+    doji_threshold: float = 0.05,
+    shadow_ratio: float = 2.0,
+    body_threshold: float = 0.6,
+    use_volume: bool = True,
+    min_confidence: float = 0.5,
+) -> List[Dict[str, Any]]:
+    """
+    Recognize candlestick patterns in a single OHLCV series.
+
+    Args:
+        open, high, low, close, volume: Price/volume arrays of equal length (float64)
+        doji_threshold: Max body/range ratio to classify a candle as a doji (default: 0.05)
+        shadow_ratio: Min shadow/body ratio for hammer-style patterns (default: 2.0)
+        body_threshold: Min body/range ratio for a "strong" candle (default: 0.6)
+        use_volume: Require volume confirmation where a pattern defines it (default: True)
+        min_confidence: Drop detections below this confidence (default: 0.5)
+
+    Returns:
+        List of detections, one dict each with keys:
+        ``pattern`` (str), ``index`` (int, last candle of the pattern),
+        ``confidence`` (float, 0-1), ``candles_used`` (int),
+        ``type`` ("bullish" | "bearish" | "neutral")
+
+    Example:
+        >>> hits = recognize_candlestick_patterns(o, h, l, c, v, min_confidence=0.7)
+        >>> [d["pattern"] for d in hits if d["type"] == "bullish"]
+    """
+    ...
+
+def recognize_candlestick_patterns_batch(
+    open_batch: List[npt.NDArray[np.float64]],
+    high_batch: List[npt.NDArray[np.float64]],
+    low_batch: List[npt.NDArray[np.float64]],
+    close_batch: List[npt.NDArray[np.float64]],
+    volume_batch: List[npt.NDArray[np.float64]],
+    doji_threshold: float = 0.05,
+    shadow_ratio: float = 2.0,
+    body_threshold: float = 0.6,
+    use_volume: bool = True,
+    min_confidence: float = 0.5,
+) -> List[List[Dict[str, Any]]]:
+    """
+    Recognize candlestick patterns for many securities in one call.
+
+    Each ``*_batch`` argument is a list with one array per security; all five
+    lists must have the same length (ValueError otherwise).
+
+    Returns:
+        One list of detection dicts per security, in input order. Each dict has the
+        same keys as ``recognize_candlestick_patterns``.
+    """
+    ...
+
+def get_candlestick_patterns() -> Dict[str, str]:
+    """
+    List every supported pattern.
+
+    Returns:
+        Mapping of pattern name -> "bullish" | "bearish" | "neutral".
+    """
+    ...
+
+def filter_patterns_by_type(
+    patterns: List[Dict[str, Any]],
+    pattern_type: str,
+) -> List[Dict[str, Any]]:
+    """
+    Keep only the detections whose ``type`` equals ``pattern_type``
+    ("bullish", "bearish" or "neutral").
+    """
+    ...
+
+def get_pattern_statistics(patterns: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Summarise a list of detections.
+
+    Returns:
+        Dict with keys ``total``, ``bullish``, ``bearish``, ``neutral`` (int),
+        ``avg_confidence`` (float, 0.0 when empty) and ``pattern_counts``
+        (Dict[str, int], detections per pattern name).
+    """
+    ...
+
+# ============================================================================
+# ORDERFLOW ANALYSIS (GPU fused kernel; requires 'gpu' feature at runtime)
+# ============================================================================
+# These three classes and orderflow_gpu_available() are exported by every build.
+# In a build without the 'gpu' feature the classes are placeholders whose
+# constructors raise RuntimeError("GPU feature not enabled. Rebuild with
+# --features gpu") and orderflow_gpu_available() always returns False.
+
+class StrategyConfig:
+    """
+    Orderflow strategy configuration with INT8 quantization ranges.
+
+    Six features are extracted per tick (buy/sell imbalance, volume delta,
+    trade intensity, price velocity, volume velocity, cumulative volume delta);
+    ``feature_mins`` / ``feature_maxs`` give the per-feature range used to
+    quantize them to 0-255.
+
+    Attributes:
+        strategy_type: One of "momentum", "mean_reversion", "breakout",
+            "scalping", "trend_following"
+        feature_mins: Six per-feature minimums
+        feature_maxs: Six per-feature maximums
+    """
+
+    strategy_type: str
+    feature_mins: List[float]
+    feature_maxs: List[float]
+
+    def __init__(
+        self,
+        strategy_type: str,
+        feature_mins: Sequence[float],
+        feature_maxs: Sequence[float],
+    ) -> None:
+        """Create a custom config; both range sequences must have exactly 6 entries."""
+        ...
+    @staticmethod
+    def momentum() -> StrategyConfig: ...
+    @staticmethod
+    def mean_reversion() -> StrategyConfig: ...
+    @staticmethod
+    def breakout() -> StrategyConfig: ...
+    @staticmethod
+    def scalping() -> StrategyConfig: ...
+    @staticmethod
+    def trend_following() -> StrategyConfig: ...
+    def __repr__(self) -> str: ...
+
+class OrderflowResult:
+    """
+    Signals and quantized features produced by ``OrderflowProcessor.process_batch``.
+
+    Attributes:
+        signals: int8 array of shape [num_strategies, num_ticks], values -1 / 0 / 1
+        features: int8 array of shape [num_strategies, num_ticks * 6] (quantized 0-255,
+            reshape a row with ``.reshape(-1, 6)``)
+        num_strategies: Number of strategies processed
+        num_ticks: Number of ticks processed
+    """
+
+    signals: npt.NDArray[np.int8]
+    features: npt.NDArray[np.int8]
+    num_strategies: int
+    num_ticks: int
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Dict with keys signals, features, num_strategies, num_ticks."""
+        ...
+    def __repr__(self) -> str: ...
+
+class OrderflowProcessor:
+    """
+    GPU orderflow processor: extracts 6 features per tick and evaluates several
+    strategies in a single fused CUDA kernel.
+    """
+
+    def __init__(self) -> None:
+        """Acquire the GPU device. Raises RuntimeError if no device (or no 'gpu' feature)."""
+        ...
+    def is_gpu_available(self) -> bool: ...
+    def calibrate_ranges(
+        self,
+        timestamps: npt.NDArray[np.int64],
+        close_prices: npt.NDArray[np.float32],
+        volumes: npt.NDArray[np.float32],
+        buy_volumes: npt.NDArray[np.float32],
+        sell_volumes: npt.NDArray[np.float32],
+    ) -> List[float]:
+        """
+        Compute per-feature quantization ranges from historical ticks.
+
+        All arrays must have the same non-zero length (timestamps in milliseconds).
+
+        Returns:
+            12 floats: [min_0, max_0, min_1, max_1, ..., min_5, max_5]
+        """
+        ...
+    def process_batch(
+        self,
+        timestamps: npt.NDArray[np.int64],
+        close_prices: npt.NDArray[np.float32],
+        volumes: npt.NDArray[np.float32],
+        buy_volumes: npt.NDArray[np.float32],
+        sell_volumes: npt.NDArray[np.float32],
+        strategies: List[StrategyConfig],
+    ) -> OrderflowResult:
+        """
+        Run feature extraction + signal generation for every strategy.
+
+        All arrays must have the same non-zero length; ``strategies`` must be non-empty.
+        """
+        ...
+    def __repr__(self) -> str: ...
+
+def orderflow_gpu_available() -> bool:
+    """True if the module was built with the 'gpu' feature and a CUDA device can be opened."""
+    ...
+
+# ============================================================================
+# PARQUET DATA LOADER (requires 'data-downloaders' feature)
+# Absent from builds without that feature (the default wheel does not include it).
+# ============================================================================
+
+def load_parquet_file_py(parquet_path: str) -> List[Dict[str, Any]]:
     """
     Load tick data from a single Parquet file (zero-copy Arrow-based).
 
@@ -1422,14 +1645,14 @@ def load_parquet_file(parquet_path: str) -> List[Dict[str, Any]]:
         10-20M records/sec (zero-copy Arrow-based loader)
 
     Example:
-        >>> trades = load_parquet_file(
+        >>> trades = load_parquet_file_py(
         ...     "/data/trades_parquet/2024-01/BTCUSDT-trades-2024-01-01.parquet"
         ... )
         >>> print(f"Loaded {len(trades)} trades")
     """
     ...
 
-def load_parquet_month(
+def load_parquet_month_py(
     month_dir: str,
     max_trades: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
@@ -1448,9 +1671,9 @@ def load_parquet_month(
 
     Example:
         >>> # Load full month
-        >>> trades = load_parquet_month("/data/trades_parquet/2024-01")
+        >>> trades = load_parquet_month_py("/data/trades_parquet/2024-01")
         >>>
         >>> # Load first 1M trades only (for testing)
-        >>> trades = load_parquet_month("/data/trades_parquet/2024-01", max_trades=1_000_000)
+        >>> trades = load_parquet_month_py("/data/trades_parquet/2024-01", max_trades=1_000_000)
     """
     ...

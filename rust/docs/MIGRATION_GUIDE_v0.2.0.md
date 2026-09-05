@@ -545,7 +545,7 @@ cargo bench --features gpu --bench cpu_gpu_hybrid_benchmark -- EMA
 **Documentation**:
 - [CPU-GPU Hybrid Strategy](./CPU_GPU_HYBRID_STRATEGY.md) - Technical details
 - [CHANGELOG](../CHANGELOG.md) - Complete v0.2.0 changelog
-- [API Reference](./API.md) - Updated API documentation
+- [API Reference](./PYTHON_BINDINGS.md) - Python bindings reference (see also [../kimsfinance_core.pyi](../kimsfinance_core.pyi))
 
 **Benchmarks**:
 - [Hybrid Benchmark Report](./reports/HYBRID_BENCHMARK_REPORT.md) - Detailed performance analysis

@@ -586,7 +586,7 @@ cargo bench --features heston --no-run # Benchmark compilation
 
 ## License
 
-MIT License - See [LICENSE](../LICENSE) file
+AGPL-3.0-or-later - See [LICENSE](../../LICENSE) for the full terms. kimsfinance is dual-licensed: see [LICENSING.md](../../LICENSING.md) for the AGPL/commercial split and [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md) for proprietary or network-service use.
 
 ---
 
