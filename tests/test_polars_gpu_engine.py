@@ -16,22 +16,7 @@ import polars as pl
 import numpy as np
 
 
-def check_gpu_available() -> bool:
-    """
-    Check if Polars GPU engine is available.
-
-    Returns:
-        bool: True if GPU engine works, False otherwise
-    """
-    try:
-        test_df = pl.LazyFrame({"test": [1, 2, 3]})
-        test_df.collect(engine="gpu")
-        return True
-    except Exception:
-        return False
-
-
-GPU_AVAILABLE = check_gpu_available()
+from _gpu import POLARS_GPU_AVAILABLE as GPU_AVAILABLE, requires_polars_gpu
 
 
 def generate_test_data(n_rows: int = 1000) -> pl.LazyFrame:
@@ -56,7 +41,7 @@ def test_gpu_detection():
     assert isinstance(GPU_AVAILABLE, bool)
 
 
-@pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 def test_gpu_engine_basic():
     """Test basic GPU engine functionality."""
     lf = pl.LazyFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -67,7 +52,7 @@ def test_gpu_engine_basic():
     assert result["b"].to_list() == [4, 5, 6]
 
 
-@pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 def test_gpu_engine_groupby():
     """Test GPU engine with groupby aggregations."""
     lf = generate_test_data(n_rows=1000)
@@ -115,7 +100,7 @@ def test_cpu_fallback():
     assert result["a"].to_list() == [1, 2, 3]
 
 
-@pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 def test_gpu_engine_complex_aggregation():
     """Test GPU engine with complex aggregations."""
     lf = generate_test_data(n_rows=10000)
@@ -141,7 +126,7 @@ def test_gpu_engine_complex_aggregation():
     assert result["count"].sum() == 10000
 
 
-@pytest.mark.skipif(not GPU_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 def test_gpu_engine_performance():
     """Test GPU engine performance vs CPU (informational)."""
     import time

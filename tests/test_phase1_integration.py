@@ -72,15 +72,7 @@ def generate_ohlcv_data(
     }
 
 
-def gpu_available() -> bool:
-    """Check if GPU is available."""
-    try:
-        import cupy
-
-        cupy.cuda.runtime.getDeviceCount()
-        return True
-    except (ImportError, Exception):
-        return False
+from _gpu import POLARS_GPU_AVAILABLE, requires_polars_gpu
 
 
 class TestPhase1Integration:
@@ -331,7 +323,7 @@ class TestPhase1Integration:
 
         print("✓ All indicators completed in reasonable time")
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_acceleration_works(self):
         """Test GPU acceleration for all indicators."""
         from kimsfinance.ops import (
@@ -551,7 +543,7 @@ if __name__ == "__main__":
         test_suite.test_all_indicators_handle_edge_cases()
         test_suite.test_performance_relative_comparison()
 
-        if gpu_available():
+        if POLARS_GPU_AVAILABLE:
             test_suite.test_gpu_acceleration_works()
         else:
             print("\n⚠ Skipping GPU tests (GPU not available)")

@@ -50,9 +50,44 @@ try:
         batch_backtest_info as _batch_backtest_info_rs,
     )
 
-    GPU_AVAILABLE = True
+    _BINDINGS_AVAILABLE = True
 except ImportError:
-    GPU_AVAILABLE = False
+    _BINDINGS_AVAILABLE = False
+
+_gpu_available_cache: Optional[bool] = None
+
+
+def _probe_gpu_available() -> bool:
+    """Return True only when the Rust batch bindings can reach a usable CUDA device.
+
+    Importable bindings are not enough: with the CUDA wheels installed but no
+    usable device (driver needs a reset, ``CUDA_VISIBLE_DEVICES=""``, ...) every
+    ``batch_backtest`` call raises ``RuntimeError``. The answer is cached after the
+    first probe so it matches what ``get_gpu_info()["gpu_available"]`` reports.
+    """
+    global _gpu_available_cache
+    if _gpu_available_cache is None:
+        if not _BINDINGS_AVAILABLE:
+            _gpu_available_cache = False
+        else:
+            try:
+                _gpu_available_cache = bool(
+                    dict(_batch_backtest_info_rs()).get("gpu_available", False)
+                )
+            except Exception:
+                _gpu_available_cache = False
+    return _gpu_available_cache
+
+
+def __getattr__(name: str) -> bool:
+    # PEP 562: ``GPU_AVAILABLE`` stays importable as a module constant
+    # (``from kimsfinance.batch import GPU_AVAILABLE``) but is probed on first
+    # access rather than at import time, so importing this module never creates
+    # a CUDA context as a side effect (that would break fork-based multiprocessing
+    # such as GeneticOptimizer's island model).
+    if name == "GPU_AVAILABLE":
+        return _probe_gpu_available()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass
@@ -75,7 +110,7 @@ def get_gpu_info() -> Dict[str, Union[bool, str, float]]:
 
     Returns:
         Dictionary with keys:
-            - gpu_available: bool
+            - gpu_available: bool (consistent with the module's ``GPU_AVAILABLE``)
             - gpu_name: str (if available)
             - cuda_version: str (if available)
             - vram_gb: int (if available)
@@ -88,13 +123,15 @@ def get_gpu_info() -> Dict[str, Union[bool, str, float]]:
         ...     print(f"GPU: {info['gpu_name']}")
         ...     print(f"Expected speedup: {info['expected_speedup']:.0f}x")
     """
-    if not GPU_AVAILABLE:
+    if not _BINDINGS_AVAILABLE:
         return {
             "gpu_available": False,
             "error": "GPU feature not compiled. Install with: pip install kimsfinance[gpu]",
             "expected_speedup": 1.0,
         }
 
+    # The Rust side reports gpu_available=False plus an error string when the
+    # bindings are present but no CUDA device can be initialised.
     return dict(_batch_backtest_info_rs())
 
 
@@ -174,10 +211,12 @@ def batch_backtest(
         >>> print(f"Best Sharpe: {best['sharpe_ratio']:.2f}")
         >>> print(f"Parameters: {best['params']}")
     """
-    if not GPU_AVAILABLE:
+    if not _BINDINGS_AVAILABLE:
         raise ImportError(
-            "GPU batch backtesting not available. " "Install with: pip install kimsfinance[gpu]"
+            "GPU batch backtesting not available. Install with: pip install kimsfinance[gpu]"
         )
+    # With the bindings present but no usable device the Rust call below raises
+    # RuntimeError("Failed to initialize GPU: ...") - see get_gpu_info()["error"].
 
     # Validate inputs
     if not parameters:

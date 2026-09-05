@@ -21,7 +21,11 @@ import pandas as pd
 import time
 from typing import List, Dict
 
+from _backtesters import BatchBacktester
+
 try:
+    # GPU_AVAILABLE is device-based (see kimsfinance.batch): False when the
+    # bindings import but no CUDA device can be initialised.
     from kimsfinance.batch import batch_backtest, BacktestConfig, get_gpu_info, GPU_AVAILABLE
     from kimsfinance.optimization.genetic import GeneticOptimizer
 
@@ -274,6 +278,7 @@ class TestE2EPipeline:
             pytest.skip(f"Slower than expected: {elapsed_ms:.1f}ms (target: <1000ms)")
 
 
+@pytest.mark.skipif(not DEAP_AVAILABLE, reason="deap package not installed")
 class TestGeneticOptimizationE2E:
     """Test genetic optimizer with GPU batch evaluation."""
 
@@ -293,12 +298,13 @@ class TestGeneticOptimizationE2E:
         )
 
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=False
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=False
         )
 
-        # Should find Pareto-optimal solutions
+        # Should find Pareto-optimal solutions. The returned front comes from a
+        # DEAP ParetoFront hall of fame accumulated over all generations, so it
+        # is not bounded by population_size.
         assert len(results) > 0
-        assert len(results) <= 20  # At most population size
 
         # Best solution should have reasonable metrics
         best = results[0]
@@ -325,7 +331,7 @@ class TestGeneticOptimizationE2E:
 
         start = time.time()
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=False
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=False
         )
         elapsed = time.time() - start
 
@@ -358,7 +364,7 @@ class TestGeneticOptimizationE2E:
 
         start = time.time()
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=True
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=True
         )
         elapsed = time.time() - start
 

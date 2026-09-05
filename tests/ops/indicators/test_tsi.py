@@ -31,14 +31,7 @@ from kimsfinance.ops.indicators.moving_averages import calculate_ema
 from kimsfinance.core import EngineManager
 from kimsfinance.core.exceptions import ConfigurationError
 
-# Check if GPU is available
-try:
-    import cupy as cp
-
-    CUPY_AVAILABLE = True
-except ImportError:
-    CUPY_AVAILABLE = False
-
+from _gpu import requires_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -696,7 +689,7 @@ class TestTSIParameterValidation:
 class TestTSIGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_small_data(self, sample_data):
         """Test GPU and CPU produce identical results on small dataset."""
         # CPU calculation
@@ -708,7 +701,7 @@ class TestTSIGPUCPU:
         # Should match within floating point tolerance
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_large_data(self, large_data):
         """Test GPU and CPU produce identical results on large dataset."""
         # CPU calculation
@@ -720,7 +713,7 @@ class TestTSIGPUCPU:
         # Should match within floating point tolerance
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_custom_parameters(self, sample_data):
         """Test GPU and CPU match with custom parameters."""
         # CPU calculation
@@ -732,7 +725,7 @@ class TestTSIGPUCPU:
         # Should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_trending_data(self, trending_up_data):
         """Test GPU and CPU match on trending data."""
         # CPU calculation
@@ -744,7 +737,7 @@ class TestTSIGPUCPU:
         # Should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_oscillating_data(self, oscillating_data):
         """Test GPU and CPU match on oscillating data."""
         # CPU calculation
@@ -756,7 +749,7 @@ class TestTSIGPUCPU:
         # Should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_fast_periods(self, sample_data):
         """Test GPU and CPU match with fast periods."""
         # CPU calculation
@@ -768,7 +761,7 @@ class TestTSIGPUCPU:
         # Should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_slow_periods(self):
         """Test GPU and CPU match with slow periods."""
         np.random.seed(42)
@@ -795,7 +788,7 @@ class TestTSIGPUCPU:
         # Results should match (auto may use GPU or CPU)
         np.testing.assert_allclose(tsi_auto, tsi_cpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_handles_nan_like_cpu(self):
         """Test that GPU handles NaN values same as CPU."""
         np.random.seed(42)
@@ -811,7 +804,7 @@ class TestTSIGPUCPU:
         # Non-NaN values should match
         np.testing.assert_allclose(tsi_cpu, tsi_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_reproducible(self, sample_data):
         """Test that GPU calculation is reproducible."""
         # Calculate twice
@@ -852,7 +845,7 @@ class TestTSIPerformance:
         # 600K rows should complete in under 10 seconds on CPU
         assert elapsed < 10.0, f"Large dataset took {elapsed:.3f}s - should be <10s"
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_performance_benefit(self, large_data):
         """Test that GPU provides performance benefit for large datasets."""
         import time

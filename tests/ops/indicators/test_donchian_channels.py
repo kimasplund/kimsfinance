@@ -17,16 +17,7 @@ from kimsfinance.ops.indicators import calculate_donchian_channels
 from kimsfinance.core import EngineManager
 
 
-def gpu_available() -> bool:
-    """Check if GPU is available."""
-    try:
-        import cupy
-
-        cupy.cuda.runtime.getDeviceCount()
-        return True
-    except (ImportError, Exception):
-        return False
-
+from _gpu import requires_polars_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -148,7 +139,7 @@ class TestDonchianChannelsBasic:
 # ============================================================================
 
 
-@pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+@requires_polars_gpu
 class TestDonchianChannelsGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 

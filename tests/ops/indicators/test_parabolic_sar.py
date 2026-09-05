@@ -9,7 +9,7 @@ Validates correctness of Parabolic SAR calculation across CPU and GPU engines.
 import numpy as np
 import pytest
 from kimsfinance.ops.indicators import calculate_parabolic_sar
-from kimsfinance.ops.indicators.parabolic_sar import CUPY_AVAILABLE
+from _gpu import requires_gpu
 from kimsfinance.core.exceptions import ConfigurationError
 
 
@@ -134,7 +134,7 @@ class TestParabolicSAR:
             valid_sar <= max_price + 0.2 * price_range
         ), "SAR values should not be too far above price range"
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match(self, sample_data):
         """Test GPU and CPU implementations produce identical results."""
         highs, lows = sample_data
@@ -273,7 +273,7 @@ class TestParabolicSAR:
         assert len(result) == 5
         assert isinstance(result, np.ndarray)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_engine_parameter(self, sample_data):
         """Test different engine parameters."""
         highs, lows = sample_data

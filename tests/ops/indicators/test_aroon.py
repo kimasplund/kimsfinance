@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from kimsfinance.ops.indicators import calculate_aroon
-from kimsfinance.ops.indicators.aroon import CUPY_AVAILABLE
+from _gpu import requires_gpu
 
 
 def generate_ohlc_data(n=100, seed=42):
@@ -297,7 +297,7 @@ def test_known_values():
     assert aroon_down[10] == 20.0, f"Expected 20, got {aroon_down[10]}"
 
 
-@pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+@requires_gpu
 def test_gpu_cpu_match():
     """Test GPU and CPU implementations produce identical results."""
     highs, lows, closes = generate_ohlc_data(n=200)

@@ -7,14 +7,16 @@ Tests the PyO3 bindings for BatchBacktestSweep.
 import numpy as np
 import pytest
 
-# Import will fail if GPU feature not enabled
+from _gpu import requires_core_gpu
+
+# The bindings only exist when the Rust crate was built with the `gpu` feature.
+# Having them is not the same as having a device: classes that launch kernels
+# are gated on the device probe (requires_core_gpu); the info and input
+# validation tests below run everywhere.
 try:
     from kimsfinance_core import batch_backtest, batch_backtest_info, BacktestResult
-
-    GPU_AVAILABLE = True
 except ImportError:
-    GPU_AVAILABLE = False
-    pytest.skip("GPU feature not enabled", allow_module_level=True)
+    pytest.skip("kimsfinance_core built without the gpu feature", allow_module_level=True)
 
 
 class TestBatchBacktestInfo:
@@ -37,6 +39,7 @@ class TestBatchBacktestInfo:
             assert info["expected_speedup"] == 1.0
 
 
+@requires_core_gpu
 class TestBatchBacktestBasic:
     """Basic batch backtest functionality tests."""
 
@@ -168,6 +171,7 @@ class TestBatchBacktestBasic:
             assert isinstance(result, BacktestResult)
 
 
+@requires_core_gpu
 class TestBatchBacktestStress:
     """Stress tests for batch backtesting."""
 
@@ -211,7 +215,6 @@ class TestBatchBacktestStress:
         ), "Results should be sorted by fitness (descending)"
 
     @pytest.mark.slow
-    @pytest.mark.skipif(not GPU_AVAILABLE, reason="Requires GPU with >1GB VRAM")
     def test_1000_strategies(self, large_ohlcv):
         """Stress test with 1000 strategies (VRAM test)."""
         # 1000 strategies: 10 periods × 10 buy thresholds × 10 sell thresholds
@@ -268,6 +271,7 @@ class TestBatchBacktestErrorHandling:
             )
 
 
+@requires_core_gpu
 class TestBacktestResultClass:
     """Test BacktestResult Python class methods."""
 
@@ -312,6 +316,7 @@ class TestBacktestResultClass:
         assert abs(fitness - expected) < 1e-6
 
 
+@requires_core_gpu
 class TestPerformance:
     """Performance validation tests."""
 

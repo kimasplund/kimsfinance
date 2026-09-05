@@ -13,7 +13,11 @@ import pytest
 import sys
 import os
 
+from _backtesters import AnalyticBacktester, BatchBacktester, FailingBacktester
+
 try:
+    # GPU_AVAILABLE is device-based (see kimsfinance.batch): False when the
+    # bindings import but no CUDA device can be initialised.
     from kimsfinance.batch import batch_backtest, BacktestConfig, get_gpu_info, GPU_AVAILABLE
     from kimsfinance.optimization.genetic import GeneticOptimizer
 
@@ -77,10 +81,10 @@ def test_gpu_available_constant():
     not DEAP_AVAILABLE, reason="deap package not installed (pip install kimsfinance[optimization])"
 )
 class TestCPUFallback:
-    """Test CPU fallback mode for genetic optimizer."""
+    """GeneticOptimizer without a GPU: fitness comes from whatever backtester is passed."""
 
     def test_cpu_mode_works(self):
-        """Test that CPU mode produces valid results."""
+        """A CPU backtester produces valid results (no GPU involved)."""
         import pandas as pd
         import numpy as np
 
@@ -107,9 +111,8 @@ class TestCPUFallback:
             generations=2,
         )
 
-        # Force CPU mode
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=False, verbose=False
+            strategy="rsi_crossover", data=data, backtester=AnalyticBacktester(), verbose=False
         )
 
         assert len(results) > 0
@@ -118,8 +121,8 @@ class TestCPUFallback:
 
         print(f"✅ CPU mode works: {len(results)} solutions found")
 
-    def test_cpu_vs_gpu_same_results(self):
-        """Test that CPU and GPU modes produce similar results (statistical)."""
+    def test_optimizer_matches_direct_gpu_backtest(self):
+        """Optimizer + BatchBacktester reproduces a direct batch_backtest() call."""
         if not GPU_AVAILABLE:
             pytest.skip("GPU not available, cannot compare")
 
@@ -145,35 +148,27 @@ class TestCPUFallback:
         # GPU result
         result_gpu = batch_backtest("rsi_crossover", data, params)[0]
 
-        # CPU result (run through optimizer with use_gpu=False)
+        # Same parameters through the optimizer (degenerate 1-point search)
         optimizer = GeneticOptimizer(
             param_space={
                 "period": (14, 14, int),
                 "buy_threshold": (30.0, 30.0, float),
                 "sell_threshold": (70.0, 70.0, float),
             },
-            population_size=1,
+            population_size=2,
             generations=1,
         )
-        result_cpu_list = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=False, verbose=False
+        result_opt_list = optimizer.optimize(
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=False
         )
-        result_cpu = result_cpu_list[0] if result_cpu_list else None
+        assert result_opt_list, "Optimizer returned no solutions"
+        result_opt = result_opt_list[0]
 
-        if result_cpu is None:
-            pytest.skip("CPU mode failed to return results")
+        assert result_opt["params"] == params[0]
+        assert result_opt["sharpe"] == pytest.approx(result_gpu["sharpe_ratio"], rel=1e-4, abs=1e-6)
+        assert result_opt["win_rate"] == pytest.approx(result_gpu["win_rate"], rel=1e-4, abs=1e-6)
 
-        # Compare (allow small differences due to numerical precision)
-        sharpe_diff = abs(result_gpu["sharpe_ratio"] - result_cpu.get("sharpe", 0.0))
-
-        # Allow 1% difference
-        if result_gpu["sharpe_ratio"] != 0:
-            relative_diff = sharpe_diff / abs(result_gpu["sharpe_ratio"])
-            assert (
-                relative_diff < 0.05
-            ), f"CPU/GPU Sharpe difference too large: {sharpe_diff} ({relative_diff*100:.2f}%)"
-
-        print(f"✅ CPU vs GPU: Sharpe diff = {sharpe_diff:.4f}")
+        print(f"✅ Optimizer vs direct GPU: Sharpe = {result_opt['sharpe']:.4f}")
 
 
 # Test error handling
@@ -266,10 +261,10 @@ class TestGPUEnvironment:
     not DEAP_AVAILABLE, reason="deap package not installed (pip install kimsfinance[optimization])"
 )
 class TestGracefulDegradation:
-    """Test graceful degradation when GPU operations fail."""
+    """Test graceful degradation when backtest evaluation fails."""
 
-    def test_fallback_on_gpu_error(self):
-        """Test that system falls back to CPU on GPU error."""
+    def test_backtester_error_yields_worst_fitness(self):
+        """A backtester that raises must not crash the optimizer (worst fitness instead)."""
         import pandas as pd
         import numpy as np
 
@@ -296,16 +291,13 @@ class TestGracefulDegradation:
             generations=2,
         )
 
-        # Try to run with GPU (may fallback to CPU if GPU fails)
-        try:
-            results = optimizer.optimize(
-                strategy="rsi_crossover", data=data, use_gpu=True, verbose=False
-            )
-            assert len(results) > 0
-            print(f"✅ Completed (GPU or CPU fallback): {len(results)} solutions")
-        except Exception as e:
-            print(f"⚠️  Failed with error: {e}")
-            # This is acceptable - system should handle errors gracefully
+        results = optimizer.optimize(
+            strategy="rsi_crossover", data=data, backtester=FailingBacktester(), verbose=False
+        )
+
+        assert len(results) > 0
+        assert all(r["sharpe"] == float("-inf") for r in results)
+        print(f"✅ Optimizer survived backtester failures: {len(results)} solutions")
 
 
 # Platform-specific tests

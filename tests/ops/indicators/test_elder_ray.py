@@ -32,16 +32,7 @@ from kimsfinance.ops.indicators.moving_averages import calculate_ema
 from kimsfinance.core import EngineManager
 
 
-def gpu_available() -> bool:
-    """Check if GPU is available."""
-    try:
-        import cupy
-
-        cupy.cuda.runtime.getDeviceCount()
-        return True
-    except (ImportError, Exception):
-        return False
-
+from _gpu import requires_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -773,7 +764,7 @@ class TestElderRayEdgeCases:
 class TestElderRayGPUCPUParity:
     """Test GPU/CPU parity for Elder Ray."""
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_bull_power(self, sample_prices):
         """Test GPU/CPU match for Bull Power."""
         bull_cpu, _ = calculate_elder_ray(
@@ -795,7 +786,7 @@ class TestElderRayGPUCPUParity:
         # Should match within floating-point tolerance
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_bear_power(self, sample_prices):
         """Test GPU/CPU match for Bear Power."""
         _, bear_cpu = calculate_elder_ray(
@@ -817,7 +808,7 @@ class TestElderRayGPUCPUParity:
         # Should match within floating-point tolerance
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_large_dataset(self, large_prices):
         """Test GPU/CPU match for large dataset."""
         bull_cpu, bear_cpu = calculate_elder_ray(
@@ -839,7 +830,7 @@ class TestElderRayGPUCPUParity:
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_auto_engine_selection(self, large_prices):
         """Test auto engine selection."""
         bull_auto, bear_auto = calculate_elder_ray(
@@ -864,7 +855,7 @@ class TestElderRayGPUCPUParity:
         assert not np.all(np.isnan(bull_auto))
         assert not np.all(np.isnan(bear_auto))
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_period_9(self, sample_prices):
         """Test GPU/CPU match with period=9."""
         bull_cpu, bear_cpu = calculate_elder_ray(
@@ -886,7 +877,7 @@ class TestElderRayGPUCPUParity:
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_period_21(self, sample_prices):
         """Test GPU/CPU match with period=21."""
         bull_cpu, bear_cpu = calculate_elder_ray(
@@ -908,7 +899,7 @@ class TestElderRayGPUCPUParity:
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_trending_up(self, trending_up_prices):
         """Test GPU/CPU match for uptrending data."""
         bull_cpu, bear_cpu = calculate_elder_ray(
@@ -930,7 +921,7 @@ class TestElderRayGPUCPUParity:
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_oscillating(self, oscillating_prices):
         """Test GPU/CPU match for oscillating data."""
         bull_cpu, bear_cpu = calculate_elder_ray(
@@ -952,7 +943,7 @@ class TestElderRayGPUCPUParity:
         np.testing.assert_allclose(bull_cpu, bull_gpu, rtol=1e-6, atol=1e-6)
         np.testing.assert_allclose(bear_cpu, bear_gpu, rtol=1e-6, atol=1e-6)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_returns_numpy_arrays(self, sample_prices):
         """Test GPU returns numpy arrays (not cupy)."""
         bull_gpu, bear_gpu = calculate_elder_ray(
@@ -972,7 +963,7 @@ class TestElderRayGPUCPUParity:
             str(bear_gpu.device) == "cpu"
         ), f"Expected CPU device, got {bear_gpu.device}"  # Not a cupy array
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_handles_nan_inputs(self, sample_prices):
         """Test GPU handles NaN inputs correctly."""
         # Add some NaNs
@@ -1021,7 +1012,7 @@ class TestElderRayPerformance:
         assert len(bull_power) == len(large_prices["close"])
         assert len(bear_power) == len(large_prices["close"])
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_gpu
     def test_gpu_performance_comparison(self, large_prices):
         """Test GPU vs CPU performance comparison."""
         # CPU timing

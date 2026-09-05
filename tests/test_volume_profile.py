@@ -5,7 +5,7 @@ Tests for Volume Profile (VPVR) indicator.
 import numpy as np
 import pytest
 from kimsfinance.ops.indicators import calculate_volume_profile
-from kimsfinance.ops.indicators.volume_profile import CUPY_AVAILABLE
+from _gpu import requires_gpu
 
 
 class TestVolumeProfile:
@@ -59,7 +59,7 @@ class TestVolumeProfile:
         # Validate POC is within price range
         assert prices.min() <= poc <= prices.max()
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match(self, sample_data):
         """Test GPU and CPU implementations produce identical results."""
         prices, volumes = sample_data
@@ -225,7 +225,7 @@ class TestVolumeProfile:
         assert len(volume_profile) == 5
         assert isinstance(poc, (float, np.floating))
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_performance_benchmark(self):
         """Benchmark CPU vs GPU performance (optional, informational)."""
         import time
