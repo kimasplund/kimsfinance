@@ -3,6 +3,13 @@ name = "kimsfinance_core"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.90.0"
+description = "GPU-accelerated indicators, backtesting and orderflow engine for kimsfinance"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/kimasplund/kimsfinance"
+readme = "README.md"
+# benches/statistics.rs and benches/test_data_generator.rs are helper modules
+# (`#[path]`-included by other benches), not bench targets; list benches explicitly.
+autobenches = false
 
 [lib]
 name = "kimsfinance_core"
@@ -29,12 +36,6 @@ async-trait = { version = "0.1", optional = true }
 # HTTP client for data downloaders
 reqwest = { version = "0.12", features = ["json", "cookies"], optional = true }
 
-# Yahoo Finance with TLS impersonation (Chrome fingerprint)
-rquest = { version = "5.1", features = ["json", "cookies"], optional = true }
-scraper = { version = "0.21", optional = true }  # HTML parsing for consent forms
-regex = { version = "1.11", optional = true }     # Crumb extraction
-once_cell = { version = "1.20", optional = true } # Singleton session
-
 # Parquet file format for data storage
 arrow = { version = "54.0", optional = true }
 parquet = { version = "54.0", features = ["arrow"], optional = true }
@@ -46,13 +47,8 @@ deribit = { version = "0.3", optional = true }
 
 # Performance dependencies for backtest optimization
 dashmap = "6.1"
-arrayvec = "0.7"
-smallvec = "1.13"
 parking_lot = "0.12"
 sha2 = "0.10"  # For kernel cache hashing
-
-# Optional SIMD support
-
 
 # Optional GPU support with cudarc (v0.17.3 - pinned for stability)
 # CUDA Toolkit Compatibility:
@@ -91,20 +87,19 @@ criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3.14"
 proptest = "1.4"
 approx = "0.5"
+smallvec = "1.13" # benches/hashmap_pattern.rs
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
-panic = "abort"
 strip = true
 
 [profile.bench]
 inherits = "release"
 
 [features]
-default = ["simd"]
-simd = []
+default = []
 
 gpu = ["cudarc", "half"]
 
@@ -115,10 +110,448 @@ strict-fp = []
 # Options data connectors
 data-ibkr = ["ibapi", "time", "tokio", "async-trait"]
 data-deribit = ["deribit", "tokio", "async-trait"]
-data-downloaders = ["tokio", "async-trait", "reqwest", "arrow", "parquet"]
-data-yahoo-tls = ["data-downloaders", "rquest", "scraper", "regex", "once_cell"]
-data-all = ["data-ibkr", "data-deribit", "data-downloaders", "data-yahoo-tls"]
+# Arrow/Parquet tick storage (pulled in by data-downloaders; cfg(feature = "parquet") in tests)
+parquet = ["dep:parquet", "dep:arrow"]
+data-downloaders = ["tokio", "async-trait", "reqwest", "parquet"]
+data-all = ["data-ibkr", "data-deribit", "data-downloaders"]
 heston = ["gpu", "argmin", "argmin-math", "rustfft", "num-complex", "ndarray-linalg"]
+# ---------------------------------------------------------------------------
+# Targets. `required-features` keeps `cargo check --all-targets` / `cargo test`
+# green on default features: targets that need a feature are simply skipped.
+# Examples/tests without an entry compile on default features (they cfg-gate
+# their GPU paths internally) and stay auto-discovered.
+# ---------------------------------------------------------------------------
+
+[[example]]
+name = "adx_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "backtest_bull_put_spread"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "benchmark_all_indicators"
+required-features = ["gpu"]
+
+[[example]]
+name = "benchmark_gpu_kernel_timing"
+required-features = ["gpu"]
+
+[[example]]
+name = "benchmark_indicators_simple"
+required-features = ["gpu"]
+
+[[example]]
+name = "calibrate_heston_ibkr"
+required-features = ["heston", "data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "compare_obv_implementations"
+required-features = ["gpu"]
+
+[[example]]
+name = "data_downloader_cli"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "delta_hedging"
+required-features = ["heston"]
+
+[[example]]
+name = "delta_neutral_vol_arb_demo"
+required-features = ["heston"]
+
+[[example]]
+name = "download_options_strategy"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "fibonacci_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "fp8_genetic_optimizer"
+required-features = ["gpu"]
+
+[[example]]
+name = "gpu_trade_aggregation"
+required-features = ["gpu"]
+
+[[example]]
+name = "grid_search_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "heston_greeks_strategies_demo"
+required-features = ["heston"]
+
+[[example]]
+name = "ichimoku_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "income_strategies_demo"
+required-features = ["heston"]
+
+[[example]]
+name = "mfi_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "orderflow_batch_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "paper_trading_scanner"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "parameter_sweep_2022_2023"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "parameter_sweep_optimizer"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "pivot_points_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "profile_transfer_overhead"
+required-features = ["gpu"]
+
+[[example]]
+name = "strategy_example_simple"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "supertrend_gpu_demo"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_all_gpu_indicators"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_all_persistent_kernels"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_atr_multi_input"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_batch_backtest"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_black_scholes"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "test_execution_modes"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_fft_pricing"
+required-features = ["heston"]
+
+[[example]]
+name = "test_heston_buffers"
+required-features = ["heston"]
+
+[[example]]
+name = "test_heston_cpu"
+required-features = ["heston"]
+
+[[example]]
+name = "test_heston_debug"
+required-features = ["heston"]
+
+[[example]]
+name = "test_heston_pricer"
+required-features = ["heston"]
+
+[[example]]
+name = "test_ibkr_all_instruments"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_chunked"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_granularity"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_historical"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_limits"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_limits_refined"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_ibkr_paper_trading"
+required-features = ["data-ibkr", "data-downloaders"]
+
+[[example]]
+name = "test_kernel_cache"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_lewis_method"
+required-features = ["heston"]
+
+[[example]]
+name = "test_macd_multi_output"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_margin_limits"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "test_multi_indicator"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_occupancy_calculator"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_parabolic_sar_gpu"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_persistent_backtest"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_persistent_indicators"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_persistent_minimal"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_persistent_traits"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_pinned_memory"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_regime_adaptive"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "test_sma_shared"
+required-features = ["gpu"]
+
+[[example]]
+name = "test_spot_data_accuracy"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "test_yahoo_chunked"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "validate_strategy_simple"
+required-features = ["data-downloaders"]
+
+[[example]]
+name = "validate_atr_performance"
+required-features = ["gpu"]
+
+[[example]]
+name = "verify_obv_performance"
+required-features = ["gpu"]
+
+[[example]]
+name = "verify_roc_warmup"
+required-features = ["gpu"]
+
+[[example]]
+name = "vwap_anchored_gpu_demo"
+required-features = ["gpu"]
+
+[[test]]
+name = "delta_neutral_test"
+required-features = ["heston"]
+
+[[test]]
+name = "gpu_accuracy_validation"
+required-features = ["gpu"]
+
+[[test]]
+name = "quantization_accuracy"
+required-features = ["gpu"]
+
+[[test]]
+name = "test_batch_api"
+required-features = ["gpu"]
+
+[[test]]
+name = "vol_arbitrage_test"
+required-features = ["heston"]
+
+[[bench]]
+name = "ab_test_cuda"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "adx_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "all_indicators_timing"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "async_execution_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "backtest_baseline"
+harness = false
+
+[[bench]]
+name = "backtest_gpu_cpu_comparison"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "backtest_large_scale"
+harness = false
+
+[[bench]]
+name = "batch_backtest_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "binance_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "candlestick_patterns"
+harness = false
+
+[[bench]]
+name = "combined_optimizations_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "comprehensive_gpu_validation"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "cpu_batch_only"
+harness = false
+
+[[bench]]
+name = "cpu_gpu_hybrid_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "cpu_vs_gpu_batch"
+harness = false
+
+[[bench]]
+name = "cuda_graph_overhead"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "fibonacci_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "fp8_tensor_cores"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "genetic_optimizer_comparison"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "genetic_optimizer_precision"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "gpu_tick_batch_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "gpu_trade_aggregation_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "greeks_gpu_bench"
+harness = false
+required-features = ["heston"]
+
+[[bench]]
+name = "hashmap_pattern"
+harness = false
+
+[[bench]]
+name = "heston_comprehensive"
+harness = false
+required-features = ["heston"]
+
+[[bench]]
+name = "heston_gpu"
+harness = false
+required-features = ["heston"]
+
+[[bench]]
+name = "heston_integration_bench"
+harness = false
+required-features = ["heston"]
+
+[[bench]]
+name = "ichimoku_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "incomplete_candle_bench"
+harness = false
+
+[[bench]]
+name = "launch_overhead"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "mfi_gpu_benchmark"
+harness = false
 
 [[bench]]
 name = "momentum_indicators"
@@ -129,59 +562,7 @@ name = "moving_averages"
 harness = false
 
 [[bench]]
-name = "volatility_indicators"
-harness = false
-
-[[bench]]
-name = "volume_indicators"
-harness = false
-
-[[bench]]
-name = "rolling_minmax"
-harness = false
-
-[[bench]]
-name = "binance_gpu_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "launch_overhead"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "parameter_sweep_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "shared_memory_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "cpu_gpu_hybrid_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "ab_test_cuda"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "backtest_gpu_cpu_comparison"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "genetic_optimizer_precision"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "genetic_optimizer_comparison"
+name = "multi_indicator_persistent_benchmark"
 harness = false
 required-features = ["gpu"]
 
@@ -191,43 +572,7 @@ harness = false
 required-features = ["gpu"]
 
 [[bench]]
-name = "backtest_baseline"
-harness = false
-
-[[bench]]
-name = "backtest_large_scale"
-harness = false
-
-[[bench]]
-name = "hashmap_pattern"
-harness = false
-
-[[bench]]
-name = "simd_validation"
-harness = false
-
-[[bench]]
-name = "multi_indicator_persistent_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "pinned_memory_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
 name = "occupancy_improvement_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "pinned_memory_transfer_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "combined_optimizations_benchmark"
 harness = false
 required-features = ["gpu"]
 
@@ -237,61 +582,17 @@ harness = false
 required-features = ["gpu"]
 
 [[bench]]
-name = "pinned_vs_standard_memory"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
 name = "optimization_validation"
 harness = false
 required-features = ["gpu"]
 
 [[bench]]
-name = "vwap_anchored_gpu_benchmark"
+name = "optimizer_comparison"
 harness = false
 required-features = ["gpu"]
 
 [[bench]]
-name = "incomplete_candle_bench"
-harness = false
-
-[[bench]]
-name = "gpu_trade_aggregation_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "heston_gpu"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "fp8_tensor_cores"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "tensor_core_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "cuda_graph_overhead"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "rsi_fused_benchmark"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "comprehensive_gpu_validation"
-harness = false
-required-features = ["gpu"]
-
-[[bench]]
-name = "all_indicators_timing"
+name = "parameter_sweep_benchmark"
 harness = false
 required-features = ["gpu"]
 
@@ -301,28 +602,80 @@ harness = false
 required-features = ["gpu"]
 
 [[bench]]
+name = "persistent_vs_traditional"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "phase3_optimization"
+harness = false
+
+[[bench]]
+name = "pinned_memory_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pinned_memory_transfer_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pinned_vs_standard_memory"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "pivot_points_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "rolling_minmax"
+harness = false
+
+[[bench]]
+name = "rsi_fused_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "shared_memory_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "simd_validation"
+harness = false
+
+[[bench]]
+name = "supertrend_gpu_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
+name = "tensor_core_benchmark"
+harness = false
+required-features = ["gpu"]
+
+[[bench]]
 name = "tick_genetic_optimizer"
 harness = false
 
 [[bench]]
-name = "gpu_tick_batch_benchmark"
+name = "tuning_comparison"
 harness = false
 required-features = ["gpu"]
 
 [[bench]]
-name = "candlestick_patterns"
+name = "volatility_indicators"
 harness = false
 
 [[bench]]
-name = "batch_backtest_benchmark"
+name = "volume_indicators"
 harness = false
-required-features = ["gpu"]
 
 [[bench]]
-name = "optimizer_comparison"
+name = "vwap_anchored_gpu_benchmark"
 harness = false
-required-features = ["gpu"]
-
-[[test]]
-name = "gpu_accuracy_validation"
 required-features = ["gpu"]
