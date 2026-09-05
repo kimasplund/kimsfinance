@@ -4,7 +4,7 @@
 //! Tests price movement logic, trending/ranging scenarios, and brick formation.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{execute_batch, GpuDevice, RangeBarBatch, RenkoBatch};
+use kimsfinance_core::gpu::{GpuDevice, RangeBarBatch, RenkoBatch, execute_batch};
 
 // ============================================================================
 // Range Bar Tests
@@ -172,12 +172,12 @@ fn test_range_bars_ranging_market() -> Result<(), Box<dyn std::error::Error>> {
         (0.0, 100.0, 10.0),
         (1.0, 102.0, 11.0),
         (2.0, 98.0, 12.0),
-        (3.0, 103.0, 13.0),  // High
-        (4.0, 97.0, 14.0),   // Low (range = 6)
-        (5.0, 100.0, 15.0),  // Back to middle
+        (3.0, 103.0, 13.0), // High
+        (4.0, 97.0, 14.0),  // Low (range = 6)
+        (5.0, 100.0, 15.0), // Back to middle
         (6.0, 102.0, 16.0),
         (7.0, 98.0, 17.0),
-        (8.0, 104.0, 18.0),  // Another oscillation
+        (8.0, 104.0, 18.0), // Another oscillation
     ];
 
     let mut data = Vec::new();
@@ -211,11 +211,7 @@ fn test_range_bars_ranging_market() -> Result<(), Box<dyn std::error::Error>> {
         let body = (close - open).abs();
 
         // In ranging market, body < range (long wicks)
-        assert!(
-            body <= range,
-            "Body should be <= range in bar {}",
-            i
-        );
+        assert!(body <= range, "Body should be <= range in bar {}", i);
     }
 
     println!("✅ Range bar ranging market handling verified");
@@ -324,10 +320,10 @@ fn test_renko_brick_formation_downtrend() -> Result<(), Box<dyn std::error::Erro
     // Clear downtrend
     let trades = vec![
         (0.0, 100.0, 10.0),
-        (1.0, 95.0, 11.0),  // Brick 1: 100 -> 95
-        (2.0, 90.0, 12.0),  // Brick 2: 95 -> 90
-        (3.0, 85.0, 13.0),  // Brick 3: 90 -> 85
-        (4.0, 83.0, 14.0),  // Incomplete
+        (1.0, 95.0, 11.0), // Brick 1: 100 -> 95
+        (2.0, 90.0, 12.0), // Brick 2: 95 -> 90
+        (3.0, 85.0, 13.0), // Brick 3: 90 -> 85
+        (4.0, 83.0, 14.0), // Incomplete
     ];
 
     let mut data = Vec::new();
@@ -411,13 +407,15 @@ fn test_renko_reversal_detection() -> Result<(), Box<dyn std::error::Error>> {
 
     // Later bricks should be down (after reversal)
     // Check if any brick has close < open
-    let has_down_brick = (0..bricks.len() / 5)
-        .any(|i| {
-            let offset = i * 5;
-            bricks[offset + 3] < bricks[offset]
-        });
+    let has_down_brick = (0..bricks.len() / 5).any(|i| {
+        let offset = i * 5;
+        bricks[offset + 3] < bricks[offset]
+    });
 
-    assert!(has_down_brick, "Should have downtrend bricks after reversal");
+    assert!(
+        has_down_brick,
+        "Should have downtrend bricks after reversal"
+    );
 
     println!("✅ Renko reversal detection verified");
     Ok(())

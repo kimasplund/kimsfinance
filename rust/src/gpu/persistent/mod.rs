@@ -869,9 +869,7 @@ fn launch_cooperative_kernel(
             .arg(&buffers.d_periods)
             .arg(&num_tasks)
             .launch_cooperative(cfg)
-            .map_err(|e| {
-                GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e))
-            })?;
+            .map_err(|e| GpuError::ExecutionError(format!("Cooperative launch failed: {:?}", e)))?;
     }
 
     #[cfg(debug_assertions)]

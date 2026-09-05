@@ -61,7 +61,7 @@ fn generate_synthetic_ohlcv(
     let mut low_prices = Vec::with_capacity(n_candles);
     let mut volumes = Vec::with_capacity(n_candles);
 
-    let mut price = 100.0;
+    let mut price = 100.0_f64;
 
     for _ in 0..n_candles {
         let change = rng.gen_range(-2.0..2.0);

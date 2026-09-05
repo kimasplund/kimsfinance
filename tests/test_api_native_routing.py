@@ -322,7 +322,7 @@ class TestAPIFallback:
             warnings.simplefilter("always")
 
             # This should fallback to mplfinance
-            result = plot(
+            plot(
                 sample_ohlcv_df,
                 type="candle",
                 mav=(20, 50),  # Triggers fallback

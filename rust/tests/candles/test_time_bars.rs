@@ -4,7 +4,7 @@
 //! Tests OHLCV correctness, edge cases, and sequential processing.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{execute_batch, GpuDevice, TimeBarBatch};
+use kimsfinance_core::gpu::{GpuDevice, TimeBarBatch, execute_batch};
 
 #[cfg(feature = "gpu")]
 #[test]
@@ -15,16 +15,14 @@ fn test_time_bars_1m_aggregation() -> Result<(), Box<dyn std::error::Error>> {
     // 10 trades spanning 3 minutes
     let trades = vec![
         // Minute 1 (0-59s): 3 trades
-        (0.0, 100.0, 10.0),     // First trade sets open
-        (30.0, 105.0, 15.0),    // High of minute
-        (50.0, 98.0, 20.0),     // Low & close
-
+        (0.0, 100.0, 10.0),  // First trade sets open
+        (30.0, 105.0, 15.0), // High of minute
+        (50.0, 98.0, 20.0),  // Low & close
         // Minute 2 (60-119s): 4 trades
-        (60.0, 99.0, 12.0),     // Open
-        (75.0, 102.0, 18.0),    // High
-        (90.0, 96.0, 14.0),     // Low
-        (110.0, 101.0, 16.0),   // Close
-
+        (60.0, 99.0, 12.0),   // Open
+        (75.0, 102.0, 18.0),  // High
+        (90.0, 96.0, 14.0),   // Low
+        (110.0, 101.0, 16.0), // Close
         // Minute 3 (120-179s): 3 trades
         (120.0, 100.0, 11.0),
         (140.0, 103.0, 19.0),
@@ -50,7 +48,11 @@ fn test_time_bars_1m_aggregation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Result should contain 3 candles (3 minutes) * 5 OHLCV values = 15 values
     let candles = &results[0];
-    assert_eq!(candles.len(), 15, "Expected 15 values (3 candles * 5 OHLCV)");
+    assert_eq!(
+        candles.len(),
+        15,
+        "Expected 15 values (3 candles * 5 OHLCV)"
+    );
 
     // Verify first candle (minute 1)
     let open1 = candles[0];
@@ -92,20 +94,19 @@ fn test_time_bars_5m_aggregation() -> Result<(), Box<dyn std::error::Error>> {
         // First 5 minutes (0-299s): 8 trades
         (0.0, 100.0, 10.0),
         (60.0, 102.0, 12.0),
-        (120.0, 104.0, 14.0),    // High
-        (180.0, 98.0, 11.0),     // Low
+        (120.0, 104.0, 14.0), // High
+        (180.0, 98.0, 11.0),  // Low
         (240.0, 101.0, 13.0),
-        (280.0, 103.0, 15.0),    // Close
+        (280.0, 103.0, 15.0), // Close
         (285.0, 102.0, 12.0),
         (295.0, 103.5, 14.0),
-
         // Second 5 minutes (300-599s): 7 trades
-        (300.0, 103.0, 11.0),    // Open
+        (300.0, 103.0, 11.0), // Open
         (360.0, 105.0, 13.0),
-        (420.0, 107.0, 15.0),    // High
+        (420.0, 107.0, 15.0), // High
         (480.0, 104.0, 12.0),
-        (540.0, 102.0, 10.0),    // Low
-        (580.0, 106.0, 14.0),    // Close
+        (540.0, 102.0, 10.0), // Low
+        (580.0, 106.0, 14.0), // Close
         (595.0, 105.5, 13.0),
     ];
 
@@ -126,7 +127,11 @@ fn test_time_bars_5m_aggregation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Should have 2 candles (10 minutes / 5 minutes)
     let candles = &results[0];
-    assert_eq!(candles.len(), 10, "Expected 10 values (2 candles * 5 OHLCV)");
+    assert_eq!(
+        candles.len(),
+        10,
+        "Expected 10 values (2 candles * 5 OHLCV)"
+    );
 
     // Verify aggregation
     let open1 = candles[0];
@@ -182,7 +187,11 @@ fn test_time_bars_1h_aggregation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Should have 2 candles (2 hours)
     let candles = &results[0];
-    assert_eq!(candles.len(), 10, "Expected 10 values (2 candles * 5 OHLCV)");
+    assert_eq!(
+        candles.len(),
+        10,
+        "Expected 10 values (2 candles * 5 OHLCV)"
+    );
 
     // Verify hour 1
     let open1 = candles[0];
@@ -209,7 +218,6 @@ fn test_time_bars_empty_bucket() -> Result<(), Box<dyn std::error::Error>> {
         // Minute 1: 2 trades
         (10.0, 100.0, 10.0),
         (50.0, 102.0, 12.0),
-
         // Minute 2: EMPTY (60-119s)
 
         // Minute 3: 2 trades

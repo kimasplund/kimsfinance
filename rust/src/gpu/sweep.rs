@@ -191,25 +191,33 @@ impl IndicatorData {
     fn validate(&self) -> Result<(), GpuError> {
         let n = self.close.len();
 
-        if let Some(ref high) = self.high && high.len() != n {
+        if let Some(ref high) = self.high
+            && high.len() != n
+        {
             return Err(GpuError::InvalidParameter(
                 "High array length mismatch".to_string(),
             ));
         }
 
-        if let Some(ref low) = self.low && low.len() != n {
+        if let Some(ref low) = self.low
+            && low.len() != n
+        {
             return Err(GpuError::InvalidParameter(
                 "Low array length mismatch".to_string(),
             ));
         }
 
-        if let Some(ref open) = self.open && open.len() != n {
+        if let Some(ref open) = self.open
+            && open.len() != n
+        {
             return Err(GpuError::InvalidParameter(
                 "Open array length mismatch".to_string(),
             ));
         }
 
-        if let Some(ref volume) = self.volume && volume.len() != n {
+        if let Some(ref volume) = self.volume
+            && volume.len() != n
+        {
             return Err(GpuError::InvalidParameter(
                 "Volume array length mismatch".to_string(),
             ));
@@ -520,7 +528,8 @@ impl ParameterSweep {
                 let low = data.low.as_ref().ok_or_else(|| {
                     GpuError::InvalidParameter("Stochastic requires low prices".to_string())
                 })?;
-                let (k, _d) = stochastic_gpu(&self.device, high, low, &data.close, param, 3, stream)?;
+                let (k, _d) =
+                    stochastic_gpu(&self.device, high, low, &data.close, param, 3, stream)?;
                 Ok(k) // Return %K for simplicity
             }
 
@@ -568,11 +577,7 @@ fn calculate_sharpe_ratio(values: &Array1<f64>) -> f64 {
     }
 
     let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-    let variance = returns
-        .iter()
-        .map(|&r| (r - mean).powi(2))
-        .sum::<f64>()
-        / returns.len() as f64;
+    let variance = returns.iter().map(|&r| (r - mean).powi(2)).sum::<f64>() / returns.len() as f64;
     let std = variance.sqrt();
 
     if std == 0.0 {
@@ -955,6 +960,9 @@ mod tests {
             .expect("Parameter sweep failed");
 
         let best = sweep.find_optimal().expect("No optimal parameter");
-        println!("Best RSI period (custom): {} (score: {:.2})", best.parameter, best.score);
+        println!(
+            "Best RSI period (custom): {} (score: {:.2})",
+            best.parameter, best.score
+        );
     }
 }

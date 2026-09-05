@@ -39,9 +39,8 @@ import polars as pl
 import time
 from typing import Tuple
 
-from kimsfinance.ops.indicators.cci import calculate_cci, CUPY_AVAILABLE
-from kimsfinance.core import EngineManager
-from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
+from kimsfinance.ops.indicators.cci import calculate_cci
+from _gpu import requires_polars_gpu
 
 # ============================================================================
 # Test Data Generators
@@ -193,7 +192,6 @@ class TestCCIBasicCalculation:
         cci = calculate_cci(highs, lows, closes, period=20, engine="cpu")
 
         valid_cci = cci[~np.isnan(cci)]
-        mean_cci = np.nanmean(valid_cci)
 
         # Should be relatively neutral (-100 to +100 range for random walk)
         # Median is a better measure for sideways markets
@@ -586,7 +584,7 @@ class TestCCIEdgeCases:
 # ============================================================================
 
 
-@pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 class TestCCIGPUCPU:
     """Test GPU/CPU parity."""
 
@@ -676,11 +674,9 @@ class TestCCIGPUCPU:
         cci_large = calculate_cci(highs_large, lows_large, closes_large, period=20, engine="auto")
         assert len(cci_large) == len(closes_large)
 
+    @requires_polars_gpu
     def test_gpu_explicit_request(self):
         """Explicit GPU engine request should work."""
-        if not EngineManager.check_gpu_available():
-            pytest.skip("GPU not available")
-
         highs, lows, closes = generate_ohlc_sideways(5000)
         cci = calculate_cci(highs, lows, closes, period=20, engine="gpu")
 
@@ -737,12 +733,9 @@ class TestCCIPerformance:
         assert elapsed < 0.200  # 200ms (2x lenient for pytest-xdist)
         assert len(cci) == 100_000
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_performance_benefit(self):
         """GPU should be faster for large datasets."""
-        if not EngineManager.check_gpu_available():
-            pytest.skip("GPU not available")
-
         highs, lows, closes = generate_ohlc_sideways(200_000, seed=42)
 
         # CPU timing
@@ -771,7 +764,7 @@ class TestCCIPerformance:
             highs, lows, closes = generate_ohlc_sideways(size, seed=42)
 
             start = time.perf_counter()
-            cci = calculate_cci(highs, lows, closes, period=20, engine="cpu")
+            calculate_cci(highs, lows, closes, period=20, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))

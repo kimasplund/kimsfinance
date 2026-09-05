@@ -28,8 +28,6 @@ from .charts import (
     create_equity_curve,
     create_drawdown_chart,
     create_returns_distribution,
-    create_monthly_heatmap,
-    create_rolling_sharpe,
 )
 from .pdf_report import ReportConfig
 

@@ -21,12 +21,10 @@ import numpy as np
 import polars as pl
 import pytest
 import time
-from typing import Tuple
 
 from kimsfinance.ops.indicators import calculate_rsi
-from kimsfinance.ops.indicators.rsi import CUPY_AVAILABLE
+from _gpu import POLARS_GPU_AVAILABLE, requires_polars_gpu
 from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
-from kimsfinance.core import EngineManager
 
 # ============================================================================
 # Test Data Generators
@@ -491,7 +489,7 @@ class TestRSIEdgeCases:
 # ============================================================================
 
 
-@pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 class TestRSIGPUCPU:
     """Test GPU/CPU parity."""
 
@@ -565,11 +563,9 @@ class TestRSIGPUCPU:
         rsi_large = calculate_rsi(prices_large, period=14, engine="auto")
         assert len(rsi_large) == len(prices_large)
 
+    @requires_polars_gpu
     def test_gpu_explicit_request(self):
         """Explicit GPU engine request should work."""
-        if not EngineManager.check_gpu_available():
-            pytest.skip("GPU not available")
-
         prices = generate_sideways(5000)
         rsi = calculate_rsi(prices, period=14, engine="gpu")
 
@@ -592,7 +588,7 @@ class TestRSIGPUCPU:
 
         rsi_cpu = calculate_rsi(prices, period=14, engine="cpu")
 
-        if EngineManager.check_gpu_available():
+        if POLARS_GPU_AVAILABLE:
             rsi_gpu = calculate_rsi(prices, period=14, engine="gpu")
             # NaN positions should match
             np.testing.assert_array_equal(np.isnan(rsi_cpu), np.isnan(rsi_gpu))
@@ -639,12 +635,9 @@ class TestRSIPerformance:
         assert elapsed < 0.100  # 100ms
         assert len(rsi) == 100_000
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_performance_benefit(self):
         """GPU should be faster for large datasets."""
-        if not EngineManager.check_gpu_available():
-            pytest.skip("GPU not available")
-
         prices = generate_sideways(200_000, seed=42)
 
         # CPU timing
@@ -673,7 +666,7 @@ class TestRSIPerformance:
             prices = generate_sideways(size, seed=42)
 
             start = time.perf_counter()
-            rsi = calculate_rsi(prices, period=14, engine="cpu")
+            calculate_rsi(prices, period=14, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))
@@ -728,8 +721,8 @@ class TestRSIParameterValidation:
 
     def test_gpu_not_available_error(self):
         """Requesting GPU when unavailable should raise error."""
-        if EngineManager.check_gpu_available():
-            pytest.skip("GPU is available, can't test unavailable case")
+        if POLARS_GPU_AVAILABLE:
+            pytest.skip("Polars GPU engine is available, can't test unavailable case")
 
         prices = generate_sideways(100)
         with pytest.raises(GPUNotAvailableError):

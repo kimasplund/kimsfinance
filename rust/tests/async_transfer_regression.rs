@@ -54,14 +54,14 @@ fn test_no_sync_transfers_in_core_indicators() {
             .unwrap_or_else(|_| panic!("Failed to read indicator file: {}", indicator));
 
         // Check for sync transfers (skip allowlisted files)
-        if !SYNC_ALLOWLIST.contains(&indicator) {
-            if content.contains("copy_to_device") || content.contains("copy_to_host") {
-                violations.push(format!(
-                    "{} uses sync transfers (copy_to_device/copy_to_host) - \
+        if !SYNC_ALLOWLIST.contains(&indicator)
+            && (content.contains("copy_to_device") || content.contains("copy_to_host"))
+        {
+            violations.push(format!(
+                "{} uses sync transfers (copy_to_device/copy_to_host) - \
                      should use async transfers (memcpy_htod/memcpy_dtoh) for 1.5x speedup",
-                    indicator
-                ));
-            }
+                indicator
+            ));
         }
     }
 

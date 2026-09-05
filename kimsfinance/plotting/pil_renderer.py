@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from pathlib import Path
+from typing import Any
 from PIL import Image, ImageDraw
 
 try:
@@ -28,7 +29,7 @@ except ImportError:
 
 
 try:
-    import svgwrite
+    import svgwrite  # noqa: F401  # availability probe
 
     SVGWRITE_AVAILABLE = True
 except ImportError:
@@ -41,7 +42,6 @@ from ..config.layout_constants import (
     BOX_SIZE_ATR_MULTIPLIER,
     CENTER_OFFSET,
     CHART_HEIGHT_RATIO,
-    GRID_ALPHA,
     GRID_LINE_WIDTH,
     HORIZONTAL_GRID_DIVISIONS,
     MAX_VERTICAL_GRID_LINES,
@@ -53,7 +53,7 @@ from ..config.layout_constants import (
     VOLUME_HEIGHT_RATIO,
     WICK_WIDTH_RATIO,
 )
-from ..config.themes import THEMES, THEMES_RGBA, THEMES_RGB
+from ..config.themes import THEMES_RGBA, THEMES_RGB
 from ..data.pnf import calculate_pnf_columns
 from ..data.renko import calculate_renko_bricks
 from ..utils.color_utils import _hex_to_rgba
@@ -666,7 +666,6 @@ def render_renko_chart(
 
     # Define chart areas (70% for bricks, 30% for volume)
     chart_height = int(height * CHART_HEIGHT_RATIO)
-    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Calculate price range for all bricks
     brick_prices = np.array([b["price"] for b in bricks])
@@ -1821,6 +1820,8 @@ def render_hollow_candles(
     return img
 
 
+# Coordinate kernels below operate on finite, pre-validated render data and cast
+# to int32; they never inspect NaN/inf, so full fastmath (incl. nnan/ninf) is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_ohlc_bar_coordinates(
     num_bars: int,

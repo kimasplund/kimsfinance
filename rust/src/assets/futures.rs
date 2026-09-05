@@ -45,6 +45,7 @@ pub struct FuturesContract {
 
 impl FuturesContract {
     /// Create new futures contract
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn new(
         symbol: &str,
         exchange: Exchange,

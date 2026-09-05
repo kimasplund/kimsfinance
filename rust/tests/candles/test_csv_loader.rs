@@ -4,7 +4,7 @@
 //! Tests various CSV formats, error handling, and memory efficiency.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{TradeData, GpuDevice};
+use kimsfinance_core::gpu::{GpuDevice, TradeData};
 use std::io::Write;
 use tempfile::NamedTempFile;
 
@@ -351,7 +351,7 @@ fn test_csv_loader_concat_for_batch() -> Result<(), Box<dyn std::error::Error>> 
 #[cfg(feature = "gpu")]
 #[test]
 fn test_csv_loader_integration_with_time_bars() -> Result<(), Box<dyn std::error::Error>> {
-    use kimsfinance_core::gpu::{execute_batch, TimeBarBatch, GpuDevice};
+    use kimsfinance_core::gpu::{GpuDevice, TimeBarBatch, execute_batch};
 
     let device = GpuDevice::new()?;
 

@@ -11,11 +11,9 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_roc
-from kimsfinance.ops.indicators.roc import CUPY_AVAILABLE
-from kimsfinance.core import EngineManager
+from _gpu import requires_gpu
 from kimsfinance.core.exceptions import ConfigurationError
 
 # ============================================================================
@@ -120,7 +118,7 @@ class TestROCBasic:
 class TestROCGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_small_data(self, sample_data):
         """Test GPU and CPU produce identical results on small dataset."""
         # CPU calculation
@@ -133,7 +131,7 @@ class TestROCGPUCPU:
         # Use rtol=1e-6 for GPU/CPU comparison (industry standard)
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-6, atol=1e-7)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_large_data(self, large_data):
         """Test GPU and CPU produce identical results on large dataset."""
         # CPU calculation
@@ -355,7 +353,7 @@ class TestROCPerformance:
         import time
 
         start = time.time()
-        result = calculate_roc(sample_data, period=12, engine="cpu")
+        calculate_roc(sample_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -366,7 +364,7 @@ class TestROCPerformance:
         import time
 
         start = time.time()
-        result = calculate_roc(large_data, period=12, engine="cpu")
+        calculate_roc(large_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 5 seconds on CPU

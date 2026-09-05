@@ -19,6 +19,7 @@ Success Criteria:
 
 from __future__ import annotations
 
+import importlib
 import pytest
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
@@ -40,6 +41,11 @@ except ImportError:
         return decorator
 
 
+# Shared safe fast-math flag set (everything except ``nnan``/``ninf``).  Plain
+# ``fastmath=True`` lets LLVM fold ``np.isnan`` to False, which silently breaks
+# NaN-aware kernels such as ``replace_nan_jit`` below.
+from kimsfinance.utils.array_utils import FASTMATH_SAFE  # noqa: E402
+
 # ============================================================================
 # Test Functions: JIT and Non-JIT versions
 # ============================================================================
@@ -57,7 +63,7 @@ def calculate_sma_python(arr: np.ndarray, window: int) -> np.ndarray:
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def calculate_sma_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """Calculate SMA with Numba JIT."""
     n = len(arr)
@@ -82,7 +88,7 @@ def rolling_max_python(arr: np.ndarray, window: int) -> np.ndarray:
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def rolling_max_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """Calculate rolling max with Numba JIT."""
     n = len(arr)
@@ -104,7 +110,7 @@ def replace_nan_python(arr: np.ndarray, value: float) -> np.ndarray:
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def replace_nan_jit(arr: np.ndarray, value: float) -> np.ndarray:
     """Replace NaN values with Numba JIT."""
     result = arr.copy()
@@ -504,7 +510,7 @@ class TestNumbaAvailability:
         """Test NUMBA_AVAILABLE flag is set correctly."""
         # This should match whether import succeeded
         try:
-            import numba
+            importlib.import_module("numba")
 
             expected = True
         except ImportError:
@@ -516,7 +522,7 @@ class TestNumbaAvailability:
     def test_njit_fallback_when_unavailable(self):
         """Test njit fallback decorator works when Numba unavailable."""
 
-        @njit(cache=True, fastmath=True)
+        @njit(cache=True, fastmath=FASTMATH_SAFE)
         def test_func(x):
             return x * 2
 

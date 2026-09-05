@@ -22,7 +22,6 @@ import time
 import tempfile
 import json
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Test imports
 from kimsfinance.integration import adapter
@@ -351,11 +350,11 @@ class TestDeadlockPrevention:
                     if i % 4 == 0:
                         adapter.configure(gpu_min_rows=thread_id * 100, verbose=False)
                     elif i % 4 == 1:
-                        config = adapter.get_config()
+                        adapter.get_config()
                     elif i % 4 == 2:
-                        is_active = adapter.is_active()
+                        adapter.is_active()
                     else:
-                        gpu_avail = engine.EngineManager.check_gpu_available()
+                        engine.EngineManager.check_gpu_available()
             except Exception as e:
                 errors.append((thread_id, e))
 
@@ -395,7 +394,7 @@ class TestPerformanceOverhead:
         start = time.perf_counter()
         for _ in range(iterations):
             adapter.configure(gpu_min_rows=5000, verbose=False)
-            config = adapter.get_config()
+            adapter.get_config()
         elapsed = time.perf_counter() - start
 
         # Should complete in reasonable time (< 0.5 seconds for 1000 operations)

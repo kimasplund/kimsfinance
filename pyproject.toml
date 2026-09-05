@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,8 @@ description = "Blazing-fast financial charting for quantitative trading - 194x a
 readme = "README.md"
 requires-python = ">=3.13"
 license = "AGPL-3.0-or-later"
+# PEP 639 (setuptools >= 77): ship every licence document, not just LICENSE.
+license-files = ["LICENSE", "LICENSING.md", "COMMERCIAL-LICENSE.md"]
 authors = [
     {name = "Kim Asplund", email = "hello@asplund.kim"}
 ]
@@ -38,7 +40,7 @@ classifiers = [
 dependencies = [
     "polars>=1.0",
     "numpy>=2.0",
-    "Pillow>=12.0",
+    "Pillow>=12.3",  # 12.0.0 carries 19 published advisories fixed by 12.3
     "psutil>=5.9.0",
 ]
 
@@ -70,17 +72,20 @@ interactive = [
     "kaleido>=0.2",  # PNG export for Plotly (optional)
 ]
 dev = [
+    # Tooling every contributor needs (also what CI's quality workflow installs).
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "black>=23.0",
     "mypy>=1.0",
+    "ruff>=0.14",
     "tox>=4.0",
+    "pre-commit>=4.0",
     "pandas>=2.0",  # so type-checkers (mypy) can resolve the optional pandas interop
 ]
 test = [
+    # Superset of [dev]: pytest/pytest-cov come from there, plus the optional
+    # libraries the renderer/IO/integration tests import.
     "kimsfinance[dev]",
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
     "pytest-benchmark>=5.1.0",
     "mplfinance>=0.12.10b0",
     "pyarrow>=15.0",
@@ -111,12 +116,53 @@ kimsfinance = ["py.typed"]
 line-length = 100
 target-version = ['py313', 'py314']
 
+[tool.ruff]
+# Keep in sync with [tool.black]: black owns formatting, ruff only lints.
+line-length = 100
+target-version = "py313"
+# Added on top of ruff's default excludes (.git, .venv, build, dist, ...).
+extend-exclude = [
+    "archive/",
+    "build/",
+    "dist/",
+    ".venv/",
+    "rust/cutlass/",
+    "examples/demo_output/",
+]
+
+[tool.ruff.lint]
+# Pyflakes + the pycodestyle error classes black does not already enforce.
+# Import sorting (I) and pyupgrade (UP) are intentionally not enabled yet.
+select = ["E4", "E7", "E9", "F"]
+
 [tool.mypy]
 python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Optional third-party dependencies that ship neither inline types nor stubs.
+# Verified against `mypy kimsfinance` output; only modules that actually raise
+# import-untyped / import-not-found are listed.
+module = [
+    "pandas",
+    "plotly",
+    "plotly.*",
+    "bokeh",
+    "bokeh.*",
+    "reportlab",
+    "reportlab.*",
+    "deap",
+    "mplfinance",
+    "mplfinance.*",
+    "cudf",
+    "cupy",
+    "numba",
+    "svgwrite",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -126,4 +172,5 @@ python_functions = "test_*"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: marks performance benchmark tests",
+    "gpu: needs a usable CUDA device (auto-skipped otherwise)",
 ]

@@ -1118,7 +1118,8 @@ pytest tests/test_memory_leaks.py -v
 /kf/test/performance
 
 # Or run directly
-pytest tests/test_performance.py -v
+pytest tests/ -m benchmark -v
+python benchmarks/standard_benchmark.py --quick
 ```
 
 ### 6.4 Distributed Rendering

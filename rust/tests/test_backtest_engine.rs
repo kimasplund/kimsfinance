@@ -17,7 +17,7 @@ struct RSIStrategy {
 }
 
 impl Strategy for RSIStrategy {
-    fn on_data(&mut self, bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
+    fn on_data(&mut self, _bar: &OHLCVBar, indicators: &IndicatorValues) -> Signal {
         let rsi_key = format!("rsi_{}", self.rsi_period);
 
         let rsi = indicators.get(&rsi_key).copied().unwrap_or(50.0);

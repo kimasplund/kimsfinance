@@ -201,7 +201,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn create_option(strike: f64, market_iv: f64, expiration: i64) -> OptionQuote {
     // Simple Black-Scholes approximation for mid price (placeholder)
     let spot = 48000.0;
-    let ttm = 0.25; // 3 months
+    let ttm = 0.25_f64; // 3 months
     let intrinsic = (spot - strike).max(0.0);
     let time_value = market_iv * spot * ttm.sqrt() * 0.4; // Rough approximation
     let mid_price = intrinsic + time_value;

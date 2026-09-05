@@ -187,7 +187,7 @@ def benchmark_function(
     times = []
     for _ in range(iterations):
         start = time.perf_counter()
-        result = func(*args, **kwargs)
+        func(*args, **kwargs)
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 

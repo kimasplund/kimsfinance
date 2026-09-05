@@ -127,14 +127,14 @@ pip install -e .
 pip install -e ".[dev]"
 
 # Or install individually
-pip install pytest pytest-cov black mypy ruff
+pip install -e ".[dev]"  # pytest, black, mypy, ruff, pre-commit
 ```
 
 #### Optional: GPU Support
 
 ```bash
 # For GPU-accelerated OHLCV processing
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 
 # Verify GPU support
 python -c "import cudf; import cupy; print('GPU ready!')"
@@ -268,7 +268,7 @@ We use **mypy** in strict mode:
 mypy kimsfinance/
 
 # Check specific file
-mypy kimsfinance/plotting/renderer.py
+mypy kimsfinance/plotting/pil_renderer.py
 ```
 
 ### Code Quality Checklist
@@ -319,10 +319,10 @@ pytest tests/
 pytest --cov=kimsfinance --cov-report=html tests/
 
 # Run specific test file
-pytest tests/test_renderer_ohlc.py
+pytest tests/plotting/test_renderer_ohlc.py
 
 # Run specific test function
-pytest tests/test_renderer_ohlc.py::test_render_basic_chart
+pytest tests/plotting/test_plotting.py::test_render_ohlcv_chart
 
 # Run tests matching pattern
 pytest -k "test_render"
@@ -337,14 +337,24 @@ Place tests in the appropriate location:
 
 ```
 tests/
-├── plotting/
+├── conftest.py
+├── test_api_native_routing.py      # Top-level API, engine and cross-cutting tests
+├── test_engine_selection.py
+├── test_visual_regression.py
+├── ...
+├── plotting/                       # Renderers, themes, SVG and interactive output
+│   ├── test_plotting.py
 │   ├── test_renderer_ohlc.py
 │   ├── test_renderer_line.py
-│   └── test_themes.py
+│   └── test_svg_export.py
 ├── ops/
-│   ├── test_aggregations.py
-│   └── test_indicators.py
-└── test_api.py
+│   └── indicators/                 # One test module per indicator
+│       ├── test_atr.py
+│       ├── test_rsi.py
+│       └── test_vwap.py
+├── integration/                    # GPU batch backtest end-to-end tests
+├── optimization/                   # Genetic optimizer tests
+└── python_integration/             # kimsfinance_core (Rust) binding tests
 ```
 
 Example test:
@@ -467,7 +477,7 @@ Follow the [Code Style Guidelines](#code-style-guidelines) and add tests!
 
 ```bash
 # Make changes
-vim kimsfinance/plotting/renderer.py
+vim kimsfinance/plotting/pil_renderer.py
 
 # Format code
 black kimsfinance/ tests/
@@ -663,7 +673,7 @@ pytest --cov=kimsfinance --cov-report=html tests/
 # Then open: htmlcov/index.html
 
 # Profile performance
-python -m cProfile -s cumulative scripts/benchmark_test.py
+python -m cProfile -s cumulative benchmarks/standard_benchmark.py --quick
 
 # Check for type errors
 mypy kimsfinance/ --show-error-codes
@@ -683,9 +693,8 @@ ruff check --fix kimsfinance/
 5. Add documentation and examples
 
 **Adding a technical indicator:**
-1. Implement in `kimsfinance/ops/indicators.py`
-2. Add GPU version in `kimsfinance/ops/indicators_gpu.py` (optional)
-3. Add tests in `tests/ops/test_indicators.py`
+1. Implement in `kimsfinance/ops/indicators/<name>.py` and export it from `kimsfinance/ops/indicators/__init__.py`
+2. Add tests in `tests/ops/indicators/test_<name>.py`
 4. Add integration tests in `tests/test_all_operations.py`
 5. Update documentation
 
@@ -706,7 +715,7 @@ If working on GPU features:
 nvidia-smi
 
 # Test GPU functionality
-pytest tests/test_gpu_operations.py
+pytest tests/test_polars_gpu_engine.py tests/test_engine_selection.py
 
 # Profile GPU kernels
 /kf/profile/gpu-kernel
@@ -719,7 +728,7 @@ pytest tests/test_gpu_operations.py
 
 ```bash
 # Run with verbose output
-pytest -vv tests/test_specific.py
+pytest -vv tests/test_engine_selection.py
 
 # Drop into debugger on failure
 pytest --pdb tests/

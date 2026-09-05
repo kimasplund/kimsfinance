@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Heston pricer with FFT size 4096
     println!("Compiling Heston characteristic function kernel...");
     let start = Instant::now();
-    let pricer = HestonGpuPricer::new(device, 4096)?;
+    let mut pricer = HestonGpuPricer::new(device, 4096, 1024)?;
     let compile_time = start.elapsed();
     println!("✓ Kernel compiled in {:?}\n", compile_time);
 

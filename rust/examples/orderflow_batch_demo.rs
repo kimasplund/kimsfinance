@@ -17,12 +17,12 @@ use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Agent 2: Orderflow + Signals (Fused Kernel) Demo");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Initialize GPU
     println!("\n[1/5] Initializing GPU...");
     let device = Arc::new(GpuDevice::new()?);
-    println!("✅ GPU initialized: {}", device.device_name()?);
+    println!("✅ GPU initialized");
 
     // Create synthetic input data (simulating Agent 1 output)
     println!("\n[2/5] Generating synthetic tick data...");

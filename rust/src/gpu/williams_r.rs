@@ -240,7 +240,10 @@ pub fn williams_r_gpu(
     let mut pinned_williams_r = device.pinned_pool.lock().acquire(stage_slots)?;
 
     // Async D2H transfer
-    exec_stream.memcpy_dtoh(&d_williams_r, pinned_f32_view_mut(&mut pinned_williams_r, n))?;
+    exec_stream.memcpy_dtoh(
+        &d_williams_r,
+        pinned_f32_view_mut(&mut pinned_williams_r, n),
+    )?;
 
     // Synchronize stream to ensure D2H copy is complete before CPU access
     exec_stream
@@ -330,8 +333,7 @@ mod tests {
             let ll32 = (0..period)
                 .map(|i| low[idx - i] as f32)
                 .fold(f32::INFINITY, f32::min);
-            let r32 =
-                (((hh32 - close[idx] as f32) / (hh32 - ll32)) * -100.0f32).clamp(-100.0, 0.0);
+            let r32 = (((hh32 - close[idx] as f32) / (hh32 - ll32)) * -100.0f32).clamp(-100.0, 0.0);
 
             assert!(
                 (r32 as f64 - r64).abs() < 0.01,

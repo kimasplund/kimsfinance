@@ -159,13 +159,13 @@ from .ops.batch import (
 # Reporting (optional - requires reportlab and matplotlib)
 try:
     from .reporting import (
-        BacktestReport,
-        HTMLReport,
-        ReportConfig,
-        calculate_performance_metrics,
-        calculate_trade_statistics,
-        calculate_risk_metrics,
-        calculate_monthly_returns,
+        BacktestReport as BacktestReport,
+        HTMLReport as HTMLReport,
+        ReportConfig as ReportConfig,
+        calculate_performance_metrics as calculate_performance_metrics,
+        calculate_trade_statistics as calculate_trade_statistics,
+        calculate_risk_metrics as calculate_risk_metrics,
+        calculate_monthly_returns as calculate_monthly_returns,
     )
 
     _REPORTING_AVAILABLE = True
@@ -233,7 +233,7 @@ def info() -> None:
     print("kimsfinance: GPU-Accelerated Financial Charting")
     print("=" * 80)
     print(f"Version: {__version__}")
-    print(f"Python: 3.13+ (modern type system)")
+    print("Python: 3.13+ (modern type system)")
     print()
 
     # Engine status
@@ -394,48 +394,15 @@ if _REPORTING_AVAILABLE:
 
 def _check_dependencies():
     """Check and report on optional dependencies."""
-    deps = {
-        "polars": False,
-        "numpy": False,
-        "pandas": False,
-        "cupy": False,
-        "cudf": False,
-    }
+    import importlib
 
-    try:
-        import polars
-
-        deps["polars"] = True
-    except ImportError:
-        pass
-
-    try:
-        import numpy
-
-        deps["numpy"] = True
-    except ImportError:
-        pass
-
-    try:
-        import pandas
-
-        deps["pandas"] = True
-    except ImportError:
-        pass
-
-    try:
-        import cupy
-
-        deps["cupy"] = True
-    except ImportError:
-        pass
-
-    try:
-        import cudf
-
-        deps["cudf"] = True
-    except ImportError:
-        pass
+    deps = {}
+    for name in ("polars", "numpy", "pandas", "cupy", "cudf"):
+        try:
+            importlib.import_module(name)
+            deps[name] = True
+        except ImportError:
+            deps[name] = False
 
     return deps
 

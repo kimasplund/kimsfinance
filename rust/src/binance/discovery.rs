@@ -297,7 +297,6 @@ mod tests {
     // Integration tests require actual filesystem
     #[test]
     fn test_find_files_empty_directory() {
-        use std::fs;
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();

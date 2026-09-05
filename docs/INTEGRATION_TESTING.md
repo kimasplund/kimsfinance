@@ -225,8 +225,9 @@ pytest tests/integration/ -v -m slow
 # GPU compatibility and fallback
 pytest tests/integration/test_gpu_compatibility.py -v
 
-# CPU-only mode (force disable GPU)
-GPU_AVAILABLE=0 pytest tests/integration/ -v
+# Without a usable CUDA device the GPU-only tests skip automatically
+# (device probes live in tests/_gpu.py)
+pytest tests/integration/ -v
 ```
 
 ### Test Markers
@@ -235,7 +236,7 @@ Tests are marked with pytest markers:
 
 - `@pytest.mark.benchmark`: Performance benchmarks
 - `@pytest.mark.slow`: Long-running tests (>10s)
-- `@pytest.mark.skipif(not GPU_AVAILABLE, ...)`: GPU-only tests
+- `@requires_gpu`, `@requires_polars_gpu`, `@requires_core_gpu` (from `tests/_gpu.py`): GPU-only tests, skipped when no usable CUDA device is found
 
 ---
 
@@ -371,9 +372,9 @@ else:
 ### CPU Fallback
 
 The genetic optimizer should gracefully fallback to CPU when:
-- GPU not available (`GPU_AVAILABLE = False`)
+- GPU not available (`kimsfinance.batch.GPU_AVAILABLE` is False)
 - GPU initialization fails (CUDA error)
-- Explicitly requested (`use_gpu=False`)
+- The `backtester` passed to `optimize()` runs on the CPU (the optimizer itself has no GPU flag)
 
 ```python
 optimizer = GeneticOptimizer(...)
@@ -641,14 +642,14 @@ def generate_random_params(n: int, strategy: str = 'rsi_crossover') -> List[Dict
 
 After completing integration testing:
 
-1. **Run Full Benchmark Suite**:
+1. **Validate the GPU batch backtest pipeline end to end**:
    ```bash
-   python benchmarks/benchmark_batch_backtest.py
+   python scripts/validate_gpu_batch_backtest.py
    ```
 
-2. **Generate Performance Report**:
+2. **Run the standard benchmark suite** and record the numbers:
    ```bash
-   python benchmarks/generate_performance_report.py
+   python benchmarks/standard_benchmark.py --quick
    ```
 
 3. **Update Documentation**:

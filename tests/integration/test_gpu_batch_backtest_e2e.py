@@ -21,7 +21,11 @@ import pandas as pd
 import time
 from typing import List, Dict
 
+from _backtesters import BatchBacktester
+
 try:
+    # GPU_AVAILABLE is device-based (see kimsfinance.batch): False when the
+    # bindings import but no CUDA device can be initialised.
     from kimsfinance.batch import batch_backtest, BacktestConfig, get_gpu_info, GPU_AVAILABLE
     from kimsfinance.optimization.genetic import GeneticOptimizer
 
@@ -206,7 +210,7 @@ class TestE2EPipeline:
             assert 0.0 <= r["win_rate"] <= 1.0, f"Result {i}: Invalid win_rate {r['win_rate']}"
             assert r["max_drawdown"] <= 0.0, f"Result {i}: Invalid max_drawdown {r['max_drawdown']}"
 
-        print(f"✅ 10 strategies E2E: All metrics valid")
+        print("✅ 10 strategies E2E: All metrics valid")
 
     def test_100_strategies_e2e(self):
         """Test 100 strategies (medium batch) end-to-end."""
@@ -274,6 +278,7 @@ class TestE2EPipeline:
             pytest.skip(f"Slower than expected: {elapsed_ms:.1f}ms (target: <1000ms)")
 
 
+@pytest.mark.skipif(not DEAP_AVAILABLE, reason="deap package not installed")
 class TestGeneticOptimizationE2E:
     """Test genetic optimizer with GPU batch evaluation."""
 
@@ -293,12 +298,13 @@ class TestGeneticOptimizationE2E:
         )
 
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=False
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=False
         )
 
-        # Should find Pareto-optimal solutions
+        # Should find Pareto-optimal solutions. The returned front comes from a
+        # DEAP ParetoFront hall of fame accumulated over all generations, so it
+        # is not bounded by population_size.
         assert len(results) > 0
-        assert len(results) <= 20  # At most population size
 
         # Best solution should have reasonable metrics
         best = results[0]
@@ -325,7 +331,7 @@ class TestGeneticOptimizationE2E:
 
         start = time.time()
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=False
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=False
         )
         elapsed = time.time() - start
 
@@ -358,7 +364,7 @@ class TestGeneticOptimizationE2E:
 
         start = time.time()
         results = optimizer.optimize(
-            strategy="rsi_crossover", data=data, use_gpu=True, verbose=True
+            strategy="rsi_crossover", data=data, backtester=BatchBacktester(), verbose=True
         )
         elapsed = time.time() - start
 
@@ -390,7 +396,7 @@ class TestAccuracyValidation:
         assert result_gpu_1["max_drawdown"] == result_gpu_2["max_drawdown"]
         assert result_gpu_1["win_rate"] == result_gpu_2["win_rate"]
 
-        print(f"✅ GPU determinism validated")
+        print("✅ GPU determinism validated")
 
     def test_gpu_vs_cpu_10_strategies(self):
         """Statistical validation: GPU vs CPU for 10 strategies."""
@@ -414,7 +420,7 @@ class TestAccuracyValidation:
                 r1["num_trades"] == r2["num_trades"]
             ), f"Strategy {i}: Non-deterministic trade count {r1['num_trades']} vs {r2['num_trades']}"
 
-        print(f"✅ GPU determinism validated for 10 strategies")
+        print("✅ GPU determinism validated for 10 strategies")
 
     @pytest.mark.slow
     def test_gpu_vs_cpu_100_strategies_statistical(self):
@@ -441,7 +447,7 @@ class TestAccuracyValidation:
         assert mean_diff == 0.0, f"Mean Sharpe diff: {mean_diff} (expected 0.0)"
         assert max_diff == 0.0, f"Max Sharpe diff: {max_diff} (expected 0.0)"
 
-        print(f"✅ GPU determinism validated for 100 strategies")
+        print("✅ GPU determinism validated for 100 strategies")
 
 
 class TestErrorHandling:
@@ -513,7 +519,7 @@ class TestErrorHandling:
             results = batch_backtest("rsi_crossover", data, params)
             # If it succeeds, validate results
             assert len(results) == 10000
-            print(f"✅ Large batch (10K strategies) succeeded")
+            print("✅ Large batch (10K strategies) succeeded")
         except RuntimeError as e:
             # Should fail gracefully with memory-related error
             error_msg = str(e).lower()
@@ -532,7 +538,7 @@ class TestPerformanceRegression:
         data = generate_synthetic_ohlcv(5000, seed=1111)
         params = generate_random_params(100, strategy="rsi_crossover", seed=1212)
 
-        result = benchmark(batch_backtest, "rsi_crossover", data, params)
+        benchmark(batch_backtest, "rsi_crossover", data, params)
 
         # Should complete in <200ms on RTX 3500 Ada (allow 2x target)
         median_time = benchmark.stats["median"]
@@ -550,7 +556,7 @@ class TestPerformanceRegression:
         data = generate_synthetic_ohlcv(10000, seed=1313)
         params = generate_random_params(1000, strategy="rsi_crossover", seed=1414)
 
-        result = benchmark(batch_backtest, "rsi_crossover", data, params)
+        benchmark(batch_backtest, "rsi_crossover", data, params)
 
         median_time = benchmark.stats["median"]
         print(f"✅ 1000 strategies: {median_time*1000:.1f}ms")

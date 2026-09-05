@@ -480,8 +480,9 @@ mod heston_integration {
             HestonGpuPricer::new(device.clone(), 4096, 100).expect("Failed to create pricer");
         let options = generate_synthetic_options(&params, &mut pricer_for_gen, 50);
 
-        let gpu_pricer =
-            Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer")));
+        let gpu_pricer = Arc::new(Mutex::new(
+            HestonGpuPricer::new(device, 4096, 100).expect("Failed to create pricer"),
+        ));
         let calibrator = HestonCalibrator::new(gpu_pricer, options, params)
             .expect("Failed to create calibrator")
             .with_max_iterations(50);

@@ -722,7 +722,7 @@ mod tests {
             .unwrap();
 
         // POC price should be within the overall price range
-        assert!(poc_price >= 105.0 && poc_price <= 122.0);
+        assert!((105.0..=122.0).contains(&poc_price));
         // POC volume should be positive
         assert!(poc_volume > 0.0);
     }

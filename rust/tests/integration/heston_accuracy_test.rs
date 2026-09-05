@@ -17,7 +17,7 @@ mod heston_accuracy_tests {
     mod test_data {
         include!("../data/heston_test_data.rs");
     }
-    use test_data::{generate_options_chain, test_heston_params, MarketRegime};
+    use test_data::{MarketRegime, generate_options_chain, test_heston_params};
 
     const PRICE_TOLERANCE: f64 = 0.0005; // 0.05% error
     const GREEKS_TOLERANCE: f64 = 0.01; // 1% error
@@ -56,7 +56,8 @@ mod heston_accuracy_tests {
                 .price(
                     option.spot_price,
                     option.strike,
-                    (option.expiration - chrono::Utc::now().timestamp()) as f64 / (365.0 * 24.0 * 3600.0),
+                    (option.expiration - chrono::Utc::now().timestamp()) as f64
+                        / (365.0 * 24.0 * 3600.0),
                     option.risk_free_rate,
                     params.v0.sqrt(), // Use current vol
                     option.option_type == OptionType::Call,
@@ -109,7 +110,9 @@ mod heston_accuracy_tests {
         let mut option_bumped = options[0].clone();
         option_bumped.spot_price += h;
 
-        let price_base = pricer.price_options(&params, &options).expect("Pricing failed")[0];
+        let price_base = pricer
+            .price_options(&params, &options)
+            .expect("Pricing failed")[0];
         let price_bumped = pricer
             .price_options(&params, &[option_bumped])
             .expect("Pricing failed")[0];
@@ -272,7 +275,9 @@ mod heston_accuracy_tests {
             greeks: None,
         };
 
-        let prices = pricer.price_options(&params, &[call]).expect("Pricing failed");
+        let prices = pricer
+            .price_options(&params, &[call])
+            .expect("Pricing failed");
         let intrinsic = spot - strike;
 
         println!("\n===== Deep ITM Call Accuracy =====");
@@ -326,7 +331,9 @@ mod heston_accuracy_tests {
             greeks: None,
         };
 
-        let prices = pricer.price_options(&params, &[call]).expect("Pricing failed");
+        let prices = pricer
+            .price_options(&params, &[call])
+            .expect("Pricing failed");
 
         println!("\n===== Deep OTM Call Accuracy =====");
         println!("Option price: {:.2}", prices[0]);

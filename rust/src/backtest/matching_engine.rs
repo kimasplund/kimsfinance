@@ -710,10 +710,10 @@ impl MatchingEngine {
                     // If parent is filled, activate child orders
                     if filled_order_ids.contains(parent_id) {
                         for &child_id in child_ids {
-                            if let Some(child) = self.pending_orders.get_mut(&child_id) {
-                                if child.status == OrderStatus::Created {
-                                    child.set_status(OrderStatus::Pending);
-                                }
+                            if let Some(child) = self.pending_orders.get_mut(&child_id)
+                                && child.status == OrderStatus::Created
+                            {
+                                child.set_status(OrderStatus::Pending);
                             }
                         }
                     }
@@ -726,10 +726,10 @@ impl MatchingEngine {
                     // If entry is filled, activate stop loss and take profit
                     if filled_order_ids.contains(entry_id) {
                         for &id in &[*stop_loss_id, *take_profit_id] {
-                            if let Some(order) = self.pending_orders.get_mut(&id) {
-                                if order.status == OrderStatus::Created {
-                                    order.set_status(OrderStatus::Pending);
-                                }
+                            if let Some(order) = self.pending_orders.get_mut(&id)
+                                && order.status == OrderStatus::Created
+                            {
+                                order.set_status(OrderStatus::Pending);
                             }
                         }
                     }
@@ -799,7 +799,10 @@ mod tests {
         // Price above limit - should not fill
         let market1 = MarketSnapshot::new(1000, create_test_bar(50000.0, 100.0));
         let fills1 = engine.match_orders(&market1);
-        println!("low: {}, limit: {}, fills1: {:?}", market1.bar.low, 49900.0, fills1);
+        println!(
+            "low: {}, limit: {}, fills1: {:?}",
+            market1.bar.low, 49900.0, fills1
+        );
         assert_eq!(fills1.len(), 0);
 
         // Price below limit - should fill
@@ -869,8 +872,10 @@ mod tests {
 
     #[test]
     fn test_partial_fills() {
-        let mut config = MatchingConfig::default();
-        config.max_fill_per_bar = 0.1; // 10% of volume
+        let config = MatchingConfig {
+            max_fill_per_bar: 0.1, // 10% of volume
+            ..Default::default()
+        };
         let mut engine = MatchingEngine::with_config(config);
 
         let order = Order::market(0, "BTC/USD".to_string(), OrderSide::Buy, 20.0);

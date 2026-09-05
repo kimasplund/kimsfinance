@@ -683,26 +683,11 @@ pub fn load_production_strategy() -> Result<LightGBMOrderflowStrategy, Box<dyn s
 
 ## Example: Complete Integration
 
-See `examples/lightgbm_orderflow_strategy.rs` for a complete working example.
-
-**To run**:
-```bash
-# Single backtest
-cargo run --release --example lightgbm_orderflow_strategy -- \
-    --model models/orderflow_model.lgb \
-    --data /data/trades_parquet/2024-01 \
-    --threshold 0.6
-
-# Genetic optimization
-cargo run --release --example lightgbm_orderflow_strategy -- \
-    --model models/orderflow_model.lgb \
-    --data /data/trades_parquet/2024-01 \
-    --optimize \
-    --population 100 \
-    --generations 50
-```
-
----
+The former `examples/lightgbm_orderflow_strategy.rs` was removed in 0.2.x: it depended on
+`clap` and a LightGBM crate that were never dependencies of the crate, and on a `Signal`
+API that no longer exists. The snippets above show the integration pattern; wire them into
+your own binary with a LightGBM binding of your choice and the `OrderflowProcessor` /
+`TickBacktestEngine` APIs documented in `docs/PYTHON_BINDINGS.md` and `docs/BATCH_API.md`.
 
 ## Next Steps
 

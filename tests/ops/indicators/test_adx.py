@@ -155,7 +155,6 @@ def test_trend_strength():
 def test_signal_generation():
     """Test +DI/-DI crossover signal detection."""
     # Create data with trend reversal
-    n = 100
     # Uptrend then downtrend
     uptrend = 100 + np.arange(50) * 0.5
     downtrend = uptrend[-1] - np.arange(50) * 0.5

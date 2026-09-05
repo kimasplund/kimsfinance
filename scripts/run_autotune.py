@@ -84,22 +84,22 @@ def main():
 
         if threshold < default:
             color = C.G
-            msg = f"(GPU beneficial at smaller sizes)"
+            msg = "(GPU beneficial at smaller sizes)"
         elif threshold > default:
             color = C.Y
-            msg = f"(GPU beneficial at larger sizes)"
+            msg = "(GPU beneficial at larger sizes)"
         else:
             color = C.C
-            msg = f"(matches default)"
+            msg = "(matches default)"
 
         print(f"  {color}{op:15s}: {threshold:>10,} rows {msg}{C.E}")
 
     print(f"\n{C.G}Results saved to: {CACHE_FILE}{C.E}")
     print(f"\n{C.BOLD}Recommendations:{C.E}")
-    print(f"  • Use engine='auto' to automatically apply these thresholds")
-    print(f"  • Re-run autotune if you change hardware or drivers")
-    print(f"  • Smaller thresholds = GPU is faster on your hardware")
-    print(f"  • Larger thresholds = CPU is more efficient for your use case")
+    print("  • Use engine='auto' to automatically apply these thresholds")
+    print("  • Re-run autotune if you change hardware or drivers")
+    print("  • Smaller thresholds = GPU is faster on your hardware")
+    print("  • Larger thresholds = CPU is more efficient for your use case")
 
     print(f"\n{C.BOLD}{'='*70}{C.E}")
     print(f"{C.G}Auto-tune complete!{C.E}")

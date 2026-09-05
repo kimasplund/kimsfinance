@@ -118,7 +118,7 @@ def demo_tick_charts():
         print(f"  ✓ Saved: {output_path}")
 
     # Create comparison with different chart types
-    print(f"\nCreating tick chart with all 6 chart types...")
+    print("\nCreating tick chart with all 6 chart types...")
     ohlc = tick_to_ohlc(ticks, tick_size=100)
 
     chart_types = ["candle", "ohlc", "line", "hollow_and_filled", "renko", "pnf"]
@@ -169,9 +169,9 @@ def demo_volume_charts():
         print(f"  ✓ Saved: {output_path}")
 
     # Show volume bars adapt to activity
-    print(f"\n📊 Key Insight: Volume bars normalize activity")
-    print(f"   - High volume periods → More bars (shorter time duration)")
-    print(f"   - Low volume periods → Fewer bars (longer time duration)")
+    print("\n📊 Key Insight: Volume bars normalize activity")
+    print("   - High volume periods → More bars (shorter time duration)")
+    print("   - Low volume periods → Fewer bars (longer time duration)")
 
 
 def demo_range_charts():
@@ -223,10 +223,10 @@ def demo_range_charts():
         )
         print(f"  ✓ Saved: {output_path}")
 
-    print(f"\n📊 Key Insight: Range bars normalize volatility")
-    print(f"   - High volatility periods → More bars")
-    print(f"   - Low volatility periods → Fewer bars")
-    print(f"   - Each bar has same high-low range")
+    print("\n📊 Key Insight: Range bars normalize volatility")
+    print("   - High volatility periods → More bars")
+    print("   - Low volatility periods → Fewer bars")
+    print("   - Each bar has same high-low range")
 
 
 def demo_comparison():
@@ -321,7 +321,7 @@ def demo_performance():
     print(f"  Generation time: {gen_time*1000:.1f}ms")
 
     # Benchmark tick_to_ohlc
-    print(f"\nBenchmark: tick_to_ohlc(tick_size=100)")
+    print("\nBenchmark: tick_to_ohlc(tick_size=100)")
     start = time.perf_counter()
     tick_ohlc = tick_to_ohlc(ticks, tick_size=100)
     tick_time = time.perf_counter() - start
@@ -330,7 +330,7 @@ def demo_performance():
     print(f"  Bars created: {len(tick_ohlc):,}")
 
     # Benchmark volume_to_ohlc
-    print(f"\nBenchmark: volume_to_ohlc(volume_size=50000)")
+    print("\nBenchmark: volume_to_ohlc(volume_size=50000)")
     start = time.perf_counter()
     volume_ohlc = volume_to_ohlc(ticks, volume_size=50_000)
     volume_time = time.perf_counter() - start
@@ -339,7 +339,7 @@ def demo_performance():
     print(f"  Bars created: {len(volume_ohlc):,}")
 
     # Benchmark range_to_ohlc
-    print(f"\nBenchmark: range_to_ohlc(range_size=2.0)")
+    print("\nBenchmark: range_to_ohlc(range_size=2.0)")
     start = time.perf_counter()
     range_ohlc = range_to_ohlc(ticks, range_size=2.0)
     range_time = time.perf_counter() - start
@@ -347,7 +347,7 @@ def demo_performance():
     print(f"  Throughput: {n_ticks/range_time/1000:.1f}K ticks/sec")
     print(f"  Bars created: {len(range_ohlc):,}")
 
-    print(f"\n✅ All aggregations process 100K+ ticks in <500ms using Polars!")
+    print("\n✅ All aggregations process 100K+ ticks in <500ms using Polars!")
 
 
 def main():
@@ -356,7 +356,7 @@ def main():
     print("    KIMSFINANCE: Tick-Based Aggregation Demo")
     print("=" * 70)
     print(f"\nOutput directory: {OUTPUT_DIR}")
-    print(f"Charts will be saved as WebP images (178x faster than mplfinance!)")
+    print("Charts will be saved as WebP images (178x faster than mplfinance!)")
 
     # Run all demos
     demo_tick_charts()

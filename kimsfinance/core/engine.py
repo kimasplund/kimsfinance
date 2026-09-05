@@ -13,7 +13,6 @@ import threading
 from collections.abc import Callable
 from typing import Literal, TypeVar, ParamSpec
 
-import polars as pl
 
 from .types import Engine
 from .exceptions import GPUNotAvailableError, ConfigurationError
@@ -102,7 +101,7 @@ class EngineManager:
 
             # Perform actual GPU check
             try:
-                import cudf
+                import cudf  # noqa: F401  # availability probe (must import)
                 import cupy as cp
 
                 # Test GPU functionality (ensure it actually works)

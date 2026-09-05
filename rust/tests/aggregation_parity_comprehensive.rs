@@ -156,61 +156,59 @@ fn test_parity_single_candle() {
 
 #[test]
 fn test_parity_multiple_candles() {
-    let mut trades = Vec::new();
-
-    // Candle 1 (0-60s): 2 trades
-    trades.push(Trade {
-        trade_id: 1,
-        price: 100.0,
-        quantity: 1.0,
-        quote_quantity: 100.0,
-        timestamp_ms: 1000,
-        is_buyer_maker: false,
-    });
-    trades.push(Trade {
-        trade_id: 2,
-        price: 102.0,
-        quantity: 0.5,
-        quote_quantity: 51.0,
-        timestamp_ms: 30000,
-        is_buyer_maker: true,
-    });
-
-    // Candle 2 (60-120s): 3 trades
-    trades.push(Trade {
-        trade_id: 3,
-        price: 110.0,
-        quantity: 2.0,
-        quote_quantity: 220.0,
-        timestamp_ms: 61000,
-        is_buyer_maker: false,
-    });
-    trades.push(Trade {
-        trade_id: 4,
-        price: 108.0,
-        quantity: 1.0,
-        quote_quantity: 108.0,
-        timestamp_ms: 90000,
-        is_buyer_maker: true,
-    });
-    trades.push(Trade {
-        trade_id: 5,
-        price: 112.0,
-        quantity: 0.75,
-        quote_quantity: 84.0,
-        timestamp_ms: 119000,
-        is_buyer_maker: false,
-    });
-
-    // Candle 3 (120-180s): 1 trade
-    trades.push(Trade {
-        trade_id: 6,
-        price: 105.0,
-        quantity: 1.5,
-        quote_quantity: 157.5,
-        timestamp_ms: 121000,
-        is_buyer_maker: false,
-    });
+    let trades = vec![
+        // Candle 1 (0-60s): 2 trades
+        Trade {
+            trade_id: 1,
+            price: 100.0,
+            quantity: 1.0,
+            quote_quantity: 100.0,
+            timestamp_ms: 1000,
+            is_buyer_maker: false,
+        },
+        Trade {
+            trade_id: 2,
+            price: 102.0,
+            quantity: 0.5,
+            quote_quantity: 51.0,
+            timestamp_ms: 30000,
+            is_buyer_maker: true,
+        },
+        // Candle 2 (60-120s): 3 trades
+        Trade {
+            trade_id: 3,
+            price: 110.0,
+            quantity: 2.0,
+            quote_quantity: 220.0,
+            timestamp_ms: 61000,
+            is_buyer_maker: false,
+        },
+        Trade {
+            trade_id: 4,
+            price: 108.0,
+            quantity: 1.0,
+            quote_quantity: 108.0,
+            timestamp_ms: 90000,
+            is_buyer_maker: true,
+        },
+        Trade {
+            trade_id: 5,
+            price: 112.0,
+            quantity: 0.75,
+            quote_quantity: 84.0,
+            timestamp_ms: 119000,
+            is_buyer_maker: false,
+        },
+        // Candle 3 (120-180s): 1 trade
+        Trade {
+            trade_id: 6,
+            price: 105.0,
+            quantity: 1.5,
+            quote_quantity: 157.5,
+            timestamp_ms: 121000,
+            is_buyer_maker: false,
+        },
+    ];
 
     let timeframe = Timeframe::parse("1m").unwrap();
 
@@ -573,7 +571,8 @@ fn test_parity_real_binance_data() {
 
     // This test validates parity against real Binance data (4.6M trades)
     // Path should be updated to match your local data location
-    let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
+    let path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
 
     // Skip test if file doesn't exist
     if !std::path::Path::new(path).exists() {

@@ -53,8 +53,7 @@ fn test_gpu_vs_cpu_identical() {
         execution_latency_ms: 10,
         use_gpu: true,
         force_cpu: false,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     // CPU results
@@ -157,8 +156,7 @@ fn test_graceful_fallback() {
         execution_latency_ms: 10,
         use_gpu: true,
         force_cpu: false, // Will auto-fallback if GPU fails,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let device = Arc::new(GpuDevice::new().expect("GPU not available for test"));
@@ -240,8 +238,7 @@ fn test_large_batch_processing() {
         execution_latency_ms: 10,
         use_gpu: true,
         force_cpu: true, // Force CPU to avoid GPU dependency,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let device = Arc::new(GpuDevice::new().expect("GPU not available for test"));
@@ -290,8 +287,7 @@ fn test_performance_summary() {
         execution_latency_ms: 10,
         use_gpu: true,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let device = Arc::new(GpuDevice::new().expect("GPU not available for test"));
@@ -339,9 +335,7 @@ fn run_cpu_backtests(
         let ema_period = param_vec[4] as usize;
         let volatility_factor = param_vec[5];
 
-        let mut strategy = OrderFlowStrategy::new(
-            imbalance_threshold,
-        );
+        let mut strategy = OrderFlowStrategy::new(imbalance_threshold);
 
         let timeframe = Timeframe::parse("5m").expect("Timeframe parse error");
         let result = engine

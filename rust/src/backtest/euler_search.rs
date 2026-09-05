@@ -60,9 +60,9 @@
 //! println!("Total evaluations: {}", result.convergence_history.len());
 //! ```
 
+use crate::BacktestConfig;
 #[cfg(feature = "gpu")]
 use crate::backtest::batch::{BatchBacktestResults, BatchBacktestSweep, StrategyType};
-use crate::BacktestConfig;
 #[cfg(feature = "gpu")]
 use crate::gpu::device::{GpuDevice, GpuError};
 use ndarray::Array1;

@@ -20,7 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     fn load_ohlcv_csv(
         path: &str,
-    ) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>), Box<dyn std::error::Error>> {
+    ) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>), Box<dyn std::error::Error>>
+    {
         let content = fs::read_to_string(path)?;
 
         let mut open = Vec::new();
@@ -129,9 +130,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         v.iter().filter(|x| x.is_finite()).count()
     }
 
-    let path = std::env::args().nth(1).unwrap_or_else(|| {
-        "../data/binance/BTCUSDT_5m_1y_ohlcv.csv".to_string()
-    });
+    let path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "../data/binance/BTCUSDT_5m_1y_ohlcv.csv".to_string());
 
     println!("=== Real-Data GPU Kernel Validation (OHLCV CSV) ===");
     println!("Input: {path}");
@@ -211,7 +212,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let t = Instant::now();
-    let mfi = mfi_gpu(&device, &high_arr, &low_arr, &close_arr, &volume_arr, 14, None)?;
+    let mfi = mfi_gpu(
+        &device,
+        &high_arr,
+        &low_arr,
+        &close_arr,
+        &volume_arr,
+        14,
+        None,
+    )?;
     println!(
         "MFI kernels: OK | time={:.2} ms | finite={}",
         t.elapsed().as_secs_f64() * 1000.0,

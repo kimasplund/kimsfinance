@@ -283,9 +283,9 @@ fn run_signal_based_backtest(
                             in_position = true;
                         }
                     }
-                    2 => {
+                    2
                         // Sell signal
-                        if in_position {
+                        if in_position => {
                             // Exit long position
                             let exit_price = price * (1.0 - config.trading_fee - config.slippage);
                             cash = position_size * exit_price;
@@ -305,7 +305,6 @@ fn run_signal_based_backtest(
                             position_size = 0.0;
                             in_position = false;
                         }
-                    }
                     _ => {} // Hold
                 }
                 false // Remove from pending

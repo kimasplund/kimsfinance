@@ -57,7 +57,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!(
         "  Sharpe (in-sample): {:.2} | (out-of-sample): {:.2} | Degradation: {:.1}%",
-        validation.is_sharpe, validation.oos_sharpe, validation.degradation * 100.0
+        validation.is_sharpe,
+        validation.oos_sharpe,
+        validation.degradation * 100.0
     );
 
     if !validation.is_approved {
@@ -96,10 +98,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("─────────────────────────────────────────────────────");
 
     let fee_structure = FeeStructure {
-        maker_fee: 0.0002,           // 0.02%
-        taker_fee: 0.0004,           // 0.04%
-        slippage_bps: 1.5,           // 1.5 bps
-        funding_rate_annual: 0.12,   // 12% annual
+        maker_fee: 0.0002,         // 0.02%
+        taker_fee: 0.0004,         // 0.04%
+        slippage_bps: 1.5,         // 1.5 bps
+        funding_rate_annual: 0.12, // 12% annual
         min_trade_value: 10.0,
     };
 
@@ -117,19 +119,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cost_per_round_trip = entry_fee + exit_fee + slippage;
     let cost_per_rt_pct = (cost_per_round_trip / avg_trade_size) * 100.0;
 
-    println!("  Cost Per Round-Trip Trade (${:.0} position):", avg_trade_size);
+    println!(
+        "  Cost Per Round-Trip Trade (${:.0} position):",
+        avg_trade_size
+    );
     println!("    Entry (taker):  ${:.2}", entry_fee);
     println!("    Exit (taker):   ${:.2}", exit_fee);
     println!("    Slippage:       ${:.2}", slippage);
     println!("    ────────────────");
-    println!("    Total Cost:     ${:.2} ({:.3}%)", cost_per_round_trip, cost_per_rt_pct);
+    println!(
+        "    Total Cost:     ${:.2} ({:.3}%)",
+        cost_per_round_trip, cost_per_rt_pct
+    );
     println!();
 
     // Total fee impact
     let total_fees = cost_per_round_trip * (total_trades as f64);
-    println!("  Total Fees for {} Trades: ${:.0}", total_trades, total_fees);
-    println!("  Average Fee Per Trade:   ${:.2}", total_fees / total_trades as f64);
-    println!("  Fees as % of Capital:    {:.2}%", (total_fees / initial_capital) * 100.0);
+    println!(
+        "  Total Fees for {} Trades: ${:.0}",
+        total_trades, total_fees
+    );
+    println!(
+        "  Average Fee Per Trade:   ${:.2}",
+        total_fees / total_trades as f64
+    );
+    println!(
+        "  Fees as % of Capital:    {:.2}%",
+        (total_fees / initial_capital) * 100.0
+    );
     println!();
 
     // =========================================================================
@@ -144,9 +161,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fee_drag_pct = (total_fees / gross_return.abs().max(1.0)) * 100.0;
 
     println!("  Return Analysis:");
-    println!("    Gross Return (before fees): ${:+.0} ({:+.1}%)", gross_return, gross_return_pct);
+    println!(
+        "    Gross Return (before fees): ${:+.0} ({:+.1}%)",
+        gross_return, gross_return_pct
+    );
     println!("    Total Fees:                 $-{:.0}", total_fees);
-    println!("    Net Return (after fees):    ${:+.0} ({:+.1}%)", net_return, net_return_pct);
+    println!(
+        "    Net Return (after fees):    ${:+.0} ({:+.1}%)",
+        net_return, net_return_pct
+    );
     println!();
 
     println!("  Fee Drag:");
@@ -166,7 +189,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Breakeven Analysis:");
     println!("    Avg profit per trade: ${:.2}", avg_profit_per_trade);
     println!("    Avg fee per trade:    ${:.2}", fee_per_trade);
-    println!("    Need {:.1}% win rate to break even", breakeven_pct.min(100.0));
+    println!(
+        "    Need {:.1}% win rate to break even",
+        breakeven_pct.min(100.0)
+    );
     println!();
 
     // Live vs backtest reality check
@@ -183,14 +209,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if net_return <= 0.0 {
         println!("  ❌ STRATEGY UNPROFITABLE AFTER FEES");
-        println!("     Fees (${:.0}) exceed profits (${:.0})", total_fees, gross_return);
-        println!("  ➜ Options: Higher win rate | Larger winners | Fewer trades | Lower position sizing");
+        println!(
+            "     Fees (${:.0}) exceed profits (${:.0})",
+            total_fees, gross_return
+        );
+        println!(
+            "  ➜ Options: Higher win rate | Larger winners | Fewer trades | Lower position sizing"
+        );
         return Ok(());
     }
 
     if realistic_net <= initial_capital * 1.02 {
         println!("  ⚠️  STRATEGY MARGINAL AFTER REALISTIC FEES");
-        println!("     After fees: {:.1}% return (effectively break-even after risk adjustment)", realistic_return_pct);
+        println!(
+            "     After fees: {:.1}% return (effectively break-even after risk adjustment)",
+            realistic_return_pct
+        );
         println!("  ➜ Risk/reward ratio makes this unviable for live trading");
         println!();
         return Ok(());
@@ -206,11 +240,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("───────────────────────────");
 
     let go_live_checks = vec![
-        ("Out-of-sample pass rate >= 75%", validation.pass_count as f64 / validation.total_periods as f64 >= 0.75),
+        (
+            "Out-of-sample pass rate >= 75%",
+            validation.pass_count as f64 / validation.total_periods as f64 >= 0.75,
+        ),
         ("OOS degradation <= 30%", validation.degradation <= 0.30),
         ("Positive net return after fees", net_return > 0.0),
         ("Fee drag <= 30%", fee_drag_pct <= 30.0),
-        ("Win rate >= breakeven", (win_rate * 100.0) > breakeven_pct.min(100.0)),
+        (
+            "Win rate >= breakeven",
+            (win_rate * 100.0) > breakeven_pct.min(100.0),
+        ),
         ("Realistic return positive", realistic_return_pct > 2.0),
     ];
 
@@ -233,26 +273,56 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("║                   Deployment Readiness Summary                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
-    println!("Strategy:              Trend({}) + RSI({})", best_candidate.period, best_candidate.rsi_threshold);
+    println!(
+        "Strategy:              Trend({}) + RSI({})",
+        best_candidate.period, best_candidate.rsi_threshold
+    );
     println!();
     println!("Backtest Metrics:");
-    println!("  Return (gross):      {:+.1}% (${:+.0})", gross_return_pct, gross_return);
+    println!(
+        "  Return (gross):      {:+.1}% (${:+.0})",
+        gross_return_pct, gross_return
+    );
     println!("  Win rate:            {:.1}%", win_rate * 100.0);
     println!("  Sharpe (in-sample):  {:.2}", validation.is_sharpe);
-    println!("  Max drawdown:        {:.1}%", best_candidate.max_drawdown * 100.0);
+    println!(
+        "  Max drawdown:        {:.1}%",
+        best_candidate.max_drawdown * 100.0
+    );
     println!();
     println!("After Typical Fees:");
-    println!("  Return (net):        {:+.1}% (${:+.0})", net_return_pct, net_return);
-    println!("  Fees paid:           ${:.0} ({:.1}% of returns)", total_fees, fee_drag_pct);
-    println!("  Realistic (live):    {:+.1}% return", realistic_return_pct);
+    println!(
+        "  Return (net):        {:+.1}% (${:+.0})",
+        net_return_pct, net_return
+    );
+    println!(
+        "  Fees paid:           ${:.0} ({:.1}% of returns)",
+        total_fees, fee_drag_pct
+    );
+    println!(
+        "  Realistic (live):    {:+.1}% return",
+        realistic_return_pct
+    );
     println!();
     println!("Deployment Plan:");
-    println!("  1. Start with ${:.0} (small size)", initial_capital / 10.0);
+    println!(
+        "  1. Start with ${:.0} (small size)",
+        initial_capital / 10.0
+    );
     println!("  2. Monitor live fees vs backtest assumptions");
-    println!("  3. Track cumulative P&L vs expected ({:+.1}%)", realistic_return_pct);
-    println!("  4. If live matches backtest within ±5%, scale up to ${:.0}", initial_capital);
+    println!(
+        "  3. Track cumulative P&L vs expected ({:+.1}%)",
+        realistic_return_pct
+    );
+    println!(
+        "  4. If live matches backtest within ±5%, scale up to ${:.0}",
+        initial_capital
+    );
     println!("  5. Revalidate weekly (market regime changes destroy strategies)");
-    println!("  6. Hard stop: Close all if any single trade loses ${:.0}", initial_capital * 0.10);
+    println!(
+        "  6. Hard stop: Close all if any single trade loses ${:.0}",
+        initial_capital * 0.10
+    );
     println!();
     println!("⚠️  REMEMBER: This assumes your fees and slippage match backtests.");
     println!("   Live execution often 50% worse than expectations.");
@@ -321,7 +391,9 @@ fn discover_strategy_parameters() -> Result<Vec<StrategyCandidate>, Box<dyn std:
     Ok(candidates)
 }
 
-fn validate_walk_forward(strategy: &StrategyCandidate) -> Result<ValidationResult, Box<dyn std::error::Error>> {
+fn validate_walk_forward(
+    strategy: &StrategyCandidate,
+) -> Result<ValidationResult, Box<dyn std::error::Error>> {
     let pass_count = 3;
     let total_periods = 4;
     let is_sharpe = strategy.sharpe;

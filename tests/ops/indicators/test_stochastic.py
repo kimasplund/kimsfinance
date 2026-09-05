@@ -18,16 +18,11 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 # Test both implementations
 from kimsfinance.ops.stochastic import calculate_stochastic, calculate_stochastic_rsi
-from kimsfinance.ops.indicators.stochastic_oscillator import (
-    calculate_stochastic_oscillator,
-    CUPY_AVAILABLE,
-)
-from kimsfinance.core import EngineManager
-from kimsfinance.core.exceptions import ConfigurationError
+from kimsfinance.ops.indicators.stochastic_oscillator import calculate_stochastic_oscillator
+from _gpu import requires_polars_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -686,7 +681,7 @@ class TestStochasticEdgeCases:
 class TestStochasticGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_basic(self, sample_ohlc):
         """Test GPU and CPU produce identical results on basic dataset."""
         highs, lows, closes = sample_ohlc
@@ -701,7 +696,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_large_data(self, large_ohlc):
         """Test GPU and CPU produce identical results on large dataset."""
         highs, lows, closes = large_ohlc
@@ -716,7 +711,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_short_period(self, sample_ohlc):
         """Test GPU/CPU parity with short period."""
         highs, lows, closes = sample_ohlc
@@ -727,7 +722,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_long_period(self, sample_ohlc):
         """Test GPU/CPU parity with long period."""
         highs, lows, closes = sample_ohlc
@@ -738,7 +733,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_uptrend(self, uptrend_ohlc):
         """Test GPU/CPU parity on uptrend data."""
         highs, lows, closes = uptrend_ohlc
@@ -749,7 +744,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_downtrend(self, downtrend_ohlc):
         """Test GPU/CPU parity on downtrend data."""
         highs, lows, closes = downtrend_ohlc
@@ -760,7 +755,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_flat_market(self, flat_ohlc):
         """Test GPU/CPU parity on flat prices."""
         highs, lows, closes = flat_ohlc
@@ -771,7 +766,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_cpu, k_gpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_cpu, d_gpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_with_nan(self, sample_ohlc):
         """Test GPU/CPU parity with NaN values in input."""
         highs, lows, closes = sample_ohlc
@@ -808,7 +803,7 @@ class TestStochasticGPUCPU:
         np.testing.assert_allclose(k_auto, k_cpu, rtol=1e-10, equal_nan=True)
         np.testing.assert_allclose(d_auto, d_cpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_auto_engine_selection_large_data(self, large_ohlc):
         """Test that auto engine selects GPU for large datasets."""
         highs, lows, closes = large_ohlc  # 600K rows > 500K threshold
@@ -850,7 +845,7 @@ class TestStochasticPerformance:
             f"\nCPU baseline: {elapsed:.4f}s for 100 iterations ({elapsed/100*1000:.2f}ms per call)"
         )
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_performance_gpu_comparison(self, large_ohlc):
         """Test GPU performance vs CPU on large dataset."""
         import time

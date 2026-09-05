@@ -2,7 +2,7 @@
 //!
 //! Validates that the calculate_parabolic_sar function matches Python expectations
 
-use kimsfinance_core::indicators::{Indicator, ParabolicSAR};
+use kimsfinance_core::indicators::ParabolicSAR;
 use ndarray::arr1;
 
 #[test]

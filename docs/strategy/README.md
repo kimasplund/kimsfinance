@@ -169,7 +169,7 @@ TOTAL: 20h (12-15h wall-clock)
 pytest -n auto tests/ops/indicators/ --benchmark-skip
 
 # Profile renderers
-python -m cProfile scripts/benchmark_comprehensive.py
+python -m cProfile scripts/benchmark_renderer_optimization.py
 
 # Check Python 3.13 JIT
 python -c "import sys; print(sys.version)"

@@ -15,7 +15,6 @@ from ..core.types import ArrayLike
 from ..utils.array_utils import to_numpy_array
 from ..config.layout_constants import (
     BOX_SIZE_ATR_MULTIPLIER,
-    BOX_SIZE_FALLBACK_RATIO,
     BRICK_SPACING_RATIO,
     CENTER_OFFSET,
     CHART_HEIGHT_RATIO,
@@ -441,7 +440,7 @@ def render_ohlc_bars_svg(
     for i in range(num_bars):
         o = float(open_prices[i])
         h = float(high_prices[i])
-        l = float(low_prices[i])
+        lo = float(low_prices[i])
         c = float(close_prices[i])
 
         # Determine color (bullish if close >= open)
@@ -455,7 +454,7 @@ def render_ohlc_bars_svg(
 
         # Y coordinates (inverted: 0 is top of chart)
         y_high = chart_height - ((h - price_min) / price_range) * chart_height
-        y_low = chart_height - ((l - price_min) / price_range) * chart_height
+        y_low = chart_height - ((lo - price_min) / price_range) * chart_height
         y_open = chart_height - ((o - price_min) / price_range) * chart_height
         y_close = chart_height - ((c - price_min) / price_range) * chart_height
 
@@ -844,12 +843,10 @@ def render_renko_chart_svg(
     bricks_group = dwg.add(dwg.g(id="bricks"))
     if has_volume:
         volume_group = dwg.add(dwg.g(id="volume"))
-        volume_data = np.ascontiguousarray(to_numpy_array(volume))
 
     # Draw bricks
     for i, brick in enumerate(bricks):
         x_start = i * brick_width + spacing / 2
-        x_end = x_start + bar_width
 
         # Calculate Y position
         # For up bricks: price is the top

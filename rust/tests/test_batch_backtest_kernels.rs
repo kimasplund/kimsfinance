@@ -97,7 +97,10 @@ mod batch_backtest_tests {
 
         // Compile kernels
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("batch_indicators_kernel").unwrap();
 
         // Launch kernel
@@ -199,11 +202,16 @@ mod batch_backtest_tests {
         // Allocate GPU memory
         let d_indicators = device.copy_to_device(&indicators).unwrap();
         let d_params = device.copy_to_device(&params).unwrap();
-        let mut d_signals = device.allocate_device_buffer::<i8>(n_strategies * n_candles).unwrap();
+        let mut d_signals = device
+            .allocate_device_buffer::<i8>(n_strategies * n_candles)
+            .unwrap();
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("strategy_signals_kernel").unwrap();
 
         // Launch kernel
@@ -292,9 +300,7 @@ mod batch_backtest_tests {
         // Allocate GPU memory
         let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
-        let mut d_equity_curves = device
-            .alloc_buffer(n_strategies * n_candles)
-            .unwrap();
+        let mut d_equity_curves = device.alloc_buffer(n_strategies * n_candles).unwrap();
 
         // Trade structure size: 6 doubles + 2 longs + 1 i8 = 56 bytes (padded to 64)
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
@@ -310,7 +316,10 @@ mod batch_backtest_tests {
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         // Launch kernel
@@ -419,8 +428,13 @@ mod batch_backtest_tests {
 
         // Allocate GPU memory
         let d_equity_curves = device.copy_to_device(&equity_curves).unwrap();
-        let mut d_trades = device.allocate_device_buffer::<u8>(trades_bytes.len()).unwrap();
-        device.stream().memcpy_htod(&trades_bytes, &mut d_trades).unwrap();
+        let mut d_trades = device
+            .allocate_device_buffer::<u8>(trades_bytes.len())
+            .unwrap();
+        device
+            .stream()
+            .memcpy_htod(&trades_bytes, &mut d_trades)
+            .unwrap();
         let d_num_trades = device.copy_to_device_i32(&num_trades).unwrap();
         let mut d_sharpe = device.alloc_buffer(n_strategies).unwrap();
         let d_max_dd = device.stream().alloc_zeros::<f64>(n_strategies).unwrap();
@@ -428,7 +442,10 @@ mod batch_backtest_tests {
 
         // Compile and load kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("metrics_calculation_kernel").unwrap();
 
         // Launch kernel
@@ -509,9 +526,7 @@ mod batch_backtest_tests {
         // Allocate GPU memory
         let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
-        let mut d_equity_curves = device
-            .alloc_buffer(n_strategies * n_candles)
-            .unwrap();
+        let mut d_equity_curves = device.alloc_buffer(n_strategies * n_candles).unwrap();
 
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
@@ -524,7 +539,10 @@ mod batch_backtest_tests {
 
         // Compile and launch kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         let config = LaunchConfig {
@@ -615,9 +633,7 @@ mod batch_backtest_tests {
         // Allocate GPU memory
         let d_signals = device.copy_to_device_i8(&signals).unwrap();
         let d_close = device.copy_to_device(&close).unwrap();
-        let mut d_equity_curves = device
-            .alloc_buffer(n_strategies * n_candles)
-            .unwrap();
+        let mut d_equity_curves = device.alloc_buffer(n_strategies * n_candles).unwrap();
 
         let trade_size = std::mem::size_of::<f64>() * 6 + std::mem::size_of::<i64>() * 2;
         let max_trades = 1000;
@@ -628,7 +644,10 @@ mod batch_backtest_tests {
 
         // Compile and launch kernel
         let ptx = compile_backtest_kernels().unwrap();
-        let module = device.context().load_module(std::sync::Arc::unwrap_or_clone(ptx)).unwrap();
+        let module = device
+            .context()
+            .load_module(std::sync::Arc::unwrap_or_clone(ptx))
+            .unwrap();
         let kernel = module.load_function("backtest_execution_kernel").unwrap();
 
         let config = LaunchConfig {

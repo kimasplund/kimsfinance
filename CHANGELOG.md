@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `FASTMATH_SAFE` in `kimsfinance.utils.array_utils`: the numba fastmath flag set (everything except `nnan` and `ninf`) used by every JIT kernel that inspects or must preserve NaN/inf.
+- `tests/_gpu.py` device probes with `requires_gpu`, `requires_polars_gpu` and `requires_core_gpu` skip markers, plus a registered `gpu` pytest marker.
+- `tests/test_jit_nan_handling.py`: 43 regression tests for NaN and inf handling in the JIT kernels, including a guard that whitelists the remaining full-fastmath kernels.
+- `[tool.ruff]` configuration, mypy overrides for the untyped optional libraries, `.pre-commit-config.yaml`, `.editorconfig`, `.gitattributes` and `.github/dependabot.yml`.
+- CI: a CPU-only Rust job (`cargo fmt --check`, `cargo clippy -D warnings`, `cargo check --all-targets`, `cargo test`); the test job installs numba so the JIT paths are exercised; ruff runs in the quality job; `publish.yml` builds both `kimsfinance` and `kimsfinance_core` and publishes with PyPI trusted publishing.
+- `docs/API.md` documents `calculate_vwap_anchored()`, the one exported indicator that was missing.
+
+### Changed
+- pandas is now an optional dependency (PR #17): install `kimsfinance[pandas]` to pass pandas objects. The `reporting`, `dev`, `test` and `all` extras still include it.
+- Rust core migrated to `rand` 0.9 and `rand_distr` 0.5 (PR #16).
+- Build backend now requires setuptools >= 77, which the SPDX `license` field needs; `license-files` declares the dual-licensing documents.
+- Pillow floor raised to 12.3 (12.0 carries 19 published advisories). The `dev` extra installs ruff and pre-commit; the `test` extra no longer duplicates pins.
+- `kimsfinance.batch.GPU_AVAILABLE` is resolved lazily from a device probe and agrees with `get_gpu_info()["gpu_available"]`; GPU tests skip instead of failing when no usable CUDA device is present.
+- Rust crate: every example, bench and integration test declares `required-features`, so `cargo check --all-targets` and `cargo test` pass on default features; `data::downloaders` is gated on `data-downloaders`; `parquet` is an explicit feature; package metadata (license, description, repository) added; `panic = "abort"` dropped from the release profile so a panic unwinds into a Python exception instead of aborting the interpreter; the default-feature build is clippy-clean.
+- Over-broad `.gitignore` rules that hid tracked source under `kimsfinance/data/`, `rust/src/data/`, `rust/docs/archive/` and `rust/Cargo.lock` are anchored; generated reports, a stray compiled binary, merge leftovers and orphaned demo outputs are no longer tracked.
+- Root-level task completion reports moved to `docs/archive/reports/`; broken documentation links and stale install instructions (CUDA 13 packages, no `[rust]` extra) corrected; Rust docs state the AGPL-3.0-or-later license; the type stub `rust/kimsfinance_core.pyi` matches the module.
+- The `benchmark.yml` workflow, which failed to parse on every push, now runs on demand only.
+- Python sources formatted with black and cleaned with ruff (no behavioural change intended).
+
+### Fixed
+- Numba kernels compiled with `fastmath=True` had `nnan`/`ninf` enabled, so `replace_nan()`, `fill_nan_forward_jit()` and `fill_nan_backward_jit()` returned their input unchanged and Wilder smoothing returned all-NaN on NaN input whenever numba was installed.
+- `rolling_std()` raised a numba `TypingError` on every NumPy input when numba was installed (`np.std(ddof=)` is unsupported in nopython mode).
+- `plot_with_indicators()` imported a module that does not exist and mis-read the MACD result; it now imports from `ops.indicators.moving_averages` and unpacks the MACD tuple.
+- Undefined type names in the `calculate_multiple_mas` and `render_ohlcv_charts` annotations.
+- `tests/optimization/test_genetic_gpu.py` passed a `use_gpu` argument the optimizer never accepted; the tests now drive the optimizer through a batch backtester.
+- Indicator edge-case fixes in the Rust core with CPU/CUDA parity (PR #15).
+- Rust: `grid_search` unit tests did not compile on default features; feature-gated imports produced unused-import warnings on CPU builds; examples and benches that no longer matched the crate API repaired.
+- Six `rust/src/data` source files (Binance and Yahoo downloaders, IBKR chunked and historical loaders) were declared but never committed, so builds with a `data-*` feature failed from a fresh clone.
+
+### Removed
+- Rust: the `rquest`, `scraper`, `regex`, `once_cell` and `arrayvec` dependencies and the dead `data-yahoo-tls` and `simd` features; `examples/lightgbm_orderflow_strategy.rs`, `examples/simple_test_strategy.rs` and `benches/warp_primitive_benchmark.rs`, which referenced modules that never existed.
+
+### Security
+- Rust lockfile: pyo3 0.27.2, rand 0.9.5, time 0.3.55, lz4_flex 0.11.6, openssl 0.10.81, rustls-webpki 0.103.15, tar 0.4.46, crossbeam-epoch 0.9.20 and h2 0.4.19. `cargo audit` goes from 15 advisories to 5; the remaining ones need the pyo3 0.29 major or a replacement for the `deribit` connector's TLS stack. Supersedes dependabot PR #18.
+
 ## [0.2.0] - 2026-06-14
 
 ### Changed

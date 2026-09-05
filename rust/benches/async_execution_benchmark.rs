@@ -79,6 +79,7 @@ fn bench_async_vs_fused(c: &mut Criterion) {
             slippage: 0.0005,
             use_gpu: true,
             force_cpu: false,
+            execution_latency_ms: 0,
         };
 
         // Benchmark Fused mode (baseline)

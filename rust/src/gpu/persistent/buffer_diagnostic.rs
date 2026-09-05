@@ -2,11 +2,11 @@
 //!
 //! Verify that buffer allocation correctly handles 3-input TradeData vs 4-input OHLCV.
 
-use crate::gpu::device::GpuDevice;
-use crate::gpu::candles::time_bars::TimeBarAggregator;
-use super::traits::PersistentIndicator;
 use super::TaskBatch;
 use super::allocate_batch_buffers;
+use super::traits::PersistentIndicator;
+use crate::gpu::candles::time_bars::TimeBarAggregator;
+use crate::gpu::device::GpuDevice;
 
 /// Diagnostic test for buffer allocation with TimeBar (3-input, 5-output)
 pub fn diagnose_timebar_buffer_allocation() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,18 +18,29 @@ pub fn diagnose_timebar_buffer_allocation() -> Result<(), Box<dyn std::error::Er
     // Test case: 9 elements (3 trades)
     // Layout: [timestamps(3), prices(3), volumes(3)]
     let trades = vec![
-        1700000000.0, 1700000010.0, 1700000020.0, // timestamps
-        50000.0, 50010.0, 50005.0,                 // prices
-        1.5, 2.0, 1.0,                             // volumes
+        1700000000.0,
+        1700000010.0,
+        1700000020.0, // timestamps
+        50000.0,
+        50010.0,
+        50005.0, // prices
+        1.5,
+        2.0,
+        1.0, // volumes
     ];
 
     println!("Input Configuration:");
     println!("  - Total elements: {}", trades.len());
     println!("  - num_inputs: {}", TimeBarAggregator::num_inputs());
     println!("  - num_outputs: {}", TimeBarAggregator::num_outputs());
-    println!("  - Expected n (trades): {}", trades.len() / TimeBarAggregator::num_inputs());
-    println!("  - Expected output_size: {}\n",
-        (trades.len() / TimeBarAggregator::num_inputs()) * TimeBarAggregator::num_outputs());
+    println!(
+        "  - Expected n (trades): {}",
+        trades.len() / TimeBarAggregator::num_inputs()
+    );
+    println!(
+        "  - Expected output_size: {}\n",
+        (trades.len() / TimeBarAggregator::num_inputs()) * TimeBarAggregator::num_outputs()
+    );
 
     batch.add_task(trades, 60); // 60 seconds interval
 
@@ -42,7 +53,7 @@ pub fn diagnose_timebar_buffer_allocation() -> Result<(), Box<dyn std::error::Er
     // Note: BatchBuffers is private, so we cannot access internal fields
     // All verification is done in the allocate_batch_buffers function
     println!("\nDetailed Buffer Inspection:");
-    println!("  (Buffer internals are private - see allocation logs above)")
+    println!("  (Buffer internals are private - see allocation logs above)");
 
     // Verify calculations
     println!("\nCalculation Verification:");
@@ -54,11 +65,17 @@ pub fn diagnose_timebar_buffer_allocation() -> Result<(), Box<dyn std::error::Er
 
     println!("  - task.data.len() = {}", task.data.len());
     println!("  - n = {} / {} = {}", task.data.len(), num_inputs, n);
-    println!("  - output_size = {} * {} = {}", n, num_outputs, output_size);
+    println!(
+        "  - output_size = {} * {} = {}",
+        n, num_outputs, output_size
+    );
 
     // Verify expected values
     assert_eq!(n, 3, "Should have 3 trades");
-    assert_eq!(output_size, 15, "Output should be 15 elements (3 trades * 5 OHLCV)");
+    assert_eq!(
+        output_size, 15,
+        "Output should be 15 elements (3 trades * 5 OHLCV)"
+    );
 
     println!("\n✅ All buffer allocation checks passed!");
 

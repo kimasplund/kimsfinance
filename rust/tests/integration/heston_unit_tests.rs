@@ -28,7 +28,7 @@ mod heston_unit_tests {
     mod test_data {
         include!("../data/heston_test_data.rs");
     }
-    use test_data::{generate_options_chain, test_heston_params, MarketRegime};
+    use test_data::{MarketRegime, generate_options_chain, test_heston_params};
 
     // ========== Strategy Type Classification Tests ==========
 
@@ -126,7 +126,10 @@ mod heston_unit_tests {
 
         assert_eq!(prices.len(), 100);
 
-        println!("Priced 100 options in {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+        println!(
+            "Priced 100 options in {:.2}ms",
+            elapsed.as_secs_f64() * 1000.0
+        );
 
         // Performance target: <20ms for 100 options
         assert!(
@@ -192,7 +195,8 @@ mod heston_unit_tests {
     #[ignore] // Requires GPU
     fn test_greeks_gpu_calculator_single_option() {
         let device = Arc::new(GpuDevice::new().expect("GPU device creation failed"));
-        let calculator = GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
+        let calculator =
+            GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
 
         let params = test_heston_params(MarketRegime::RangeBound);
         let options = generate_options_chain(50000.0, 1, 30, &params);
@@ -219,7 +223,8 @@ mod heston_unit_tests {
     #[ignore] // Requires GPU
     fn test_greeks_gpu_batch_performance() {
         let device = Arc::new(GpuDevice::new().expect("GPU device creation failed"));
-        let calculator = GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
+        let calculator =
+            GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
 
         let params = test_heston_params(MarketRegime::RangeBound);
         let options = generate_options_chain(50000.0, 500, 30, &params); // 1000 options
@@ -249,7 +254,8 @@ mod heston_unit_tests {
     #[ignore] // Requires GPU
     fn test_greeks_call_put_symmetry() {
         let device = Arc::new(GpuDevice::new().expect("GPU device creation failed"));
-        let calculator = GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
+        let calculator =
+            GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
 
         let params = test_heston_params(MarketRegime::RangeBound);
         let options = generate_options_chain(50000.0, 1, 30, &params);
@@ -417,7 +423,8 @@ mod heston_unit_tests {
     #[ignore] // Requires GPU
     fn test_greeks_boundary_cases() {
         let device = Arc::new(GpuDevice::new().expect("GPU device creation failed"));
-        let calculator = GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
+        let calculator =
+            GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
 
         let params = test_heston_params(MarketRegime::RangeBound);
 
@@ -521,7 +528,8 @@ mod heston_unit_tests {
     #[ignore] // Requires GPU
     fn test_greeks_calculator_determinism() {
         let device = Arc::new(GpuDevice::new().expect("GPU device creation failed"));
-        let calculator = GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
+        let calculator =
+            GreeksGpuCalculator::new(device).expect("Failed to create Greeks calculator");
 
         let params = test_heston_params(MarketRegime::RangeBound);
         let options = generate_options_chain(50000.0, 10, 30, &params);

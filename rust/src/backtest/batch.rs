@@ -100,7 +100,12 @@ const EXECUTION_BLOCK_SIZE: u32 = 128;
 
 /// Device buffers produced by Phase 3 (`execute_backtests_batch`):
 /// `(equity_curves, trades_data, num_trades, max_drawdowns)`.
-type BacktestDeviceBuffers = (CudaSlice<f64>, CudaSlice<i8>, CudaSlice<i32>, CudaSlice<f64>);
+type BacktestDeviceBuffers = (
+    CudaSlice<f64>,
+    CudaSlice<i8>,
+    CudaSlice<i32>,
+    CudaSlice<f64>,
+);
 
 /// Host mirror of the CUDA `Trade` struct in `kernels_backtest.cu`.
 ///
@@ -357,10 +362,7 @@ pub struct OhlcvData {
 ///     // Use traditional (4 launches)
 /// }
 /// ```
-pub fn calculate_optimal_threshold(
-    num_strategies: usize,
-    num_candles: usize,
-) -> usize {
+pub fn calculate_optimal_threshold(num_strategies: usize, num_candles: usize) -> usize {
     // Calculate data size in MB (OHLCV = 5 arrays × 8 bytes per f64)
     let data_size_mb = (num_strategies * num_candles * 5 * 8) / (1024 * 1024);
 
@@ -1766,8 +1768,14 @@ mod tests {
         let body = &BACKTEST_KERNELS_SRC[start..];
         let end = body.find("KERNEL 4").unwrap_or(body.len());
         let body = &body[..end];
-        assert!(!body.contains("__shared__"), "execution kernel must not use shared memory");
-        assert!(!body.contains("__syncthreads"), "execution kernel must not synchronize");
+        assert!(
+            !body.contains("__shared__"),
+            "execution kernel must not use shared memory"
+        );
+        assert!(
+            !body.contains("__syncthreads"),
+            "execution kernel must not synchronize"
+        );
     }
 
     #[test]
@@ -1815,7 +1823,10 @@ mod tests {
         assert_eq!(&flat[0..3], &[14.0, 25.0, 75.0]);
         assert!(flat[3..9].iter().all(|&v| v == 0.0), "padding must be zero");
         assert_eq!(&flat[9..12], &[20.0, 30.0, 70.0]);
-        assert!(flat[12..18].iter().all(|&v| v == 0.0), "padding must be zero");
+        assert!(
+            flat[12..18].iter().all(|&v| v == 0.0),
+            "padding must be zero"
+        );
     }
 
     #[test]

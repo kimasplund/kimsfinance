@@ -24,9 +24,8 @@ import time
 from typing import Tuple
 
 from kimsfinance.ops.indicators import calculate_mfi
-from kimsfinance.ops.indicators.mfi import CUPY_AVAILABLE
+from _gpu import POLARS_GPU_AVAILABLE, requires_polars_gpu
 from kimsfinance.core.exceptions import ConfigurationError, GPUNotAvailableError
-from kimsfinance.core import EngineManager
 
 # ============================================================================
 # Test Data Generators
@@ -453,7 +452,7 @@ class TestMFIEdgeCases:
 # ============================================================================
 
 
-@pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+@requires_polars_gpu
 class TestMFIGPUCPU:
     """Test GPU/CPU parity."""
 
@@ -518,11 +517,9 @@ class TestMFIGPUCPU:
         mfi_large = calculate_mfi(high, low, close, volume, period=14, engine="auto")
         assert len(mfi_large) == len(close)
 
+    @requires_polars_gpu
     def test_gpu_explicit_request(self):
         """Explicit GPU engine request should work."""
-        if not EngineManager.check_gpu_available():
-            pytest.skip("GPU not available")
-
         high, low, close, volume = generate_sideways_with_volume(5000)
         mfi = calculate_mfi(high, low, close, volume, period=14, engine="gpu")
 
@@ -587,7 +584,7 @@ class TestMFIPerformance:
             high, low, close, volume = generate_sideways_with_volume(size, seed=42)
 
             start = time.perf_counter()
-            mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+            calculate_mfi(high, low, close, volume, period=14, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))
@@ -644,8 +641,8 @@ class TestMFIParameterValidation:
 
     def test_gpu_not_available_error(self):
         """Requesting GPU when unavailable should raise error."""
-        if EngineManager.check_gpu_available():
-            pytest.skip("GPU is available, can't test unavailable case")
+        if POLARS_GPU_AVAILABLE:
+            pytest.skip("Polars GPU engine is available, can't test unavailable case")
 
         high, low, close, volume = generate_sideways_with_volume(100)
         with pytest.raises(GPUNotAvailableError):

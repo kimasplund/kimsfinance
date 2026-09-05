@@ -246,10 +246,10 @@ fn bench_persistent_with_pinned(c: &mut Criterion) {
         b.iter(|| {
             use kimsfinance_core::gpu::persistent::*;
 
-            let mut batch = TaskBatch::new();
+            let mut batch = TaskBatch::<SmaIndicator>::new();
             for i in 0..num_tasks {
                 let data: Vec<f64> = (0..data_size).map(|j| 100.0 + j as f64).collect();
-                let period = 14 + i % 10;
+                let period = (14 + i % 10) as i32;
                 batch.add_task(data, period);
             }
 

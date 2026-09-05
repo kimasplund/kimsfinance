@@ -7,17 +7,13 @@ Monkey-patches mplfinance internal functions with GPU-accelerated versions.
 
 from __future__ import annotations
 
-import sys
 from typing import Any, Callable
-import numpy as np
 import polars as pl
 import threading
 import warnings
 
 # Import our operations
 from ..ops.indicators.moving_averages import calculate_sma, calculate_ema
-from ..ops.nan_ops import nanmin_gpu, nanmax_gpu, nan_bounds
-from ..core.engine import EngineManager
 
 # Global state with lock protection
 _lock = threading.RLock()  # Reentrant lock for nested calls
@@ -40,7 +36,7 @@ def patch_plotting_functions(config: dict[str, Any]) -> None:
 
         try:
             import mplfinance.plotting as mpf_plotting
-            import mplfinance._utils as mpf_utils
+            import mplfinance._utils as mpf_utils  # noqa: F401  # availability/version probe
         except ImportError:
             raise ImportError("mplfinance not installed or incompatible version")
 
@@ -115,10 +111,6 @@ def _plot_mav_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
 
     # Get shift if specified
     shift = config.get("mav_shift", None)
-
-    # Determine engine
-    engine = _config.get("default_engine", "auto")
-    data_size = len(prices)
 
     # For moving averages, always use CPU (GPU not beneficial)
     exec_engine = "cpu"
@@ -218,7 +210,6 @@ def _plot_ema_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
 def _plot_mav_on_main(ax, config, xdates, sma_results, mavgs):
     """Plot SMAs on main price axis."""
     # Get colors and styles from config
-    from matplotlib import cycler
 
     # Use mplfinance's color cycle or default
     if "marketcolor" in config:
@@ -243,7 +234,6 @@ def _plot_mav_with_panel(ax, config, xdates, sma_results, mavgs, apmav, apwidth)
 
 def _plot_ema_on_main(ax, config, xdates, ema_results, mavgs):
     """Plot EMAs on main price axis."""
-    from matplotlib import cycler
 
     if "marketcolor" in config:
         colors = config["marketcolor"].get("ema_colors", None)

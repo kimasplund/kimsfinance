@@ -33,13 +33,7 @@ def generate_sample_data(n_candles: int = 5000, seed: int = 42) -> pd.DataFrame:
     open_ = close * (1 + np.random.randn(n_candles) * 0.005)
     volume = np.abs(np.random.randn(n_candles)) * 1000 + 5000
 
-    return pd.DataFrame({
-        'open': open_,
-        'high': high,
-        'low': low,
-        'close': close,
-        'volume': volume
-    })
+    return pd.DataFrame({"open": open_, "high": high, "low": low, "close": close, "volume": volume})
 
 
 def main():
@@ -53,7 +47,7 @@ def main():
     for key, value in gpu_info.items():
         print(f"   {key}: {value}")
 
-    if not gpu_info['gpu_available']:
+    if not gpu_info["gpu_available"]:
         print("\n   WARNING: GPU not available, will use CPU (slower)")
         use_gpu = False
     else:
@@ -69,11 +63,11 @@ def main():
     # Define parameter search space
     print("\n3. Defining parameter search space...")
     param_space = {
-        'period': (5, 30, int),           # RSI period: 5 to 30
-        'buy_threshold': (20, 40, float), # Buy below this RSI
-        'sell_threshold': (60, 80, float), # Sell above this RSI
+        "period": (5, 30, int),  # RSI period: 5 to 30
+        "buy_threshold": (20, 40, float),  # Buy below this RSI
+        "sell_threshold": (60, 80, float),  # Sell above this RSI
     }
-    print(f"   Parameter space:")
+    print("   Parameter space:")
     for param, (low, high, dtype) in param_space.items():
         print(f"      {param}: [{low}, {high}] ({dtype.__name__})")
 
@@ -81,10 +75,10 @@ def main():
     print("\n4. Creating genetic optimizer...")
     optimizer = GeneticOptimizer(
         param_space=param_space,
-        population_size=100,      # 100 individuals per generation
-        generations=50,           # 50 generations
-        objectives=['sharpe', 'max_drawdown', 'win_rate'],  # Multi-objective
-        n_islands=1,              # Single island (can use 4+ for parallel evolution)
+        population_size=100,  # 100 individuals per generation
+        generations=50,  # 50 generations
+        objectives=["sharpe", "max_drawdown", "win_rate"],  # Multi-objective
+        n_islands=1,  # Single island (can use 4+ for parallel evolution)
         mutation_rate=0.2,
         crossover_rate=0.8,
     )
@@ -99,10 +93,7 @@ def main():
 
     start_time = time.perf_counter()
     results = optimizer.optimize(
-        strategy='rsi_crossover',
-        data=data,
-        use_gpu=use_gpu,
-        verbose=True  # Show progress
+        strategy="rsi_crossover", data=data, use_gpu=use_gpu, verbose=True  # Show progress
     )
     elapsed_time = time.perf_counter() - start_time
 
@@ -116,23 +107,27 @@ def main():
     print("-" * 70)
 
     for i, sol in enumerate(results[:10]):
-        params_str = f"period={sol['params']['period']}, " \
-                     f"buy={sol['params']['buy_threshold']:.1f}, " \
-                     f"sell={sol['params']['sell_threshold']:.1f}"
-        print(f"{i+1:<5} {sol['sharpe']:>7.2f} {sol['max_drawdown']:>9.2%} "
-              f"{sol['win_rate']:>9.1%} {params_str}")
+        params_str = (
+            f"period={sol['params']['period']}, "
+            f"buy={sol['params']['buy_threshold']:.1f}, "
+            f"sell={sol['params']['sell_threshold']:.1f}"
+        )
+        print(
+            f"{i+1:<5} {sol['sharpe']:>7.2f} {sol['max_drawdown']:>9.2%} "
+            f"{sol['win_rate']:>9.1%} {params_str}"
+        )
 
     # Best solution details
     print("\n7. Best solution details:")
     best = results[0]
-    print(f"   Parameters:")
-    for key, value in best['params'].items():
+    print("   Parameters:")
+    for key, value in best["params"].items():
         print(f"      {key}: {value}")
-    print(f"\n   Performance metrics:")
+    print("\n   Performance metrics:")
     print(f"      Sharpe Ratio: {best['sharpe']:.2f}")
     print(f"      Max Drawdown: {best['max_drawdown']:.2%}")
     print(f"      Win Rate: {best['win_rate']:.1%}")
-    if 'total_return' in best:
+    if "total_return" in best:
         print(f"      Total Return: {best['total_return']:.2%}")
 
     # Performance analysis
@@ -151,33 +146,33 @@ def main():
         print(f"   Estimated GPU speedup: {speedup_estimate:.1f}x")
 
         if speedup_estimate >= 20:
-            print(f"   ✓ Target 20-40x speedup ACHIEVED!")
+            print("   ✓ Target 20-40x speedup ACHIEVED!")
         elif speedup_estimate >= 10:
-            print(f"   ✓ Good speedup (10x+)")
+            print("   ✓ Good speedup (10x+)")
         else:
-            print(f"   ⚠ Below target speedup")
+            print("   ⚠ Below target speedup")
 
     # Pareto front visualization (text-based)
     print("\n9. Pareto Front (Sharpe vs Max Drawdown):")
     print("-" * 50)
 
     # Extract Sharpe and Drawdown
-    sharpe_values = [sol['sharpe'] for sol in results[:20]]
-    dd_values = [abs(sol['max_drawdown']) for sol in results[:20]]
+    sharpe_values = [sol["sharpe"] for sol in results[:20]]
+    dd_values = [abs(sol["max_drawdown"]) for sol in results[:20]]
 
     sharpe_min, sharpe_max = min(sharpe_values), max(sharpe_values)
     dd_min, dd_max = min(dd_values), max(dd_values)
 
     for sol in results[:20]:
-        sharpe = sol['sharpe']
-        dd = abs(sol['max_drawdown'])
+        sharpe = sol["sharpe"]
+        dd = abs(sol["max_drawdown"])
 
         # Normalize to 0-40 for visualization
         sharpe_norm = int((sharpe - sharpe_min) / (sharpe_max - sharpe_min + 1e-6) * 40)
         dd_norm = int((dd - dd_min) / (dd_max - dd_min + 1e-6) * 40)
 
-        sharpe_bar = '█' * sharpe_norm
-        dd_bar = '░' * dd_norm
+        sharpe_bar = "█" * sharpe_norm
+        dd_bar = "░" * dd_norm
 
         print(f"Sharpe {sharpe:>5.2f} |{sharpe_bar:<40}|")
         print(f"  DD   {dd:>5.2%} |{dd_bar:<40}|")
@@ -188,5 +183,5 @@ def main():
     print("=" * 70)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -28,7 +28,6 @@ GPU Batch Backtesting Accuracy Validation Script
 
 import sys
 import numpy as np
-import pandas as pd
 from scipy import stats
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
@@ -43,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 class BacktestResult:
     """Container for backtest metrics"""
+
     def __init__(
         self,
         sharpe_ratio: float,
@@ -78,7 +78,7 @@ def generate_test_data(n_candles: int = 10000, seed: int = 12345) -> Tuple:
     # Random walk with drift
     for i in range(1, n_candles):
         change = np.random.randn() * 0.02  # 2% volatility
-        close[i] = close[i-1] * (1 + change)
+        close[i] = close[i - 1] * (1 + change)
 
     # Generate OHLV from close
     open_ = np.roll(close, 1)
@@ -97,20 +97,19 @@ def generate_random_strategies(n_strategies: int, seed: int = 67890) -> List[Dic
 
     strategies = []
     for _ in range(n_strategies):
-        strategies.append({
-            "type": "rsi_crossover",
-            "rsi_period": np.random.randint(10, 21),
-            "buy_threshold": np.random.uniform(20, 40),
-            "sell_threshold": np.random.uniform(60, 80),
-        })
+        strategies.append(
+            {
+                "type": "rsi_crossover",
+                "rsi_period": np.random.randint(10, 21),
+                "buy_threshold": np.random.uniform(20, 40),
+                "sell_threshold": np.random.uniform(60, 80),
+            }
+        )
 
     return strategies
 
 
-def run_cpu_sequential_backtests(
-    data: Tuple,
-    strategies: List[Dict]
-) -> List[BacktestResult]:
+def run_cpu_sequential_backtests(data: Tuple, strategies: List[Dict]) -> List[BacktestResult]:
     """Run backtests sequentially on CPU (baseline)"""
     print(f"Running {len(strategies)} CPU sequential backtests...")
 
@@ -126,20 +125,19 @@ def run_cpu_sequential_backtests(
     # PLACEHOLDER: Generate fake results for now
     results = []
     for _ in strategies:
-        results.append(BacktestResult(
-            sharpe_ratio=np.random.uniform(0.5, 2.0),
-            max_drawdown=np.random.uniform(0.1, 0.3),
-            total_return=np.random.uniform(-0.1, 0.5),
-            win_rate=np.random.uniform(0.4, 0.6),
-            num_trades=np.random.randint(50, 200),
-        ))
+        results.append(
+            BacktestResult(
+                sharpe_ratio=np.random.uniform(0.5, 2.0),
+                max_drawdown=np.random.uniform(0.1, 0.3),
+                total_return=np.random.uniform(-0.1, 0.5),
+                win_rate=np.random.uniform(0.4, 0.6),
+                num_trades=np.random.randint(50, 200),
+            )
+        )
     return results
 
 
-def run_gpu_batch_backtests(
-    data: Tuple,
-    strategies: List[Dict]
-) -> List[BacktestResult]:
+def run_gpu_batch_backtests(data: Tuple, strategies: List[Dict]) -> List[BacktestResult]:
     """Run backtests in batch on GPU"""
     print(f"Running {len(strategies)} GPU batch backtests...")
 
@@ -160,20 +158,20 @@ def run_gpu_batch_backtests(
     # PLACEHOLDER: Generate fake results (slightly different from CPU)
     results = []
     for _ in strategies:
-        results.append(BacktestResult(
-            sharpe_ratio=np.random.uniform(0.5, 2.0),
-            max_drawdown=np.random.uniform(0.1, 0.3),
-            total_return=np.random.uniform(-0.1, 0.5),
-            win_rate=np.random.uniform(0.4, 0.6),
-            num_trades=np.random.randint(50, 200),
-        ))
+        results.append(
+            BacktestResult(
+                sharpe_ratio=np.random.uniform(0.5, 2.0),
+                max_drawdown=np.random.uniform(0.1, 0.3),
+                total_return=np.random.uniform(-0.1, 0.5),
+                win_rate=np.random.uniform(0.4, 0.6),
+                num_trades=np.random.randint(50, 200),
+            )
+        )
     return results
 
 
 def calculate_differences(
-    cpu_results: List[BacktestResult],
-    gpu_results: List[BacktestResult],
-    metric: str
+    cpu_results: List[BacktestResult], gpu_results: List[BacktestResult], metric: str
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Calculate absolute and relative differences for a metric"""
     cpu_values = np.array([getattr(r, metric) for r in cpu_results])
@@ -186,9 +184,7 @@ def calculate_differences(
 
 
 def validate_accuracy(
-    cpu_results: List[BacktestResult],
-    gpu_results: List[BacktestResult],
-    tolerance: float = 0.0001
+    cpu_results: List[BacktestResult], gpu_results: List[BacktestResult], tolerance: float = 0.0001
 ) -> Dict[str, Dict]:
     """
     Validate GPU batch results match CPU sequential within tolerance.
@@ -243,9 +239,9 @@ def validate_accuracy(
 
 def print_validation_report(validation_results: Dict[str, Dict], tolerance: float):
     """Print formatted validation report to console"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("GPU BATCH BACKTESTING ACCURACY VALIDATION REPORT")
-    print("="*80)
+    print("=" * 80)
 
     for metric, results in validation_results.items():
         print(f"\n{metric.upper().replace('_', ' ')}:")
@@ -253,16 +249,16 @@ def print_validation_report(validation_results: Dict[str, Dict], tolerance: floa
         print(f"  Max difference:      {results['max_diff']:.6f} (target: <{tolerance*10})")
         print(f"  Std deviation:       {results['std_diff']:.6f}")
         print(f"  Correlation:         {results['correlation']:.6f} (target: >0.9999)")
-        print(f"  Paired t-test:")
+        print("  Paired t-test:")
         print(f"    t-statistic:       {results['t_stat']:.4f}")
         print(f"    p-value:           {results['p_value']:.6f} (target: >0.05)")
         print(f"  Status:              {'✅ PASS' if results['overall_pass'] else '❌ FAIL'}")
 
     # Overall validation
     all_pass = all(r["overall_pass"] for r in validation_results.values())
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(f"OVERALL VALIDATION: {'✅ ALL TESTS PASSED' if all_pass else '❌ SOME TESTS FAILED'}")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     return all_pass
 
@@ -270,7 +266,7 @@ def print_validation_report(validation_results: Dict[str, Dict], tolerance: floa
 def plot_accuracy_validation(
     cpu_results: List[BacktestResult],
     gpu_results: List[BacktestResult],
-    output_dir: Path = Path("benchmarks/figures")
+    output_dir: Path = Path("benchmarks/figures"),
 ):
     """Generate accuracy validation plots"""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -285,9 +281,12 @@ def plot_accuracy_validation(
 
         # Plot 1: CPU vs GPU scatter
         ax1.scatter(cpu_values, gpu_values, alpha=0.5, s=20)
-        ax1.plot([cpu_values.min(), cpu_values.max()],
-                 [cpu_values.min(), cpu_values.max()],
-                 'r--', label='Perfect agreement')
+        ax1.plot(
+            [cpu_values.min(), cpu_values.max()],
+            [cpu_values.min(), cpu_values.max()],
+            "r--",
+            label="Perfect agreement",
+        )
         ax1.set_xlabel(f'CPU {metric.replace("_", " ").title()}')
         ax1.set_ylabel(f'GPU {metric.replace("_", " ").title()}')
         ax1.set_title(f'{metric.replace("_", " ").title()}: CPU vs GPU')
@@ -296,10 +295,10 @@ def plot_accuracy_validation(
 
         # Plot 2: Difference distribution
         diff = gpu_values - cpu_values
-        ax2.hist(diff, bins=30, alpha=0.7, edgecolor='black')
-        ax2.axvline(0, color='r', linestyle='--', label='Zero difference')
-        ax2.set_xlabel('Difference (GPU - CPU)')
-        ax2.set_ylabel('Frequency')
+        ax2.hist(diff, bins=30, alpha=0.7, edgecolor="black")
+        ax2.axvline(0, color="r", linestyle="--", label="Zero difference")
+        ax2.set_xlabel("Difference (GPU - CPU)")
+        ax2.set_ylabel("Frequency")
         ax2.set_title(f'{metric.replace("_", " ").title()}: Difference Distribution')
         ax2.legend()
         ax2.grid(True, alpha=0.3)
@@ -314,17 +313,17 @@ def plot_accuracy_validation(
 def save_validation_report(
     validation_results: Dict[str, Dict],
     tolerance: float,
-    output_path: Path = Path("benchmarks/validation_report.txt")
+    output_path: Path = Path("benchmarks/validation_report.txt"),
 ):
     """Save validation report to file"""
-    with open(output_path, 'w') as f:
-        f.write("="*80 + "\n")
+    with open(output_path, "w") as f:
+        f.write("=" * 80 + "\n")
         f.write("GPU BATCH BACKTESTING ACCURACY VALIDATION REPORT\n")
-        f.write("="*80 + "\n\n")
+        f.write("=" * 80 + "\n\n")
 
         f.write(f"Tolerance: {tolerance:.6f} ({tolerance*100:.4f}%)\n")
-        f.write(f"Target correlation: >0.9999\n")
-        f.write(f"Target p-value: >0.05\n\n")
+        f.write("Target correlation: >0.9999\n")
+        f.write("Target p-value: >0.05\n\n")
 
         for metric, results in validation_results.items():
             f.write(f"{metric.upper().replace('_', ' ')}:\n")
@@ -338,9 +337,9 @@ def save_validation_report(
             f.write("\n")
 
         all_pass = all(r["overall_pass"] for r in validation_results.values())
-        f.write("="*80 + "\n")
+        f.write("=" * 80 + "\n")
         f.write(f"OVERALL VALIDATION: {'ALL TESTS PASSED' if all_pass else 'SOME TESTS FAILED'}\n")
-        f.write("="*80 + "\n")
+        f.write("=" * 80 + "\n")
 
     print(f"Saved report: {output_path}")
 
@@ -348,14 +347,14 @@ def save_validation_report(
 def main():
     """Main validation workflow"""
     print("GPU Batch Backtesting Accuracy Validation")
-    print("="*80)
+    print("=" * 80)
 
     # Configuration
     n_strategies = 100  # Number of strategies to test
-    n_candles = 10000   # Dataset size
+    n_candles = 10000  # Dataset size
     tolerance = 0.0001  # 0.01% relative difference
 
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  Strategies: {n_strategies}")
     print(f"  Candles: {n_candles}")
     print(f"  Tolerance: {tolerance:.6f} ({tolerance*100:.4f}%)")

@@ -1515,7 +1515,7 @@ start_http_server(8000)
 Detect performance regressions in CI/CD:
 
 ```python
-# test_performance_regression.py
+# Save as tests/test_performance_regression.py (not shipped with kimsfinance)
 import pytest
 import time
 import numpy as np

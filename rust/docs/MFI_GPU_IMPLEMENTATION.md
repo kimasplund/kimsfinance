@@ -560,7 +560,7 @@ nvcc --version
 
 This implementation is part of the kimsfinance_core library.
 
-**SPDX-License-Identifier**: Apache-2.0 OR MIT
+**SPDX-License-Identifier**: AGPL-3.0-or-later (dual-licensed; see [LICENSING.md](../../LICENSING.md) and [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md))
 
 ---
 

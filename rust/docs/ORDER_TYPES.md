@@ -543,7 +543,7 @@ Record a fill and update order status and average fill price.
 
 ## License
 
-MIT License - Same as kimsfinance project
+AGPL-3.0-or-later - See [LICENSE](../../LICENSE) for the full terms. kimsfinance is dual-licensed: see [LICENSING.md](../../LICENSING.md) for the AGPL/commercial split and [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md) for proprietary or network-service use.
 
 ---
 

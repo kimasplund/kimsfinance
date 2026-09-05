@@ -16,7 +16,7 @@ import time
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Tuple
 import sys
 
 
@@ -60,7 +60,7 @@ def benchmark_function(func: Callable, name: str, iterations: int = 10) -> Tuple
 
     for _ in range(iterations):
         start = time.perf_counter()
-        result = func()
+        func()
         end = time.perf_counter()
         times.append((end - start) * 1000)  # Convert to milliseconds
 
@@ -81,7 +81,7 @@ def benchmark_mplfinance(df: pd.DataFrame) -> Dict[str, Tuple[float, float, floa
     results = {}
 
     try:
-        import mplfinance as mpf
+        import mplfinance as mpf  # noqa: F401  # availability probe
         from ta.trend import SMAIndicator, EMAIndicator
         from ta.momentum import RSIIndicator
         from ta.volatility import AverageTrueRange
@@ -225,21 +225,10 @@ def benchmark_kimsfinance_python_gpu(df: pd.DataFrame) -> Dict[str, Tuple[float,
             # Test GPU engine with a simple query
             test_df = pl.LazyFrame({"test": [1, 2, 3]})
             test_df.collect(engine="gpu")
-            gpu_available = True
             print(f"  {Colors.OKGREEN}✅ Polars GPU engine available{Colors.ENDC}")
         except Exception as e:
-            gpu_available = False
             print(f"  {Colors.WARNING}⚠️  Polars GPU not available: {e}{Colors.ENDC}")
             return results
-
-        # Convert to Polars DataFrame for GPU processing
-        pl_df = pl.DataFrame(
-            {
-                "close": df["close"].values,
-                "high": df["high"].values,
-                "low": df["low"].values,
-            }
-        )
 
         # For GPU benchmarks, we need to ensure operations use Polars GPU
         # Note: Not all indicators may benefit from GPU in kimsfinance
@@ -552,7 +541,7 @@ def print_comparison_table(
         rust_cpu_avg_speedup = calc_avg_speedup(mplfinance_results, rust_cpu_results)
         rust_gpu_avg_speedup = calc_avg_speedup(mplfinance_results, rust_gpu_results)
 
-        print(f"  Average Speedup vs mplfinance:")
+        print("  Average Speedup vs mplfinance:")
         if kf_cpu_avg_speedup:
             print(
                 f"    kimsfinance Py CPU:  {Colors.OKGREEN}{kf_cpu_avg_speedup:6.2f}x{Colors.ENDC}"

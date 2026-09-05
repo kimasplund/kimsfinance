@@ -351,7 +351,7 @@ mod tests {
     // CRITICAL: Property-based test for order independence
     #[test]
     fn test_order_independence_of_high_low() {
-        let trades = vec![
+        let trades = [
             make_trade(100.0, 1.0, 1000),
             make_trade(110.0, 2.0, 2000),
             make_trade(95.0, 1.5, 3000),

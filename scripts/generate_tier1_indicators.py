@@ -6,7 +6,6 @@ RSI, MACD, Stochastic, Multi-panel layouts
 
 import polars as pl
 import pandas as pd
-import numpy as np
 import mplfinance as mpf
 import os
 
@@ -424,7 +423,7 @@ for root, dirs, files in os.walk("docs/sample_charts/indicators"):
         if f.endswith(".webp"):
             total_size += os.path.getsize(os.path.join(root, f))
 
-print(f"\nTotal charts generated: 15")
+print("\nTotal charts generated: 15")
 print(f"Total size: {total_size / 1024:.1f} KB")
 print(f"Average size per chart: {total_size / 1024 / 15:.1f} KB")
 print("\nCategories:")

@@ -16,12 +16,8 @@ use std::time::Instant;
 
 #[cfg(feature = "gpu")]
 use kimsfinance_core::gpu::{
-    GpuDevice,
-    dema_gpu, dema_batch_gpu,
-    tema_gpu, tema_batch_gpu,
-    hma_gpu,
-    kama_gpu, kama_batch_gpu,
-    KamaParams,
+    GpuDevice, KamaParams, dema_batch_gpu, dema_gpu, hma_gpu, kama_batch_gpu, kama_gpu,
+    tema_batch_gpu, tema_gpu,
 };
 
 fn generate_price_data(n: usize) -> Array1<f64> {
@@ -82,7 +78,10 @@ fn main() {
     let period = 20;
 
     if gpu_enabled {
-        println!("{:<10} {:<15} {:<15} {:<15}", "Indicator", "CPU (ms)", "GPU (ms)", "Speedup");
+        println!(
+            "{:<10} {:<15} {:<15} {:<15}",
+            "Indicator", "CPU (ms)", "GPU (ms)", "Speedup"
+        );
     } else {
         println!("{:<10} {:<15}", "Indicator", "CPU (ms)");
     }
@@ -99,7 +98,13 @@ fn main() {
         let start = Instant::now();
         let _ = dema_gpu(dev, &prices, period, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "DEMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "DEMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "DEMA", cpu_time);
     }
@@ -118,7 +123,13 @@ fn main() {
         let start = Instant::now();
         let _ = tema_gpu(dev, &prices, period, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "TEMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "TEMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "TEMA", cpu_time);
     }
@@ -137,7 +148,13 @@ fn main() {
         let start = Instant::now();
         let _ = kama_gpu(dev, &prices, period, 2, 30, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "KAMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "KAMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "KAMA", cpu_time);
     }
@@ -156,14 +173,19 @@ fn main() {
         let start = Instant::now();
         let _ = hma_gpu(dev, &prices, period, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "HMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "HMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "HMA", cpu_time);
     }
 
     #[cfg(not(feature = "gpu"))]
     println!("{:<10} {:<15.2}", "HMA", cpu_time);
-
 
     // -----------------------------------------------------------------------
     // Benchmark 2: Batch Throughput comparison (Parameter Sweeps / Multi-Series)
@@ -175,7 +197,10 @@ fn main() {
     let periods = vec![10, 20, 30, 40, 50, 100]; // 6 parameter variations
 
     if gpu_enabled {
-        println!("{:<10} {:<15} {:<15} {:<15}", "Indicator", "CPU (ms)", "GPU (ms)", "Speedup");
+        println!(
+            "{:<10} {:<15} {:<15} {:<15}",
+            "Indicator", "CPU (ms)", "GPU (ms)", "Speedup"
+        );
     } else {
         println!("{:<10} {:<15}", "Indicator", "CPU (ms)");
     }
@@ -199,7 +224,13 @@ fn main() {
         let start = Instant::now();
         let _ = dema_batch_gpu(dev, &batch_prices, &periods, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "DEMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "DEMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "DEMA", cpu_time);
     }
@@ -223,7 +254,13 @@ fn main() {
         let start = Instant::now();
         let _ = tema_batch_gpu(dev, &batch_prices, &periods, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "TEMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "TEMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "TEMA", cpu_time);
     }
@@ -257,7 +294,13 @@ fn main() {
         let start = Instant::now();
         let _ = kama_batch_gpu(dev, &batch_prices, &kama_params, None).unwrap();
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "KAMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "KAMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "KAMA", cpu_time);
     }
@@ -287,7 +330,13 @@ fn main() {
             }
         }
         let gpu_time = start.elapsed().as_secs_f64() * 1000.0;
-        println!("{:<10} {:<15.2} {:<15.2} {:<15.2}x", "HMA", cpu_time, gpu_time, cpu_time / gpu_time);
+        println!(
+            "{:<10} {:<15.2} {:<15.2} {:<15.2}x",
+            "HMA",
+            cpu_time,
+            gpu_time,
+            cpu_time / gpu_time
+        );
     } else {
         println!("{:<10} {:<15.2}", "HMA", cpu_time);
     }
@@ -301,7 +350,9 @@ fn main() {
         println!("- Rebuild with `--features gpu` on a CUDA-capable machine for speedup data.");
     } else {
         println!("- For a single series (Benchmark 1), host-device transfer and JIT launch");
-        println!("  overhead dominates. HMA achieves high performance because of its fused WMA math.");
+        println!(
+            "  overhead dominates. HMA achieves high performance because of its fused WMA math."
+        );
         println!("- For batch sweeps (Benchmark 2), the GPU excels by parallelizing across");
         println!("  all series and parameters, yielding massive throughput speedups (often >10x).");
     }

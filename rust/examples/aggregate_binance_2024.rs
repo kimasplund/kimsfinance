@@ -48,8 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", separator);
 
     let data_dir = Path::new("/home/kim/projects/binance-data/futures/BTCUSDT/trades");
-    let output_path =
-        Path::new("/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv");
+    let output_path = Path::new("/home/kim/projects/binance-data/BTCUSDT_2024_1min_ohlc.csv");
 
     println!("\nData directory: {}", data_dir.display());
     println!("Output file:    {}\n", output_path.display());

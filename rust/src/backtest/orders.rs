@@ -17,9 +17,7 @@
 //! Order Lifecycle (cancellations, expiry, triggers)
 //! ```
 
-
 use serde::{Deserialize, Serialize};
-
 
 /// Unique order identifier
 pub type OrderId = u64;
@@ -106,9 +104,10 @@ pub enum OrderStatus {
 }
 
 /// Time-in-force specification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum TimeInForce {
     /// Good Till Cancelled - remains active until filled or cancelled
+    #[default]
     GTC,
 
     /// Good Till Date - remains active until specified date
@@ -122,12 +121,6 @@ pub enum TimeInForce {
 
     /// Fill or Kill - fill entire order immediately or cancel
     FOK,
-}
-
-impl Default for TimeInForce {
-    fn default() -> Self {
-        TimeInForce::GTC
-    }
 }
 
 /// Order parameters for different order types
@@ -463,6 +456,7 @@ pub struct Fill {
 
 impl Fill {
     /// Create new fill record
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn new(
         order_id: OrderId,
         timestamp: i64,

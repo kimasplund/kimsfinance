@@ -82,7 +82,7 @@ from .ichimoku import calculate_ichimoku
 from .indicators.adx import calculate_adx
 from .mfi import calculate_mfi
 from .supertrend import calculate_supertrend
-from .atr import calculate_atr as calculate_atr_standalone
+from .atr import calculate_atr as calculate_atr_standalone  # noqa: F401  # aliased re-export
 from .swing import find_swing_points
 
 # Aggregation functions

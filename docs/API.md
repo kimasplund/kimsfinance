@@ -42,7 +42,7 @@ pip install kimsfinance
 For 6.4x faster OHLCV processing and GPU-accelerated indicators:
 
 ```bash
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 ```
 
 **GPU Requirements:**
@@ -968,6 +968,46 @@ vwap = kf.calculate_vwap(
 
 ---
 
+#### `calculate_vwap_anchored()` - Anchored VWAP
+
+```python
+kimsfinance.calculate_vwap_anchored(
+    highs,
+    lows,
+    closes,
+    volumes,
+    anchor_indices,
+    *,
+    engine="auto"
+)
+```
+
+Resets the VWAP calculation at each anchor point (e.g., session start). `anchor_indices` is a
+boolean array of the same length as the price arrays; `True` marks a bar where the cumulative
+sums restart.
+
+**Returns:** NumPy array of anchored VWAP values
+
+**Example:**
+```python
+import numpy as np
+
+# Anchor at the first bar of each trading day
+dates = df['date'].to_numpy()
+anchors = np.r_[True, dates[1:] != dates[:-1]]
+
+avwap = kf.calculate_vwap_anchored(
+    df['high'],
+    df['low'],
+    df['close'],
+    df['volume'],
+    anchor_indices=anchors,
+    engine='auto'
+)
+```
+
+---
+
 #### `calculate_cmf()` - Chaikin Money Flow
 
 ```python
@@ -1573,7 +1613,7 @@ The `kimsfinance.batch` module provides high-level Python API for GPU-accelerate
 - `BacktestConfig` - Backtest configuration dataclass
 
 **Constants:**
-- `GPU_AVAILABLE` - Boolean indicating if GPU feature is compiled
+- `GPU_AVAILABLE` - True when a usable CUDA device was found; resolved lazily on first access and consistent with `get_gpu_info()["gpu_available"]`
 
 #### Usage
 

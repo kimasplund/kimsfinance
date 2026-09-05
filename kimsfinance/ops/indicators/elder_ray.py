@@ -6,6 +6,7 @@ from ...core import (
     ArrayResult,
     Engine,
 )
+from ...utils.array_utils import FASTMATH_SAFE
 from .moving_averages import calculate_ema
 
 try:
@@ -91,7 +92,7 @@ def calculate_elder_ray(
     return (bull_power, bear_power)
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _calculate_elder_ray_jit(
     highs: np.ndarray, lows: np.ndarray, ema: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:

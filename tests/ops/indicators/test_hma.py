@@ -19,10 +19,8 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_hma, calculate_wma, calculate_sma, calculate_ema
-from kimsfinance.core import EngineManager
 
 # ============================================================================
 # Test Fixtures
@@ -274,7 +272,6 @@ class TestHMABasic:
 
         # Verify that the result has the expected NaN pattern
         # Total warmup = (period-1) + (sqrt_period-1)
-        half_period = period // 2
         sqrt_period = int(np.round(np.sqrt(period)))
         expected_warmup = period - 1 + sqrt_period - 1
 
@@ -336,7 +333,6 @@ class TestHMASignals:
     def test_price_crossover_above(self):
         """Test price crossing above HMA (bullish signal)."""
         # Create data where price crosses above HMA
-        n = 100
         data = np.concatenate(
             [
                 np.full(50, 100.0),  # Flat
@@ -360,7 +356,6 @@ class TestHMASignals:
     def test_price_crossover_below(self):
         """Test price crossing below HMA (bearish signal)."""
         # Create data where price crosses below HMA
-        n = 100
         data = np.concatenate(
             [
                 np.full(50, 100.0),  # Flat
@@ -418,7 +413,6 @@ class TestHMASignals:
     def test_hma_color_changes(self):
         """Test HMA color changes (uptrend/downtrend transitions)."""
         # Create data with trend changes
-        n = 150
         data = np.concatenate(
             [
                 np.linspace(100, 120, 50),  # Up
@@ -814,7 +808,7 @@ class TestHMAPerformance:
         import time
 
         start = time.time()
-        result = calculate_hma(sample_data, 20, engine="cpu")
+        calculate_hma(sample_data, 20, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -825,7 +819,7 @@ class TestHMAPerformance:
         import time
 
         start = time.time()
-        result = calculate_hma(large_data, 20, engine="cpu")
+        calculate_hma(large_data, 20, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 60 seconds on CPU
@@ -852,7 +846,7 @@ class TestHMAPerformance:
 
         for period in periods:
             start = time.time()
-            result = calculate_hma(sample_data, period, engine="cpu")
+            calculate_hma(sample_data, period, engine="cpu")
             elapsed = time.time() - start
             times.append(elapsed)
 
@@ -866,7 +860,7 @@ class TestHMAPerformance:
 
         start = time.time()
         for _ in range(100):
-            result = calculate_hma(sample_data, 20, engine="cpu")
+            calculate_hma(sample_data, 20, engine="cpu")
         elapsed = time.time() - start
 
         # 100 calls should complete in reasonable time

@@ -258,15 +258,16 @@ mod tests {
     use super::*;
     use ndarray::Array1;
 
-    fn create_test_data(
-        n: usize,
-    ) -> (
+    /// `(high, low, open, close, volume)`
+    type TestData = (
         Array1<f64>,
         Array1<f64>,
         Array1<f64>,
         Array1<f64>,
         Array1<f64>,
-    ) {
+    );
+
+    fn create_test_data(n: usize) -> TestData {
         let high = Array1::linspace(100.0, 150.0, n);
         let low = Array1::linspace(90.0, 140.0, n);
         let open = Array1::linspace(95.0, 145.0, n);

@@ -21,26 +21,25 @@
 name: Continuous Benchmarking
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    env:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     strategy:
       matrix:
         python-version: ['3.13', '3.14']
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0  # Fetch full history for better tracking
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -62,7 +61,7 @@ jobs:
         run: |
           # Run any pytest-based benchmarks with pytest-benchmark
           # Only run tests marked with 'benchmark' keyword
-          pytest tests/ -k benchmark --benchmark-only \
+          pytest tests/ -m benchmark \
             --benchmark-json=benchmark_results.json \
             --benchmark-autosave || echo "No pytest benchmarks found, skipping"
         continue-on-error: true
@@ -123,8 +122,8 @@ jobs:
         continue-on-error: true
 
       - name: Track benchmarks with Bencher
-        if: secrets.BENCHER_API_TOKEN != ''
-        uses: bencherdev/bencher@main
+        if: env.BENCHER_API_TOKEN != ''
+        uses: bencherdev/bencher@v0.6.12
         with:
           bencher-api-token: ${{ secrets.BENCHER_API_TOKEN }}
           bencher-project: kimsfinance
@@ -157,7 +156,7 @@ jobs:
 
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: |
@@ -168,7 +167,7 @@ jobs:
 
       - name: Comment PR with performance summary
         if: github.event_name == 'pull_request' && always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -237,10 +236,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.14
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.14'
           cache: 'pip'
@@ -262,7 +261,7 @@ jobs:
 
       - name: Upload Polars GPU benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: polars-gpu-benchmarks
           path: |
@@ -275,10 +274,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.14
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.14'
           cache: 'pip'
@@ -305,7 +304,7 @@ jobs:
 
       - name: Upload Numba JIT benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: numba-jit-benchmarks
           path: |

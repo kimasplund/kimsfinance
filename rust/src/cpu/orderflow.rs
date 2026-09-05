@@ -311,7 +311,7 @@ struct OrderflowFeatures {
 
 impl OrderflowFeatures {
     /// Convert to array for quantization
-    fn to_array(&self) -> [f32; NUM_FEATURES] {
+    fn to_array(self) -> [f32; NUM_FEATURES] {
         [
             self.buy_sell_imbalance,
             self.volume_delta,

@@ -7,11 +7,8 @@ Shows regime classification, ADX, and directional indicators from the dataset
 import sys
 from pathlib import Path
 import polars as pl
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import kimsfinance as kf
 
 
 def load_data_with_indicators(
@@ -42,7 +39,6 @@ def load_data_with_indicators(
 def create_adx_panel_chart(df_pandas, output_path: Path, title: str) -> float:
     """Create chart with ADX in separate panel"""
     try:
-        import pandas as pd
         import mplfinance as mpf
 
         # Prepare ADX panel data
@@ -91,15 +87,7 @@ def create_adx_panel_chart(df_pandas, output_path: Path, title: str) -> float:
 def create_regime_overlay_chart(df_pandas, output_path: Path, title: str) -> float:
     """Create chart with regime indicators overlaid"""
     try:
-        import pandas as pd
         import mplfinance as mpf
-
-        # Get regime data
-        regime_data = df_pandas["regime_label"].tail(100)
-
-        # Create colored markers for regime changes
-        # 0 = trending_up (green), 1 = trending_down (red), 2 = uncertain (yellow)
-        colors = regime_data.map({0: "green", 1: "red", 2: "yellow"})
 
         # Create figure with simple style
         fig, axes = mpf.plot(
@@ -259,16 +247,16 @@ def main():
 
     # Show available data
     print("\n📊 Available Experimental Data:")
-    print(f"  • ADX: Average Directional Index")
-    print(f"  • +DI: Plus Directional Indicator")
-    print(f"  • -DI: Minus Directional Indicator")
-    print(f"  • Regime Label: 0=trending_up, 1=trending_down, 2=uncertain")
-    print(f"  • Future Return: Forward-looking return prediction")
+    print("  • ADX: Average Directional Index")
+    print("  • +DI: Plus Directional Indicator")
+    print("  • -DI: Minus Directional Indicator")
+    print("  • Regime Label: 0=trending_up, 1=trending_down, 2=uncertain")
+    print("  • Future Return: Forward-looking return prediction")
 
     # Show regime distribution
     if "regime_name" in df_pandas.columns:
         regime_counts = df_pandas["regime_name"].tail(100).value_counts()
-        print(f"\n  Regime Distribution (last 100 candles):")
+        print("\n  Regime Distribution (last 100 candles):")
         for regime, count in regime_counts.items():
             print(f"    • {regime}: {count} candles ({count/100*100:.1f}%)")
 

@@ -45,15 +45,15 @@ for phase_name, start, end in phases:
     print(f"  Aroon Down: {avg_down:.2f}")
 
     if avg_up > 70 and avg_down < 30:
-        print(f"  Signal: STRONG UPTREND ↑")
+        print("  Signal: STRONG UPTREND ↑")
     elif avg_down > 70 and avg_up < 30:
-        print(f"  Signal: STRONG DOWNTREND ↓")
+        print("  Signal: STRONG DOWNTREND ↓")
     elif abs(avg_up - avg_down) < 20:
-        print(f"  Signal: CONSOLIDATION ↔")
+        print("  Signal: CONSOLIDATION ↔")
     elif avg_up > avg_down:
-        print(f"  Signal: Weak uptrend")
+        print("  Signal: Weak uptrend")
     else:
-        print(f"  Signal: Weak downtrend")
+        print("  Signal: Weak downtrend")
 
 # Detect crossovers
 valid_idx = ~(np.isnan(aroon_up) | np.isnan(aroon_down))
@@ -63,7 +63,7 @@ bearish_cross = (aroon_down[1:] > aroon_up[1:]) & (aroon_down[:-1] <= aroon_up[:
 bullish_signals = np.where(bullish_cross)[0] + 1
 bearish_signals = np.where(bearish_cross)[0] + 1
 
-print(f"\nCrossover Signals:")
+print("\nCrossover Signals:")
 print(f"  Bullish crossovers (Aroon Up crosses above Down): {len(bullish_signals)}")
 if len(bullish_signals) > 0:
     print(f"    At bars: {bullish_signals[:5]}")  # Show first 5

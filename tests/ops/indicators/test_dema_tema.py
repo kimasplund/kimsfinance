@@ -41,20 +41,10 @@ from __future__ import annotations
 import pytest
 import numpy as np
 import time
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_dema, calculate_tema, calculate_ema, calculate_sma
-from kimsfinance.ops.indicators.dema_tema import calculate_dema, calculate_tema
-from kimsfinance.core.types import Engine
 
-# Check if GPU is available
-try:
-    import cupy as cp
-
-    CUPY_AVAILABLE = True
-except ImportError:
-    CUPY_AVAILABLE = False
-
+from _gpu import requires_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -750,7 +740,7 @@ class TestDEMATEMAEdgeCases:
 class TestDEMATEMAGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_dema_gpu_cpu_match_small_data(self, sample_data):
         """Test DEMA GPU and CPU produce identical results on small dataset."""
         dema_cpu = calculate_dema(sample_data, period=10, engine="cpu")
@@ -758,7 +748,7 @@ class TestDEMATEMAGPUCPU:
 
         np.testing.assert_allclose(dema_cpu, dema_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_tema_gpu_cpu_match_small_data(self, sample_data):
         """Test TEMA GPU and CPU produce identical results on small dataset."""
         tema_cpu = calculate_tema(sample_data, period=10, engine="cpu")
@@ -766,7 +756,7 @@ class TestDEMATEMAGPUCPU:
 
         np.testing.assert_allclose(tema_cpu, tema_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_dema_gpu_cpu_match_large_data(self, large_data):
         """Test DEMA GPU and CPU produce identical results on large dataset."""
         dema_cpu = calculate_dema(large_data, period=20, engine="cpu")
@@ -774,7 +764,7 @@ class TestDEMATEMAGPUCPU:
 
         np.testing.assert_allclose(dema_cpu, dema_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_tema_gpu_cpu_match_large_data(self, large_data):
         """Test TEMA GPU and CPU produce identical results on large dataset."""
         tema_cpu = calculate_tema(large_data, period=20, engine="cpu")
@@ -782,7 +772,7 @@ class TestDEMATEMAGPUCPU:
 
         np.testing.assert_allclose(tema_cpu, tema_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_dema_gpu_cpu_custom_parameters(self, sample_data):
         """Test DEMA GPU and CPU match with custom parameters."""
         dema_cpu = calculate_dema(sample_data, period=8, engine="cpu")
@@ -790,7 +780,7 @@ class TestDEMATEMAGPUCPU:
 
         np.testing.assert_allclose(dema_cpu, dema_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_tema_gpu_cpu_custom_parameters(self, sample_data):
         """Test TEMA GPU and CPU match with custom parameters."""
         tema_cpu = calculate_tema(sample_data, period=12, engine="cpu")

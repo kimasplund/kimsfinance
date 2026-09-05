@@ -527,7 +527,7 @@ fp16_to_fp32_vectorized<<<grid, block>>>(C_fp16, C_fp32, m * n);
 
 ## License
 
-MIT License - See project LICENSE file
+AGPL-3.0-or-later - See [LICENSE](../../LICENSE) for the full terms. kimsfinance is dual-licensed: see [LICENSING.md](../../LICENSING.md) for the AGPL/commercial split and [COMMERCIAL-LICENSE.md](../../COMMERCIAL-LICENSE.md) for proprietary or network-service use.
 
 ---
 

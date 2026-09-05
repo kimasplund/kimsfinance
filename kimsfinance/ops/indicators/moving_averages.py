@@ -26,7 +26,6 @@ Example:
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Literal
 
 import polars as pl
 import numpy as np
@@ -137,7 +136,7 @@ def calculate_multiple_mas(
     sma_shift: ShiftPeriods = None,
     ema_shift: ShiftPeriods = None,
     engine: Engine = "cpu",
-) -> dict[str, list[MAResult]]:
+) -> dict[str, MovingAverageResult]:
     """
     Calculate multiple SMAs and EMAs in a single optimized pass.
 
@@ -329,6 +328,7 @@ def _calculate_wma_cpu(prices: np.ndarray, period: int) -> np.ndarray:
     return wma
 
 
+# Pure arithmetic over finite price data, no NaN/inf inspection: full fastmath is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_wma_jit(prices: np.ndarray, period: int) -> np.ndarray:
     """
@@ -421,6 +421,7 @@ def _calculate_vwma_cpu(prices: np.ndarray, volumes: np.ndarray, period: int) ->
     return vwma
 
 
+# Pure arithmetic over finite price/volume data, no NaN/inf inspection: full fastmath is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_vwma_jit(prices: np.ndarray, volumes: np.ndarray, period: int) -> np.ndarray:
     """

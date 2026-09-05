@@ -319,7 +319,7 @@ pub struct PortfolioGreeks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quantitative::heston::{OptionType, ValidationError};
+    use crate::quantitative::heston::OptionType;
     use chrono::Utc;
 
     fn create_test_option_with_iv(strike: f64, iv: f64) -> OptionQuote {
@@ -351,7 +351,7 @@ mod tests {
         // Market IV = 15%, Model IV = 20% (from √v₀ = √0.04 = 0.2)
         // Difference = -5pp → BUY signal
         let option = create_test_option_with_iv(50000.0, 0.15);
-        let signals = strategy.generate_signals(&[option.clone()], &params);
+        let signals = strategy.generate_signals(std::slice::from_ref(&option), &params);
 
         assert_eq!(signals.len(), 1);
         match &signals[0] {
@@ -374,7 +374,7 @@ mod tests {
         // Market IV = 26%, Model IV = 20% (from √v₀ = √0.04 = 0.2)
         // Difference = +6pp → SELL signal (above 5pp threshold)
         let option = create_test_option_with_iv(50000.0, 0.26);
-        let signals = strategy.generate_signals(&[option.clone()], &params);
+        let signals = strategy.generate_signals(std::slice::from_ref(&option), &params);
 
         assert_eq!(signals.len(), 1);
         match &signals[0] {
@@ -397,7 +397,7 @@ mod tests {
         // Market IV = 21%, Model IV = 20%
         // Difference = 1pp < threshold → NO signal
         let option = create_test_option_with_iv(50000.0, 0.21);
-        let signals = strategy.generate_signals(&[option.clone()], &params);
+        let signals = strategy.generate_signals(std::slice::from_ref(&option), &params);
 
         assert_eq!(signals.len(), 0);
     }

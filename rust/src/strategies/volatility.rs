@@ -200,10 +200,8 @@ impl Strategy for BollingerBandsExpansion {
 
         if bar.close <= lower {
             Signal::Buy
-        } else if bar.close >= upper {
-            Signal::Sell
-        } else if self.exit_at_middle
-            && (bar.close >= middle * 0.995 && bar.close <= middle * 1.005)
+        } else if bar.close >= upper
+            || (self.exit_at_middle && (bar.close >= middle * 0.995 && bar.close <= middle * 1.005))
         {
             Signal::Sell
         } else {

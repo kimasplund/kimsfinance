@@ -193,7 +193,7 @@ fn bench_genetic_optimization(c: &mut Criterion) {
             // Note: This is a placeholder - actual optimization would require
             // converting TickStrategy to Strategy trait or creating adapter
             // For now, we measure the overhead of setup
-            black_box(optimizer.population_size);
+            black_box(&optimizer);
         });
     });
 

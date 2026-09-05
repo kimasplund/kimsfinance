@@ -59,7 +59,6 @@ def _benchmark_operation(
     number: int = 10,
 ) -> float:
     """Benchmark a given function on a specific engine."""
-    from .engine import EngineManager  # Local import to avoid circular dependency
 
     timer = timeit.Timer(lambda: func(data, engine=engine))
     return timer.timeit(number=number) / number

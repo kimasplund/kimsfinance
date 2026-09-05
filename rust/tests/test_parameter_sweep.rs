@@ -48,17 +48,18 @@ impl Strategy for RSIStrategy {
     }
 }
 
-/// Generate synthetic OHLCV data with oscillating price pattern
-fn generate_test_data(
-    n: usize,
-) -> (
+/// (timestamps, open, high, low, close, volume) test fixture
+type OhlcvArrays = (
     Vec<i64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
     Array1<f64>,
-) {
+);
+
+/// Generate synthetic OHLCV data with oscillating price pattern
+fn generate_test_data(n: usize) -> OhlcvArrays {
     let mut timestamps = Vec::with_capacity(n);
     let mut high = Vec::with_capacity(n);
     let mut low = Vec::with_capacity(n);

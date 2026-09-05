@@ -17,9 +17,12 @@ def generate_data(num_candles):
 
 def run_benchmark(use_batch_drawing, data, num_runs=10):
     """Run benchmark for a given rendering mode."""
-    stmt = lambda: render_ohlcv_chart(
-        ohlc=data["ohlc"], volume=data["volume"], use_batch_drawing=use_batch_drawing
-    )
+
+    def stmt():
+        return render_ohlcv_chart(
+            ohlc=data["ohlc"], volume=data["volume"], use_batch_drawing=use_batch_drawing
+        )
+
     times = timeit.repeat(stmt, repeat=3, number=num_runs)
     return min(times) / num_runs
 

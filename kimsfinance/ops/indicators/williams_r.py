@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
 import polars as pl
 
 try:
-    import cupy as cp
+    import cupy as cp  # noqa: F401  # availability probe
 
     CUPY_AVAILABLE = True
 except ImportError:
@@ -13,11 +12,8 @@ except ImportError:
 from ...core import (
     ArrayLike,
     ArrayResult,
-    DataFrameInput,
-    MACDResult,
     Engine,
     EngineManager,
-    GPUNotAvailableError,
 )
 from ...utils.array_utils import to_numpy_array
 

@@ -26,23 +26,12 @@ from __future__ import annotations
 import pytest
 import numpy as np
 import time
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_bollinger_bands
 from kimsfinance.ops.indicators.moving_averages import calculate_sma
-from kimsfinance.core import EngineManager
 
 
-def gpu_available() -> bool:
-    """Check if GPU is available."""
-    try:
-        import cupy
-
-        cupy.cuda.runtime.getDeviceCount()
-        return True
-    except (ImportError, Exception):
-        return False
-
+from _gpu import requires_polars_gpu
 
 # ============================================================================
 # Test Fixtures
@@ -784,7 +773,7 @@ class TestBollingerBandsEdgeCases:
 class TestBollingerBandsGPUCPUParity:
     """Test GPU/CPU equivalence."""
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_basic_parity(self, sample_prices):
         """Test basic GPU/CPU parity."""
         # CPU calculation
@@ -802,7 +791,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_custom_multiplier(self, sample_prices):
         """Test GPU/CPU parity with custom multiplier."""
         # CPU calculation
@@ -819,7 +808,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_short_period(self, sample_prices):
         """Test GPU/CPU parity with short period."""
         upper_cpu, middle_cpu, lower_cpu = calculate_bollinger_bands(
@@ -834,7 +823,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_long_period(self, sample_prices):
         """Test GPU/CPU parity with long period."""
         upper_cpu, middle_cpu, lower_cpu = calculate_bollinger_bands(
@@ -849,7 +838,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_large_dataset(self, large_prices):
         """Test GPU/CPU parity with large dataset."""
         upper_cpu, middle_cpu, lower_cpu = calculate_bollinger_bands(
@@ -864,7 +853,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_auto_engine_selection_small(self, sample_prices):
         """Test auto engine selection with small dataset."""
         upper_auto, middle_auto, lower_auto = calculate_bollinger_bands(
@@ -878,7 +867,7 @@ class TestBollingerBandsGPUCPUParity:
         # For small dataset, auto should use CPU, so results should match exactly
         np.testing.assert_allclose(upper_auto, upper_cpu, rtol=1e-10, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_auto_engine_selection_large(self, large_prices):
         """Test auto engine selection with large dataset."""
         upper_auto, middle_auto, lower_auto = calculate_bollinger_bands(
@@ -889,7 +878,7 @@ class TestBollingerBandsGPUCPUParity:
         valid_mask = ~np.isnan(upper_auto)
         assert np.all(np.isfinite(upper_auto[valid_mask]))
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_volatile_data(self, volatile_prices):
         """Test GPU/CPU parity with volatile data."""
         upper_cpu, middle_cpu, lower_cpu = calculate_bollinger_bands(
@@ -904,7 +893,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_constant_data(self):
         """Test GPU/CPU parity with constant data."""
         constant = np.array([100.0] * 50)
@@ -921,7 +910,7 @@ class TestBollingerBandsGPUCPUParity:
         np.testing.assert_allclose(middle_cpu, middle_gpu, rtol=1e-5, equal_nan=True)
         np.testing.assert_allclose(lower_cpu, lower_gpu, rtol=1e-5, equal_nan=True)
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_parity_multiple_calculations(self, sample_prices):
         """Test GPU/CPU parity across multiple calculations."""
         for period in [10, 20, 30]:
@@ -981,7 +970,7 @@ class TestBollingerBandsPerformance:
         # Should handle 100K efficiently
         assert duration < 2.0, f"100K calculation took {duration:.3f}s, expected <2.0s"
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_performance_large(self, large_prices):
         """Test GPU performance with large dataset."""
         start = time.time()
@@ -1054,7 +1043,6 @@ class TestBollingerBandsParameterValidation:
         )
 
         # With negative multiplier, "upper" would be below "lower"
-        valid_mask = ~np.isnan(upper)
         # Just check it produces valid output
         assert len(upper) == len(sample_prices)
 

@@ -85,16 +85,15 @@
 
 #[cfg(feature = "gpu")]
 use super::batch::{BatchBacktestSweep, StrategyType};
-use super::core::ParameterGrid;
-#[cfg(feature = "gpu")]
-use super::core::ParameterRange;
+use super::core::{ParameterGrid, ParameterRange};
 use super::engine::BacktestConfig;
 use super::optimizer::OptimizerResult;
-use std::time::Instant;
 #[cfg(feature = "gpu")]
 use crate::gpu::GpuError;
 #[cfg(feature = "gpu")]
 use crate::gpu::device::GpuDevice;
+#[cfg(feature = "gpu")]
+use std::time::Instant;
 
 #[cfg(not(feature = "gpu"))]
 use crate::cpu::sequential::GpuError;
@@ -102,7 +101,6 @@ use crate::cpu::sequential::GpuError;
 use ndarray::Array1;
 #[cfg(feature = "gpu")]
 use std::sync::Arc;
-
 
 /// GPU-accelerated grid search optimizer
 ///
@@ -228,6 +226,7 @@ impl GridSearchOptimizer {
     /// println!("Best: {:?} (Sharpe: {:.2})", result.best_parameters, result.best_fitness);
     /// ```
     #[cfg(feature = "gpu")]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize(
         &self,
         device: Arc<GpuDevice>,
@@ -351,6 +350,7 @@ impl GridSearchOptimizer {
 
     /// CPU fallback when GPU feature not enabled
     #[cfg(not(feature = "gpu"))]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize(
         &self,
         _timestamps: &[i64],
@@ -390,7 +390,9 @@ impl GridSearchOptimizer {
     ///
     /// Order of parameters matches HashMap iteration order (unstable). For consistent
     /// parameter ordering, use sorted keys.
-    #[cfg(feature = "gpu")]
+    // Pure CPU logic; only the GPU `optimize` path calls it in production, but the unit tests
+    // exercise it on every build.
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
     fn generate_all_combinations(&self, grid: &ParameterGrid) -> Vec<Vec<f64>> {
         if grid.is_empty() {
             return vec![vec![]];

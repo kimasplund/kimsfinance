@@ -146,7 +146,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Binance BTCUSDT Futures Backtesting ===\n");
 
     // Configuration
-    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
+    let data_path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
     let timeframe = Timeframe::minutes(5);
 
     println!("Loading data from: {}", data_path);
@@ -231,6 +232,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         slippage: 0.0005,   // 0.05% slippage
         use_gpu: cfg!(feature = "gpu"),
         force_cpu: false,
+        execution_latency_ms: 0,
     };
 
     let engine = BacktestEngine::with_config(config.clone());

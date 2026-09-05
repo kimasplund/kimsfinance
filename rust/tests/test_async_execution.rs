@@ -73,8 +73,7 @@ mod async_tests {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execute()
             .expect("Execution failed");
@@ -116,8 +115,7 @@ mod async_tests {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execute()
             .expect("Execution failed");
@@ -157,8 +155,7 @@ mod async_tests {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execute()
             .expect("Fused execution failed");
@@ -175,8 +172,7 @@ mod async_tests {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execute()
             .expect("Async execution failed");
@@ -242,8 +238,7 @@ mod async_tests {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execute()
             .expect("Execution failed");

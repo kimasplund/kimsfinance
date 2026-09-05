@@ -1,4 +1,3 @@
-import polars as pl
 from .atr import calculate_atr
 from .rsi import calculate_rsi
 from .macd import calculate_macd

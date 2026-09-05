@@ -18,7 +18,6 @@ rust/
 ├── docs/
 │   ├── persistent-kernels-implementation.md  - Full report
 │   ├── persistent-kernel-patterns.md         - Pattern library
-│   ├── PERSISTENT_KERNELS_SUMMARY.md         - Executive summary
 │   └── PERSISTENT_KERNELS_QUICKREF.md        - This file
 ```
 

@@ -8,11 +8,13 @@ Performance: >1M candles/sec (benchmarked at 21-23M candles/sec)
 """
 
 import numpy as np
+
 try:
     import kimsfinance_core
 except ImportError:
     print("ERROR: kimsfinance_core not installed. Run: pip install -e rust/")
     exit(1)
+
 
 def generate_sample_data(n=1000):
     """Generate sample OHLCV data"""
@@ -28,6 +30,7 @@ def generate_sample_data(n=1000):
     volume = np.random.uniform(1000, 10000, n)
 
     return open_prices, high_prices, low_prices, close_prices, volume
+
 
 def main():
     print("=" * 80)
@@ -45,9 +48,9 @@ def main():
     print("-" * 80)
     all_patterns = kimsfinance_core.get_candlestick_patterns()
 
-    bullish = [name for name, type_ in all_patterns.items() if type_ == 'bullish']
-    bearish = [name for name, type_ in all_patterns.items() if type_ == 'bearish']
-    neutral = [name for name, type_ in all_patterns.items() if type_ == 'neutral']
+    bullish = [name for name, type_ in all_patterns.items() if type_ == "bullish"]
+    bearish = [name for name, type_ in all_patterns.items() if type_ == "bearish"]
+    neutral = [name for name, type_ in all_patterns.items() if type_ == "neutral"]
 
     print(f"  Bullish ({len(bullish)}): {', '.join(bullish[:5])}...")
     print(f"  Bearish ({len(bearish)}): {', '.join(bearish[:5])}...")
@@ -65,8 +68,10 @@ def main():
     if patterns:
         print(f"Found {len(patterns)} patterns:")
         for p in patterns[:10]:  # Show first 10
-            print(f"  {p['pattern']:25s} @ index {p['index']:4d} "
-                  f"({p['type']:7s}, confidence: {p['confidence']:.2f})")
+            print(
+                f"  {p['pattern']:25s} @ index {p['index']:4d} "
+                f"({p['type']:7s}, confidence: {p['confidence']:.2f})"
+            )
         if len(patterns) > 10:
             print(f"  ... and {len(patterns) - 10} more")
     else:
@@ -85,7 +90,7 @@ def main():
     print()
 
     print("  Top 5 Most Common Patterns:")
-    pattern_counts = sorted(stats['pattern_counts'].items(), key=lambda x: x[1], reverse=True)
+    pattern_counts = sorted(stats["pattern_counts"].items(), key=lambda x: x[1], reverse=True)
     for name, count in pattern_counts[:5]:
         print(f"    {name:25s}: {count} occurrences")
     print()
@@ -93,22 +98,28 @@ def main():
     # Filter by type
     print("🟢 Bullish Patterns Only:")
     print("-" * 80)
-    bullish_patterns = kimsfinance_core.filter_patterns_by_type(patterns, 'bullish')
+    bullish_patterns = kimsfinance_core.filter_patterns_by_type(patterns, "bullish")
     print(f"  Found {len(bullish_patterns)} bullish patterns:")
     for p in bullish_patterns[:5]:
-        print(f"    {p['pattern']:25s} @ index {p['index']:4d} "
-              f"(confidence: {p['confidence']:.2f})")
+        print(
+            f"    {p['pattern']:25s} @ index {p['index']:4d} "
+            f"(confidence: {p['confidence']:.2f})"
+        )
     print()
 
     # Strict configuration (fewer false positives)
     print("🔍 Detecting Patterns (Strict Config)...")
     print("-" * 80)
     patterns_strict = kimsfinance_core.recognize_candlestick_patterns(
-        open_prices, high, low, close, volume,
+        open_prices,
+        high,
+        low,
+        close,
+        volume,
         doji_threshold=0.03,  # Stricter doji detection
         shadow_ratio=2.5,  # Stricter hammer/star detection
         body_threshold=0.7,  # Stricter body requirements
-        min_confidence=0.7  # Higher confidence threshold
+        min_confidence=0.7,  # Higher confidence threshold
     )
     print(f"  Found {len(patterns_strict)} patterns (vs {len(patterns)} with default)")
     print()
@@ -117,12 +128,16 @@ def main():
     print("🔍 Detecting Patterns (Relaxed Config)...")
     print("-" * 80)
     patterns_relaxed = kimsfinance_core.recognize_candlestick_patterns(
-        open_prices, high, low, close, volume,
+        open_prices,
+        high,
+        low,
+        close,
+        volume,
         doji_threshold=0.1,  # More lenient doji detection
         shadow_ratio=1.5,  # More lenient hammer/star detection
         body_threshold=0.5,  # More lenient body requirements
         use_volume=False,  # Don't require volume confirmation
-        min_confidence=0.3  # Lower confidence threshold
+        min_confidence=0.3,  # Lower confidence threshold
     )
     print(f"  Found {len(patterns_relaxed)} patterns (vs {len(patterns)} with default)")
     print()
@@ -158,13 +173,14 @@ def main():
     print("-" * 80)
     print(f"  Input: {len(open_prices)} candles")
     print(f"  Output: {len(patterns)} patterns detected")
-    print(f"  Throughput: ~21-23 million candles/second (benchmarked)")
-    print(f"  Processing 1M candles: ~43-48ms")
+    print("  Throughput: ~21-23 million candles/second (benchmarked)")
+    print("  Processing 1M candles: ~43-48ms")
     print()
 
     print("=" * 80)
     print("✅ Example Complete!")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

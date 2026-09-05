@@ -391,7 +391,7 @@ def test_signal_generation():
     total_signals = np.sum(buy_signals) + np.sum(sell_signals)
     assert total_signals >= 1, "Should generate at least one trading signal"
 
-    print(f"\nSignal generation test:")
+    print("\nSignal generation test:")
     print(f"  Buy signals: {np.sum(buy_signals)}")
     print(f"  Sell signals: {np.sum(sell_signals)}")
     print(f"  Total signals: {total_signals}")

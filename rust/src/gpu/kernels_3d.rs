@@ -488,7 +488,7 @@ pub fn rsi_sweep_3d_gpu(
     let stage1_config = LaunchConfig {
         grid_dim: (
             n_candles.div_ceil(256) as u32, // x: candle chunks
-            n_assets as u32,                  // y: asset batch
+            n_assets as u32,                // y: asset batch
             1,
         ),
         block_dim: (256, 1, 1),
@@ -562,8 +562,8 @@ pub fn rsi_sweep_3d_gpu(
     let final_config = LaunchConfig {
         grid_dim: (
             n_candles.div_ceil(256) as u32, // x: candle chunks
-            n_periods as u32,                 // y: period sweep
-            n_assets as u32,                  // z: asset batch
+            n_periods as u32,               // y: period sweep
+            n_assets as u32,                // z: asset batch
         ),
         block_dim: (256, 1, 1),
         shared_mem_bytes: 0,

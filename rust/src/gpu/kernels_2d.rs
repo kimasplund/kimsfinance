@@ -13,8 +13,8 @@
 //! - GPU utilization: >75% during batch execution
 //! - Async pinned memory: +11% speedup over sync transfers (batch operations benefit most)
 
-use super::device::{GpuDevice, GpuError};
 use super::compile::compile_ptx_optimized_cached;
+use super::device::{GpuDevice, GpuError};
 use crate::cpu::sequential::wilders_smoothing_cpu;
 use cudarc::driver::{LaunchConfig, PushKernelArg};
 use ndarray::Array1;
@@ -350,20 +350,22 @@ fn wilder_smooth_batch(
         .par_chunks_mut(n_candles)
         .zip(avg_loss_batch.par_chunks_mut(n_candles))
         .enumerate()
-        .try_for_each(|(asset_idx, (gain_out, loss_out))| -> Result<(), GpuError> {
-            let start = asset_idx * n_candles;
-            let end = start + n_candles;
+        .try_for_each(
+            |(asset_idx, (gain_out, loss_out))| -> Result<(), GpuError> {
+                let start = asset_idx * n_candles;
+                let end = start + n_candles;
 
-            let gains_arr = Array1::from_vec(gains[start..end].to_vec());
-            let losses_arr = Array1::from_vec(losses[start..end].to_vec());
+                let gains_arr = Array1::from_vec(gains[start..end].to_vec());
+                let losses_arr = Array1::from_vec(losses[start..end].to_vec());
 
-            let avg_gain = wilders_smoothing_cpu(&gains_arr, period)?;
-            let avg_loss = wilders_smoothing_cpu(&losses_arr, period)?;
+                let avg_gain = wilders_smoothing_cpu(&gains_arr, period)?;
+                let avg_loss = wilders_smoothing_cpu(&losses_arr, period)?;
 
-            gain_out.copy_from_slice(avg_gain.as_slice().unwrap());
-            loss_out.copy_from_slice(avg_loss.as_slice().unwrap());
-            Ok(())
-        })?;
+                gain_out.copy_from_slice(avg_gain.as_slice().unwrap());
+                loss_out.copy_from_slice(avg_loss.as_slice().unwrap());
+                Ok(())
+            },
+        )?;
 
     Ok((avg_gain_batch, avg_loss_batch))
 }
@@ -435,17 +437,22 @@ pub fn rsi_batch_2d_gpu(
     }
 
     // Compile PTX
-    let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS)
-        .map_err(|e| GpuError::CompilationError(format!("Failed to compile 2D kernels: {:?}", e)))?;
+    let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS).map_err(|e| {
+        GpuError::CompilationError(format!("Failed to compile 2D kernels: {:?}", e))
+    })?;
     let ptx = Arc::unwrap_or_clone(ptx_arc);
 
-    let module = device.context().load_module(ptx)
+    let module = device
+        .context()
+        .load_module(ptx)
         .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
 
-    let gains_losses_kernel = module.load_function("rsi_batch_2d_kernel")
+    let gains_losses_kernel = module
+        .load_function("rsi_batch_2d_kernel")
         .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
-    let rsi_final_kernel = module.load_function("rsi_batch_final_2d_kernel")
+    let rsi_final_kernel = module
+        .load_function("rsi_batch_final_2d_kernel")
         .map_err(|e| GpuError::ExecutionError(format!("Failed to load kernel: {:?}", e)))?;
 
     // === Step 1: GPU - Calculate gains/losses (2D parallel) ===
@@ -455,7 +462,9 @@ pub fn rsi_batch_2d_gpu(
     pinned_close.as_mut_slice()[..batch_size].copy_from_slice(close_batch);
 
     let mut d_close = device.alloc_buffer(batch_size)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..batch_size], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..batch_size], &mut d_close)?;
     device.pinned_pool.lock().release(pinned_close);
 
     let mut d_gains = device.alloc_buffer(batch_size)?;
@@ -497,11 +506,15 @@ pub fn rsi_batch_2d_gpu(
     // === Step 2: D2H - Copy gains/losses for CPU Wilder's smoothing ===
     // Async D2H transfer for gains
     let mut pinned_gains = device.pinned_pool.lock().acquire(batch_size)?;
-    device.stream.memcpy_dtoh(&d_gains, &mut pinned_gains.as_mut_slice()[..batch_size])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_gains, &mut pinned_gains.as_mut_slice()[..batch_size])?;
 
     // Async D2H transfer for losses
     let mut pinned_losses = device.pinned_pool.lock().acquire(batch_size)?;
-    device.stream.memcpy_dtoh(&d_losses, &mut pinned_losses.as_mut_slice()[..batch_size])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_losses, &mut pinned_losses.as_mut_slice()[..batch_size])?;
 
     // Synchronize before CPU access
     device.stream.synchronize().map_err(|e| {
@@ -524,7 +537,9 @@ pub fn rsi_batch_2d_gpu(
     pinned_avg_gain.as_mut_slice()[..batch_size].copy_from_slice(&avg_gain_batch);
 
     let mut d_avg_gain = device.alloc_buffer(batch_size)?;
-    device.stream.memcpy_htod(&pinned_avg_gain.as_slice()[..batch_size], &mut d_avg_gain)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_avg_gain.as_slice()[..batch_size], &mut d_avg_gain)?;
     device.pinned_pool.lock().release(pinned_avg_gain);
 
     // Async H2D transfer for avg_loss
@@ -532,7 +547,9 @@ pub fn rsi_batch_2d_gpu(
     pinned_avg_loss.as_mut_slice()[..batch_size].copy_from_slice(&avg_loss_batch);
 
     let mut d_avg_loss = device.alloc_buffer(batch_size)?;
-    device.stream.memcpy_htod(&pinned_avg_loss.as_slice()[..batch_size], &mut d_avg_loss)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_avg_loss.as_slice()[..batch_size], &mut d_avg_loss)?;
     device.pinned_pool.lock().release(pinned_avg_loss);
 
     let mut d_rsi = device.alloc_buffer(batch_size)?;
@@ -559,7 +576,9 @@ pub fn rsi_batch_2d_gpu(
     // === Step 6: D2H - Copy final RSI ===
     // Async D2H transfer for final RSI
     let mut pinned_rsi = device.pinned_pool.lock().acquire(batch_size)?;
-    device.stream.memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..batch_size])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..batch_size])?;
 
     // Synchronize before returning
     device.stream.synchronize().map_err(|e| {
@@ -584,7 +603,9 @@ pub fn sma_batch_2d_gpu(
     period: usize,
 ) -> Result<Vec<f64>, GpuError> {
     if close_batch.len() != n_assets * n_candles {
-        return Err(GpuError::InvalidParameter("close_batch length mismatch".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "close_batch length mismatch".to_string(),
+        ));
     }
 
     let ptx_arc = compile_ptx_optimized_cached(BATCH_2D_KERNELS)?;
@@ -598,7 +619,9 @@ pub fn sma_batch_2d_gpu(
     pinned_close.as_mut_slice()[..batch_size].copy_from_slice(close_batch);
 
     let mut d_close = device.alloc_buffer(batch_size)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..batch_size], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..batch_size], &mut d_close)?;
     device.pinned_pool.lock().release(pinned_close);
 
     let mut d_sma = device.alloc_buffer(batch_size)?;
@@ -627,7 +650,9 @@ pub fn sma_batch_2d_gpu(
 
     // Async D2H transfer for SMA
     let mut pinned_sma = device.pinned_pool.lock().acquire(batch_size)?;
-    device.stream.memcpy_dtoh(&d_sma, &mut pinned_sma.as_mut_slice()[..batch_size])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_sma, &mut pinned_sma.as_mut_slice()[..batch_size])?;
 
     // Synchronize before returning
     device.stream.synchronize()?;
@@ -665,7 +690,9 @@ pub fn momentum_fusion_2d_gpu(
     let n = close.len();
 
     if high.len() != n || low.len() != n {
-        return Err(GpuError::InvalidParameter("Array length mismatch".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "Array length mismatch".to_string(),
+        ));
     }
 
     // Step 1: CPU - Calculate gains/losses and Wilder's smoothing for RSI
@@ -692,31 +719,41 @@ pub fn momentum_fusion_2d_gpu(
     let mut pinned_high = device.pinned_pool.lock().acquire(n)?;
     pinned_high.as_mut_slice()[..n].copy_from_slice(high.as_slice().unwrap());
     let mut d_high = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_high.as_slice()[..n], &mut d_high)?;
     device.pinned_pool.lock().release(pinned_high);
 
     let mut pinned_low = device.pinned_pool.lock().acquire(n)?;
     pinned_low.as_mut_slice()[..n].copy_from_slice(low.as_slice().unwrap());
     let mut d_low = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)?;
     device.pinned_pool.lock().release(pinned_low);
 
     let mut pinned_close = device.pinned_pool.lock().acquire(n)?;
     pinned_close.as_mut_slice()[..n].copy_from_slice(close.as_slice().unwrap());
     let mut d_close = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_close.as_slice()[..n], &mut d_close)?;
     device.pinned_pool.lock().release(pinned_close);
 
     let mut pinned_avg_gain = device.pinned_pool.lock().acquire(n)?;
     pinned_avg_gain.as_mut_slice()[..n].copy_from_slice(avg_gain.as_slice().unwrap());
     let mut d_avg_gain = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_avg_gain.as_slice()[..n], &mut d_avg_gain)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_avg_gain.as_slice()[..n], &mut d_avg_gain)?;
     device.pinned_pool.lock().release(pinned_avg_gain);
 
     let mut pinned_avg_loss = device.pinned_pool.lock().acquire(n)?;
     pinned_avg_loss.as_mut_slice()[..n].copy_from_slice(avg_loss.as_slice().unwrap());
     let mut d_avg_loss = device.alloc_buffer(n)?;
-    device.stream.memcpy_htod(&pinned_avg_loss.as_slice()[..n], &mut d_avg_loss)?;
+    device
+        .stream
+        .memcpy_htod(&pinned_avg_loss.as_slice()[..n], &mut d_avg_loss)?;
     device.pinned_pool.lock().release(pinned_avg_loss);
 
     let mut d_rsi = device.alloc_buffer(n)?;
@@ -752,13 +789,19 @@ pub fn momentum_fusion_2d_gpu(
 
     // Async D2H transfers for all output arrays
     let mut pinned_rsi = device.pinned_pool.lock().acquire(n)?;
-    device.stream.memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_rsi, &mut pinned_rsi.as_mut_slice()[..n])?;
 
     let mut pinned_stoch = device.pinned_pool.lock().acquire(n)?;
-    device.stream.memcpy_dtoh(&d_stoch_k, &mut pinned_stoch.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_stoch_k, &mut pinned_stoch.as_mut_slice()[..n])?;
 
     let mut pinned_williams = device.pinned_pool.lock().acquire(n)?;
-    device.stream.memcpy_dtoh(&d_williams, &mut pinned_williams.as_mut_slice()[..n])?;
+    device
+        .stream
+        .memcpy_dtoh(&d_williams, &mut pinned_williams.as_mut_slice()[..n])?;
 
     // Synchronize before CPU access
     device.stream.synchronize()?;
@@ -874,7 +917,8 @@ mod tests {
 
         // 2D batch
         let close_batch: Vec<f64> = assets.iter().flatten().copied().collect();
-        let sma_batch = sma_batch_2d_gpu(&device, &close_batch, n_assets, n_candles, period).unwrap();
+        let sma_batch =
+            sma_batch_2d_gpu(&device, &close_batch, n_assets, n_candles, period).unwrap();
 
         // Compare
         for asset_idx in 0..n_assets {
@@ -910,8 +954,10 @@ mod tests {
 
         // Individual calls
         let rsi_ind = rsi_gpu(&device, &close_arr, period, None).unwrap();
-        let (stoch_ind, _) = stochastic_gpu(&device, &high_arr, &low_arr, &close_arr, period, 3, None).unwrap();
-        let williams_ind = williams_r_gpu(&device, &high_arr, &low_arr, &close_arr, period, None).unwrap();
+        let (stoch_ind, _) =
+            stochastic_gpu(&device, &high_arr, &low_arr, &close_arr, period, 3, None).unwrap();
+        let williams_ind =
+            williams_r_gpu(&device, &high_arr, &low_arr, &close_arr, period, None).unwrap();
 
         // Fused call
         let (rsi_fused, stoch_fused, williams_fused) =

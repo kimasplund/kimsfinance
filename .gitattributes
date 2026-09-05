@@ -1,0 +1,17 @@
+# Binary assets: no text diff/merge, no EOL conversion
+*.webp    binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.bmp     binary
+*.ico     binary
+*.pdf     binary
+*.parquet binary
+*.npy     binary
+*.npz     binary
+*.ptx     binary
+*.cubin   binary
+*.so      binary
+# Keep generated sample outputs collapsed in GitHub PR diffs
+examples/demo_output/** linguist-generated=true

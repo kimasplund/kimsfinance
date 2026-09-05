@@ -11,7 +11,6 @@ use super::{Asset, AssetError, AssetResult, AssetSpec, AssetType, Exchange};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-
 /// Forex currency pair
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ForexPair {
@@ -84,12 +83,11 @@ impl ForexPair {
 
     /// Calculate profit/loss in pips
     pub fn calculate_pips(&self, entry_rate: f64, exit_rate: f64, is_long: bool) -> f64 {
-        let pip_diff = if is_long {
+        if is_long {
             (exit_rate - entry_rate) / self.pip_size
         } else {
             (entry_rate - exit_rate) / self.pip_size
-        };
-        pip_diff
+        }
     }
 
     /// Get base currency

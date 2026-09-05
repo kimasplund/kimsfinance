@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: "3.13"
         cache: 'pip'
@@ -26,7 +26,12 @@ jobs:
 
     - name: Check code formatting with Black
       run: |
-        black --check kimsfinance tests benchmarks
+        black --check kimsfinance tests benchmarks scripts examples
+
+    - name: Lint with ruff
+      run: |
+        # Configuration lives in [tool.ruff] in pyproject.toml.
+        ruff check kimsfinance tests benchmarks scripts examples
 
     - name: Type check with mypy
       run: |
@@ -37,10 +42,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: "3.13"
 

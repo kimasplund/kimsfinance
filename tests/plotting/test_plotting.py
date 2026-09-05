@@ -12,7 +12,6 @@ from kimsfinance.plotting import (
     save_chart,
 )
 from kimsfinance.config.themes import THEMES
-from kimsfinance.config.chart_settings import SPEED_PRESETS
 from kimsfinance.plotting import render_charts_parallel
 from kimsfinance.utils.color_utils import _hex_to_rgba
 
@@ -2261,7 +2260,7 @@ def test_render_charts_parallel_empty_list():
     """
     datasets = []
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory():
         results = render_charts_parallel(datasets, output_paths=[])
 
         assert results == []

@@ -14,11 +14,9 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_macd
-from kimsfinance.ops.indicators.macd import CUPY_AVAILABLE
-from kimsfinance.core import EngineManager
+from _gpu import requires_gpu
 from kimsfinance.core.exceptions import ConfigurationError
 
 # ============================================================================
@@ -538,7 +536,7 @@ class TestMACDParameterValidation:
 class TestMACDGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_small_data(self, sample_data):
         """Test GPU and CPU produce identical results on small dataset."""
         # CPU calculation
@@ -552,7 +550,7 @@ class TestMACDGPUCPU:
         np.testing.assert_allclose(signal_cpu, signal_gpu, rtol=1e-10)
         np.testing.assert_allclose(hist_cpu, hist_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_large_data(self, large_data):
         """Test GPU and CPU produce identical results on large dataset."""
         # CPU calculation
@@ -566,7 +564,7 @@ class TestMACDGPUCPU:
         np.testing.assert_allclose(signal_cpu, signal_gpu, rtol=1e-10)
         np.testing.assert_allclose(hist_cpu, hist_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_cpu_match_custom_parameters(self, sample_data):
         """Test GPU and CPU match with custom parameters."""
         # CPU calculation
@@ -671,7 +669,7 @@ class TestMACDPerformance:
         # 600K rows should complete in under 5 seconds on CPU
         assert elapsed < 5.0, f"Large dataset took {elapsed:.3f}s - should be <5s"
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_gpu
     def test_gpu_threshold_validation(self, large_data):
         """Test that GPU is actually used for large datasets when available."""
         # This test validates that engine='auto' uses GPU for large data

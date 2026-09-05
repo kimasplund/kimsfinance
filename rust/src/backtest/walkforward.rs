@@ -297,6 +297,7 @@ impl WalkForwardAnalyzer {
     /// # Returns
     ///
     /// WalkForwardResult with in-sample/out-of-sample comparison
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn analyze<S>(
         &self,
         engine: &BacktestEngine,

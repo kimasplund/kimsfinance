@@ -354,8 +354,8 @@ mod tests {
         let detector = OutlierDetector::new(3.0);
         let extreme = detector.find_extreme_outliers(&trades);
 
-        assert!(extreme.len() > 0, "Expected at least one extreme outlier");
-        if extreme.len() > 0 {
+        assert!(!extreme.is_empty(), "Expected at least one extreme outlier");
+        if !extreme.is_empty() {
             assert!(
                 extreme[0].z_score > 10.0,
                 "Z-score should be >10, got {}",

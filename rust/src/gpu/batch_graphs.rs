@@ -162,7 +162,10 @@ mod tests {
             Err(GpuError::ComputationErrorStatic(msg)) => {
                 assert!(msg.contains("disabled"));
             }
-            other => panic!("Expected ComputationErrorStatic, got {:?}", other.map(|_| ())),
+            other => panic!(
+                "Expected ComputationErrorStatic, got {:?}",
+                other.map(|_| ())
+            ),
         }
 
         // Nothing is ever cached while the path is disabled.

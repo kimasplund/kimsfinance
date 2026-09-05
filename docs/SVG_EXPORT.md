@@ -342,9 +342,10 @@ Planned additions:
 ## See Also
 
 - [kimsfinance README](../README.md) - Main documentation
-- [Native Charts Guide](../docs/implementation_plan_native_charts.md) - PIL rendering details
+- [Chart Types](API.md#chart-types) - Native PIL chart types
+- [Visualization Guide](VISUALIZATION.md) - PIL rendering details
 - [API Reference](../kimsfinance/api/plot.py) - plot() function documentation
-- [Renderer Source](../kimsfinance/plotting/renderer.py) - Low-level rendering code
+- [Renderer Source](../kimsfinance/plotting/pil_renderer.py) - Low-level rendering code
 
 ---
 

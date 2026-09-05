@@ -20,10 +20,10 @@ jobs:
         python-version: ["3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
@@ -41,7 +41,9 @@ jobs:
         python -m pip install --upgrade pip
         # [test] pulls the optional test deps (svgwrite, mplfinance, pyarrow, ...)
         # so renderer/IO tests run instead of erroring on missing imports.
-        pip install -e ".[test]"
+        # [jit] installs numba so the JIT code paths are exercised for real:
+        # without it the numba tests silently run their pure-Python fallback.
+        pip install -e ".[test,jit]"
         pip install maturin
 
     - name: Build and install Rust extension (kimsfinance_core)
@@ -53,9 +55,42 @@ jobs:
 
     - name: Run tests
       run: |
-        # GPU-hardware tests skip automatically when no GPU is present.
+        # GPU-hardware tests skip automatically when no usable device is present.
         pytest tests/ -v --tb=short
 
     - name: Test import
       run: |
         python -c "from kimsfinance.plotting import render_ohlcv_chart; print('Import successful')"
+
+  rust:
+    # CPU-only checks of the kimsfinance_core crate on default features.
+    # The gpu feature needs CUDA/nvcc and a device; see cuda-benchmark.yml.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Cache Rust build
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: rust
+
+    - name: Formatting (cargo fmt)
+      run: cargo fmt --all -- --check
+
+    - name: Lint (cargo clippy)
+      run: cargo clippy --lib --tests --no-deps -- -D warnings
+
+    - name: Check every target compiles
+      run: cargo check --all-targets
+
+    - name: Unit and integration tests
+      run: cargo test --lib --tests

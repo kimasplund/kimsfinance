@@ -167,8 +167,8 @@ For custom strategies, use CPU backtesting engine which supports unlimited flexi
 ### Build from Source (Rust)
 
 ```bash
-git clone https://github.com/kimsfinance/kimsfinance_core.git
-cd kimsfinance_core/rust
+git clone https://github.com/kimasplund/kimsfinance.git
+cd kimsfinance/rust
 
 # Build with GPU support
 cargo build --release --features gpu
@@ -656,10 +656,10 @@ See [`docs/MIGRATION_GUIDE_v0.2.0.md`](./docs/MIGRATION_GUIDE_v0.2.0.md) for det
 - **[Python 3.14 Free-Threading](./docs/PYTHON_314_FREE_THREADING_MIGRATION.md)** - GIL-free execution guide
 
 ### Performance & Benchmarks
-- **[Benchmark Report](./HYBRID_BENCHMARK_REPORT.md)** - Detailed performance analysis
+- **[Benchmark Report](./docs/reports/HYBRID_BENCHMARK_REPORT.md)** - Detailed performance analysis
 - **[Benchmark Usage](./benches/BENCHMARK_USAGE.md)** - How to run benchmarks
 - **[Launch Overhead Results](./benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md)** - Persistent kernel benchmarks
-- **[Binance Backtest Results](./BINANCE_BACKTEST_RESULTS.md)** - Real-world validation
+- **[Binance Backtest Results](./docs/reports/BINANCE_BACKTEST_RESULTS.md)** - Real-world validation
 
 ### Optimization & Strategy Development
 - **[Optimization Guide](./docs/OPTIMIZATION_GUIDE.md)** - Complete guide to all three optimizers ✨
@@ -803,7 +803,7 @@ rust/
 │   └── backtest_binance_comprehensive.rs # Backtest examples ✨
 ├── Cargo.toml
 ├── CHANGELOG.md
-├── BINANCE_BACKTEST_RESULTS.md        # Real-world results ✨
+├── docs/reports/BINANCE_BACKTEST_RESULTS.md  # Real-world results ✨
 └── README.md (this file)
 ```
 
@@ -821,7 +821,7 @@ rust/
 
 ## License
 
-MIT License - See [LICENSE](./LICENSE) for details
+AGPL-3.0-or-later - See [LICENSE](../LICENSE) for the full terms. kimsfinance is dual-licensed: see [LICENSING.md](../LICENSING.md) for the AGPL/commercial split and [COMMERCIAL-LICENSE.md](../COMMERCIAL-LICENSE.md) for proprietary or network-service use.
 
 ---
 
@@ -853,5 +853,5 @@ MIT License - See [LICENSE](./LICENSE) for details
 ---
 
 **Maintained By**: kimsfinance team
-**Repository**: https://github.com/kimsfinance/kimsfinance_core
+**Repository**: https://github.com/kimasplund/kimsfinance
 **Documentation**: https://docs.kimsfinance.io

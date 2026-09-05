@@ -19,10 +19,8 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Literal, Optional, Union
 
-import numpy as np
 import polars as pl
 
 try:
@@ -39,9 +37,6 @@ try:
         ColumnDataSource,
         CrosshairTool,
         HoverTool,
-        Range1d,
-        RangeTool,
-        Segment,
     )
     from bokeh.plotting import figure, output_file, save, show
 
@@ -50,7 +45,7 @@ except ImportError:
     BOKEH_AVAILABLE = False
 
 from ..config.themes import THEMES
-from ..core.types import ArrayLike, DataFrameInput
+from ..core.types import DataFrameInput
 from ..utils.array_utils import to_numpy_array
 
 # Type aliases
@@ -359,8 +354,8 @@ def plot_candlestick_plotly(
             increasing={"line": {"color": colors["up"]}, "fillcolor": colors["up"]},
             decreasing={"line": {"color": colors["down"]}, "fillcolor": colors["down"]},
             hovertext=[
-                f"O: {o:.2f}<br>H: {h:.2f}<br>L: {l:.2f}<br>C: {c:.2f}"
-                for o, h, l, c in zip(
+                f"O: {o:.2f}<br>H: {h:.2f}<br>L: {lo:.2f}<br>C: {c:.2f}"
+                for o, h, lo, c in zip(
                     df["open"].to_list(),
                     df["high"].to_list(),
                     df["low"].to_list(),

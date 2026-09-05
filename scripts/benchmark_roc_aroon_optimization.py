@@ -212,11 +212,11 @@ def main():
     print("SUMMARY")
     print("=" * 80)
 
-    print(f"\nROC Optimization:")
+    print("\nROC Optimization:")
     print(f"  Speedup: {roc_speedup:.1f}x (vectorized vs loop)")
     print(f"  Peak throughput: {max(r['throughput'] for r in roc_results):,.0f} candles/sec")
 
-    print(f"\nAroon Optimization:")
+    print("\nAroon Optimization:")
     print(f"  Speedup: {aroon_speedup:.1f}x (sliding windows vs loop)")
     print(f"  Peak throughput: {max(r['throughput'] for r in aroon_results):,.0f} candles/sec")
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import tempfile
 import numpy as np
-import pytest
 from PIL import Image
 
 from kimsfinance.plotting import (
@@ -11,7 +10,6 @@ from kimsfinance.plotting import (
     save_chart,
 )
 from kimsfinance.config.themes import THEMES
-from kimsfinance.utils.color_utils import _hex_to_rgba
 
 # Sample test data used across multiple tests
 SAMPLE_OHLC = {
@@ -302,7 +300,7 @@ def test_generate_sample_line_charts():
     """
     Generates sample line charts for visual inspection.
 
-    This test creates sample charts in the tests/fixtures/ directory.
+    This test creates sample charts in the tests/plotting/fixtures/ directory.
     """
     fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures")
     os.makedirs(fixtures_dir, exist_ok=True)

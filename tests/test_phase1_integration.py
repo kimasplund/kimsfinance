@@ -29,7 +29,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import time
-from typing import Callable, Any
+
+from _gpu import POLARS_GPU_AVAILABLE, requires_polars_gpu
 
 
 def generate_ohlcv_data(
@@ -70,17 +71,6 @@ def generate_ohlcv_data(
         "close": closes,
         "volume": volumes,
     }
-
-
-def gpu_available() -> bool:
-    """Check if GPU is available."""
-    try:
-        import cupy
-
-        cupy.cuda.runtime.getDeviceCount()
-        return True
-    except (ImportError, Exception):
-        return False
 
 
 class TestPhase1Integration:
@@ -214,18 +204,14 @@ class TestPhase1Integration:
         try:
             # All should handle gracefully (may have NaN for initial values)
             k, d = calculate_stochastic(data["high"], data["low"], data["close"], engine="cpu")
-            vwap = calculate_vwap(
-                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
-            )
-            ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
+            calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+            calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
             adx, plus_di, minus_di = calculate_adx(
                 data["high"], data["low"], data["close"], engine="cpu"
             )
-            williams = calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
-            cci = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
-            mfi = calculate_mfi(
-                data["high"], data["low"], data["close"], data["volume"], engine="cpu"
-            )
+            calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
+            calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
+            calculate_mfi(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
             supertrend, direction = calculate_supertrend(
                 data["high"], data["low"], data["close"], engine="cpu"
             )
@@ -261,15 +247,13 @@ class TestPhase1Integration:
 
         # VWAP
         start = time.perf_counter()
-        vwap = calculate_vwap(
-            data["high"], data["low"], data["close"], data["volume"], engine="cpu"
-        )
+        calculate_vwap(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
         vwap_time = (time.perf_counter() - start) * 1000
         results.append(("VWAP", vwap_time))
 
         # Ichimoku
         start = time.perf_counter()
-        ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
+        calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
         ichimoku_time = (time.perf_counter() - start) * 1000
         results.append(("Ichimoku", ichimoku_time))
 
@@ -283,19 +267,19 @@ class TestPhase1Integration:
 
         # Williams %R
         start = time.perf_counter()
-        williams = calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
+        calculate_williams_r(data["high"], data["low"], data["close"], engine="cpu")
         williams_time = (time.perf_counter() - start) * 1000
         results.append(("Williams %R", williams_time))
 
         # CCI
         start = time.perf_counter()
-        cci = calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
+        calculate_cci(data["high"], data["low"], data["close"], engine="cpu")
         cci_time = (time.perf_counter() - start) * 1000
         results.append(("CCI", cci_time))
 
         # MFI
         start = time.perf_counter()
-        mfi = calculate_mfi(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
+        calculate_mfi(data["high"], data["low"], data["close"], data["volume"], engine="cpu")
         mfi_time = (time.perf_counter() - start) * 1000
         results.append(("MFI", mfi_time))
 
@@ -331,18 +315,12 @@ class TestPhase1Integration:
 
         print("✓ All indicators completed in reasonable time")
 
-    @pytest.mark.skipif(not gpu_available(), reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_acceleration_works(self):
         """Test GPU acceleration for all indicators."""
         from kimsfinance.ops import (
             calculate_stochastic,
             calculate_vwap,
-            calculate_ichimoku,
-            calculate_adx,
-            calculate_williams_r,
-            calculate_cci,
-            calculate_mfi,
-            calculate_supertrend,
         )
 
         # Use 100K rows to trigger GPU acceleration
@@ -396,7 +374,7 @@ class TestPhase1Integration:
             vwap = calculate_vwap(
                 data["high"], data["low"], data["close"], data["volume"], engine="cpu"
             )
-            ichimoku = calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
+            calculate_ichimoku(data["high"], data["low"], data["close"], engine="cpu")
             adx, plus_di, minus_di = calculate_adx(
                 data["high"], data["low"], data["close"], engine="cpu"
             )
@@ -494,7 +472,7 @@ class TestPhase1Integration:
         # Trend confirmation: ADX > 25 (trending) and Supertrend direction
         trending = indicators["adx"][valid_idx] > 25
 
-        print(f"✓ Multi-indicator strategy compatible:")
+        print("✓ Multi-indicator strategy compatible:")
         print(f"  - Momentum oversold: {momentum_oversold}")
         print(f"  - Volume confirmation: {volume_ok}")
         print(f"  - Trending market: {trending}")
@@ -551,7 +529,7 @@ if __name__ == "__main__":
         test_suite.test_all_indicators_handle_edge_cases()
         test_suite.test_performance_relative_comparison()
 
-        if gpu_available():
+        if POLARS_GPU_AVAILABLE:
             test_suite.test_gpu_acceleration_works()
         else:
             print("\n⚠ Skipping GPU tests (GPU not available)")

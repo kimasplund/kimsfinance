@@ -56,7 +56,7 @@
 - **🧪 Production Ready**: 1,500+ tests, comprehensive coverage, full type safety
 - **🎯 Developer Friendly**: Simple API, flexible output (PIL Image, numpy array, file)
 - **⚙️ GPU Acceleration**: Optional RAPIDS/CuPy support for massive datasets
-- **📈 28 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 23 more (26 standalone functions with Rust acceleration)
+- **📈 32 Technical Indicators**: ATR, RSI, MACD, Stochastic, Bollinger Bands, and 27 more (26 standalone functions with Rust acceleration)
 - **🐍 Python 3.14 Support**: 27% single-thread, 3.1x multi-thread speedup with free-threading
 - **📊 Backtesting Engine**: GPU-accelerated backtesting with genetic optimization
 
@@ -352,7 +352,7 @@ pip install kimsfinance
 pip install kimsfinance[gpu]
 
 # Or install GPU libraries separately
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 ```
 
 ### With JIT Optimization (Optional)
@@ -368,11 +368,8 @@ pip install numba>=0.59
 ### With Rust Performance (Optional)
 
 ```bash
-# For 194x average speedup (764x for ATR)
-pip install kimsfinance[rust]
-
-# Or install Rust bindings separately
-pip install kimsfinance_core
+# For 194x average speedup (764x for ATR) - the Rust bindings are a separate package
+pip install kimsfinance kimsfinance_core
 ```
 
 ### With Python 3.14 Free-Threading (Optional)
@@ -390,7 +387,7 @@ python3.14t -m pip install kimsfinance[all]
 ### All Features
 
 ```bash
-# Install everything (GPU + JIT + Rust + all extras)
+# Install every Python extra (GPU + JIT + reporting + interactive + dev/test); add kimsfinance_core for Rust
 pip install kimsfinance[all]
 ```
 
@@ -971,7 +968,7 @@ save_chart(img, 'chart.webp', quality=95)
 
 ```bash
 # Install RAPIDS
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 
 # Verify
 python -c "import cudf; import cupy; print('GPU ready!')"
@@ -992,7 +989,7 @@ kimsfinance supports multiple chart types for different trading strategies:
 5. **Renko** - Brick charts for trend following
 6. **Point & Figure** - X/O charts for price action
 
-### Technical Indicators (28 Built-in)
+### Technical Indicators (32 Built-in)
 
 All indicators are available in Python, with 26 standalone Rust-accelerated indicator functions (30+ indicators total incl. batch-only) for massive datasets:
 
@@ -1051,9 +1048,9 @@ All indicators are available in Python, with 26 standalone Rust-accelerated indi
 - [Performance Guide](docs/PERFORMANCE.md) - Optimization techniques
 - [GPU Optimization](docs/GPU_OPTIMIZATION.md) - GPU acceleration deep dive
 - [Output Formats Guide](docs/OUTPUT_FORMATS.md) - SVG, SVGZ, WebP, PNG, JPEG comparison
-- [Migration from mplfinance](docs/MIGRATION.md) - Port existing mplfinance code
-- [Backtesting Engine](rust/BACKTESTING_IMPLEMENTATION_COMPLETE.md) - GPU-accelerated backtesting with genetic optimization
-- [Persistent Kernels](rust/PERSISTENT_KERNELS_SUMMARY.md) - 41x GPU batch processing speedup
+- [Migration from mplfinance](docs/MIGRATION_GUIDE.md) - Port existing mplfinance code
+- [Backtesting Engine](rust/docs/reports/BACKTESTING_IMPLEMENTATION_COMPLETE.md) - GPU-accelerated backtesting with genetic optimization
+- [Persistent Kernels](rust/PERSISTENT_KERNELS.md) - 41x GPU batch processing speedup
 
 ### Reference
 
@@ -1081,8 +1078,9 @@ source .venv/bin/activate
 # Install in development mode
 pip install -e .
 
-# Install dev dependencies
-pip install pytest pytest-cov black mypy ruff
+# Install dev dependencies (pytest, black, mypy, ruff, pre-commit, ...) and the git hooks
+pip install -e ".[dev]"
+pre-commit install
 ```
 
 ### Running Tests
@@ -1095,7 +1093,7 @@ pytest tests/
 pytest --cov=kimsfinance tests/
 
 # Run specific test
-pytest tests/test_plotting.py::test_render_ohlcv_chart
+pytest tests/plotting/test_plotting.py::test_render_ohlcv_chart
 ```
 
 ### Code Quality

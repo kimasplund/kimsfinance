@@ -37,6 +37,7 @@ Usage:
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 import time
 import platform
@@ -71,12 +72,7 @@ def load_renderer_module():
     )
 
     # Check if svgwrite is available
-    try:
-        import svgwrite
-
-        SVGWRITE_AVAILABLE = True
-    except ImportError:
-        SVGWRITE_AVAILABLE = False
+    SVGWRITE_AVAILABLE = importlib.util.find_spec("svgwrite") is not None
 
     # Create module namespace with necessary functions
     namespace = {
@@ -493,7 +489,7 @@ def format_results_markdown(
                     cpu_model = line.split(":")[1].strip()
                     md.append(f"- **CPU:** {cpu_model} ({os.cpu_count()} cores)")
                     break
-    except:
+    except Exception:
         md.append(f"- **CPU:** {platform.processor() or platform.machine()}")
 
     # Memory info
@@ -503,7 +499,7 @@ def format_results_markdown(
         mem_info = subprocess.check_output(["free", "-h"], text=True)
         mem_total = mem_info.split("\n")[1].split()[1]
         md.append(f"- **Memory:** {mem_total}")
-    except:
+    except Exception:
         pass
 
     # GPU info
@@ -518,7 +514,7 @@ def format_results_markdown(
         if gpu_info:
             gpu_name, gpu_mem = gpu_info.split(", ")
             md.append(f"- **GPU:** {gpu_name} ({gpu_mem})")
-    except:
+    except Exception:
         pass
 
     md.append("")
@@ -848,7 +844,6 @@ def benchmark_mplfinance_comparison(
         matplotlib.use("Agg")  # Non-interactive backend
         import matplotlib.pyplot as plt
 
-        mplfinance_available = True
         print("✓ mplfinance available - running comparison")
     except ImportError:
         print("✗ mplfinance not installed - skipping comparison")
@@ -1015,7 +1010,7 @@ def main():
                     cpu_model = line.split(":")[1].strip()
                     print(f"CPU: {cpu_model} ({os.cpu_count()} cores)")
                     break
-    except:
+    except Exception:
         print(f"CPU: {platform.processor() or platform.machine()}")
 
     # Memory info
@@ -1025,7 +1020,7 @@ def main():
         mem_info = subprocess.check_output(["free", "-h"], text=True)
         mem_total = mem_info.split("\n")[1].split()[1]
         print(f"Memory: {mem_total}")
-    except:
+    except Exception:
         pass
 
     # GPU info
@@ -1039,7 +1034,7 @@ def main():
         ).strip()
         if gpu_info:
             print(f"GPU: {gpu_info}")
-    except:
+    except Exception:
         pass
     print(f"\nDataset sizes: {args.sizes}")
     print(f"Runs per benchmark: {args.n_runs}")
@@ -1059,18 +1054,18 @@ def main():
     )
 
     # Format and save results
-    print(f"\nGenerating markdown report...")
+    print("\nGenerating markdown report...")
     markdown = format_results_markdown(results, export_perf, comparison_results)
 
     output_path = Path(args.output)
     output_path.write_text(markdown)
 
     print(f"\n{'=' * 80}")
-    print(f"BENCHMARK COMPLETE")
+    print("BENCHMARK COMPLETE")
     print(f"{'=' * 80}")
     print(f"\nResults saved to: {output_path.absolute()}")
     print(f"Total scenarios tested: {len(results)}")
-    print(f"\nPreview of results:")
+    print("\nPreview of results:")
     print(f"{'─' * 80}")
 
     # Print summary stats

@@ -8,7 +8,7 @@ Replaces scattered kwargs with validated, type-safe configuration.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields as dataclass_fields
+from dataclasses import dataclass, fields as dataclass_fields
 from typing import Any
 
 

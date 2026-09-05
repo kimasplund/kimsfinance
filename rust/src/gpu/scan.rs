@@ -164,7 +164,10 @@ fn num_tiles(n: usize) -> usize {
 
 fn tile_cfg(tiles: usize) -> Result<LaunchConfig, GpuError> {
     let grid = u32::try_from(tiles).map_err(|_| {
-        GpuError::InvalidParameter(format!("scan input too large: {} tiles exceed grid limit", tiles))
+        GpuError::InvalidParameter(format!(
+            "scan input too large: {} tiles exceed grid limit",
+            tiles
+        ))
     })?;
     Ok(LaunchConfig {
         grid_dim: (grid, 1, 1),
@@ -176,7 +179,10 @@ fn tile_cfg(tiles: usize) -> Result<LaunchConfig, GpuError> {
 fn elementwise_cfg(count: usize) -> Result<LaunchConfig, GpuError> {
     let blocks = count.div_ceil(SCAN_BLOCK_THREADS).max(1);
     let grid = u32::try_from(blocks).map_err(|_| {
-        GpuError::InvalidParameter(format!("launch too large: {} blocks exceed grid limit", blocks))
+        GpuError::InvalidParameter(format!(
+            "launch too large: {} blocks exceed grid limit",
+            blocks
+        ))
     })?;
     Ok(LaunchConfig {
         grid_dim: (grid, 1, 1),
@@ -528,9 +534,9 @@ fn run_affine_recurrence_f32(
 
     // First-valid-window start index, kept device-resident so no host sync
     // is required. alloc_zeros leaves it at 0 for the EMA path.
-    let d_start: CudaSlice<i32> = stream
-        .alloc_zeros(1)
-        .map_err(|e| GpuError::AllocationError(format!("scan start-index alloc failed: {:?}", e)))?;
+    let d_start: CudaSlice<i32> = stream.alloc_zeros(1).map_err(|e| {
+        GpuError::AllocationError(format!("scan start-index alloc failed: {:?}", e))
+    })?;
 
     if search_window {
         let store_fn = get_function(device, "scan_store_i32")?;
@@ -1054,7 +1060,13 @@ mod tests {
         let expected =
             wilders_smoothing_cpu(&Array1::from_vec(x.clone()), period).expect("CPU failed");
         let got = host_wilder(&x, period);
-        assert_vec_close(&got, expected.as_slice().unwrap(), 1e-12, 1e-12, "nan-prefix");
+        assert_vec_close(
+            &got,
+            expected.as_slice().unwrap(),
+            1e-12,
+            1e-12,
+            "nan-prefix",
+        );
         // Sanity: warmup really is start + period - 1 = 27 + 13 = 40.
         assert!(got[39].is_nan());
         assert!(got[40].is_finite());
@@ -1071,7 +1083,13 @@ mod tests {
         let expected =
             wilders_smoothing_cpu(&Array1::from_vec(x.clone()), period).expect("CPU failed");
         let got = host_wilder(&x, period);
-        assert_vec_close(&got, expected.as_slice().unwrap(), 1e-12, 1e-12, "interior-nan");
+        assert_vec_close(
+            &got,
+            expected.as_slice().unwrap(),
+            1e-12,
+            1e-12,
+            "interior-nan",
+        );
         for i in 50..n {
             assert!(got[i].is_nan(), "index {} should be NaN", i);
         }
@@ -1089,7 +1107,13 @@ mod tests {
         let expected =
             wilders_smoothing_cpu(&Array1::from_vec(x.clone()), period).expect("CPU failed");
         let got = host_wilder(&x, period);
-        assert_vec_close(&got, expected.as_slice().unwrap(), 1e-12, 1e-12, "no-window");
+        assert_vec_close(
+            &got,
+            expected.as_slice().unwrap(),
+            1e-12,
+            1e-12,
+            "no-window",
+        );
         assert!(got.iter().all(|v| v.is_nan()));
     }
 
@@ -1177,7 +1201,10 @@ mod tests {
     }
 
     fn gen_unit_f32(n: usize, seed: u32) -> Vec<f32> {
-        gen_unit_f64(n, seed).into_iter().map(|v| v as f32).collect()
+        gen_unit_f64(n, seed)
+            .into_iter()
+            .map(|v| v as f32)
+            .collect()
     }
 
     #[test]
@@ -1221,7 +1248,13 @@ mod tests {
             let mut acc = 0.0f64;
             for i in 0..n {
                 acc += x[i];
-                assert_close(got[i], acc, 1e-12, 1e-14, &format!("sum_f64 n={} idx {}", n, i));
+                assert_close(
+                    got[i],
+                    acc,
+                    1e-12,
+                    1e-14,
+                    &format!("sum_f64 n={} idx {}", n, i),
+                );
             }
         }
     }
@@ -1268,7 +1301,13 @@ mod tests {
             for i in 0..n {
                 ax += buf[2 * i] as f64;
                 ay += buf[2 * i + 1] as f64;
-                assert_close(got[2 * i] as f64, ax, 1e-5, 1e-6, &format!("pair x n={} i={}", n, i));
+                assert_close(
+                    got[2 * i] as f64,
+                    ax,
+                    1e-5,
+                    1e-6,
+                    &format!("pair x n={} i={}", n, i),
+                );
                 assert_close(
                     got[2 * i + 1] as f64,
                     ay,
@@ -1393,8 +1432,7 @@ mod tests {
             *v = f32::NAN;
         }
         let x_f64: Vec<f64> = x_f32.iter().map(|&v| v as f64).collect();
-        let expected =
-            wilders_smoothing_cpu(&Array1::from_vec(x_f64), period).expect("CPU failed");
+        let expected = wilders_smoothing_cpu(&Array1::from_vec(x_f64), period).expect("CPU failed");
 
         let d_x = device.copy_to_device_f32(&x_f32).unwrap();
         let mut d_out = device.allocate_device_buffer::<f32>(n).unwrap();

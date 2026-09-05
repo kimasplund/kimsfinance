@@ -93,7 +93,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Island Model Genetic Optimizer Example ===\n");
 
     // Load Binance BTCUSDT data
-    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
+    let data_path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
 
     println!("Loading Binance BTCUSDT data...");
     let load_start = Instant::now();

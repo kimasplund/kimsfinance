@@ -124,6 +124,7 @@ impl BacktestEngine {
     /// # Returns
     ///
     /// BacktestResult with equity curve, trades, and performance metrics
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn run(
         &self,
         strategy: &mut dyn Strategy,
@@ -430,6 +431,7 @@ impl BacktestEngine {
     ///     println!("Strategy failed early exit");
     /// }
     /// ```
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn run_with_early_exit(
         &self,
         strategy: &mut dyn Strategy,
@@ -751,6 +753,7 @@ impl BacktestEngine {
     /// println!("Best Sharpe: {:.2}", results[0].sharpe_ratio);
     /// ```
     #[cfg(feature = "gpu")]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn run_sweep(
         &self,
         strategy: &mut dyn Strategy,
@@ -771,6 +774,7 @@ impl BacktestEngine {
 
     /// Run parameter sweep (CPU fallback)
     #[cfg(not(feature = "gpu"))]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn run_sweep(
         &self,
         strategy: &mut dyn Strategy,

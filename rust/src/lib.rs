@@ -38,7 +38,9 @@
 /// ```
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyDict;
+#[cfg(feature = "data-downloaders")]
+use pyo3::types::PyList;
 
 mod batch;
 pub mod binance;

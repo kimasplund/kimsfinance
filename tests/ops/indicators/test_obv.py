@@ -14,7 +14,6 @@ Comprehensive tests for OBV implementation including:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 import sys
 from pathlib import Path
 
@@ -428,8 +427,6 @@ def test_obv_bullish_divergence():
     print("\n=== Test 18: Bullish Divergence ===")
 
     # Create data where price makes lower low but volume shows accumulation
-    n = 50
-
     # Price makes lower low
     closes = np.concatenate([np.linspace(110, 100, 25), np.linspace(100, 105, 25)])
 
@@ -461,8 +458,6 @@ def test_obv_bearish_divergence():
     print("\n=== Test 19: Bearish Divergence ===")
 
     # Create data where price makes higher high but volume shows distribution
-    n = 50
-
     # Price makes higher high
     closes = np.concatenate([np.linspace(100, 110, 25), np.linspace(110, 115, 25)])
 
@@ -518,8 +513,6 @@ def test_obv_volume_surge():
 def test_obv_distribution_accumulation():
     """Test OBV during distribution and accumulation phases."""
     print("\n=== Test 21: Distribution vs Accumulation ===")
-
-    n = 30
 
     # Accumulation: price stable/slightly down, but volume on up days
     closes_accum = np.concatenate([np.full(15, 100.0), np.linspace(100, 102, 15)])
@@ -755,7 +748,7 @@ def test_obv_mismatched_lengths():
     volumes = np.array([1000.0, 1500.0])  # Shorter
 
     try:
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         assert False, "Should raise error for mismatched lengths"
     except Exception as e:
         print(f"✓ Correctly raises exception for mismatched lengths: {type(e).__name__}")
@@ -769,7 +762,7 @@ def test_obv_empty_arrays():
     volumes = np.array([])
 
     try:
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         assert False, "Should raise error for empty arrays"
     except Exception as e:
         print(f"✓ Correctly raises exception for empty arrays: {type(e).__name__}")
@@ -845,7 +838,7 @@ def test_obv_cpu_gpu_parity_small():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ CPU and GPU results match")
         else:
-            print(f"  Warning: CPU/GPU difference detected")
+            print("  Warning: CPU/GPU difference detected")
             print(f"  - Max difference: {np.max(np.abs(obv_cpu - obv_gpu))}")
     except Exception:
         print("✓ GPU not available, skipping comparison")
@@ -866,7 +859,7 @@ def test_obv_cpu_gpu_parity_large():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ CPU and GPU results match on large dataset")
         else:
-            print(f"  Warning: CPU/GPU difference detected")
+            print("  Warning: CPU/GPU difference detected")
             print(f"  - Max difference: {np.max(np.abs(obv_cpu - obv_gpu))}")
     except Exception:
         print("✓ GPU not available, skipping comparison")
@@ -892,7 +885,7 @@ def test_obv_cumulative_cpu_gpu():
         if np.allclose(obv_cpu, obv_gpu, rtol=1e-5):
             print("✓ Cumulative operations match")
         else:
-            print(f"  Warning: Cumulative difference detected")
+            print("  Warning: Cumulative difference detected")
     except Exception:
         print("✓ GPU not available, CPU only")
 
@@ -1043,7 +1036,7 @@ def test_obv_performance_comparison():
         closes, volumes = generate_price_volume_data(n=size)
 
         start = time.perf_counter()
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         elapsed = (time.perf_counter() - start) * 1000
 
         print(f"✓ Size {size:>7,}: {elapsed:>6.2f} ms ({size/elapsed:>8.0f} rows/ms)")
@@ -1060,7 +1053,7 @@ def test_obv_sequential_operations():
 
     start = time.perf_counter()
     for _ in range(n_iterations):
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
     elapsed = (time.perf_counter() - start) * 1000
 
     print(f"✓ {n_iterations} iterations: {elapsed:.2f} ms")
@@ -1082,7 +1075,7 @@ def test_obv_percentage_change_analysis():
     # Calculate percentage changes
     obv_pct_change = np.diff(obv) / (np.abs(obv[:-1]) + 1e-10) * 100
 
-    print(f"✓ OBV percentage changes calculated")
+    print("✓ OBV percentage changes calculated")
     print(f"  - Mean: {np.mean(obv_pct_change):.2f}%")
     print(f"  - Std: {np.std(obv_pct_change):.2f}%")
     print(f"  - Max: {np.max(obv_pct_change):.2f}%")

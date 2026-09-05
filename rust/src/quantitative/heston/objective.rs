@@ -302,7 +302,9 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_valid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(
+            HestonGpuPricer::new(device, 4096, 4096).unwrap(),
+        ));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -319,7 +321,9 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_objective_invalid_params() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(
+            HestonGpuPricer::new(device, 4096, 4096).unwrap(),
+        ));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -335,7 +339,9 @@ mod tests {
     #[ignore] // Requires GPU
     fn test_gradient_computation() {
         let device = Arc::new(GpuDevice::new().expect("GPU required"));
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(
+            HestonGpuPricer::new(device, 4096, 4096).unwrap(),
+        ));
         let options = create_test_options();
 
         let objective = HestonObjective::new(pricer, options);
@@ -384,7 +390,9 @@ mod tests {
     #[test]
     fn test_vec_to_params() {
         let device = Arc::new(GpuDevice::new().ok().unwrap());
-        let pricer = Arc::new(Mutex::new(HestonGpuPricer::new(device, 4096, 4096).unwrap()));
+        let pricer = Arc::new(Mutex::new(
+            HestonGpuPricer::new(device, 4096, 4096).unwrap(),
+        ));
         let options = create_test_options();
         let objective = HestonObjective::new(pricer, options);
 

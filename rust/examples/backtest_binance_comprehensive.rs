@@ -297,6 +297,7 @@ fn run_backtest_for_timeframe(
         slippage: 0.0005,
         use_gpu: cfg!(feature = "gpu"),
         force_cpu: false,
+        execution_latency_ms: 0,
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -345,8 +346,7 @@ fn generate_markdown_report(
     data_path: &str,
     total_duration: std::time::Duration,
 ) -> Result<(), Box<dyn Error>> {
-    let mut file =
-        File::create("/home/kim/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
+    let mut file = File::create("/home/kim/projects/kimsfinance/rust/BINANCE_BACKTEST_RESULTS.md")?;
 
     writeln!(file, "# Binance BTCUSDT Futures Backtest Results\n")?;
     writeln!(file, "## Test Configuration\n")?;
@@ -613,7 +613,8 @@ fn generate_markdown_report(
 fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Comprehensive Binance BTCUSDT Futures Backtesting ===\n");
 
-    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
+    let data_path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
 
     let total_start = Instant::now();
     let mut all_results = Vec::new();

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-import polars as pl
 
 try:
-    import cupy as cp
+    import cupy as cp  # noqa: F401  # availability probe
 
     CUPY_AVAILABLE = True
 except ImportError:
@@ -13,13 +12,10 @@ except ImportError:
 from ...core import (
     ArrayLike,
     ArrayResult,
-    DataFrameInput,
-    MACDResult,
     Engine,
     EngineManager,
-    GPUNotAvailableError,
 )
-from ...utils.array_utils import to_numpy_array
+from ...utils.array_utils import FASTMATH_SAFE, to_numpy_array
 
 try:
     from numba import njit
@@ -179,7 +175,7 @@ def _calculate_aroon_cpu(
     return (aroon_up, aroon_down)
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _calculate_aroon_jit(
     highs: np.ndarray, lows: np.ndarray, period: int
 ) -> tuple[np.ndarray, np.ndarray]:

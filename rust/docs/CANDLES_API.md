@@ -1192,11 +1192,11 @@ let trades = TradeData::from_csv_with_columns(
 ## See Also
 
 - [CANDLES_BENCHMARKS.md](CANDLES_BENCHMARKS.md) - Performance benchmarks
-- [PERSISTENT_KERNELS.md](PERSISTENT_KERNELS.md) - Persistent kernel architecture
-- [Examples](/examples) - Code examples
-  - [time_bars_from_csv.rs](/examples/time_bars_from_csv.rs)
-  - [multi_symbol_batch.rs](/examples/multi_symbol_batch.rs)
-  - [heikin_ashi_strategy.rs](/examples/heikin_ashi_strategy.rs)
+- [PERSISTENT_KERNELS.md](../PERSISTENT_KERNELS.md) - Persistent kernel architecture
+- [Examples](../examples/) - Code examples
+  - [time_bars_from_csv.rs](../examples/time_bars_from_csv.rs)
+  - [multi_symbol_batch.rs](../examples/multi_symbol_batch.rs)
+  - [heikin_ashi_strategy.rs](../examples/heikin_ashi_strategy.rs)
 
 ---
 

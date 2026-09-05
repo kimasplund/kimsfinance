@@ -288,11 +288,7 @@ pub struct OrderflowOutput {
 /// scale quantizes a constant feature to code 0, which dequantizes to `min`.
 fn quantization_scale(min: f32, max: f32) -> f32 {
     let range = max - min;
-    if range > 1e-9 {
-        255.0 / range
-    } else {
-        0.0
-    }
+    if range > 1e-9 { 255.0 / range } else { 0.0 }
 }
 
 /// Unique quantization-range groups across strategies.

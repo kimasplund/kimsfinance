@@ -160,6 +160,7 @@ impl PositionManager {
     }
 
     /// Open new option position
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn open_position(
         &mut self,
         option_type: OptionType,

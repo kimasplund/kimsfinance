@@ -279,7 +279,10 @@ fn scan_inclusive_device(
                 .arg(&len_i32)
                 .launch(add_config)
                 .map_err(|e| {
-                    GpuError::ExecutionError(format!("Add block sums kernel launch failed: {:?}", e))
+                    GpuError::ExecutionError(format!(
+                        "Add block sums kernel launch failed: {:?}",
+                        e
+                    ))
                 })?;
         }
     }
@@ -493,10 +496,7 @@ mod tests {
         assert_eq!(scan_level_block_counts(16_777_216), vec![65_536, 256, 1]);
 
         // Four levels just past BLOCK_SIZE^3
-        assert_eq!(
-            scan_level_block_counts(16_777_217),
-            vec![65_537, 257, 2, 1]
-        );
+        assert_eq!(scan_level_block_counts(16_777_217), vec![65_537, 257, 2, 1]);
     }
 
     #[test]
@@ -577,7 +577,9 @@ mod tests {
         // Sizes spanning 1, 2, and 3 scan levels, including exact block
         // boundaries. Values are small integers (exact in f64) so block-order
         // summation differences cannot affect the comparison.
-        for &n in &[1usize, 2, 255, 256, 257, 511, 512, 513, 65_535, 65_536, 65_537, 200_000] {
+        for &n in &[
+            1usize, 2, 255, 256, 257, 511, 512, 513, 65_535, 65_536, 65_537, 200_000,
+        ] {
             let input: Vec<f64> = (0..n)
                 .map(|i| match i % 3 {
                     0 => 1.0,

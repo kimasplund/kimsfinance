@@ -21,11 +21,9 @@ from __future__ import annotations
 
 import pytest
 import numpy as np
-from unittest.mock import patch
 
 from kimsfinance.ops.indicators import calculate_williams_r
-from kimsfinance.ops.indicators.williams_r import CUPY_AVAILABLE
-from kimsfinance.core import EngineManager
+from _gpu import requires_polars_gpu
 from kimsfinance.core.exceptions import ConfigurationError
 
 # ============================================================================
@@ -467,7 +465,7 @@ class TestWilliamsREdgeCases:
 class TestWilliamsRGPUCPU:
     """Test GPU and CPU implementations produce identical results."""
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_small_data(self, sample_ohlc_data):
         """Test GPU and CPU produce identical results on small dataset."""
         high, low, close = sample_ohlc_data
@@ -481,7 +479,7 @@ class TestWilliamsRGPUCPU:
         # Should match within floating point tolerance
         np.testing.assert_allclose(result_cpu, result_gpu, rtol=1e-10)
 
-    @pytest.mark.skipif(not CUPY_AVAILABLE, reason="GPU not available")
+    @requires_polars_gpu
     def test_gpu_cpu_match_large_data(self, large_ohlc_data):
         """Test GPU and CPU produce identical results on large dataset."""
         high, low, close = large_ohlc_data
@@ -587,7 +585,7 @@ class TestWilliamsRPerformance:
         high, low, close = sample_ohlc_data
 
         start = time.time()
-        result = calculate_williams_r(high, low, close, period=14, engine="cpu")
+        calculate_williams_r(high, low, close, period=14, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -600,7 +598,7 @@ class TestWilliamsRPerformance:
         high, low, close = large_ohlc_data
 
         start = time.time()
-        result = calculate_williams_r(high, low, close, period=14, engine="cpu")
+        calculate_williams_r(high, low, close, period=14, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 5 seconds on CPU

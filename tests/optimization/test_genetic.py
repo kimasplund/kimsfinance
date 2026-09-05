@@ -138,7 +138,7 @@ class TestGeneticOptimizerInit:
         assert "sell_threshold" in optimizer.param_names
 
         assert optimizer.param_bounds["rsi_period"] == (5, 30)
-        assert optimizer.param_types["rsi_period"] == int
+        assert optimizer.param_types["rsi_period"] is int
 
 
 class TestGeneticOptimizerDecoding:
@@ -447,7 +447,7 @@ class TestErrorHandling:
     def test_invalid_param_space(self):
         """Test that invalid parameter space raises error."""
         with pytest.raises((KeyError, ValueError)):
-            optimizer = GeneticOptimizer(
+            GeneticOptimizer(
                 param_space={},  # Empty parameter space
             )
 

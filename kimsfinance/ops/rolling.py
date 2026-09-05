@@ -26,6 +26,7 @@ import numpy as np
 from typing import Any
 
 from ..core.decorators import get_array_module
+from ..utils.array_utils import FASTMATH_SAFE
 
 try:
     from numba import njit
@@ -43,7 +44,7 @@ except ImportError:
         return decorator
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _rolling_max_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     JIT-compiled rolling maximum.
@@ -116,7 +117,7 @@ def rolling_max(
         return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _rolling_min_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
     JIT-compiled rolling minimum.
@@ -189,6 +190,8 @@ def rolling_min(
         return result
 
 
+# Only reached when the caller has verified the input has no NaN
+# (see ``rolling_mean``), so full fastmath is safe here.
 @njit(cache=True, fastmath=True)
 def _rolling_mean_jit(arr: np.ndarray, window: int) -> np.ndarray:
     """
@@ -269,20 +272,36 @@ def rolling_mean(
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _rolling_std_jit(arr: np.ndarray, window: int, ddof: int) -> np.ndarray:
     """
     JIT-compiled rolling standard deviation.
 
     Provides 10-30% speedup over vectorized NumPy.
+
+    The two-pass mean/sum-of-squares formulation matches ``np.std(x, ddof=ddof)``
+    (Numba's ``np.std`` does not accept ``ddof``).  A NaN anywhere in the window
+    propagates to the result, as with NumPy.
     """
     n = len(arr)
     result = np.empty(n, dtype=np.float64)
     result[: window - 1] = np.nan
 
+    denom = window - ddof
     for i in range(window - 1, n):
-        start = max(0, i - window + 1)
-        result[i] = np.std(arr[start : i + 1], ddof=ddof)
+        start = i - window + 1
+        mean = 0.0
+        for j in range(start, i + 1):
+            mean += arr[j]
+        mean /= window
+        sum_sq = 0.0
+        for j in range(start, i + 1):
+            diff = arr[j] - mean
+            sum_sq += diff * diff
+        if denom > 0:
+            result[i] = np.sqrt(sum_sq / denom)
+        else:
+            result[i] = np.nan
 
     return result
 
@@ -322,7 +341,7 @@ def rolling_std(
         return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _ewm_mean_jit(arr: np.ndarray, span: int, adjust: bool) -> np.ndarray:
     """
     JIT-compiled exponential weighted moving average.

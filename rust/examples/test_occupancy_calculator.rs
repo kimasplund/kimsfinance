@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // Create a test batch
-    let mut batch = TaskBatch::new();
+    let mut batch = TaskBatch::<RocIndicator>::new();
     let test_data = vec![100.0, 102.0, 104.0, 106.0, 108.0, 110.0, 112.0];
     batch.add_task(test_data.clone(), 3);
     batch.add_task(test_data.clone(), 5);

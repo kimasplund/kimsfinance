@@ -1111,7 +1111,7 @@ pip install kimsfinance[gpu]
 
 ### With All Features
 ```bash
-pip install kimsfinance[all]  # GPU + JIT + Rust + all extras
+pip install kimsfinance[all]  # every Python extra; the Rust bindings (kimsfinance_core) are installed separately
 ```
 
 ### From Source

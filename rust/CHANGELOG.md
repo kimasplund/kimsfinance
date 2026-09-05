@@ -66,6 +66,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `docs/DATA_CONNECTORS_SETUP.md` - Setup instructions
     - Full rustdoc comments for all public APIs
 
+### Changed
+
+- **rand 0.9 / rand_distr 0.5** (PR #16, supersedes dependabot #12) - `src/backtest/multi_objective.rs`
+  and `src/backtest/optimizer.rs` migrated to the rand 0.9 API (`rand::rng()`, `random_range`,
+  `random_bool`, `random`). No seeded-RNG value tests changed.
+- **Cargo targets declare `required-features`** - examples, benches and tests that need the `gpu`
+  (or another optional) feature are now gated, so `cargo build --examples` / `cargo test` on the
+  default feature set no longer fails to compile.
+- **`grid_search` unit tests gated on `gpu`** - the test module in `src/backtest/grid_search.rs`
+  imports GPU-only items and is now `#[cfg(all(test, feature = "gpu"))]`.
+- **Removed unused dependencies** - the `rquest` HTTP client, the `data-yahoo-tls` feature that
+  wrapped it, and the unused `arrayvec` crate are dropped. A duplicate `chrono` entry in
+  `[dev-dependencies]` is removed.
+- **`panic = "abort"` dropped from the release profile** - Rust panics now unwind, so PyO3 can
+  surface them to Python as `PanicException` instead of aborting the host interpreter.
+- **Security lockfile updates** - `Cargo.lock` refreshed to pick up dependency versions that
+  resolve the advisories reported by `cargo audit` / `cargo deny`.
+
+### Fixed
+
+- **Indicator edge cases, with CPU/GPU parity** (PR #15) - ten distinct bugs in three classes,
+  found by a systematic hunt starting from two downstream reports. Convention: a flat or degenerate
+  window yields the neutral midpoint (RSI / MFI / Stochastic %K -> 50, Williams %R -> -50,
+  ADX DX -> 0), chained moving averages skip the input's leading-NaN warmup, and CPU and GPU
+  agree on every edge case.
+  - Leading-NaN propagation (`indicators/utils.rs`, new `first_finite_window`): `ema()` seeded on the
+    raw first N values made the MACD signal and histogram all-NaN; `sma()` did the same to
+    Stochastic %D; `wilders_smoothing()` had the same latent bug (hardens ADX).
+  - Flat / 0-over-0 windows returned a max sentinel: RSI flat -> 100 (now 50, CPU + GPU);
+    MFI flat or zero-flow -> 100 (now 50, CPU + GPU); Stochastic %K and Williams %R flat -> NaN on
+    CPU vs midpoint on GPU (both now midpoint).
+  - CPU/GPU divergence: ADX GPU emitted NaN on flat DI/DX and Wilder smoothing poisoned the tail
+    (now finite 0 like CPU); CMF GPU dropped doji volume from the denominator (now always counted);
+    OBV CPU seeded `OBV[0] = volume[0]` while GPU seeded 0 (CPU aligned to 0); Aroon's parallel
+    path (`cpu/sequential.rs`, n > 500) picked the oldest index on tied highs while the sequential
+    path picks the newest (tie-break aligned).
+  - Tests that encoded the old behaviour were updated (obv, mfi x3, cmf, rsi-gpu). Host suite
+    849/0, GPU `--ignored` suite 326/0 on RTX 3500 Ada.
+- **Data downloader sources restored to version control** - `src/data/downloaders/{mod,common,
+  binance,yahoo}.rs` and `src/data/ibkr/{chunked,historical}.rs` were matched by an over-broad
+  `.gitignore` rule and had never been committed, so `--features data-downloaders` / `data-ibkr`
+  did not build from a fresh clone. They are now tracked.
+
 ### Dependencies Added
 
 - `argmin = "0.10"` - L-BFGS-B optimization algorithm
@@ -315,5 +358,5 @@ let ema = ema_hybrid(&device, &close, 20, None)?;  // Also 6.8x faster
 ---
 
 **Maintained By**: kimsfinance team
-**License**: MIT
-**Repository**: https://github.com/kimsfinance/kimsfinance_core
+**License**: AGPL-3.0-or-later (dual-licensed; see [LICENSING.md](../LICENSING.md) and [COMMERCIAL-LICENSE.md](../COMMERCIAL-LICENSE.md))
+**Repository**: https://github.com/kimasplund/kimsfinance

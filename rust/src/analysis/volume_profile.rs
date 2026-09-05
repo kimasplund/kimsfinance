@@ -389,14 +389,14 @@ impl VolumeProfileBuilder {
             let bucket_timestamp = (trade.timestamp_ms / timeframe_ms) * timeframe_ms;
             buckets
                 .entry(bucket_timestamp)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(trade.clone());
         }
 
         // Build profile for each bucket
         let mut profiles: Vec<VolumeProfile> = buckets
-            .into_iter()
-            .map(|(_timestamp, bucket_trades)| self.build(&bucket_trades))
+            .into_values()
+            .map(|bucket_trades| self.build(&bucket_trades))
             .collect();
 
         // Sort by timestamp
@@ -664,16 +664,14 @@ mod tests {
 
     #[test]
     fn test_value_area_custom_percentage() {
-        let mut trades = Vec::new();
-
-        // Price 100: 2.0 volume (20%)
-        trades.push(make_trade(100.0, 2.0, 1000, false));
-
-        // Price 101: 5.0 volume (50%)
-        trades.push(make_trade(101.0, 5.0, 2000, false));
-
-        // Price 102: 3.0 volume (30%)
-        trades.push(make_trade(102.0, 3.0, 3000, false));
+        let trades = vec![
+            // Price 100: 2.0 volume (20%)
+            make_trade(100.0, 2.0, 1000, false),
+            // Price 101: 5.0 volume (50%)
+            make_trade(101.0, 5.0, 2000, false),
+            // Price 102: 3.0 volume (30%)
+            make_trade(102.0, 3.0, 3000, false),
+        ];
 
         // 50% value area should only include POC (101)
         let builder = VolumeProfileBuilder::new(1.0).value_area_pct(0.50);

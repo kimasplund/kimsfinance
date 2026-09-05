@@ -33,6 +33,17 @@ except ImportError:
 
 from ..core.types import ArrayLike
 
+# Fast-math flags that are safe for NaN/inf-aware kernels.
+#
+# ``fastmath=True`` sets *all* LLVM fast-math flags, including ``nnan`` and
+# ``ninf``, which allow the optimiser to assume no NaN/inf ever occurs.  That
+# lets it fold ``np.isnan(x)``/``np.isinf(x)`` to ``False`` and rewrite NaN-aware
+# comparisons, so functions like ``fill_nan_forward_jit`` silently become no-ops.
+# This set keeps the flags that only affect finite arithmetic (sign of zero,
+# reciprocals, contraction, approximate functions, reassociation) and drops the
+# two that change NaN/inf semantics.  Numba requires a plain ``set`` here.
+FASTMATH_SAFE: set[str] = {"nsz", "arcp", "contract", "afn", "reassoc"}
+
 
 def to_numpy_array(data: ArrayLike) -> np.ndarray:
     """
@@ -54,7 +65,7 @@ def to_numpy_array(data: ArrayLike) -> np.ndarray:
         return np.asarray(data)
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def normalize_array_jit(arr: np.ndarray, min_val: float, max_val: float) -> np.ndarray:
     """
     Normalize array to [0, 1] range with Numba JIT.
@@ -75,7 +86,7 @@ def normalize_array_jit(arr: np.ndarray, min_val: float, max_val: float) -> np.n
     return (arr - min_val) / range_val
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def clip_array_jit(arr: np.ndarray, min_val: float, max_val: float) -> np.ndarray:
     """
     Clip array values to [min_val, max_val] with Numba JIT.
@@ -101,7 +112,7 @@ def clip_array_jit(arr: np.ndarray, min_val: float, max_val: float) -> np.ndarra
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def fill_nan_forward_jit(arr: np.ndarray) -> np.ndarray:
     """
     Forward-fill NaN values with Numba JIT.
@@ -127,7 +138,7 @@ def fill_nan_forward_jit(arr: np.ndarray) -> np.ndarray:
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def fill_nan_backward_jit(arr: np.ndarray) -> np.ndarray:
     """
     Backward-fill NaN values with Numba JIT.
@@ -153,6 +164,7 @@ def fill_nan_backward_jit(arr: np.ndarray) -> np.ndarray:
     return result
 
 
+# Pure arithmetic, no NaN/inf inspection: full fastmath is safe here.
 @njit(cache=True, fastmath=True)
 def array_diff_jit(arr: np.ndarray, periods: int = 1) -> np.ndarray:
     """
@@ -179,6 +191,7 @@ def array_diff_jit(arr: np.ndarray, periods: int = 1) -> np.ndarray:
 
 
 __all__ = [
+    "FASTMATH_SAFE",
     "to_numpy_array",
     "normalize_array_jit",
     "clip_array_jit",

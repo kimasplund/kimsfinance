@@ -110,7 +110,7 @@ source .venv/bin/activate
 pip install -e .
 
 # Install development dependencies
-pip install pytest pytest-cov black mypy ruff
+pip install -e ".[dev]"  # pytest, black, mypy, ruff, pre-commit
 ```
 
 ### Verify Installation

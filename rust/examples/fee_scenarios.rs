@@ -49,8 +49,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = FeeScenario {
         name: "Optimistic".to_string(),
         taker_fee_pct: 0.0004,
-        slippage_bps: 1.0, // Ideal slippage
-        liquidity_factor: 1.0, // Perfect fills
+        slippage_bps: 1.0,        // Ideal slippage
+        liquidity_factor: 1.0,    // Perfect fills
         execution_delay_sec: 0.0, // No delay
     };
 
@@ -82,12 +82,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Assumptions:");
     println!("  Taker fee: {:.2}%", real.taker_fee_pct * 100.0);
-    println!("  Slippage: {:.1} bps (bid-ask + movement)", real.slippage_bps);
+    println!(
+        "  Slippage: {:.1} bps (bid-ask + movement)",
+        real.slippage_bps
+    );
     println!("  Liquidity: Normal (occasional slippage on large orders)");
     println!("  Execution: Typical latency (0.5 sec)");
     println!();
 
-    let (real_net, real_fees) = calculate_net_return(&real, position_size, gross_return, trade_count);
+    let (real_net, real_fees) =
+        calculate_net_return(&real, position_size, gross_return, trade_count);
     display_results(&real, real_net, real_fees, gross_return, initial_capital);
 
     // =========================================================================
@@ -101,8 +105,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pess = FeeScenario {
         name: "Pessimistic".to_string(),
         taker_fee_pct: 0.0004,
-        slippage_bps: 5.0, // High slippage in volatile markets
-        liquidity_factor: 0.7, // Poor fills on market impact
+        slippage_bps: 5.0,        // High slippage in volatile markets
+        liquidity_factor: 0.7,    // Poor fills on market impact
         execution_delay_sec: 2.0, // Network delay, queue position
     };
 
@@ -113,7 +117,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Execution: Delay and market impact (2.0 sec)");
     println!();
 
-    let (pess_net, pess_fees) = calculate_net_return(&pess, position_size, gross_return, trade_count);
+    let (pess_net, pess_fees) =
+        calculate_net_return(&pess, position_size, gross_return, trade_count);
     display_results(&pess, pess_net, pess_fees, gross_return, initial_capital);
 
     // =========================================================================
@@ -169,14 +174,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     println!("1. OPTIMISTIC vs REALISTIC");
-    println!("   {:.1}% return degradation (0.02% → 0.07% effective fee)", (1.0 - real_net_pct / opt_net_pct) * 100.0);
+    println!(
+        "   {:.1}% return degradation (0.02% → 0.07% effective fee)",
+        (1.0 - real_net_pct / opt_net_pct) * 100.0
+    );
     println!("   • This is NORMAL in live trading");
     println!("   • Slippage is worse than assumed");
     println!("   • Network latency causes worse fills");
     println!();
 
     println!("2. REALISTIC vs PESSIMISTIC");
-    println!("   {:.1}% additional degradation (volatile conditions)", (1.0 - pess_net_pct / real_net_pct) * 100.0);
+    println!(
+        "   {:.1}% additional degradation (volatile conditions)",
+        (1.0 - pess_net_pct / real_net_pct) * 100.0
+    );
     println!("   • Happens regularly (not once per year)");
     println!("   • Larger positions = worse execution");
     println!("   • High volatility = larger spreads");
@@ -184,8 +195,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("3. CUMULATIVE IMPACT");
     let total_degradation = (opt_net_pct - pess_net_pct) / opt_net_pct * 100.0;
-    println!("   From optimistic to pessimistic: {:.1}% degradation", total_degradation);
-    println!("   {:.1}% return becomes {:.1}% return", opt_net_pct, pess_net_pct);
+    println!(
+        "   From optimistic to pessimistic: {:.1}% degradation",
+        total_degradation
+    );
+    println!(
+        "   {:.1}% return becomes {:.1}% return",
+        opt_net_pct, pess_net_pct
+    );
     if pess_net_pct < 3.0 {
         println!("   ❌ Strategy becomes UNPROFITABLE after risk adjustment");
     } else if pess_net_pct < 5.0 {
@@ -253,8 +270,9 @@ fn calculate_net_return(
     // Fee per round-trip
     let taker_cost = position_size * scenario.taker_fee_pct * 2.0; // Entry + exit
     let slippage_cost = position_size * (scenario.slippage_bps / 10000.0);
-    let liquidity_slippage = position_size * (scenario.slippage_bps / 10000.0) * (1.0 - scenario.liquidity_factor);
-    
+    let liquidity_slippage =
+        position_size * (scenario.slippage_bps / 10000.0) * (1.0 - scenario.liquidity_factor);
+
     let cost_per_rt = taker_cost + slippage_cost + liquidity_slippage;
     let total_fees = cost_per_rt * (trade_count as f64);
 
@@ -274,7 +292,10 @@ fn display_results(
     let final_capital = initial_capital + net_return;
 
     println!("Results:");
-    println!("  Gross return:  ${:+.0} ({:+.1}%)", gross_return, gross_pct);
+    println!(
+        "  Gross return:  ${:+.0} ({:+.1}%)",
+        gross_return, gross_pct
+    );
     println!("  Total fees:    ${:+.0}", total_fees);
     println!("  Net return:    ${:+.0} ({:+.1}%)", net_return, net_pct);
     println!("  Final capital: ${:.0}", final_capital);

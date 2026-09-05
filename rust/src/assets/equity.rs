@@ -64,8 +64,7 @@ impl EquityAsset {
     pub fn add_corporate_action(&mut self, action: CorporateAction) {
         self.corporate_actions.push(action);
         // Sort by date
-        self.corporate_actions
-            .sort_by(|a, b| a.ex_date.cmp(&b.ex_date));
+        self.corporate_actions.sort_by_key(|a| a.ex_date);
     }
 
     /// Get applicable tick size for given price

@@ -136,7 +136,7 @@ fn bench_cuda_graphs(c: &mut Criterion) {
     let _ = rsi_gpu(&*device, &close, 14, None);
     let _ = atr_gpu(&*device, &high, &low, &close, 14, None);
     let _ = bollinger_bands_gpu(&*device, &close, 20, 2.0, None);
-    let _ = aroon_gpu(&*device, &high, &low, &25, None);
+    let _ = aroon_gpu(&*device, &high, &low, 25, None);
     builder
         .end_capture_stream(IndicatorSpeed::Medium)
         .expect("End capture failed");
