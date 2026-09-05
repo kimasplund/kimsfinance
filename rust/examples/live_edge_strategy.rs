@@ -312,7 +312,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("PHASE 1: Load real data");
     println!("────────────────────────");
     let t0 = Instant::now();
-    let dir = "../data/binance";
+    let dir = std::env::var("BINANCE_DATA_DIR").unwrap_or_else(|_| "../data/binance".to_string());
     let btc = load_ohlcv(&format!("{}/BTCUSDT_5m_1y.parquet", dir))?;
     let eth = load_ohlcv(&format!("{}/ETHUSDT_5m_1y.parquet", dir))?;
     let sol = load_ohlcv(&format!("{}/SOLUSDT_5m_1y.parquet", dir))?;
