@@ -48,7 +48,7 @@ deribit = { version = "0.3", optional = true }
 # Performance dependencies for backtest optimization
 dashmap = "6.1"
 parking_lot = "0.12"
-sha2 = "0.10"  # For kernel cache hashing
+sha2 = "0.11"  # For kernel cache hashing
 
 # Optional GPU support with cudarc (v0.17.3 - pinned for stability)
 # CUDA Toolkit Compatibility:
