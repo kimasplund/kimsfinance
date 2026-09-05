@@ -20,7 +20,6 @@ try:
     matplotlib.use("Agg")  # Non-interactive backend
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
-    from matplotlib.patches import Rectangle
 
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
@@ -352,7 +351,7 @@ def _create_placeholder_chart(width: int, height: int, text: str) -> Image.Image
     # Try to load font
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
-    except:
+    except Exception:
         font = ImageFont.load_default()
 
     # Draw text

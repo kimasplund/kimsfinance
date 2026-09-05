@@ -584,7 +584,7 @@ class TestMFIPerformance:
             high, low, close, volume = generate_sideways_with_volume(size, seed=42)
 
             start = time.perf_counter()
-            mfi = calculate_mfi(high, low, close, volume, period=14, engine="cpu")
+            calculate_mfi(high, low, close, volume, period=14, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))

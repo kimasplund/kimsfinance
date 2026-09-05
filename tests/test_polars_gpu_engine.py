@@ -132,30 +132,19 @@ def test_gpu_engine_performance():
 
     lf = generate_test_data(n_rows=100000)
 
-    start = time.perf_counter()
-    cpu_result = (
-        lf.group_by("symbol")
-        .agg(
-            [
-                pl.col("open").mean(),
-                pl.col("volume").sum(),
-            ]
-        )
-        .collect(engine=None)
+    query = lf.group_by("symbol").agg(
+        [
+            pl.col("open").mean(),
+            pl.col("volume").sum(),
+        ]
     )
+
+    start = time.perf_counter()
+    query.collect(engine=None)
     cpu_time = time.perf_counter() - start
 
     start = time.perf_counter()
-    gpu_result = (
-        lf.group_by("symbol")
-        .agg(
-            [
-                pl.col("open").mean(),
-                pl.col("volume").sum(),
-            ]
-        )
-        .collect(engine="gpu")
-    )
+    query.collect(engine="gpu")
     gpu_time = time.perf_counter() - start
 
     speedup = cpu_time / gpu_time

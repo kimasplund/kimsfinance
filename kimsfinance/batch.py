@@ -361,5 +361,5 @@ __all__ = [
     "get_gpu_info",
     "find_best_parameters",
     "BacktestConfig",
-    "GPU_AVAILABLE",
+    "GPU_AVAILABLE",  # noqa: F822  # provided lazily via __getattr__
 ]

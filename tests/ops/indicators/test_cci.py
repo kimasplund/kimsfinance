@@ -192,7 +192,6 @@ class TestCCIBasicCalculation:
         cci = calculate_cci(highs, lows, closes, period=20, engine="cpu")
 
         valid_cci = cci[~np.isnan(cci)]
-        mean_cci = np.nanmean(valid_cci)
 
         # Should be relatively neutral (-100 to +100 range for random walk)
         # Median is a better measure for sideways markets
@@ -765,7 +764,7 @@ class TestCCIPerformance:
             highs, lows, closes = generate_ohlc_sideways(size, seed=42)
 
             start = time.perf_counter()
-            cci = calculate_cci(highs, lows, closes, period=20, engine="cpu")
+            calculate_cci(highs, lows, closes, period=20, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))

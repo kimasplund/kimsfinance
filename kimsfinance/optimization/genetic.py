@@ -61,7 +61,7 @@ from typing import Dict, List, Tuple, Callable, Any, Optional
 import numpy as np
 
 try:
-    from deap import base, creator, tools, algorithms
+    from deap import base, creator, tools
 
     DEAP_AVAILABLE = True
 except ImportError:  # pragma: no cover - optional dependency
@@ -177,7 +177,7 @@ class GeneticOptimizer:
             low, high = self.param_bounds[param_name]
             dtype = self.param_types[param_name]
 
-            if dtype == int:
+            if dtype is int:
                 self.toolbox.register(f"attr_{i}", np.random.randint, low, high + 1)
             else:
                 self.toolbox.register(f"attr_{i}", np.random.uniform, low, high)
@@ -209,7 +209,7 @@ class GeneticOptimizer:
                 low, high = self.param_bounds[param_name]
                 dtype = self.param_types[param_name]
 
-                if dtype == int:
+                if dtype is int:
                     # Random reset for integers
                     individual[i] = np.random.randint(low, high + 1)
                 else:

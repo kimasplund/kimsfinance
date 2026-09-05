@@ -36,7 +36,7 @@ try:
         PageBreak,
         Image as RLImage,
     )
-    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+    from reportlab.lib.enums import TA_CENTER
 
     REPORTLAB_AVAILABLE = True
 except ImportError:
@@ -237,7 +237,7 @@ class BacktestReport:
                 logo = RLImage(self.config.logo_path, width=2 * inch, height=1 * inch)
                 story.append(logo)
                 story.append(Spacer(1, 0.3 * inch))
-            except:
+            except Exception:
                 pass
 
         # Title

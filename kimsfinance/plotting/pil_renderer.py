@@ -29,7 +29,7 @@ except ImportError:
 
 
 try:
-    import svgwrite
+    import svgwrite  # noqa: F401  # availability probe
 
     SVGWRITE_AVAILABLE = True
 except ImportError:
@@ -666,7 +666,6 @@ def render_renko_chart(
 
     # Define chart areas (70% for bricks, 30% for volume)
     chart_height = int(height * CHART_HEIGHT_RATIO)
-    volume_height = int(height * VOLUME_HEIGHT_RATIO)
 
     # Calculate price range for all bricks
     brick_prices = np.array([b["price"] for b in bricks])

@@ -116,7 +116,6 @@ def test_displacement():
     tenkan = ichimoku["tenkan"]
     kijun = ichimoku["kijun"]
     senkou_a = ichimoku["senkou_a"]
-    senkou_b = ichimoku["senkou_b"]
     chikou = ichimoku["chikou"]
 
     # Test Senkou Span A displacement (forward by 26)
@@ -290,7 +289,6 @@ def test_edge_cases():
 
     # Lines should be constant (after initial period)
     tenkan_const = ichimoku_const["tenkan"]
-    kijun_const = ichimoku_const["kijun"]
 
     # After sufficient period, values should stabilize
     assert np.allclose(

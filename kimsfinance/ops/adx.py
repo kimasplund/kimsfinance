@@ -182,8 +182,6 @@ def calculate_adx(
 
     # All arrays now have length n-1 (due to diff operations)
     # Pad with NaN at the beginning to align with original data length
-    n = len(high)
-
     # Create full-length arrays with NaN at start
     plus_dm_full = xp.concatenate([xp.array([xp.nan]), plus_dm])
     minus_dm_full = xp.concatenate([xp.array([xp.nan]), minus_dm])

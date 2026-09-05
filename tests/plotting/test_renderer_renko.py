@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import tempfile
 import numpy as np
@@ -15,12 +16,7 @@ from kimsfinance.plotting import (
 from kimsfinance.config.themes import THEMES
 
 # Check if svgwrite is available
-try:
-    import svgwrite
-
-    SVGWRITE_AVAILABLE = True
-except ImportError:
-    SVGWRITE_AVAILABLE = False
+SVGWRITE_AVAILABLE = importlib.util.find_spec("svgwrite") is not None
 
 
 # Sample test data for Renko charts

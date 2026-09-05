@@ -89,13 +89,6 @@ def create_regime_overlay_chart(df_pandas, output_path: Path, title: str) -> flo
     try:
         import mplfinance as mpf
 
-        # Get regime data
-        regime_data = df_pandas["regime_label"].tail(100)
-
-        # Create colored markers for regime changes
-        # 0 = trending_up (green), 1 = trending_down (red), 2 = uncertain (yellow)
-        colors = regime_data.map({0: "green", 1: "red", 2: "yellow"})
-
         # Create figure with simple style
         fig, axes = mpf.plot(
             df_pandas[["Open", "High", "Low", "Close", "Volume"]].tail(100),

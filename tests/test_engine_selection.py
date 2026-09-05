@@ -148,14 +148,14 @@ class TestIndicatorEngineIntegration:
         calculate_rsi(self.small_closes, period=14, engine="auto")
         mock_select.assert_called_once_with("auto", operation="rsi", data_size=self.small_size)
 
-    @patch("kimsfinance.ops.indicators.pl.LazyFrame.collect")
+    @patch("polars.LazyFrame.collect")
     def test_rsi_with_small_data_uses_cpu(self, mock_collect):
         """Test that RSI with small data uses the CPU engine."""
         mock_collect.return_value = pl.DataFrame({"rsi": []})
         calculate_rsi(self.small_closes, period=14, engine="auto")
         mock_collect.assert_called_with(engine="cpu")
 
-    @patch("kimsfinance.ops.indicators.pl.LazyFrame.collect")
+    @patch("polars.LazyFrame.collect")
     @patch.object(EngineManager, "check_polars_gpu_available", return_value=True)
     def test_rsi_with_large_data_uses_gpu(self, mock_gpu, mock_collect):
         """Test that RSI with large data uses the GPU engine."""

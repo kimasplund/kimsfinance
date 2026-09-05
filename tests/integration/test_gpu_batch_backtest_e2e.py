@@ -538,7 +538,7 @@ class TestPerformanceRegression:
         data = generate_synthetic_ohlcv(5000, seed=1111)
         params = generate_random_params(100, strategy="rsi_crossover", seed=1212)
 
-        result = benchmark(batch_backtest, "rsi_crossover", data, params)
+        benchmark(batch_backtest, "rsi_crossover", data, params)
 
         # Should complete in <200ms on RTX 3500 Ada (allow 2x target)
         median_time = benchmark.stats["median"]
@@ -556,7 +556,7 @@ class TestPerformanceRegression:
         data = generate_synthetic_ohlcv(10000, seed=1313)
         params = generate_random_params(1000, strategy="rsi_crossover", seed=1414)
 
-        result = benchmark(batch_backtest, "rsi_crossover", data, params)
+        benchmark(batch_backtest, "rsi_crossover", data, params)
 
         median_time = benchmark.stats["median"]
         print(f"✅ 1000 strategies: {median_time*1000:.1f}ms")

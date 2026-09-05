@@ -11,7 +11,7 @@ import polars as pl
 from typing import Tuple
 
 try:
-    import cupy as cp
+    import cupy as cp  # noqa: F401  # availability probe
 
     CUPY_AVAILABLE = True
 except ImportError:

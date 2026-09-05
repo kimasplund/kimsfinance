@@ -43,7 +43,6 @@ import numpy as np
 import time
 
 from kimsfinance.ops.indicators import calculate_dema, calculate_tema, calculate_ema, calculate_sma
-from kimsfinance.ops.indicators.dema_tema import calculate_dema, calculate_tema
 
 from _gpu import requires_gpu
 

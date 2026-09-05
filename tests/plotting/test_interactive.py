@@ -4,6 +4,8 @@ Tests for interactive plotting module.
 Tests cover Plotly and Bokeh backends with various chart types and configurations.
 """
 
+import importlib.util
+
 import numpy as np
 import polars as pl
 import pytest
@@ -16,19 +18,8 @@ from kimsfinance.plotting.interactive import (
     plot_line_plotly,
 )
 
-try:
-    import plotly
-
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    PLOTLY_AVAILABLE = False
-
-try:
-    import bokeh
-
-    BOKEH_AVAILABLE = True
-except ImportError:
-    BOKEH_AVAILABLE = False
+PLOTLY_AVAILABLE = importlib.util.find_spec("plotly") is not None
+BOKEH_AVAILABLE = importlib.util.find_spec("bokeh") is not None
 
 
 @pytest.fixture

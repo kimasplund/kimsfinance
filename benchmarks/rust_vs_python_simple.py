@@ -17,7 +17,7 @@ try:
     import kimsfinance_core
 
     RUST_AVAILABLE = True
-except:
+except Exception:
     print("⚠️  Rust not available. Build with: cd rust && maturin develop --release")
     RUST_AVAILABLE = False
 
@@ -55,19 +55,19 @@ def main():
 
     # RSI
     start = time.perf_counter()
-    py_rsi = calculate_rsi(close, 14)
+    calculate_rsi(close, 14)
     py_times["RSI"] = time.perf_counter() - start
     print(f"RSI (14):  {py_times['RSI']:.4f}s")
 
     # ATR
     start = time.perf_counter()
-    py_atr = calculate_atr(high, low, close, 14)
+    calculate_atr(high, low, close, 14)
     py_times["ATR"] = time.perf_counter() - start
     print(f"ATR (14):  {py_times['ATR']:.4f}s")
 
     # MACD
     start = time.perf_counter()
-    py_macd = calculate_macd(close, 12, 26, 9)
+    calculate_macd(close, 12, 26, 9)
     py_times["MACD"] = time.perf_counter() - start
     print(f"MACD:      {py_times['MACD']:.4f}s")
 
@@ -86,19 +86,19 @@ def main():
 
     # RSI
     start = time.perf_counter()
-    rs_rsi = kimsfinance_core.calculate_rsi(close, 14)
+    kimsfinance_core.calculate_rsi(close, 14)
     rust_times["RSI"] = time.perf_counter() - start
     print(f"RSI (14):  {rust_times['RSI']:.4f}s")
 
     # ATR
     start = time.perf_counter()
-    rs_atr = kimsfinance_core.calculate_atr(high, low, close, 14)
+    kimsfinance_core.calculate_atr(high, low, close, 14)
     rust_times["ATR"] = time.perf_counter() - start
     print(f"ATR (14):  {rust_times['ATR']:.4f}s")
 
     # MACD
     start = time.perf_counter()
-    rs_macd = kimsfinance_core.calculate_macd(close, 12, 26, 9)
+    kimsfinance_core.calculate_macd(close, 12, 26, 9)
     rust_times["MACD"] = time.perf_counter() - start
     print(f"MACD:      {rust_times['MACD']:.4f}s")
 

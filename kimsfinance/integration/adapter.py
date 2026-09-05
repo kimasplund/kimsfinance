@@ -180,7 +180,7 @@ def activate(*, engine: str = "auto", strict: bool = False, verbose: bool = True
 
         # Check if mplfinance is installed
         try:
-            import mplfinance
+            import mplfinance  # noqa: F401  # availability probe
         except ImportError:
             raise ImportError(
                 "mplfinance is not installed. " "Install with: pip install mplfinance"

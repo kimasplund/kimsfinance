@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 try:
-    import cupy as cp
+    import cupy as cp  # noqa: F401  # availability probe
 
     CUPY_AVAILABLE = True
 except ImportError:

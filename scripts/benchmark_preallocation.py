@@ -73,7 +73,7 @@ def benchmark_rendering(num_candles: int, n_runs: int = 100) -> dict:
     times = []
     for _ in range(n_runs):
         start = time.perf_counter()
-        img = render_ohlcv_chart(ohlc, volume, width=1920, height=1080)
+        render_ohlcv_chart(ohlc, volume, width=1920, height=1080)
         end = time.perf_counter()
         times.append((end - start) * 1000)  # Convert to ms
 

@@ -36,7 +36,7 @@ def patch_plotting_functions(config: dict[str, Any]) -> None:
 
         try:
             import mplfinance.plotting as mpf_plotting
-            import mplfinance._utils as mpf_utils
+            import mplfinance._utils as mpf_utils  # noqa: F401  # availability/version probe
         except ImportError:
             raise ImportError("mplfinance not installed or incompatible version")
 
@@ -111,10 +111,6 @@ def _plot_mav_accelerated(ax, config, xdates, prices, apmav=None, apwidth=None):
 
     # Get shift if specified
     shift = config.get("mav_shift", None)
-
-    # Determine engine
-    engine = _config.get("default_engine", "auto")
-    data_size = len(prices)
 
     # For moving averages, always use CPU (GPU not beneficial)
     exec_engine = "cpu"

@@ -36,7 +36,7 @@ def benchmark_numpy(high, low, open_price, close, volume, iterations=100):
 
     for _ in range(iterations):
         start = time.perf_counter()
-        result = _calculate_coordinates_numpy(
+        _calculate_coordinates_numpy(
             num_candles=len(high),
             candle_width=10.0,
             spacing=1.0,
@@ -68,7 +68,7 @@ def benchmark_rust(high, low, open_price, close, volume, iterations=100):
 
     for _ in range(iterations):
         start = time.perf_counter()
-        result = kimsfinance_core.calculate_coordinates_py(
+        kimsfinance_core.calculate_coordinates_py(
             high,  # Positional args only
             low,
             open_price,

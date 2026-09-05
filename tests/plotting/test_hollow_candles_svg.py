@@ -52,7 +52,7 @@ def test_render_hollow_candles_svg_file_output():
 
     try:
         # Render to file
-        svg_string = render_hollow_candles_svg(
+        render_hollow_candles_svg(
             ohlc_dict,
             volume_data,
             width=1920,

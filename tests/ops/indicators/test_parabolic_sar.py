@@ -229,7 +229,6 @@ class TestParabolicSAR:
     def test_trend_reversal_detection(self):
         """Test that SAR correctly identifies trend reversals."""
         # Create data with clear trend reversal
-        n = 30
         # First half: uptrend
         up_closes = np.linspace(100, 120, 15)
         up_highs = up_closes + 1.0
@@ -245,19 +244,7 @@ class TestParabolicSAR:
 
         sar = calculate_parabolic_sar(highs, lows, engine="cpu")
 
-        # Check for reversal signal around index 15
-        # Before reversal: SAR should be below price
-        # After reversal: SAR should be above price
-        reversal_window = range(12, 18)
-        reversal_detected = False
-
-        for i in reversal_window:
-            if i > 0 and i < len(sar) - 1:
-                # Check if SAR crossed from below to above
-                if sar[i - 1] < lows[i - 1] and sar[i + 1] > highs[i + 1]:
-                    reversal_detected = True
-                    break
-
+        # Around index 15 the SAR should flip from below price to above price.
         # We don't strictly require reversal detection in this test
         # but SAR should adapt to the new trend
         # Just check that SAR values are reasonable

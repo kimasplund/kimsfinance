@@ -666,7 +666,7 @@ class TestRSIPerformance:
             prices = generate_sideways(size, seed=42)
 
             start = time.perf_counter()
-            rsi = calculate_rsi(prices, period=14, engine="cpu")
+            calculate_rsi(prices, period=14, engine="cpu")
             elapsed = time.perf_counter() - start
 
             timings.append((size, elapsed))

@@ -1043,7 +1043,6 @@ class TestBollingerBandsParameterValidation:
         )
 
         # With negative multiplier, "upper" would be below "lower"
-        valid_mask = ~np.isnan(upper)
         # Just check it produces valid output
         assert len(upper) == len(sample_prices)
 

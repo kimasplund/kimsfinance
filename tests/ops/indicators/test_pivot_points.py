@@ -27,23 +27,23 @@ class TestPivotPoints:
 
         # Resistance levels
         r1 = 2 * pp - low  # 2*105 - 100 = 110
-        assert result["R1"] == pytest.approx(110.0)
+        assert result["R1"] == pytest.approx(r1)
 
         r2 = pp + (high - low)  # 105 + 10 = 115
-        assert result["R2"] == pytest.approx(115.0)
+        assert result["R2"] == pytest.approx(r2)
 
         r3 = high + 2 * (pp - low)  # 110 + 2*(105-100) = 120
-        assert result["R3"] == pytest.approx(120.0)
+        assert result["R3"] == pytest.approx(r3)
 
         # Support levels
         s1 = 2 * pp - high  # 2*105 - 110 = 100
-        assert result["S1"] == pytest.approx(100.0)
+        assert result["S1"] == pytest.approx(s1)
 
         s2 = pp - (high - low)  # 105 - 10 = 95
-        assert result["S2"] == pytest.approx(95.0)
+        assert result["S2"] == pytest.approx(s2)
 
         s3 = low - 2 * (high - pp)  # 100 - 2*(110-105) = 90
-        assert result["S3"] == pytest.approx(90.0)
+        assert result["S3"] == pytest.approx(s3)
 
     def test_symmetry_relationships(self):
         """Test that resistance and support levels maintain proper relationships."""
@@ -72,7 +72,7 @@ class TestPivotPoints:
 
         # Should still produce valid levels
         pp = (120 + 110 + 120) / 3  # 116.666...
-        assert result["PP"] == pytest.approx(116.666667, abs=1e-5)
+        assert result["PP"] == pytest.approx(pp, abs=1e-5)
 
         # All resistance levels should be above PP
         assert result["R1"] > result["PP"]
@@ -89,7 +89,7 @@ class TestPivotPoints:
 
         # Should still produce valid levels
         pp = (120 + 110 + 110) / 3  # 113.333...
-        assert result["PP"] == pytest.approx(113.333333, abs=1e-5)
+        assert result["PP"] == pytest.approx(pp, abs=1e-5)
 
         # All support levels should be below PP
         assert result["S1"] < result["PP"]

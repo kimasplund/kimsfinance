@@ -158,7 +158,6 @@ def typical_price(
         >>> tp
         array([101., 103., 102.67])
     """
-    xp = get_array_module(high)
     return (high + low + close) / 3.0
 
 

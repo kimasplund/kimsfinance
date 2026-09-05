@@ -27,7 +27,7 @@ def benchmark_ohlc_bars():
     start_time = time.perf_counter()
 
     for _ in range(num_iterations):
-        img = render_ohlc_bars(ohlc, volume, width=800, height=600, enable_antialiasing=False)
+        render_ohlc_bars(ohlc, volume, width=800, height=600, enable_antialiasing=False)
 
     end_time = time.perf_counter()
     elapsed = end_time - start_time

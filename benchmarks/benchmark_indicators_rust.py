@@ -231,8 +231,11 @@ def benchmark_sma(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 20
 
-    python_func = lambda: calculate_sma(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_sma(close, period=period)
+    def python_func():
+        return calculate_sma(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_sma(close, period=period)
 
     return compare_implementations("SMA", python_func, rust_func, size)
 
@@ -242,8 +245,11 @@ def benchmark_ema(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 12
 
-    python_func = lambda: calculate_ema(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_ema(close, period=period)
+    def python_func():
+        return calculate_ema(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_ema(close, period=period)
 
     return compare_implementations("EMA", python_func, rust_func, size)
 
@@ -253,8 +259,11 @@ def benchmark_wma(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 20
 
-    python_func = lambda: calculate_wma(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_wma(close, period=period)
+    def python_func():
+        return calculate_wma(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_wma(close, period=period)
 
     return compare_implementations("WMA", python_func, rust_func, size)
 
@@ -265,8 +274,11 @@ def benchmark_vwma(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     volume = data["volume"]
     period = 20
 
-    python_func = lambda: calculate_vwma(close, volume, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_vwma(close, volume, period=period)
+    def python_func():
+        return calculate_vwma(close, volume, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_vwma(close, volume, period=period)
 
     return compare_implementations("VWMA", python_func, rust_func, size)
 
@@ -276,8 +288,11 @@ def benchmark_rsi(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 14
 
-    python_func = lambda: calculate_rsi(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_rsi(close, period=period)
+    def python_func():
+        return calculate_rsi(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_rsi(close, period=period)
 
     return compare_implementations("RSI", python_func, rust_func, size)
 
@@ -287,8 +302,11 @@ def benchmark_roc(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 12
 
-    python_func = lambda: calculate_roc(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_roc(close, period=period)
+    def python_func():
+        return calculate_roc(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_roc(close, period=period)
 
     return compare_implementations("ROC", python_func, rust_func, size)
 
@@ -297,10 +315,13 @@ def benchmark_macd(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     """Benchmark MACD."""
     close = data["close"]
 
-    python_func = lambda: calculate_macd(close, fast_period=12, slow_period=26, signal_period=9)
-    rust_func = lambda: kimsfinance_core.calculate_macd(
-        close, fast_period=12, slow_period=26, signal_period=9
-    )
+    def python_func():
+        return calculate_macd(close, fast_period=12, slow_period=26, signal_period=9)
+
+    def rust_func():
+        return kimsfinance_core.calculate_macd(
+            close, fast_period=12, slow_period=26, signal_period=9
+        )
 
     return compare_implementations("MACD", python_func, rust_func, size)
 
@@ -310,8 +331,11 @@ def benchmark_atr(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     high, low, close = data["high"], data["low"], data["close"]
     period = 14
 
-    python_func = lambda: calculate_atr(high, low, close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_atr(high, low, close, period=period)
+    def python_func():
+        return calculate_atr(high, low, close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_atr(high, low, close, period=period)
 
     return compare_implementations("ATR", python_func, rust_func, size)
 
@@ -320,8 +344,11 @@ def benchmark_bollinger_bands(data: dict[str, np.ndarray], size: int) -> Benchma
     """Benchmark Bollinger Bands."""
     close = data["close"]
 
-    python_func = lambda: calculate_bollinger_bands(close, period=20, num_std=2.0)
-    rust_func = lambda: kimsfinance_core.calculate_bollinger_bands(close, period=20, std_dev=2.0)
+    def python_func():
+        return calculate_bollinger_bands(close, period=20, num_std=2.0)
+
+    def rust_func():
+        return kimsfinance_core.calculate_bollinger_bands(close, period=20, std_dev=2.0)
 
     return compare_implementations("Bollinger Bands", python_func, rust_func, size)
 
@@ -330,8 +357,11 @@ def benchmark_obv(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     """Benchmark On-Balance Volume."""
     close, volume = data["close"], data["volume"]
 
-    python_func = lambda: calculate_obv(close, volume)
-    rust_func = lambda: kimsfinance_core.calculate_obv(close, volume)
+    def python_func():
+        return calculate_obv(close, volume)
+
+    def rust_func():
+        return kimsfinance_core.calculate_obv(close, volume)
 
     return compare_implementations("OBV", python_func, rust_func, size)
 
@@ -340,8 +370,11 @@ def benchmark_vwap(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     """Benchmark Volume Weighted Average Price."""
     high, low, close, volume = data["high"], data["low"], data["close"], data["volume"]
 
-    python_func = lambda: calculate_vwap(high, low, close, volume)
-    rust_func = lambda: kimsfinance_core.calculate_vwap(high, low, close, volume)
+    def python_func():
+        return calculate_vwap(high, low, close, volume)
+
+    def rust_func():
+        return kimsfinance_core.calculate_vwap(high, low, close, volume)
 
     return compare_implementations("VWAP", python_func, rust_func, size)
 
@@ -351,8 +384,11 @@ def benchmark_williams_r(data: dict[str, np.ndarray], size: int) -> BenchmarkRes
     high, low, close = data["high"], data["low"], data["close"]
     period = 14
 
-    python_func = lambda: calculate_williams_r(high, low, close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_williams_r(high, low, close, period=period)
+    def python_func():
+        return calculate_williams_r(high, low, close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_williams_r(high, low, close, period=period)
 
     return compare_implementations("Williams %R", python_func, rust_func, size)
 
@@ -361,10 +397,11 @@ def benchmark_stochastic(data: dict[str, np.ndarray], size: int) -> BenchmarkRes
     """Benchmark Stochastic Oscillator."""
     high, low, close = data["high"], data["low"], data["close"]
 
-    python_func = lambda: calculate_stochastic_oscillator(high, low, close, k_period=14, d_period=3)
-    rust_func = lambda: kimsfinance_core.calculate_stochastic(
-        high, low, close, k_period=14, d_period=3
-    )
+    def python_func():
+        return calculate_stochastic_oscillator(high, low, close, k_period=14, d_period=3)
+
+    def rust_func():
+        return kimsfinance_core.calculate_stochastic(high, low, close, k_period=14, d_period=3)
 
     return compare_implementations("Stochastic", python_func, rust_func, size)
 
@@ -374,8 +411,11 @@ def benchmark_aroon(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     high, low = data["high"], data["low"]
     period = 25
 
-    python_func = lambda: calculate_aroon(high, low, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_aroon(high, low, period=period)
+    def python_func():
+        return calculate_aroon(high, low, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_aroon(high, low, period=period)
 
     return compare_implementations("Aroon", python_func, rust_func, size)
 
@@ -385,8 +425,11 @@ def benchmark_cci(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     high, low, close = data["high"], data["low"], data["close"]
     period = 20
 
-    python_func = lambda: calculate_cci(high, low, close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_cci(high, low, close, period=period)
+    def python_func():
+        return calculate_cci(high, low, close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_cci(high, low, close, period=period)
 
     return compare_implementations("CCI", python_func, rust_func, size)
 
@@ -396,8 +439,11 @@ def benchmark_cmf(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     high, low, close, volume = data["high"], data["low"], data["close"], data["volume"]
     period = 20
 
-    python_func = lambda: calculate_cmf(high, low, close, volume, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_cmf(high, low, close, volume, period=period)
+    def python_func():
+        return calculate_cmf(high, low, close, volume, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_cmf(high, low, close, volume, period=period)
 
     return compare_implementations("CMF", python_func, rust_func, size)
 
@@ -407,8 +453,11 @@ def benchmark_dema(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 20
 
-    python_func = lambda: calculate_dema(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_dema(close, period=period)
+    def python_func():
+        return calculate_dema(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_dema(close, period=period)
 
     return compare_implementations("DEMA", python_func, rust_func, size)
 
@@ -418,8 +467,11 @@ def benchmark_tema(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 20
 
-    python_func = lambda: calculate_tema(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_tema(close, period=period)
+    def python_func():
+        return calculate_tema(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_tema(close, period=period)
 
     return compare_implementations("TEMA", python_func, rust_func, size)
 
@@ -429,8 +481,11 @@ def benchmark_hma(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     close = data["close"]
     period = 20
 
-    python_func = lambda: calculate_hma(close, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_hma(close, period=period)
+    def python_func():
+        return calculate_hma(close, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_hma(close, period=period)
 
     return compare_implementations("HMA", python_func, rust_func, size)
 
@@ -439,10 +494,13 @@ def benchmark_keltner_channels(data: dict[str, np.ndarray], size: int) -> Benchm
     """Benchmark Keltner Channels."""
     high, low, close = data["high"], data["low"], data["close"]
 
-    python_func = lambda: calculate_keltner_channels(high, low, close, ema_period=20, atr_period=10)
-    rust_func = lambda: kimsfinance_core.calculate_keltner_channels(
-        high, low, close, ema_period=20, atr_period=10, atr_multiplier=2.0
-    )
+    def python_func():
+        return calculate_keltner_channels(high, low, close, ema_period=20, atr_period=10)
+
+    def rust_func():
+        return kimsfinance_core.calculate_keltner_channels(
+            high, low, close, ema_period=20, atr_period=10, atr_multiplier=2.0
+        )
 
     return compare_implementations("Keltner Channels", python_func, rust_func, size)
 
@@ -452,8 +510,11 @@ def benchmark_donchian_channels(data: dict[str, np.ndarray], size: int) -> Bench
     high, low = data["high"], data["low"]
     period = 20
 
-    python_func = lambda: calculate_donchian_channels(high, low, period=period)
-    rust_func = lambda: kimsfinance_core.calculate_donchian_channels(high, low, period=period)
+    def python_func():
+        return calculate_donchian_channels(high, low, period=period)
+
+    def rust_func():
+        return kimsfinance_core.calculate_donchian_channels(high, low, period=period)
 
     return compare_implementations("Donchian Channels", python_func, rust_func, size)
 
@@ -462,8 +523,11 @@ def benchmark_elder_ray(data: dict[str, np.ndarray], size: int) -> BenchmarkResu
     """Benchmark Elder Ray Index."""
     high, low, close = data["high"], data["low"], data["close"]
 
-    python_func = lambda: calculate_elder_ray(high, low, close, ema_period=13)
-    rust_func = lambda: kimsfinance_core.calculate_elder_ray(high, low, close, ema_period=13)
+    def python_func():
+        return calculate_elder_ray(high, low, close, ema_period=13)
+
+    def rust_func():
+        return kimsfinance_core.calculate_elder_ray(high, low, close, ema_period=13)
 
     return compare_implementations("Elder Ray", python_func, rust_func, size)
 
@@ -472,10 +536,13 @@ def benchmark_tsi(data: dict[str, np.ndarray], size: int) -> BenchmarkResult:
     """Benchmark True Strength Index."""
     close = data["close"]
 
-    python_func = lambda: calculate_tsi(close, long_period=25, short_period=13, signal_period=13)
-    rust_func = lambda: kimsfinance_core.calculate_tsi(
-        close, long_period=25, short_period=13, signal_period=13
-    )
+    def python_func():
+        return calculate_tsi(close, long_period=25, short_period=13, signal_period=13)
+
+    def rust_func():
+        return kimsfinance_core.calculate_tsi(
+            close, long_period=25, short_period=13, signal_period=13
+        )
 
     return compare_implementations("TSI", python_func, rust_func, size)
 

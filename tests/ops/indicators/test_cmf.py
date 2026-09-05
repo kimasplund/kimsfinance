@@ -264,14 +264,14 @@ def test_parameter_validation():
 
     # Test invalid period
     try:
-        cmf = calculate_cmf(highs, lows, closes, volumes, period=0, engine="cpu")
+        calculate_cmf(highs, lows, closes, volumes, period=0, engine="cpu")
         assert False, "Should raise ValueError for period=0"
     except ValueError as e:
         print(f"✓ Correctly raises ValueError for period=0: {e}")
 
     # Test negative period
     try:
-        cmf = calculate_cmf(highs, lows, closes, volumes, period=-5, engine="cpu")
+        calculate_cmf(highs, lows, closes, volumes, period=-5, engine="cpu")
         assert False, "Should raise ValueError for negative period"
     except ValueError as e:
         print(f"✓ Correctly raises ValueError for negative period: {e}")
@@ -282,9 +282,7 @@ def test_parameter_validation():
         short_lows = np.array([99, 100, 101])
         short_closes = np.array([100, 101, 102])
         short_volumes = np.array([1000, 1000, 1000])
-        cmf = calculate_cmf(
-            short_highs, short_lows, short_closes, short_volumes, period=20, engine="cpu"
-        )
+        calculate_cmf(short_highs, short_lows, short_closes, short_volumes, period=20, engine="cpu")
         assert False, "Should raise ValueError for insufficient data"
     except ValueError as e:
         print(f"✓ Correctly raises ValueError for insufficient data: {e}")
@@ -292,7 +290,7 @@ def test_parameter_validation():
     # Test mismatched array lengths
     try:
         mismatched_volumes = np.array([1000, 1000])  # Different length
-        cmf = calculate_cmf(highs, lows, closes, mismatched_volumes, period=20, engine="cpu")
+        calculate_cmf(highs, lows, closes, mismatched_volumes, period=20, engine="cpu")
         assert False, "Should raise ValueError for mismatched lengths"
     except ValueError as e:
         print(f"✓ Correctly raises ValueError for mismatched lengths: {e}")

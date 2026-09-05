@@ -726,9 +726,7 @@ class TestBatchPerformanceCharacteristics:
         highs, lows, closes, volumes = small_ohlcv_data
 
         start = time.time()
-        results = calculate_indicators_batch(
-            highs, lows, closes, volumes, engine="cpu", streaming=False
-        )
+        calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu", streaming=False)
         elapsed = time.time() - start
 
         # 1000 rows should complete in under 1 second
@@ -741,9 +739,7 @@ class TestBatchPerformanceCharacteristics:
         highs, lows, closes, volumes = large_ohlcv_data
 
         start = time.time()
-        results = calculate_indicators_batch(
-            highs, lows, closes, volumes, engine="cpu", streaming=False
-        )
+        calculate_indicators_batch(highs, lows, closes, volumes, engine="cpu", streaming=False)
         elapsed = time.time() - start
 
         # 200K rows should complete in under 10 seconds

@@ -433,7 +433,7 @@ def regenerate_indicator_samples():
     print(f"  ✓ rsi_candlestick.webp ({output_path.stat().st_size:,} bytes)")
 
     print("\nGenerating MACD chart...")
-    macd_result = calculate_macd(df["Close"], engine="cpu")
+    calculate_macd(df["Close"], engine="cpu")
 
     output_path = DEMO_DIR / "indicators" / "macd_candlestick.webp"
     plot(df, type="candle", volume=True, savefig=str(output_path), width=1920, height=1080)

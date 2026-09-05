@@ -36,17 +36,6 @@ import time
 from typing import Callable, Dict, Tuple, Any
 import warnings
 
-# Suppress NumPy warnings for cleaner output
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-try:
-    import cupy as cp
-
-    CUPY_AVAILABLE = True
-except ImportError:
-    CUPY_AVAILABLE = False
-    cp = None
-
 from kimsfinance.ops.indicators import (
     calculate_atr,
     calculate_rsi,
@@ -58,6 +47,17 @@ from kimsfinance.ops.indicators import (
     calculate_elder_ray,
     calculate_hma,
 )
+
+# Suppress NumPy warnings for cleaner output
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+try:
+    import cupy as cp
+
+    CUPY_AVAILABLE = True
+except ImportError:
+    CUPY_AVAILABLE = False
+    cp = None
 
 
 # Color codes for output

@@ -101,7 +101,7 @@ class EngineManager:
 
             # Perform actual GPU check
             try:
-                import cudf
+                import cudf  # noqa: F401  # availability probe (must import)
                 import cupy as cp
 
                 # Test GPU functionality (ensure it actually works)

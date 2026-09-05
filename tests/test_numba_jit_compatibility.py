@@ -19,6 +19,7 @@ Success Criteria:
 
 from __future__ import annotations
 
+import importlib
 import pytest
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
@@ -509,7 +510,7 @@ class TestNumbaAvailability:
         """Test NUMBA_AVAILABLE flag is set correctly."""
         # This should match whether import succeeded
         try:
-            import numba
+            importlib.import_module("numba")
 
             expected = True
         except ImportError:

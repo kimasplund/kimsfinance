@@ -2260,7 +2260,7 @@ def test_render_charts_parallel_empty_list():
     """
     datasets = []
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory():
         results = render_charts_parallel(datasets, output_paths=[])
 
         assert results == []

@@ -353,7 +353,7 @@ class TestROCPerformance:
         import time
 
         start = time.time()
-        result = calculate_roc(sample_data, period=12, engine="cpu")
+        calculate_roc(sample_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -364,7 +364,7 @@ class TestROCPerformance:
         import time
 
         start = time.time()
-        result = calculate_roc(large_data, period=12, engine="cpu")
+        calculate_roc(large_data, period=12, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 5 seconds on CPU

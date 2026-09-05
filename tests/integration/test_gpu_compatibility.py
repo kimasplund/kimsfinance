@@ -9,15 +9,17 @@ Tests:
 - Environment-specific GPU features
 """
 
-import pytest
+import importlib
 import os
+
+import pytest
 
 from _backtesters import AnalyticBacktester, BatchBacktester, FailingBacktester
 
 try:
     # GPU_AVAILABLE is device-based (see kimsfinance.batch): False when the
     # bindings import but no CUDA device can be initialised.
-    from kimsfinance.batch import batch_backtest, BacktestConfig, get_gpu_info, GPU_AVAILABLE
+    from kimsfinance.batch import batch_backtest, get_gpu_info, GPU_AVAILABLE
     from kimsfinance.optimization.genetic import GeneticOptimizer
 
     BATCH_AVAILABLE = True
@@ -184,12 +186,10 @@ class TestGPUNotAvailable:
 
         # Try importing and check error message
         try:
-            from kimsfinance.batch import batch_backtest
+            from kimsfinance.batch import batch_backtest  # noqa: F401  # import is the check
 
             pytest.fail("Import should have failed")
         except ImportError as e:
-            # Should mention GPU or installation
-            error_msg = str(e).lower()
             # This is expected behavior - no assertion needed
             print(f"✅ Import error (expected): {e}")
 
@@ -341,14 +341,14 @@ def test_platform_detection():
 def test_module_imports():
     """Test that all required modules can be imported."""
     try:
-        import kimsfinance.batch
+        importlib.import_module("kimsfinance.batch")
 
         print("✅ kimsfinance.batch imported successfully")
     except ImportError as e:
         print(f"⚠️  kimsfinance.batch import failed: {e}")
 
     try:
-        import kimsfinance.optimization.genetic
+        importlib.import_module("kimsfinance.optimization.genetic")
 
         print("✅ kimsfinance.optimization.genetic imported successfully")
     except ImportError as e:
@@ -363,7 +363,7 @@ def test_module_imports():
         print("⚠️  CuPy not available (GPU acceleration unavailable)")
 
     try:
-        import numba.cuda
+        importlib.import_module("numba.cuda")
 
         print("✅ Numba CUDA available")
     except ImportError:

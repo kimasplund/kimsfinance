@@ -825,7 +825,7 @@ class TestTSIPerformance:
         import time
 
         start = time.time()
-        tsi = calculate_tsi(sample_data, engine="cpu")
+        calculate_tsi(sample_data, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -836,7 +836,7 @@ class TestTSIPerformance:
         import time
 
         start = time.time()
-        tsi = calculate_tsi(large_data, engine="cpu")
+        calculate_tsi(large_data, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 10 seconds on CPU
@@ -884,7 +884,7 @@ class TestTSIPerformance:
             prices = 100 + np.cumsum(np.random.randn(size) * 0.5)
 
             start = time.time()
-            tsi = calculate_tsi(prices, engine="cpu")
+            calculate_tsi(prices, engine="cpu")
             elapsed = time.time() - start
 
             timings.append((size, elapsed))

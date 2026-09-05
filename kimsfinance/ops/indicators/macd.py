@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 
 try:
-    import cupy as cp
+    import cupy as cp  # noqa: F401  # availability probe
 
     CUPY_AVAILABLE = True
 except ImportError:

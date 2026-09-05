@@ -249,7 +249,7 @@ def test_svg_without_volume():
     output_path = Path(tempfile.mkdtemp()) / "test_svg_no_volume.svg"
     print(f"\n📊 Rendering SVG without volume to: {output_path}")
 
-    svg_content = render_candlestick_svg(
+    render_candlestick_svg(
         ohlc_dict,
         volume=None,  # No volume
         width=1200,
@@ -326,7 +326,7 @@ def test_svg_large_dataset():
     output_path = Path(tempfile.mkdtemp()) / "test_svg_large.svg"
     print(f"\n📊 Rendering large SVG to: {output_path}")
 
-    result = plot(
+    plot(
         df,
         type="candle",
         style="tradingview",

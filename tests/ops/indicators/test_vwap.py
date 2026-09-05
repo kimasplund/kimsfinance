@@ -317,7 +317,7 @@ def test_different_array_types():
     print("\n=== Test: Different Array Types ===")
 
     # Test data
-    h, l, c, v = (
+    h, lo, c, v = (
         [105.0, 110.0, 108.0],
         [95.0, 100.0, 98.0],
         [100.0, 105.0, 103.0],
@@ -325,13 +325,13 @@ def test_different_array_types():
     )
 
     # Test with lists
-    vwap_list = calculate_vwap(h, l, c, v, engine="cpu")
+    vwap_list = calculate_vwap(h, lo, c, v, engine="cpu")
 
     # Test with tuples
-    vwap_tuple = calculate_vwap(tuple(h), tuple(l), tuple(c), tuple(v), engine="cpu")
+    vwap_tuple = calculate_vwap(tuple(h), tuple(lo), tuple(c), tuple(v), engine="cpu")
 
     # Test with numpy arrays
-    vwap_numpy = calculate_vwap(np.array(h), np.array(l), np.array(c), np.array(v), engine="cpu")
+    vwap_numpy = calculate_vwap(np.array(h), np.array(lo), np.array(c), np.array(v), engine="cpu")
 
     # All should produce same results
     np.testing.assert_allclose(vwap_list, vwap_numpy, rtol=1e-10)
@@ -763,7 +763,7 @@ def test_mismatched_array_lengths():
     volumes = np.array([1000.0, 1000.0, 1000.0])
 
     try:
-        vwap = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
+        calculate_vwap(highs, lows, closes, volumes, engine="cpu")
         print("Warning: Mismatched lengths did not raise error")
     except Exception as e:
         print(f"✓ Mismatched lengths raised expected error: {type(e).__name__}")
@@ -1179,7 +1179,7 @@ def test_engine_error_handling():
     highs, lows, closes, volumes = generate_ohlcv_data(n=50)
 
     try:
-        vwap = calculate_vwap(highs, lows, closes, volumes, engine="invalid")
+        calculate_vwap(highs, lows, closes, volumes, engine="invalid")
         print("Warning: Invalid engine did not raise error")
     except Exception as e:
         print(f"✓ Invalid engine raised expected error: {type(e).__name__}")
@@ -1198,7 +1198,7 @@ def test_performance_small_dataset():
 
     start = time.perf_counter()
     for _ in range(100):
-        vwap = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
+        calculate_vwap(highs, lows, closes, volumes, engine="cpu")
     elapsed = time.perf_counter() - start
 
     avg_time_ms = (elapsed / 100) * 1000
@@ -1213,7 +1213,7 @@ def test_performance_medium_dataset():
 
     start = time.perf_counter()
     for _ in range(10):
-        vwap = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
+        calculate_vwap(highs, lows, closes, volumes, engine="cpu")
     elapsed = time.perf_counter() - start
 
     avg_time_ms = (elapsed / 10) * 1000
@@ -1227,7 +1227,7 @@ def test_performance_large_dataset():
     highs, lows, closes, volumes = generate_ohlcv_data(n=100_000)
 
     start = time.perf_counter()
-    vwap = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
+    calculate_vwap(highs, lows, closes, volumes, engine="cpu")
     elapsed = time.perf_counter() - start
 
     print(f"✓ Large dataset (100k points): {elapsed*1000:.3f}ms")
@@ -1243,7 +1243,7 @@ def test_performance_anchored_vwap():
 
     start = time.perf_counter()
     for _ in range(10):
-        vwap = calculate_vwap_anchored(highs, lows, closes, volumes, anchors, engine="cpu")
+        calculate_vwap_anchored(highs, lows, closes, volumes, anchors, engine="cpu")
     elapsed = time.perf_counter() - start
 
     avg_time_ms = (elapsed / 10) * 1000
@@ -1261,12 +1261,12 @@ def test_performance_comparison():
 
     # Regular VWAP
     start = time.perf_counter()
-    vwap_regular = calculate_vwap(highs, lows, closes, volumes, engine="cpu")
+    calculate_vwap(highs, lows, closes, volumes, engine="cpu")
     time_regular = time.perf_counter() - start
 
     # Anchored VWAP (single anchor = should be similar)
     start = time.perf_counter()
-    vwap_anchored = calculate_vwap_anchored(highs, lows, closes, volumes, anchors, engine="cpu")
+    calculate_vwap_anchored(highs, lows, closes, volumes, anchors, engine="cpu")
     time_anchored = time.perf_counter() - start
 
     print(f"Regular VWAP: {time_regular*1000:.3f}ms")

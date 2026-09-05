@@ -427,8 +427,6 @@ def test_obv_bullish_divergence():
     print("\n=== Test 18: Bullish Divergence ===")
 
     # Create data where price makes lower low but volume shows accumulation
-    n = 50
-
     # Price makes lower low
     closes = np.concatenate([np.linspace(110, 100, 25), np.linspace(100, 105, 25)])
 
@@ -460,8 +458,6 @@ def test_obv_bearish_divergence():
     print("\n=== Test 19: Bearish Divergence ===")
 
     # Create data where price makes higher high but volume shows distribution
-    n = 50
-
     # Price makes higher high
     closes = np.concatenate([np.linspace(100, 110, 25), np.linspace(110, 115, 25)])
 
@@ -517,8 +513,6 @@ def test_obv_volume_surge():
 def test_obv_distribution_accumulation():
     """Test OBV during distribution and accumulation phases."""
     print("\n=== Test 21: Distribution vs Accumulation ===")
-
-    n = 30
 
     # Accumulation: price stable/slightly down, but volume on up days
     closes_accum = np.concatenate([np.full(15, 100.0), np.linspace(100, 102, 15)])
@@ -754,7 +748,7 @@ def test_obv_mismatched_lengths():
     volumes = np.array([1000.0, 1500.0])  # Shorter
 
     try:
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         assert False, "Should raise error for mismatched lengths"
     except Exception as e:
         print(f"✓ Correctly raises exception for mismatched lengths: {type(e).__name__}")
@@ -768,7 +762,7 @@ def test_obv_empty_arrays():
     volumes = np.array([])
 
     try:
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         assert False, "Should raise error for empty arrays"
     except Exception as e:
         print(f"✓ Correctly raises exception for empty arrays: {type(e).__name__}")
@@ -1042,7 +1036,7 @@ def test_obv_performance_comparison():
         closes, volumes = generate_price_volume_data(n=size)
 
         start = time.perf_counter()
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
         elapsed = (time.perf_counter() - start) * 1000
 
         print(f"✓ Size {size:>7,}: {elapsed:>6.2f} ms ({size/elapsed:>8.0f} rows/ms)")
@@ -1059,7 +1053,7 @@ def test_obv_sequential_operations():
 
     start = time.perf_counter()
     for _ in range(n_iterations):
-        obv = calculate_obv(closes, volumes, engine="cpu")
+        calculate_obv(closes, volumes, engine="cpu")
     elapsed = (time.perf_counter() - start) * 1000
 
     print(f"✓ {n_iterations} iterations: {elapsed:.2f} ms")

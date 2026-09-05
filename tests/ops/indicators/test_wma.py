@@ -341,7 +341,7 @@ class TestWMAPerformance:
         import time
 
         start = time.time()
-        result = calculate_wma(sample_data, 20, engine="cpu")
+        calculate_wma(sample_data, 20, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -352,7 +352,7 @@ class TestWMAPerformance:
         import time
 
         start = time.time()
-        result = calculate_wma(large_data, 20, engine="cpu")
+        calculate_wma(large_data, 20, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 15 seconds on CPU
@@ -408,7 +408,6 @@ class TestWMAIntegration:
         from kimsfinance.ops.indicators import calculate_sma, calculate_ema
 
         # Create data with a trend change
-        n = 100
         data = np.concatenate(
             [np.full(50, 100.0), np.linspace(100, 120, 50)]  # Flat at 100  # Linear increase to 120
         )

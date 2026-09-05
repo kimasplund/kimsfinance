@@ -146,8 +146,8 @@ def test_cupy() -> Dict[str, Any]:
         start = time.time()
 
         for _ in range(100):
-            y = cp.mean(x, axis=0)
-            z = cp.std(x, axis=0)
+            cp.mean(x, axis=0)
+            cp.std(x, axis=0)
 
         cp.cuda.Stream.null.synchronize()
         elapsed = time.time() - start
@@ -220,8 +220,8 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
     data_np = np.random.randn(size, 100)
     start = time.time()
     for _ in range(100):
-        mean = np.mean(data_np, axis=0)
-        std = np.std(data_np, axis=0)
+        np.mean(data_np, axis=0)
+        np.std(data_np, axis=0)
     numpy_time = time.time() - start
 
     # Try PyTorch GPU
@@ -235,8 +235,8 @@ def benchmark_numpy_vs_torch() -> Dict[str, Any]:
             torch.cuda.synchronize()
             start = time.time()
             for _ in range(100):
-                mean = torch.mean(data_torch, dim=0)
-                std = torch.std(data_torch, dim=0)
+                torch.mean(data_torch, dim=0)
+                torch.std(data_torch, dim=0)
             torch.cuda.synchronize()
             torch_time = time.time() - start
 
@@ -286,10 +286,10 @@ def test_financial_indicators() -> Dict[str, Any]:
 
             # Simple moving average
             window = 14
-            avg_gains = torch.nn.functional.avg_pool1d(
+            torch.nn.functional.avg_pool1d(
                 gains.unsqueeze(0).unsqueeze(0), kernel_size=window, stride=1
             )
-            avg_losses = torch.nn.functional.avg_pool1d(
+            torch.nn.functional.avg_pool1d(
                 losses.unsqueeze(0).unsqueeze(0), kernel_size=window, stride=1
             )
 
@@ -316,10 +316,10 @@ def test_financial_indicators() -> Dict[str, Any]:
                 close.unsqueeze(0).unsqueeze(0), kernel_size=20, stride=1
             ).squeeze()
 
-            # Standard deviation (simplified)
+            # Standard deviation (simplified); bands are computed for timing only
             std = torch.std(close[-20:])
-            upper = ma + 2 * std
-            lower = ma - 2 * std
+            ma + 2 * std  # upper band
+            ma - 2 * std  # lower band
 
         torch.cuda.synchronize()
         elapsed = time.time() - start

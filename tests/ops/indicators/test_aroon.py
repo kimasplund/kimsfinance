@@ -154,7 +154,6 @@ def test_downtrend_detection():
 def test_crossover_signals():
     """Test Aroon crossover signal detection."""
     # Create data with trend reversal
-    n = 100
     # Uptrend then downtrend
     uptrend = 100 + np.arange(50) * 0.5
     downtrend = uptrend[-1] - np.arange(50) * 0.5
@@ -186,7 +185,6 @@ def test_edge_cases():
     """Test edge cases for Aroon calculation."""
     # Test 1: Constant price (no movement)
     n = 50
-    constant_close = np.full(n, 100.0)
     constant_high = np.full(n, 100.5)
     constant_low = np.full(n, 99.5)
 

@@ -15,6 +15,7 @@ Usage:
     python examples/generate_backtest_report.py
 """
 
+import importlib
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -180,8 +181,8 @@ def main():
 if __name__ == "__main__":
     # Check dependencies
     try:
-        import reportlab
-        import matplotlib
+        importlib.import_module("reportlab")
+        importlib.import_module("matplotlib")
 
         main()
     except ImportError as e:

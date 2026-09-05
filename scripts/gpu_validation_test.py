@@ -138,7 +138,7 @@ def check_dependencies() -> Dict[str, bool]:
 
     # Check cudf
     try:
-        import cudf
+        import cudf  # noqa: F401  # availability probe
 
         deps["cudf"] = True
     except ImportError:
@@ -146,7 +146,7 @@ def check_dependencies() -> Dict[str, bool]:
 
     # Check cupy
     try:
-        import cupy
+        import cupy  # noqa: F401  # availability probe
 
         deps["cupy"] = True
     except ImportError:

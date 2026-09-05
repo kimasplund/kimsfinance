@@ -36,7 +36,21 @@ def test_imports():
             create_rolling_sharpe,
         )
 
-        print("  ✓ All imports successful")
+        imported = (
+            BacktestReport,
+            HTMLReport,
+            ReportConfig,
+            calculate_performance_metrics,
+            calculate_trade_statistics,
+            calculate_risk_metrics,
+            calculate_monthly_returns,
+            create_equity_curve,
+            create_drawdown_chart,
+            create_returns_distribution,
+            create_monthly_heatmap,
+            create_rolling_sharpe,
+        )
+        print(f"  ✓ All imports successful ({len(imported)} symbols)")
         return True
     except ImportError as e:
         print(f"  ✗ Import failed: {e}")

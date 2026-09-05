@@ -37,9 +37,6 @@ try:
         ColumnDataSource,
         CrosshairTool,
         HoverTool,
-        Range1d,
-        RangeTool,
-        Segment,
     )
     from bokeh.plotting import figure, output_file, save, show
 
@@ -357,8 +354,8 @@ def plot_candlestick_plotly(
             increasing={"line": {"color": colors["up"]}, "fillcolor": colors["up"]},
             decreasing={"line": {"color": colors["down"]}, "fillcolor": colors["down"]},
             hovertext=[
-                f"O: {o:.2f}<br>H: {h:.2f}<br>L: {l:.2f}<br>C: {c:.2f}"
-                for o, h, l, c in zip(
+                f"O: {o:.2f}<br>H: {h:.2f}<br>L: {lo:.2f}<br>C: {c:.2f}"
+                for o, h, lo, c in zip(
                     df["open"].to_list(),
                     df["high"].to_list(),
                     df["low"].to_list(),

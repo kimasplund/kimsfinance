@@ -15,7 +15,6 @@ class TestVolumeProfile:
     def sample_data(self):
         """Generate sample price and volume data for testing."""
         np.random.seed(42)
-        n = 100
         # Generate prices with known distribution
         prices = np.concatenate(
             [
@@ -130,9 +129,6 @@ class TestVolumeProfile:
         )
 
         # POC should be around 102.0 (bin with highest volume)
-        # Find bin with max volume
-        max_idx = np.argmax(volume_profile)
-
         # The POC should be close to 102.0
         assert 101.5 <= poc <= 102.5
 

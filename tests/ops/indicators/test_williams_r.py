@@ -585,7 +585,7 @@ class TestWilliamsRPerformance:
         high, low, close = sample_ohlc_data
 
         start = time.time()
-        result = calculate_williams_r(high, low, close, period=14, engine="cpu")
+        calculate_williams_r(high, low, close, period=14, engine="cpu")
         elapsed = time.time() - start
 
         # 100 rows should complete in under 1 second
@@ -598,7 +598,7 @@ class TestWilliamsRPerformance:
         high, low, close = large_ohlc_data
 
         start = time.time()
-        result = calculate_williams_r(high, low, close, period=14, engine="cpu")
+        calculate_williams_r(high, low, close, period=14, engine="cpu")
         elapsed = time.time() - start
 
         # 600K rows should complete in under 5 seconds on CPU

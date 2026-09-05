@@ -115,7 +115,7 @@ def main():
     print_test(1, total_tests, "Checking GPU availability")
 
     try:
-        from kimsfinance.batch import batch_backtest, get_gpu_info, GPU_AVAILABLE
+        from kimsfinance.batch import batch_backtest, get_gpu_info
         from kimsfinance.optimization.genetic import GeneticOptimizer
 
         info = get_gpu_info()

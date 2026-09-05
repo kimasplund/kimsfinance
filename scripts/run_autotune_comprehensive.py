@@ -57,7 +57,7 @@ def benchmark_batch_indicators(size: int, engine: str, iterations: int = 5) -> f
     times = []
     for _ in range(iterations):
         start = time.perf_counter()
-        result = calculate_indicators_batch(highs, lows, closes, volumes, engine=engine)
+        calculate_indicators_batch(highs, lows, closes, volumes, engine=engine)
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 
