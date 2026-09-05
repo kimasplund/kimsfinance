@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Heston pricer
     println!("Compiling Heston pricer...");
     let start = Instant::now();
-    let pricer = HestonGpuPricer::new(device, 4096)?;
+    let pricer = HestonGpuPricer::new(device, 4096, 1024)?;
     println!("✓ Pricer compiled in {:?}\n", start.elapsed());
 
     // Create Greeks calculator
