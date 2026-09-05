@@ -36,6 +36,7 @@ except ImportError:
 
 
 from ..core.decorators import get_array_module
+from ..utils.array_utils import FASTMATH_SAFE
 
 EPSILON = 1e-10
 LAMBERT_CONSTANT = 0.015
@@ -354,7 +355,7 @@ def weighted_close(
     return (high + low + 2 * close) / 4.0
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _wilder_smoothing_jit(arr: np.ndarray, period: int, alpha: float) -> np.ndarray:
     """
     JIT-compiled Wilder's smoothing for CPU path.

@@ -19,7 +19,7 @@ from ...core import (
     EngineManager,
     GPUNotAvailableError,
 )
-from ...utils.array_utils import to_numpy_array
+from ...utils.array_utils import FASTMATH_SAFE, to_numpy_array
 
 try:
     from numba import njit
@@ -123,7 +123,7 @@ def _calculate_roc_cpu(data: np.ndarray, period: int) -> np.ndarray:
     return result
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _calculate_roc_jit(data: np.ndarray, period: int) -> np.ndarray:
     """
     JIT-compiled CPU implementation of ROC using Numba.

@@ -19,7 +19,7 @@ from ...core import (
     EngineManager,
     GPUNotAvailableError,
 )
-from ...utils.array_utils import to_numpy_array
+from ...utils.array_utils import FASTMATH_SAFE, to_numpy_array
 
 try:
     from numba import njit
@@ -179,7 +179,7 @@ def _calculate_aroon_cpu(
     return (aroon_up, aroon_down)
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _calculate_aroon_jit(
     highs: np.ndarray, lows: np.ndarray, period: int
 ) -> tuple[np.ndarray, np.ndarray]:

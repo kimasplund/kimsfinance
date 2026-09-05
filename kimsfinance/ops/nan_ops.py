@@ -50,6 +50,7 @@ from ..core import (
     EngineManager,
     GPUNotAvailableError,
 )
+from ..utils.array_utils import FASTMATH_SAFE
 
 
 def _to_numpy_array(data: ArrayLike) -> np.ndarray:
@@ -332,7 +333,7 @@ def nan_indices(data: ArrayLike, *, engine: Engine = "auto") -> ArrayResult:
     return np.where(np.isnan(arr))[0]
 
 
-@njit(cache=True, fastmath=True)
+@njit(cache=True, fastmath=FASTMATH_SAFE)
 def _replace_nan_jit(arr: np.ndarray, value: float) -> np.ndarray:
     """
     JIT-compiled NaN replacement for CPU path.

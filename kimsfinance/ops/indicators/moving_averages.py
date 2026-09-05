@@ -329,6 +329,7 @@ def _calculate_wma_cpu(prices: np.ndarray, period: int) -> np.ndarray:
     return wma
 
 
+# Pure arithmetic over finite price data, no NaN/inf inspection: full fastmath is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_wma_jit(prices: np.ndarray, period: int) -> np.ndarray:
     """
@@ -421,6 +422,7 @@ def _calculate_vwma_cpu(prices: np.ndarray, volumes: np.ndarray, period: int) ->
     return vwma
 
 
+# Pure arithmetic over finite price/volume data, no NaN/inf inspection: full fastmath is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_vwma_jit(prices: np.ndarray, volumes: np.ndarray, period: int) -> np.ndarray:
     """

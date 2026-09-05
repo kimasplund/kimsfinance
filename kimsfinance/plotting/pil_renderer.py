@@ -1822,6 +1822,8 @@ def render_hollow_candles(
     return img
 
 
+# Coordinate kernels below operate on finite, pre-validated render data and cast
+# to int32; they never inspect NaN/inf, so full fastmath (incl. nnan/ninf) is safe.
 @njit(cache=True, fastmath=True)
 def _calculate_ohlc_bar_coordinates(
     num_bars: int,
