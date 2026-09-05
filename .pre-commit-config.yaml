@@ -1,0 +1,51 @@
+# Contributor git hooks. Install once with `pre-commit install` (pre-commit is in
+# the [dev] extra). Formatting/linting settings live in pyproject.toml so the hooks,
+# CI and manual runs agree on line length 100 and the ruff rule set.
+#
+# The Rust hooks are on the `manual` stage because clippy over the whole crate is
+# slow: run them with `pre-commit run --hook-stage manual --all-files`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(archive/|rust/cutlass/|examples/demo_output/)
+      - id: end-of-file-fixer
+        exclude: ^(archive/|rust/cutlass/|examples/demo_output/)
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 26.1.0
+    hooks:
+      - id: black
+        args: [--line-length, "100"]
+        files: ^(kimsfinance|tests|benchmarks)/.*\.py$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.13
+    hooks:
+      - id: ruff
+        # `ruff check` only, no --fix: contributors review what changes.
+        args: []
+        files: ^(kimsfinance|tests|benchmarks|scripts|examples)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: cargo-fmt-check
+        name: cargo fmt --check (kimsfinance_core)
+        entry: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
+        stages: [manual]
+      - id: cargo-clippy
+        name: cargo clippy (kimsfinance_core)
+        entry: cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings
+        language: system
+        files: ^rust/.*\.rs$
+        pass_filenames: false
+        stages: [manual]

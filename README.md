@@ -1078,8 +1078,9 @@ source .venv/bin/activate
 # Install in development mode
 pip install -e .
 
-# Install dev dependencies
-pip install pytest pytest-cov black mypy ruff
+# Install dev dependencies (pytest, black, mypy, ruff, pre-commit, ...) and the git hooks
+pip install -e ".[dev]"
+pre-commit install
 ```
 
 ### Running Tests
