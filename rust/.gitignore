@@ -3,8 +3,9 @@
 **/*.rs.bk
 *.pdb
 
-# Cargo lock for libraries (comment out for binaries)
-# Cargo.lock
+# Cargo.lock of this crate IS tracked (dependabot keeps it current).
+# cuda-ext is a standalone sub-crate (not a workspace member); its lock stays untracked.
+/cuda-ext/Cargo.lock
 
 # Python wheels
 *.whl
@@ -26,10 +27,20 @@ build/
 .DS_Store
 Thumbs.db
 
-# Data files (large, should not be in repo)
+# Data files (large, should not be in repo). Anchored: src/data/ and tests/data/ are source.
 *.parquet
-data/
-logs/
+/data/
+/logs/
+
+# Generated example output (examples/parameter_sweep_optimizer.rs writes results/*.json)
+/results/
+
+# Captured cargo check/test logs
+/check_output*.txt
+/test_output*.txt
+
+# Local NVIDIA/CUTLASS checkout used for the retired FP8 experiments (not a submodule; see build.rs)
+/cutlass/
 
 # CSV files (except test data)
 *.csv

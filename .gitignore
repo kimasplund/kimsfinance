@@ -8,7 +8,11 @@ __pycache__/
 *$py.class
 *.so
 .Python
-data/
+
+# Downloaded market data at the repo root (data/yfinance, data/binance, ...).
+# Anchored: kimsfinance/data/ is a source package and must not be matched.
+/data/
+
 # Distribution / packaging
 build/
 develop-eggs/
@@ -63,6 +67,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
 coverage.json
 
 # ==============================================================================
@@ -131,6 +136,8 @@ Thumbs.db
 # ==============================================================================
 .env.local
 .env.*.local
+.env.*
+!.env.example
 *.pem
 *.key
 *credentials*.json
@@ -141,8 +148,8 @@ Thumbs.db
 # Project-Specific
 # ==============================================================================
 
-# Archives and dev artifacts (from cleanup)
-archive/
+# Archives and dev artifacts (from cleanup). Anchored: rust/docs/archive/ is tracked.
+/archive/
 research/*
 # Keep curated, version-controlled research (scratch elsewhere in research/ stays ignored)
 !research/gpu-cuda-cores/
@@ -151,6 +158,8 @@ research/*
 *.backup
 *.bak
 *.tmp
+*.orig
+*.rej
 
 # Log files
 *.log
@@ -171,6 +180,10 @@ test_*.png
 # Visual regression artifacts
 tests/visual_diffs/
 
+# Generated example reports (examples/generate_backtest_report.py, examples/test_reporting_module.py)
+/backtest_report.*
+/test_report.*
+
 # GPU profiling data
 # (already covered above: *.nsys-rep, *.sqlite, *.qdrep)
 
@@ -183,7 +196,8 @@ CLAUDE.md
 # Rust Build Artifacts
 # ==============================================================================
 target/
-Cargo.lock
+# rust/Cargo.lock is tracked on purpose (dependabot + CI cache key); the standalone
+# rust/cuda-ext crate's lock file is ignored in rust/.gitignore.
 *.rustc_info.json
 
 # Internal documentation
