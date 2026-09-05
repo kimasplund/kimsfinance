@@ -107,8 +107,10 @@ pub enum OrderStatus {
 
 /// Time-in-force specification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum TimeInForce {
     /// Good Till Cancelled - remains active until filled or cancelled
+    #[default]
     GTC,
 
     /// Good Till Date - remains active until specified date
@@ -124,11 +126,6 @@ pub enum TimeInForce {
     FOK,
 }
 
-impl Default for TimeInForce {
-    fn default() -> Self {
-        TimeInForce::GTC
-    }
-}
 
 /// Order parameters for different order types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -463,6 +460,7 @@ pub struct Fill {
 
 impl Fill {
     /// Create new fill record
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn new(
         order_id: OrderId,
         timestamp: i64,

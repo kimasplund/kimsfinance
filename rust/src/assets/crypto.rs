@@ -155,8 +155,7 @@ impl Asset for CryptoAsset {
         } else {
             // Try to split common pairs
             for base in ["BTC", "ETH", "USDT", "BNB", "SOL"] {
-                if cleaned.starts_with(base) {
-                    let quote = &cleaned[base.len()..];
+                if let Some(quote) = cleaned.strip_prefix(base) {
                     return Ok(format!("{}/{}", base, quote));
                 }
             }

@@ -141,7 +141,7 @@ impl CandlestickPattern {
     /// Check if pattern is bearish
     pub fn is_bearish(&self) -> bool {
         let val = *self as u8;
-        val >= 15 && val <= 29
+        (15..=29).contains(&val)
     }
 
     /// Check if pattern is neutral
@@ -360,34 +360,29 @@ pub fn recognize_patterns(
     // Scan for patterns (start at index 0 to include all single/double candle patterns)
     for i in 0..len {
         // Single-candle patterns
-        if let Some(detection) = check_single_candle_patterns(&candles, i, config) {
-            if detection.confidence >= config.min_confidence {
+        if let Some(detection) = check_single_candle_patterns(&candles, i, config)
+            && detection.confidence >= config.min_confidence {
                 detections.push(detection);
             }
-        }
 
         // Two-candle patterns
-        if let Some(detection) = check_two_candle_patterns(&candles, i, config) {
-            if detection.confidence >= config.min_confidence {
+        if let Some(detection) = check_two_candle_patterns(&candles, i, config)
+            && detection.confidence >= config.min_confidence {
                 detections.push(detection);
             }
-        }
 
         // Three-candle patterns
-        if let Some(detection) = check_three_candle_patterns(&candles, i, config) {
-            if detection.confidence >= config.min_confidence {
+        if let Some(detection) = check_three_candle_patterns(&candles, i, config)
+            && detection.confidence >= config.min_confidence {
                 detections.push(detection);
             }
-        }
 
         // Five-candle patterns (Rising/Falling Three Methods)
-        if i >= 4 {
-            if let Some(detection) = check_five_candle_patterns(&candles, i, config) {
-                if detection.confidence >= config.min_confidence {
+        if i >= 4
+            && let Some(detection) = check_five_candle_patterns(&candles, i, config)
+                && detection.confidence >= config.min_confidence {
                     detections.push(detection);
                 }
-            }
-        }
     }
 
     detections
@@ -653,8 +648,8 @@ fn check_two_candle_patterns(
     }
 
     // Bullish Harami: large bearish followed by small bullish contained within
-    if prev.is_bearish() && curr.is_bullish() {
-        if curr.open > prev.close && curr.close < prev.open {
+    if prev.is_bearish() && curr.is_bullish()
+        && curr.open > prev.close && curr.close < prev.open {
             let size_ratio = curr.body() / prev.body();
             let confidence = if size_ratio < 0.5 { 0.75 } else { 0.6 };
             return Some(PatternDetection {
@@ -664,11 +659,10 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     // Bearish Harami: large bullish followed by small bearish contained within
-    if prev.is_bullish() && curr.is_bearish() {
-        if curr.open < prev.close && curr.close > prev.open {
+    if prev.is_bullish() && curr.is_bearish()
+        && curr.open < prev.close && curr.close > prev.open {
             let size_ratio = curr.body() / prev.body();
             let confidence = if size_ratio < 0.5 { 0.75 } else { 0.6 };
             return Some(PatternDetection {
@@ -678,11 +672,10 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     // Tweezer Bottom: two candles with same lows (bullish reversal)
-    if (prev.low - curr.low).abs() < prev.range() * 0.01 {
-        if prev.is_bearish() && curr.is_bullish() {
+    if (prev.low - curr.low).abs() < prev.range() * 0.01
+        && prev.is_bearish() && curr.is_bullish() {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::TweezerBottom,
                 index: i,
@@ -690,11 +683,10 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     // Tweezer Top: two candles with same highs (bearish reversal)
-    if (prev.high - curr.high).abs() < prev.range() * 0.01 {
-        if prev.is_bullish() && curr.is_bearish() {
+    if (prev.high - curr.high).abs() < prev.range() * 0.01
+        && prev.is_bullish() && curr.is_bearish() {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::TweezerTop,
                 index: i,
@@ -702,11 +694,10 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     // Bullish Kicking: gap up with strong bullish candle after bearish
-    if prev.is_bearish() && curr.is_bullish() {
-        if curr.open > prev.close && curr.is_strong_body(config.strong_body_threshold) {
+    if prev.is_bearish() && curr.is_bullish()
+        && curr.open > prev.close && curr.is_strong_body(config.strong_body_threshold) {
             let gap_size = (curr.open - prev.close) / prev.range();
             let confidence = 0.65 + (gap_size * 0.25).min(0.25);
             return Some(PatternDetection {
@@ -716,11 +707,10 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     // Bearish Kicking: gap down with strong bearish candle after bullish
-    if prev.is_bullish() && curr.is_bearish() {
-        if curr.open < prev.close && curr.is_strong_body(config.strong_body_threshold) {
+    if prev.is_bullish() && curr.is_bearish()
+        && curr.open < prev.close && curr.is_strong_body(config.strong_body_threshold) {
             let gap_size = (prev.close - curr.open) / prev.range();
             let confidence = 0.65 + (gap_size * 0.25).min(0.25);
             return Some(PatternDetection {
@@ -730,7 +720,6 @@ fn check_two_candle_patterns(
                 candles_used: 2,
             });
         }
-    }
 
     None
 }
@@ -750,9 +739,9 @@ fn check_three_candle_patterns(
     let c3 = candles[i];
 
     // Morning Star: bearish, doji/small, bullish (reversal)
-    if c1.is_bearish() && c3.is_bullish() {
-        if c2.body() < c1.body() * 0.5 && c2.body() < c3.body() * 0.5 {
-            if c3.close > (c1.open + c1.close) / 2.0 {
+    if c1.is_bearish() && c3.is_bullish()
+        && c2.body() < c1.body() * 0.5 && c2.body() < c3.body() * 0.5
+            && c3.close > (c1.open + c1.close) / 2.0 {
                 return Some(PatternDetection {
                     pattern: CandlestickPattern::MorningStar,
                     index: i,
@@ -760,13 +749,11 @@ fn check_three_candle_patterns(
                     candles_used: 3,
                 });
             }
-        }
-    }
 
     // Evening Star: bullish, doji/small, bearish (reversal)
-    if c1.is_bullish() && c3.is_bearish() {
-        if c2.body() < c1.body() * 0.5 && c2.body() < c3.body() * 0.5 {
-            if c3.close < (c1.open + c1.close) / 2.0 {
+    if c1.is_bullish() && c3.is_bearish()
+        && c2.body() < c1.body() * 0.5 && c2.body() < c3.body() * 0.5
+            && c3.close < (c1.open + c1.close) / 2.0 {
                 return Some(PatternDetection {
                     pattern: CandlestickPattern::EveningStar,
                     index: i,
@@ -774,16 +761,13 @@ fn check_three_candle_patterns(
                     candles_used: 3,
                 });
             }
-        }
-    }
 
     // Three White Soldiers: three consecutive strong bullish candles
-    if c1.is_bullish() && c2.is_bullish() && c3.is_bullish() {
-        if c1.is_strong_body(config.strong_body_threshold)
+    if c1.is_bullish() && c2.is_bullish() && c3.is_bullish()
+        && c1.is_strong_body(config.strong_body_threshold)
             && c2.is_strong_body(config.strong_body_threshold)
             && c3.is_strong_body(config.strong_body_threshold)
-        {
-            if c2.close > c1.close && c3.close > c2.close {
+            && c2.close > c1.close && c3.close > c2.close {
                 return Some(PatternDetection {
                     pattern: CandlestickPattern::ThreeWhiteSoldiers,
                     index: i,
@@ -791,16 +775,13 @@ fn check_three_candle_patterns(
                     candles_used: 3,
                 });
             }
-        }
-    }
 
     // Three Black Crows: three consecutive strong bearish candles
-    if c1.is_bearish() && c2.is_bearish() && c3.is_bearish() {
-        if c1.is_strong_body(config.strong_body_threshold)
+    if c1.is_bearish() && c2.is_bearish() && c3.is_bearish()
+        && c1.is_strong_body(config.strong_body_threshold)
             && c2.is_strong_body(config.strong_body_threshold)
             && c3.is_strong_body(config.strong_body_threshold)
-        {
-            if c2.close < c1.close && c3.close < c2.close {
+            && c2.close < c1.close && c3.close < c2.close {
                 return Some(PatternDetection {
                     pattern: CandlestickPattern::ThreeBlackCrows,
                     index: i,
@@ -808,8 +789,6 @@ fn check_three_candle_patterns(
                     candles_used: 3,
                 });
             }
-        }
-    }
 
     // Identical Three Crows: three bearish with same opens
     if c1.is_bearish() && c2.is_bearish() && c3.is_bearish() {
@@ -826,8 +805,8 @@ fn check_three_candle_patterns(
     }
 
     // Three Inside Up: harami followed by breakout
-    if c1.is_bearish() && c2.is_bullish() && c3.is_bullish() {
-        if c2.open > c1.close && c2.close < c1.open && c3.close > c1.open {
+    if c1.is_bearish() && c2.is_bullish() && c3.is_bullish()
+        && c2.open > c1.close && c2.close < c1.open && c3.close > c1.open {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::ThreeInsideUp,
                 index: i,
@@ -835,11 +814,10 @@ fn check_three_candle_patterns(
                 candles_used: 3,
             });
         }
-    }
 
     // Three Inside Down: harami followed by breakdown
-    if c1.is_bullish() && c2.is_bearish() && c3.is_bearish() {
-        if c2.open < c1.close && c2.close > c1.open && c3.close < c1.open {
+    if c1.is_bullish() && c2.is_bearish() && c3.is_bearish()
+        && c2.open < c1.close && c2.close > c1.open && c3.close < c1.open {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::ThreeInsideDown,
                 index: i,
@@ -847,11 +825,10 @@ fn check_three_candle_patterns(
                 candles_used: 3,
             });
         }
-    }
 
     // Three Outside Up: engulfing followed by breakout
-    if c1.is_bearish() && c2.is_bullish() && c3.is_bullish() {
-        if c2.open < c1.close && c2.close > c1.open && c3.close > c2.close {
+    if c1.is_bearish() && c2.is_bullish() && c3.is_bullish()
+        && c2.open < c1.close && c2.close > c1.open && c3.close > c2.close {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::ThreeOutsideUp,
                 index: i,
@@ -859,11 +836,10 @@ fn check_three_candle_patterns(
                 candles_used: 3,
             });
         }
-    }
 
     // Three Outside Down: engulfing followed by breakdown
-    if c1.is_bullish() && c2.is_bearish() && c3.is_bearish() {
-        if c2.open > c1.close && c2.close < c1.open && c3.close < c2.close {
+    if c1.is_bullish() && c2.is_bearish() && c3.is_bearish()
+        && c2.open > c1.close && c2.close < c1.open && c3.close < c2.close {
             return Some(PatternDetection {
                 pattern: CandlestickPattern::ThreeOutsideDown,
                 index: i,
@@ -871,7 +847,6 @@ fn check_three_candle_patterns(
                 candles_used: 3,
             });
         }
-    }
 
     None
 }
@@ -1051,8 +1026,10 @@ mod tests {
         let close = vec![102.0, 102.0, 103.0];
         let volume = vec![1000.0, 1000.0, 1000.0];
 
-        let mut config = PatternConfig::default();
-        config.min_confidence = 0.9; // Very high threshold
+        let config = PatternConfig {
+            min_confidence: 0.9, // Very high threshold
+            ..Default::default()
+        };
 
         let patterns = recognize_patterns(&open, &high, &low, &close, &volume, &config);
 

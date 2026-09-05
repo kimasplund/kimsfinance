@@ -224,7 +224,7 @@ impl TickStrategy for VolumeProfileStrategy {
         self.prune_old_trades(trade.timestamp_ms);
 
         // Rebuild profile periodically
-        if self.trade_counter % self.rebuild_interval == 0 {
+        if self.trade_counter.is_multiple_of(self.rebuild_interval) {
             self.rebuild_profile();
         }
 

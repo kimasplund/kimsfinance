@@ -690,7 +690,7 @@ mod tests {
 
         let result = engine.run(&mut strategy, &trades, timeframe).unwrap();
 
-        // Should have executed at least one trade
-        assert!(result.num_trades >= 0);
+        // `num_trades` is unsigned, so any value is valid; the check is that `run` succeeded.
+        let _ = result.num_trades;
     }
 }

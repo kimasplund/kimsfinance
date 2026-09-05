@@ -168,6 +168,7 @@ impl GeneticOptimizer {
     /// # Returns
     ///
     /// OptimizerResult with best parameters, fitness, and convergence history
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize<S>(
         &self,
         engine: &BacktestEngine,
@@ -398,6 +399,7 @@ impl GeneticOptimizer {
     ///
     /// GPU batch evaluation is automatically attempted for populations >= 50.
     /// Falls back to CPU parallel if GPU unavailable or batch kernel fails.
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     fn evaluate_population<S>(
         &self,
         population: &mut [Individual],
@@ -653,6 +655,7 @@ impl GeneticOptimizer {
     }
 
     /// Evaluate single individual
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     fn evaluate_individual(
         &self,
         individual: &Individual,
@@ -1217,6 +1220,7 @@ impl IslandGeneticOptimizer {
     /// # Returns
     ///
     /// OptimizerResult with best parameters across all islands
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize<S>(
         &self,
         engine: &BacktestEngine,
@@ -1419,12 +1423,12 @@ impl IslandGeneticOptimizer {
             .map(|island| island.iter().take(num_migrants).cloned().collect())
             .collect();
 
-        for i in 0..self.num_islands {
+        for (i, migrant) in migrants.into_iter().enumerate().take(self.num_islands) {
             let next_island = (i + 1) % self.num_islands;
             let target_len = islands[next_island].len();
 
             // Replace worst individuals with migrants from previous island
-            islands[next_island].splice((target_len - num_migrants).., migrants[i].clone());
+            islands[next_island].splice((target_len - num_migrants).., migrant);
         }
     }
 }

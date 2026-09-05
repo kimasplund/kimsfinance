@@ -144,11 +144,11 @@ impl RebalanceFrequency {
     pub fn should_rebalance(&self, bar_index: usize) -> bool {
         match self {
             RebalanceFrequency::Never => false,
-            RebalanceFrequency::EveryNBars(n) => bar_index > 0 && bar_index % n == 0,
+            RebalanceFrequency::EveryNBars(n) => bar_index > 0 && bar_index.is_multiple_of(*n),
             RebalanceFrequency::Daily => bar_index > 0,
-            RebalanceFrequency::Weekly => bar_index > 0 && bar_index % 7 == 0,
-            RebalanceFrequency::Monthly => bar_index > 0 && bar_index % 30 == 0,
-            RebalanceFrequency::Quarterly => bar_index > 0 && bar_index % 90 == 0,
+            RebalanceFrequency::Weekly => bar_index > 0 && bar_index.is_multiple_of(7),
+            RebalanceFrequency::Monthly => bar_index > 0 && bar_index.is_multiple_of(30),
+            RebalanceFrequency::Quarterly => bar_index > 0 && bar_index.is_multiple_of(90),
         }
     }
 }
@@ -464,17 +464,15 @@ impl PortfolioBacktest {
         let mut asset_equity_curves = PortfolioState::with_capacity(&self.assets, n);
 
         // Backtest loop
-        for i in 0..n {
-            let timestamp = common_timestamps[i];
+        for (i, &timestamp) in common_timestamps.iter().enumerate() {
 
             // Build bar data for all assets
             let mut bars = HashMap::new();
             for asset in &self.assets {
-                if let Some(asset_idx) = asset.timestamps.iter().position(|&t| t == timestamp) {
-                    if let Some(bar) = asset.bar(asset_idx) {
+                if let Some(asset_idx) = asset.timestamps.iter().position(|&t| t == timestamp)
+                    && let Some(bar) = asset.bar(asset_idx) {
                         bars.insert(asset.symbol.clone(), bar);
                     }
-                }
             }
 
             // Build indicator data for this bar

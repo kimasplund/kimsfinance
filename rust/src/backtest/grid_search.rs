@@ -227,6 +227,7 @@ impl GridSearchOptimizer {
     /// println!("Best: {:?} (Sharpe: {:.2})", result.best_parameters, result.best_fitness);
     /// ```
     #[cfg(feature = "gpu")]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize(
         &self,
         device: Arc<GpuDevice>,
@@ -350,6 +351,7 @@ impl GridSearchOptimizer {
 
     /// CPU fallback when GPU feature not enabled
     #[cfg(not(feature = "gpu"))]
+    #[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
     pub fn optimize(
         &self,
         _timestamps: &[i64],

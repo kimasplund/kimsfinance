@@ -187,7 +187,7 @@ impl AssetSpec {
 
     /// Check if contract is expired
     pub fn is_expired(&self, timestamp: DateTime<Utc>) -> bool {
-        self.expiration.map_or(false, |exp| timestamp >= exp)
+        self.expiration.is_some_and(|exp| timestamp >= exp)
     }
 }
 

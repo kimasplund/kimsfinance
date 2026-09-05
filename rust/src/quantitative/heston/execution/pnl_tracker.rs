@@ -279,10 +279,11 @@ pub struct PerformanceMetrics {
     pub losing_trades: usize,
 }
 
-impl PerformanceMetrics {
+impl std::fmt::Display for PerformanceMetrics {
     /// Format metrics as human-readable string
-    pub fn to_string(&self) -> String {
-        format!(
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "Performance Metrics:\n\
              Total P&L: ${:.2}\n\
              Realized P&L: ${:.2}\n\

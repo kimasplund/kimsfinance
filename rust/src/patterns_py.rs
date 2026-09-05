@@ -84,6 +84,7 @@ use pyo3::types::{PyDict, PyList};
     use_volume=true,
     min_confidence=0.5
 ))]
+#[allow(clippy::too_many_arguments)] // PyO3 binding: Python-facing signature is public API
 pub fn recognize_candlestick_patterns(
     py: Python,
     open: PyReadonlyArray1<f64>,
@@ -274,6 +275,7 @@ pub fn get_candlestick_patterns(py: Python) -> PyResult<Py<PyAny>> {
     use_volume=true,
     min_confidence=0.5
 ))]
+#[allow(clippy::too_many_arguments)] // PyO3 binding: Python-facing signature is public API
 pub fn recognize_candlestick_patterns_batch(
     py: Python,
     open_batch: Vec<PyReadonlyArray1<f64>>,
@@ -383,13 +385,11 @@ pub fn filter_patterns_by_type(
     let result_list = PyList::empty(py);
 
     for pattern_dict in patterns {
-        if let Ok(ptype) = pattern_dict.get_item("type") {
-            if let Some(ptype_str) = ptype.and_then(|v| v.extract::<String>().ok()) {
-                if ptype_str == pattern_type {
+        if let Ok(ptype) = pattern_dict.get_item("type")
+            && let Some(ptype_str) = ptype.and_then(|v| v.extract::<String>().ok())
+                && ptype_str == pattern_type {
                     result_list.append(pattern_dict)?;
                 }
-            }
-        }
     }
 
     Ok(result_list.into())
@@ -427,8 +427,8 @@ pub fn get_pattern_statistics(py: Python, patterns: Vec<Bound<PyDict>>) -> PyRes
     for pattern_dict in &patterns {
         total += 1;
 
-        if let Ok(Some(ptype)) = pattern_dict.get_item("type") {
-            if let Ok(ptype_str) = ptype.extract::<String>() {
+        if let Ok(Some(ptype)) = pattern_dict.get_item("type")
+            && let Ok(ptype_str) = ptype.extract::<String>() {
                 match ptype_str.as_str() {
                     "bullish" => bullish += 1,
                     "bearish" => bearish += 1,
@@ -436,19 +436,16 @@ pub fn get_pattern_statistics(py: Python, patterns: Vec<Bound<PyDict>>) -> PyRes
                     _ => {}
                 }
             }
-        }
 
-        if let Ok(Some(conf)) = pattern_dict.get_item("confidence") {
-            if let Ok(conf_val) = conf.extract::<f64>() {
+        if let Ok(Some(conf)) = pattern_dict.get_item("confidence")
+            && let Ok(conf_val) = conf.extract::<f64>() {
                 confidence_sum += conf_val;
             }
-        }
 
-        if let Ok(Some(name)) = pattern_dict.get_item("pattern") {
-            if let Ok(name_str) = name.extract::<String>() {
+        if let Ok(Some(name)) = pattern_dict.get_item("pattern")
+            && let Ok(name_str) = name.extract::<String>() {
                 *pattern_counts.entry(name_str).or_insert(0) += 1;
             }
-        }
     }
 
     let dict = PyDict::new(py);
@@ -477,8 +474,6 @@ pub fn get_pattern_statistics(py: Python, patterns: Vec<Bound<PyDict>>) -> PyRes
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_python_bindings_compile() {
         // Just ensure Python bindings compile

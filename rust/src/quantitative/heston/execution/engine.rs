@@ -382,10 +382,11 @@ pub struct ExecutionReport {
     pub total_trades: usize,
 }
 
-impl ExecutionReport {
+impl std::fmt::Display for ExecutionReport {
     /// Format report as human-readable string
-    pub fn to_string(&self) -> String {
-        format!(
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "Execution Report:\n\
              ================\n\
              Initial Capital: ${:.2}\n\
@@ -400,7 +401,7 @@ impl ExecutionReport {
             self.cash,
             self.position_count,
             self.total_trades,
-            self.metrics.to_string()
+            self.metrics
         )
     }
 }
@@ -443,8 +444,10 @@ mod tests {
 
     #[test]
     fn test_invalid_config() {
-        let mut config = ExecutionConfig::default();
-        config.slippage = 1.5; // Invalid
+        let config = ExecutionConfig {
+            slippage: 1.5, // Invalid
+            ..Default::default()
+        };
 
         let result = ExecutionEngine::new(10_000.0, config);
         assert!(result.is_err());
@@ -491,8 +494,10 @@ mod tests {
 
     #[test]
     fn test_max_position_limit() {
-        let mut config = ExecutionConfig::default();
-        config.max_position_size = 2;
+        let config = ExecutionConfig {
+            max_position_size: 2,
+            ..Default::default()
+        };
 
         let mut engine = ExecutionEngine::new(10_000.0, config).unwrap();
         let market_data = create_test_market_data(1735000000, 100.0);
@@ -574,8 +579,10 @@ mod tests {
 
     #[test]
     fn test_slippage_application() {
-        let mut config = ExecutionConfig::default();
-        config.slippage = 0.01; // 1%
+        let config = ExecutionConfig {
+            slippage: 0.01, // 1%
+            ..Default::default()
+        };
 
         let engine = ExecutionEngine::new(10_000.0, config).unwrap();
 

@@ -1033,7 +1033,7 @@ impl AutoTuneProfile {
 
     #[cfg(not(feature = "gpu"))]
     pub fn get_or_init(_device: &()) -> &'static AutoTuneProfile {
-        PROFILE.get_or_init(|| Self::cpu_only_profile())
+        PROFILE.get_or_init(Self::cpu_only_profile)
     }
 
     /// Create CPU-only profile (for FORCE_CPU mode or no GPU)
@@ -1238,7 +1238,7 @@ mod tests {
         assert!(profile.backtest_thresholds.simd_sharpe_threshold <= 100_000);
         assert!(profile.backtest_thresholds.parallel_eval_threshold >= 10);
         assert!(profile.backtest_thresholds.parallel_eval_threshold <= 100);
-        assert_eq!(profile.backtest_thresholds.use_hashmap_prealloc, false);
+        assert!(!profile.backtest_thresholds.use_hashmap_prealloc);
     }
 
     #[test]

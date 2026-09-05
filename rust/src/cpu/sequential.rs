@@ -357,6 +357,9 @@ pub fn wilders_smoothing_cpu(input: &Array1<f64>, period: usize) -> Result<Array
     Ok(output)
 }
 
+/// MACD output: `(macd_line, signal_line, histogram)`.
+pub type MacdOutput = (Array1<f64>, Array1<f64>, Array1<f64>);
+
 /// CPU-optimized MACD (Moving Average Convergence Divergence)
 ///
 /// MACD uses 3 sequential EMAs, making it 1,647x faster on CPU than GPU!
@@ -410,7 +413,7 @@ pub fn macd_cpu(
     fast_period: usize,
     slow_period: usize,
     signal_period: usize,
-) -> Result<(Array1<f64>, Array1<f64>, Array1<f64>), GpuError> {
+) -> Result<MacdOutput, GpuError> {
     let n = close.len();
 
     // Validate inputs
@@ -814,7 +817,7 @@ mod tests {
         // In an uptrend, MACD should be positive (fast > slow)
         let valid_macd: Vec<f64> = macd.iter().filter(|&&x| !x.is_nan()).copied().collect();
         assert!(
-            valid_macd.len() > 0,
+            !valid_macd.is_empty(),
             "Should have at least some valid MACD values"
         );
 

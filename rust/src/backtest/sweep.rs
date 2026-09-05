@@ -84,6 +84,7 @@ use crate::cpu::sequential::GpuError;
 /// println!("Best Sharpe: {:.2}", results[0].sharpe_ratio);
 /// ```
 #[cfg(feature = "gpu")]
+#[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
 pub fn run_parameter_sweep_gpu(
     engine: &BacktestEngine,
     strategy: &mut dyn Strategy,
@@ -406,6 +407,7 @@ fn generate_parameter_combinations(params: &[(String, Vec<f64>)]) -> Vec<HashMap
 
 /// CPU fallback for parameter sweep (sequential testing)
 #[cfg(not(feature = "gpu"))]
+#[allow(clippy::too_many_arguments)] // public API: signature is documented and used by callers
 pub fn run_parameter_sweep_cpu(
     engine: &BacktestEngine,
     strategy: &mut dyn Strategy,
@@ -440,7 +442,7 @@ pub fn run_parameter_sweep_cpu(
     } else {
         let param_pairs: Vec<(String, Vec<f64>)> = param_names
             .into_iter()
-            .zip(param_values.into_iter())
+            .zip(param_values)
             .collect();
         generate_parameter_combinations(&param_pairs)
     };
