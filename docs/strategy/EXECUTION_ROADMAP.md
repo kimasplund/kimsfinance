@@ -226,13 +226,13 @@ pytest --cov=kimsfinance --cov-report=term-missing --cov-report=html
 **Checks**:
 ```bash
 # 1. Run baseline benchmark (if not already done)
-python scripts/benchmark_comprehensive.py --output baseline.json
+python benchmarks/standard_benchmark.py --quick | tee baseline.txt
 
 # 2. Run optimized benchmark
-python scripts/benchmark_comprehensive.py --output optimized.json
+python benchmarks/standard_benchmark.py --quick | tee optimized.txt
 
-# 3. Compare results
-python scripts/compare_benchmarks.py baseline.json optimized.json
+# 3. Compare results (no dedicated comparison script exists yet)
+diff baseline.txt optimized.txt
 
 # 4. Verify speedup
 # Expected: ≥1.3x improvement in render times
@@ -309,8 +309,8 @@ Buffer Time                                         │████│ (20-24h b
 ### Pre-Execution (30 min)
 - [ ] Verify Python 3.13+ with JIT support
 - [ ] Install pytest-xdist: `pip install pytest-xdist`
-- [ ] Run baseline benchmark: `python scripts/benchmark_comprehensive.py`
-- [ ] Profile renderers: `python -m cProfile scripts/benchmark_comprehensive.py`
+- [ ] Run baseline benchmark: `python benchmarks/standard_benchmark.py --quick`
+- [ ] Profile renderers: `python -m cProfile scripts/benchmark_renderer_optimization.py`
 - [ ] Test pytest-xdist speedup: `pytest -n auto tests/ops/indicators/`
 - [ ] Create execution branches: `git checkout -b phase3-execution`
 

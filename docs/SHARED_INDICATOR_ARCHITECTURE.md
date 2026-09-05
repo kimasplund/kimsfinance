@@ -8,13 +8,13 @@
 ## File Locations
 
 ### Implementation
-- **File**: `kimsfinance/ops/indicators.py`
-- **Add functions to existing file** (already has 10 indicators)
+- **Package**: `kimsfinance/ops/indicators/` (one module per indicator, e.g. `rsi.py`, `atr.py`)
+- **Add a new module per indicator** and export it from `kimsfinance/ops/indicators/__init__.py`
 - **Preserve existing code** (do not modify ATR, RSI, MACD, etc.)
 
 ### Tests
-- **File**: `tests/test_indicators.py`
-- **Add test classes to existing file**
+- **Directory**: `tests/ops/indicators/` (one module per indicator, e.g. `test_rsi.py`)
+- **Add a new test module per indicator**
 - **Follow existing test patterns**
 
 ### Exports
@@ -396,11 +396,11 @@ References:
 
 ### After Implementation, Each Indicator Must:
 
-- [ ] Be added to `kimsfinance/ops/indicators.py`
+- [ ] Be added as a module under `kimsfinance/ops/indicators/`
 - [ ] Be exported in `kimsfinance/ops/__init__.py` (import and `__all__`)
-- [ ] Have test class in `tests/test_indicators.py`
+- [ ] Have a test module in `tests/ops/indicators/`
 - [ ] Have minimum 4 tests (basic, gpu/cpu match, invalid input, known values)
-- [ ] Pass all tests with `pytest tests/test_indicators.py -v`
+- [ ] Pass all tests with `pytest tests/ops/indicators/ -v`
 - [ ] Have full type hints (no `Any` types)
 - [ ] Have complete docstring
 - [ ] Handle edge cases (NaN, inf, insufficient data)
@@ -409,7 +409,7 @@ References:
 
 ## Example: Complete Implementation
 
-See existing indicators in `kimsfinance/ops/indicators.py`:
+See existing indicators in `kimsfinance/ops/indicators/`:
 - `calculate_atr` - Good example of OHLC input
 - `calculate_rsi` - Good example of single input
 - `calculate_macd` - Good example of multiple outputs
@@ -461,6 +461,6 @@ def test_performance_benchmark(self):
 
 ## Questions or Issues?
 
-Refer to existing indicators in `kimsfinance/ops/indicators.py` for patterns and examples.
+Refer to existing indicators in `kimsfinance/ops/indicators/` for patterns and examples.
 
 **Good luck with parallel implementation!**

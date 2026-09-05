@@ -133,8 +133,8 @@ Install kimsfinance with GPU support:
 pip install kimsfinance[gpu]
 
 # This installs:
-# - cudf-cu12 (>=24.12) - GPU-accelerated DataFrames
-# - cupy-cuda12x (>=13.0) - NumPy-compatible GPU arrays
+# - cudf-cu13 (>=25.10) - GPU-accelerated DataFrames
+# - cupy-cuda13x (>=13.0) - NumPy-compatible GPU arrays
 ```
 
 #### Method 2: Manual RAPIDS Installation
@@ -145,14 +145,11 @@ For more control over versions:
 # Install base package
 pip install kimsfinance
 
-# Install RAPIDS (cuDF) from NVIDIA's PyPI
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
+# For CUDA 13 (recommended for RTX 40-series, Ada Lovelace)
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x
 
-# Install CuPy for CUDA 12.x
-pip install cupy-cuda12x
-
-# For CUDA 11.x, use:
-# pip install cudf-cu11 cupy-cuda11x
+# For CUDA 12 (older GPUs)
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
 ```
 
 #### Method 3: Conda Installation (Alternative)
@@ -234,7 +231,7 @@ def check_cupy():
         return True
     except ImportError:
         print("✗ CuPy not installed")
-        print("  Install with: pip install cupy-cuda12x")
+        print("  Install with: pip install cupy-cuda13x")
         return False
     except Exception as e:
         print(f"✗ CuPy test failed: {e}")
@@ -1202,7 +1199,7 @@ let cpu_backtest = BacktestEngine::new(capital)?;
 - Implementation Details: `rust/docs/PERSISTENT_KERNELS.md`
 
 **Source Code**:
-- Implementation: `rust/src/gpu/persistent.rs`
+- Implementation: `rust/src/gpu/persistent/` (`mod.rs`, `generic.rs`, `traits.rs`, `kernels/`)
 - Benchmarks: `rust/benches/launch_overhead.rs`
 - Examples: `rust/examples/test_persistent_*.rs`
 
@@ -2096,32 +2093,28 @@ results = multi_gpu_batch_process(all_symbols_data, n_gpus=2)
 
 **Symptoms**:
 ```bash
-ERROR: Could not find a version that satisfies the requirement cudf-cu12
+ERROR: Could not find a version that satisfies the requirement cudf-cu13
 ```
 
 **Solutions**:
 
-1. Check Python version (must be 3.9-3.12, **3.13 not yet supported by RAPIDS**):
+1. Check Python version (kimsfinance requires 3.13+; RAPIDS 25.10+ wheels support Python 3.13):
    ```bash
-   python --version  # Must be 3.9-3.12
+   python --version  # Must be 3.13+
    ```
 
-   If using Python 3.13:
+2. Use NVIDIA PyPI index and the wheel matching your CUDA version:
    ```bash
-   # Downgrade to Python 3.12 for GPU support
-   conda create -n kimsfinance python=3.12
-   conda activate kimsfinance
-   pip install kimsfinance[gpu]
-   ```
+   # For CUDA 13 (recommended for RTX 40-series, Ada Lovelace)
+   pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13
 
-2. Use NVIDIA PyPI index:
-   ```bash
+   # For CUDA 12 (older GPUs)
    pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
    ```
 
 3. Use conda (more reliable):
    ```bash
-   conda install -c rapidsai -c conda-forge -c nvidia cudf=24.12 python=3.12
+   conda install -c rapidsai -c conda-forge -c nvidia cudf=25.10 python=3.13
    ```
 
 #### Issue: CuPy installation fails
@@ -2135,11 +2128,11 @@ ImportError: DLL load failed while importing cupy_backends
 
 1. Install correct CUDA version:
    ```bash
-   # For CUDA 12.x
-   pip install cupy-cuda12x
+   # For CUDA 13.x (default for kimsfinance[gpu])
+   pip install cupy-cuda13x
 
-   # For CUDA 11.x
-   pip install cupy-cuda11x
+   # For CUDA 12.x (older GPUs)
+   pip install cupy-cuda12x
    ```
 
 2. Check CUDA installation:
@@ -2376,7 +2369,8 @@ nvidia-smi | grep "MiB"
 - `scripts/gpu_validation_test.py` - GPU setup validation
 - `scripts/gpu_advanced_test.py` - Advanced GPU benchmarks
 - `tests/test_engine_selection.py` - Engine selection tests
-- `benchmarks/compare_gpu_cpu.py` - CPU vs GPU comparison
+- `scripts/benchmark_gpu_indicators.py` - CPU vs GPU indicator comparison
+- `benchmarks/benchmark_polars_gpu.py` - Polars GPU engine benchmark
 
 ### Related Guides
 
@@ -2395,18 +2389,18 @@ nvidia-smi | grep "MiB"
 - 9.0: Hopper (H100)
 
 **CUDA Versions**:
-- CUDA 11.8: Widely supported, stable
-- CUDA 12.0+: Latest features, better performance
+- CUDA 13.x: Default for `kimsfinance[gpu]` (`cudf-cu13`, `cupy-cuda13x`)
+- CUDA 12.x: Supported for older hardware (`cudf-cu12`, `cupy-cuda12x`)
 
 **cuDF Compatibility**:
-- cuDF 24.12: Python 3.9-3.12, CUDA 11.8+
-- cuDF 24.10: Python 3.9-3.11, CUDA 11.4+
+- cuDF 25.10+ (`cudf-cu13`): Python 3.13, CUDA 13.x
+- cuDF 25.10+ (`cudf-cu12`): Python 3.13, CUDA 12.x (older GPUs)
 
 ---
 
 **Document Version**: 1.1.0
 **Last Updated**: 2025-10-27
-**Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 12.6
+**Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 13.x
 **Author**: kimsfinance Team
 
 **Changelog (v1.1.0)**:

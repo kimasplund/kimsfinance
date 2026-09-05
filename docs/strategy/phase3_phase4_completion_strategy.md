@@ -330,7 +330,7 @@ pytest tests/benchmark_ohlc_bars.py --benchmark-only
 
 3. Performance validation:
    ```bash
-   python scripts/benchmark_comprehensive.py
+   python benchmarks/standard_benchmark.py --quick
    ```
    - Confirm 178x baseline maintained
    - Validate pre-allocate optimization: 231x total (178 × 1.3)
@@ -691,17 +691,17 @@ def calculate_aroon_gpu(high, low, period):
 
 - [ ] **Baseline Benchmark**: Run before Phase 2
   ```bash
-  python scripts/benchmark_comprehensive.py --output baseline.json
+  python benchmarks/standard_benchmark.py --quick | tee baseline.txt
   ```
 
 - [ ] **Post-Optimization Benchmark**: Run after Phase 2
   ```bash
-  python scripts/benchmark_comprehensive.py --output optimized.json
+  python benchmarks/standard_benchmark.py --quick | tee optimized.txt
   ```
 
-- [ ] **Comparison Report**: Generate speedup analysis
+- [ ] **Comparison Report**: Compare the two runs (no dedicated comparison script exists yet)
   ```bash
-  python scripts/compare_benchmarks.py baseline.json optimized.json
+  diff baseline.txt optimized.txt
   ```
 
 - [ ] **Regression Check**: Ensure no chart type degraded
@@ -813,7 +813,7 @@ def calculate_aroon_gpu(high, low, period):
 
 2. **Profile renderers**:
    ```bash
-   python -m cProfile -o profile.stats scripts/benchmark_comprehensive.py
+   python -m cProfile -o profile.stats scripts/benchmark_renderer_optimization.py
    python -m pstats profile.stats
    # Identify hotspots for pre-allocate optimization
    ```

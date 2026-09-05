@@ -140,7 +140,7 @@ Complete kimsfinance Phase 3+4 in **20 hours** using 6 parallel agents:
 
 2. **Profile renderers** (identify optimization opportunities):
    ```bash
-   python -m cProfile scripts/benchmark_comprehensive.py
+   python -m cProfile scripts/benchmark_renderer_optimization.py
    ```
 
 3. **Check Python 3.13 JIT availability**:

@@ -337,14 +337,24 @@ Place tests in the appropriate location:
 
 ```
 tests/
-├── plotting/
+├── conftest.py
+├── test_api_native_routing.py      # Top-level API, engine and cross-cutting tests
+├── test_engine_selection.py
+├── test_visual_regression.py
+├── ...
+├── plotting/                       # Renderers, themes, SVG and interactive output
+│   ├── test_plotting.py
 │   ├── test_renderer_ohlc.py
 │   ├── test_renderer_line.py
-│   └── test_themes.py
+│   └── test_svg_export.py
 ├── ops/
-│   ├── test_aggregations.py
-│   └── test_indicators.py
-└── test_api.py
+│   └── indicators/                 # One test module per indicator
+│       ├── test_atr.py
+│       ├── test_rsi.py
+│       └── test_vwap.py
+├── integration/                    # GPU batch backtest end-to-end tests
+├── optimization/                   # Genetic optimizer tests
+└── python_integration/             # kimsfinance_core (Rust) binding tests
 ```
 
 Example test:
@@ -718,7 +728,7 @@ pytest tests/test_polars_gpu_engine.py tests/test_engine_selection.py
 
 ```bash
 # Run with verbose output
-pytest -vv tests/test_specific.py
+pytest -vv tests/test_engine_selection.py
 
 # Drop into debugger on failure
 pytest --pdb tests/

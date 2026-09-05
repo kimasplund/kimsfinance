@@ -641,14 +641,14 @@ def generate_random_params(n: int, strategy: str = 'rsi_crossover') -> List[Dict
 
 After completing integration testing:
 
-1. **Run Full Benchmark Suite**:
+1. **Validate the GPU batch backtest pipeline end to end**:
    ```bash
-   python benchmarks/benchmark_batch_backtest.py
+   python scripts/validate_gpu_batch_backtest.py
    ```
 
-2. **Generate Performance Report**:
+2. **Run the standard benchmark suite** and record the numbers:
    ```bash
-   python benchmarks/generate_performance_report.py
+   python benchmarks/standard_benchmark.py --quick
    ```
 
 3. **Update Documentation**:

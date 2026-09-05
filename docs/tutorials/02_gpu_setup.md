@@ -106,7 +106,7 @@ kimsfinance provides **optional GPU acceleration** using NVIDIA GPUs and CUDA. G
 - **GPU**: NVIDIA GPU with compute capability 7.0+ (Volta or newer)
 - **VRAM**: 4 GB minimum (8 GB recommended)
 - **CUDA**: Version 13.x (recommended), 12.x, or 11.8
-- **Driver**: NVIDIA Driver 535.x or newer (for CUDA 13)
+- **Driver**: NVIDIA Driver 580.x or newer for CUDA 13 (525.x or newer for CUDA 12)
 
 ### Supported Hardware
 
@@ -281,7 +281,7 @@ def main():
         print(f"   ✓ GPU array test passed (sum={result})")
     except ImportError:
         print("   ✗ CuPy not installed")
-        print("   Install with: pip install cupy-cuda12x")
+        print("   Install with: pip install cupy-cuda13x")
         return False
     except Exception as e:
         print(f"   ✗ CuPy test failed: {e}")
@@ -981,7 +981,7 @@ GPU_THRESHOLDS['vectorizable_simple'] = 200_000  # vs 100K default
 
 **Symptoms**:
 ```bash
-ERROR: Could not find a version that satisfies the requirement cudf-cu12
+ERROR: Could not find a version that satisfies the requirement cudf-cu13
 ```
 
 **Solution 1**: Check Python version (RAPIDS requires 3.9-3.14):

@@ -713,7 +713,7 @@ plot(ohlc, type='candle', savefig='tick_based.webp')
 
 ## Related Documentation
 
-- [Native Chart Types](IMPLEMENTATION_COMPLETE.md) - All 6 chart types
+- [Chart Types](API.md#chart-types) - All 6 chart types
 - [Performance Benchmarks](../benchmarks/) - Speed comparisons
 - [API Reference](../README.md) - Main API documentation
 
