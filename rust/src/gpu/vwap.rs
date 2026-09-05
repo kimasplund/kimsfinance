@@ -182,9 +182,9 @@ pub fn vwap_gpu(
         .map_err(|e| GpuError::CompilationError(format!("Failed to load PTX: {:?}", e)))?;
 
     // Get kernel function
-    let tpv_kernel = module
-        .load_function("vwap_tpv_kernel")
-        .map_err(|e| GpuError::ExecutionError(format!("Failed to load vwap_tpv kernel: {:?}", e)))?;
+    let tpv_kernel = module.load_function("vwap_tpv_kernel").map_err(|e| {
+        GpuError::ExecutionError(format!("Failed to load vwap_tpv kernel: {:?}", e))
+    })?;
 
     // Select stream: use provided stream or fallback to device.stream
     let exec_stream = stream.unwrap_or(&device.stream);
@@ -236,9 +236,9 @@ pub fn vwap_gpu(
 
     let tpv_config = LaunchConfig::for_num_elems(n as u32);
     unsafe {
-        tpv_builder.launch(tpv_config).map_err(|e| {
-            GpuError::ExecutionError(format!("TPV kernel launch failed: {:?}", e))
-        })?;
+        tpv_builder
+            .launch(tpv_config)
+            .map_err(|e| GpuError::ExecutionError(format!("TPV kernel launch failed: {:?}", e)))?;
     }
 
     // === Step 3: D2H - Asynchronously copy TPV back ===
@@ -254,10 +254,8 @@ pub fn vwap_gpu(
     })?;
 
     // === Step 4: CPU - cumulative sums and division in f64 ===
-    let vwap_vec = calculate_vwap_from_tpv_cpu(
-        &pinned_tpv.as_slice()[..n],
-        volume.as_slice().unwrap(),
-    );
+    let vwap_vec =
+        calculate_vwap_from_tpv_cpu(&pinned_tpv.as_slice()[..n], volume.as_slice().unwrap());
 
     // Release pinned buffer
     device.pinned_pool.lock().release(pinned_tpv);

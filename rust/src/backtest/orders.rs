@@ -17,9 +17,7 @@
 //! Order Lifecycle (cancellations, expiry, triggers)
 //! ```
 
-
 use serde::{Deserialize, Serialize};
-
 
 /// Unique order identifier
 pub type OrderId = u64;
@@ -106,8 +104,7 @@ pub enum OrderStatus {
 }
 
 /// Time-in-force specification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum TimeInForce {
     /// Good Till Cancelled - remains active until filled or cancelled
     #[default]
@@ -125,7 +122,6 @@ pub enum TimeInForce {
     /// Fill or Kill - fill entire order immediately or cancel
     FOK,
 }
-
 
 /// Order parameters for different order types
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

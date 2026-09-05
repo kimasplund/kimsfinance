@@ -1248,10 +1248,7 @@ mod tests {
 
         // ROC (14) vs RSI (56) -> RSI dominates
         assert_eq!(
-            batch_overlap_candles(
-                &[BatchIndicatorType::ROC, BatchIndicatorType::RSI],
-                &params
-            ),
+            batch_overlap_candles(&[BatchIndicatorType::ROC, BatchIndicatorType::RSI], &params),
             56
         );
 
@@ -1357,12 +1354,8 @@ mod tests {
         let arr = |v: Vec<f64>| Array1::from(v);
 
         // Single
-        let trimmed = trim_leading(
-            IndicatorResult::Single(arr(vec![1.0, 2.0, 3.0, 4.0])),
-            2,
-            4,
-        )
-        .unwrap();
+        let trimmed =
+            trim_leading(IndicatorResult::Single(arr(vec![1.0, 2.0, 3.0, 4.0])), 2, 4).unwrap();
         match trimmed {
             IndicatorResult::Single(a) => assert_eq!(a.to_vec(), vec![3.0, 4.0]),
             other => panic!("expected Single, got {:?}", other),

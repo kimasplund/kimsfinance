@@ -196,7 +196,9 @@ impl MassIndex {
         let mut double_ema = Array1::from_elem(n, f64::NAN);
         let single_ema_sliced = single_ema.slice(s![self.ema_period - 1..]);
         let double_ema_sliced = ema(single_ema_sliced, self.ema_period);
-        double_ema.slice_mut(s![self.ema_period - 1..]).assign(&double_ema_sliced);
+        double_ema
+            .slice_mut(s![self.ema_period - 1..])
+            .assign(&double_ema_sliced);
 
         // EMA ratio
         let mut ema_ratio = Array1::zeros(n);

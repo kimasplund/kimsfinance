@@ -83,8 +83,7 @@ fn test_cpu_fallback_rsi() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -123,8 +122,7 @@ fn test_cpu_fallback_atr() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -161,8 +159,7 @@ fn test_cpu_fallback_roc() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -199,8 +196,7 @@ fn test_cpu_fallback_cci() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -237,8 +233,7 @@ fn test_cpu_fallback_williamsr() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -275,8 +270,7 @@ fn test_cpu_fallback_sma() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -313,8 +307,7 @@ fn test_cpu_fallback_ema() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -351,8 +344,7 @@ fn test_cpu_fallback_macd() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -419,8 +411,7 @@ fn test_cpu_fallback_stochastic() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -476,8 +467,7 @@ fn test_cpu_fallback_bollinger_bands() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -543,8 +533,7 @@ fn test_cpu_fallback_multiple_indicators() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -605,8 +594,7 @@ fn test_force_cpu_overrides_gpu() {
         slippage: 0.0005,
         use_gpu: true,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -643,8 +631,7 @@ fn test_cpu_fallback_small_dataset() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);
@@ -682,8 +669,7 @@ fn test_cpu_fallback_large_dataset() {
         slippage: 0.0005,
         use_gpu: false,
         force_cpu: true,
-            ..Default::default()
-        
+        ..Default::default()
     };
 
     let engine = BacktestEngine::with_config(config);

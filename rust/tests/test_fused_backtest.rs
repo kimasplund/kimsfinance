@@ -96,7 +96,6 @@ mod fused_kernel_tests {
             trading_fee: 0.001,
             slippage: 0.0005,
             ..Default::default()
-        
         };
 
         // Run with Traditional mode
@@ -180,7 +179,6 @@ mod fused_kernel_tests {
             trading_fee: 0.001,
             slippage: 0.0005,
             ..Default::default()
-        
         };
 
         // Benchmark Traditional mode
@@ -239,7 +237,6 @@ mod fused_kernel_tests {
             trading_fee: 0.001,
             slippage: 0.0005,
             ..Default::default()
-        
         };
 
         // Test with small batch (should use Traditional)
@@ -287,8 +284,7 @@ mod fused_kernel_tests {
                 initial_capital: 10_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .execution_mode(ExecutionMode::Fused);
 

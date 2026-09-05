@@ -146,7 +146,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Binance BTCUSDT Futures Backtesting ===\n");
 
     // Configuration
-    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
+    let data_path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2024-05-31.zip";
     let timeframe = Timeframe::minutes(5);
 
     println!("Loading data from: {}", data_path);

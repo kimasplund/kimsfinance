@@ -394,7 +394,9 @@ impl VolumeProfileBuilder {
         }
 
         // Build profile for each bucket
-        let mut profiles: Vec<VolumeProfile> = buckets.into_values().map(|bucket_trades| self.build(&bucket_trades))
+        let mut profiles: Vec<VolumeProfile> = buckets
+            .into_values()
+            .map(|bucket_trades| self.build(&bucket_trades))
             .collect();
 
         // Sort by timestamp

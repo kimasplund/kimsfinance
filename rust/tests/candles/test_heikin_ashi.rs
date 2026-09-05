@@ -4,7 +4,7 @@
 //! Tests formula correctness, sequential dependencies, and known-good implementations.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{execute_batch, GpuDevice, HeikinAshiBatch};
+use kimsfinance_core::gpu::{GpuDevice, HeikinAshiBatch, execute_batch};
 
 /// Known-good Heikin-Ashi calculation (CPU reference)
 #[cfg(feature = "gpu")]
@@ -315,11 +315,26 @@ fn test_heikin_ashi_batch_processing() -> Result<(), Box<dyn std::error::Error>>
     // Process 3 different symbols in one batch
     let symbols = vec![
         // Symbol 1
-        (vec![100.0, 102.0, 104.0], vec![103.0, 105.0, 106.0], vec![99.0, 101.0, 103.0], vec![102.0, 104.0, 105.0]),
+        (
+            vec![100.0, 102.0, 104.0],
+            vec![103.0, 105.0, 106.0],
+            vec![99.0, 101.0, 103.0],
+            vec![102.0, 104.0, 105.0],
+        ),
         // Symbol 2
-        (vec![50.0, 51.0, 52.0], vec![52.0, 53.0, 54.0], vec![49.0, 50.0, 51.0], vec![51.0, 52.0, 53.0]),
+        (
+            vec![50.0, 51.0, 52.0],
+            vec![52.0, 53.0, 54.0],
+            vec![49.0, 50.0, 51.0],
+            vec![51.0, 52.0, 53.0],
+        ),
         // Symbol 3
-        (vec![200.0, 198.0, 196.0], vec![202.0, 200.0, 198.0], vec![198.0, 196.0, 194.0], vec![199.0, 197.0, 195.0]),
+        (
+            vec![200.0, 198.0, 196.0],
+            vec![202.0, 200.0, 198.0],
+            vec![198.0, 196.0, 194.0],
+            vec![199.0, 197.0, 195.0],
+        ),
     ];
 
     let mut batch = HeikinAshiBatch::new();
@@ -339,7 +354,12 @@ fn test_heikin_ashi_batch_processing() -> Result<(), Box<dyn std::error::Error>>
 
     // Verify each symbol processed correctly
     for (i, result) in results.iter().enumerate() {
-        assert_eq!(result.len(), 12, "Symbol {} should have 12 values (3 candles * 4)", i);
+        assert_eq!(
+            result.len(),
+            12,
+            "Symbol {} should have 12 values (3 candles * 4)",
+            i
+        );
         println!("Symbol {} HA candles computed: {:?}", i + 1, &result[..4]);
     }
 

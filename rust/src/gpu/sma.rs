@@ -326,7 +326,9 @@ pub fn sma_gpu_f32(
 ) -> Result<Array1<f64>, GpuError> {
     let n = close.len();
     if period < 1 {
-        return Err(GpuError::InvalidParameter("Period must be >= 1".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "Period must be >= 1".to_string(),
+        ));
     }
     if n < period {
         return Err(GpuError::InvalidParameter(format!(
@@ -388,7 +390,9 @@ pub fn sma_on_device(
     stream: Option<&Arc<CudaStream>>,
 ) -> Result<(), GpuError> {
     if period < 1 {
-        return Err(GpuError::InvalidParameter("Period must be >= 1".to_string()));
+        return Err(GpuError::InvalidParameter(
+            "Period must be >= 1".to_string(),
+        ));
     }
     let kernel = device.get_or_load_function(SMA_KERNEL_F32, "sma_kernel_f32")?;
     let kernel_stream = stream.unwrap_or(&device.stream);
@@ -941,7 +945,12 @@ mod tests {
             let f32_out = sma_gpu_f32(&device, &close, period, None).expect("f32 SMA failed");
             for i in 0..n {
                 if f64_out[i].is_nan() {
-                    assert!(f32_out[i].is_nan(), "period {} idx {}: f32 not NaN", period, i);
+                    assert!(
+                        f32_out[i].is_nan(),
+                        "period {} idx {}: f32 not NaN",
+                        period,
+                        i
+                    );
                     continue;
                 }
                 let rel = (f64_out[i] - f32_out[i]).abs() / f64_out[i].abs().max(1.0);
@@ -1133,7 +1142,13 @@ mod tests {
                 if a[i].is_nan() {
                     assert!(b[i].is_nan());
                 } else {
-                    assert!((a[i] - b[i]).abs() < 1e-3, "mismatch at {}: {} vs {}", i, a[i], b[i]);
+                    assert!(
+                        (a[i] - b[i]).abs() < 1e-3,
+                        "mismatch at {}: {} vs {}",
+                        i,
+                        a[i],
+                        b[i]
+                    );
                 }
             }
         }

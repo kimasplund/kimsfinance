@@ -571,7 +571,8 @@ fn test_parity_real_binance_data() {
 
     // This test validates parity against real Binance data (4.6M trades)
     // Path should be updated to match your local data location
-    let path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
+    let path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
 
     // Skip test if file doesn't exist
     if !std::path::Path::new(path).exists() {

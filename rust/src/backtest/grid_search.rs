@@ -89,11 +89,11 @@ use super::core::{ParameterGrid, ParameterRange};
 use super::engine::BacktestConfig;
 use super::optimizer::OptimizerResult;
 #[cfg(feature = "gpu")]
-use std::time::Instant;
-#[cfg(feature = "gpu")]
 use crate::gpu::GpuError;
 #[cfg(feature = "gpu")]
 use crate::gpu::device::GpuDevice;
+#[cfg(feature = "gpu")]
+use std::time::Instant;
 
 #[cfg(not(feature = "gpu"))]
 use crate::cpu::sequential::GpuError;
@@ -101,7 +101,6 @@ use crate::cpu::sequential::GpuError;
 use ndarray::Array1;
 #[cfg(feature = "gpu")]
 use std::sync::Arc;
-
 
 /// GPU-accelerated grid search optimizer
 ///

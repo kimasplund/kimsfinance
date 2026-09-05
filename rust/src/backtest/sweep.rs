@@ -440,10 +440,8 @@ pub fn run_parameter_sweep_cpu(
     let combinations = if param_names.is_empty() {
         vec![HashMap::new()]
     } else {
-        let param_pairs: Vec<(String, Vec<f64>)> = param_names
-            .into_iter()
-            .zip(param_values)
-            .collect();
+        let param_pairs: Vec<(String, Vec<f64>)> =
+            param_names.into_iter().zip(param_values).collect();
         generate_parameter_combinations(&param_pairs)
     };
 

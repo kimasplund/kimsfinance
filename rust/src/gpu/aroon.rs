@@ -182,9 +182,7 @@ pub fn aroon_gpu(
         })?;
     exec_stream
         .memcpy_htod(&pinned_low.as_slice()[..n], &mut d_low)
-        .map_err(|e| {
-            GpuError::MemoryCopyError(format!("Failed to copy low to device: {:?}", e))
-        })?;
+        .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy low to device: {:?}", e)))?;
 
     // Allocate output buffers on selected stream
     let mut d_aroon_up = exec_stream.alloc_zeros::<f64>(n).map_err(|e| {

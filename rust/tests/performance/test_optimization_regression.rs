@@ -27,10 +27,13 @@ use std::time::Instant;
 
 // Helper module for generating test data
 mod test_data {
-    use rand::prelude::*;
     use rand::SeedableRng;
+    use rand::prelude::*;
 
-    pub fn generate_realistic_prices(n: usize, seed: u64) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
+    pub fn generate_realistic_prices(
+        n: usize,
+        seed: u64,
+    ) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
         let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
 
         let mut open = Vec::with_capacity(n);
@@ -67,9 +70,9 @@ mod test_data {
         (0..n_strategies)
             .map(|_| {
                 vec![
-                    rng.gen_range(10.0..20.0),  // RSI period
-                    rng.gen_range(20.0..40.0),  // Buy threshold
-                    rng.gen_range(60.0..80.0),  // Sell threshold
+                    rng.gen_range(10.0..20.0), // RSI period
+                    rng.gen_range(20.0..40.0), // Buy threshold
+                    rng.gen_range(60.0..80.0), // Sell threshold
                 ]
             })
             .collect()
@@ -112,14 +115,20 @@ mod tests {
             trading_fee: 0.001,
             slippage: 0.0005,
             ..Default::default()
-        
         };
 
         // Warmup (5 iterations)
         for _ in 0..5 {
             let _ = BatchBacktestSweep::new(device.clone())
                 .strategy_type(StrategyType::RsiCrossover)
-                .data_ohlcv(&timestamps, &open_arr, &high_arr, &low_arr, &close_arr, &volume_arr)
+                .data_ohlcv(
+                    &timestamps,
+                    &open_arr,
+                    &high_arr,
+                    &low_arr,
+                    &close_arr,
+                    &volume_arr,
+                )
                 .parameters_batch(&params)
                 .config(config.clone())
                 .execute()
@@ -135,7 +144,14 @@ mod tests {
 
             let results = BatchBacktestSweep::new(device.clone())
                 .strategy_type(StrategyType::RsiCrossover)
-                .data_ohlcv(&timestamps, &open_arr, &high_arr, &low_arr, &close_arr, &volume_arr)
+                .data_ohlcv(
+                    &timestamps,
+                    &open_arr,
+                    &high_arr,
+                    &low_arr,
+                    &close_arr,
+                    &volume_arr,
+                )
                 .parameters_batch(&params)
                 .config(config.clone())
                 .execute()
@@ -144,9 +160,7 @@ mod tests {
             total_time += start.elapsed().as_secs_f64();
 
             if sharpe_ratios.is_empty() {
-                sharpe_ratios = results.results.iter()
-                    .map(|r| r.sharpe_ratio)
-                    .collect();
+                sharpe_ratios = results.results.iter().map(|r| r.sharpe_ratio).collect();
             }
         }
 
@@ -175,14 +189,20 @@ mod tests {
             trading_fee: 0.001,
             slippage: 0.0005,
             ..Default::default()
-        
         };
 
         // Warmup (5 iterations)
         for _ in 0..5 {
             let _ = BatchBacktestSweep::new(device.clone())
                 .strategy_type(StrategyType::RsiCrossover)
-                .data_ohlcv(&timestamps, &open_arr, &high_arr, &low_arr, &close_arr, &volume_arr)
+                .data_ohlcv(
+                    &timestamps,
+                    &open_arr,
+                    &high_arr,
+                    &low_arr,
+                    &close_arr,
+                    &volume_arr,
+                )
                 .parameters_batch(&params)
                 .config(config.clone())
                 .use_persistent_kernels(true)
@@ -199,7 +219,14 @@ mod tests {
 
             let results = BatchBacktestSweep::new(device.clone())
                 .strategy_type(StrategyType::RsiCrossover)
-                .data_ohlcv(&timestamps, &open_arr, &high_arr, &low_arr, &close_arr, &volume_arr)
+                .data_ohlcv(
+                    &timestamps,
+                    &open_arr,
+                    &high_arr,
+                    &low_arr,
+                    &close_arr,
+                    &volume_arr,
+                )
                 .parameters_batch(&params)
                 .config(config.clone())
                 .use_persistent_kernels(true)
@@ -209,9 +236,7 @@ mod tests {
             total_time += start.elapsed().as_secs_f64();
 
             if sharpe_ratios.is_empty() {
-                sharpe_ratios = results.results.iter()
-                    .map(|r| r.sharpe_ratio)
-                    .collect();
+                sharpe_ratios = results.results.iter().map(|r| r.sharpe_ratio).collect();
             }
         }
 
@@ -225,16 +250,16 @@ mod tests {
 
         for (i, (t, o)) in traditional.iter().zip(optimized.iter()).enumerate() {
             let diff = (t - o).abs();
-            let rel_diff = if t.abs() > 1e-6 {
-                diff / t.abs()
-            } else {
-                diff
-            };
+            let rel_diff = if t.abs() > 1e-6 { diff / t.abs() } else { diff };
 
             assert!(
                 rel_diff < tolerance,
                 "Strategy {} mismatch: traditional={:.6}, optimized={:.6}, rel_diff={:.6} (tolerance={:.6})",
-                i, t, o, rel_diff, tolerance
+                i,
+                t,
+                o,
+                rel_diff,
+                tolerance
             );
         }
     }
@@ -253,22 +278,30 @@ mod tests {
         let n_candles = 10000;
 
         println!("\n=== Persistent Kernels Regression Test ===");
-        println!("Configuration: {} strategies × {} candles", n_strategies, n_candles);
+        println!(
+            "Configuration: {} strategies × {} candles",
+            n_strategies, n_candles
+        );
 
         // Run traditional baseline
         println!("Running traditional kernels...");
-        let (traditional_results, traditional_time) = run_traditional_batch(&device, n_strategies, n_candles);
+        let (traditional_results, traditional_time) =
+            run_traditional_batch(&device, n_strategies, n_candles);
         println!("  Traditional: {:.2} ms", traditional_time * 1000.0);
 
         // Run persistent kernels
         println!("Running persistent kernels...");
-        let (persistent_results, persistent_time) = run_persistent_batch(&device, n_strategies, n_candles);
+        let (persistent_results, persistent_time) =
+            run_persistent_batch(&device, n_strategies, n_candles);
         println!("  Persistent:  {:.2} ms", persistent_time * 1000.0);
 
         // Validate accuracy
         println!("Validating accuracy...");
         assert_results_match(&traditional_results, &persistent_results, TOLERANCE);
-        println!("  ✓ Results match within {:.2}% tolerance", TOLERANCE * 100.0);
+        println!(
+            "  ✓ Results match within {:.2}% tolerance",
+            TOLERANCE * 100.0
+        );
 
         // Validate speedup
         let speedup = traditional_time / persistent_time;
@@ -278,7 +311,8 @@ mod tests {
         assert!(
             speedup >= MIN_SPEEDUP,
             "Persistent kernels regression detected! Speedup {:.2}x < {:.2}x minimum",
-            speedup, MIN_SPEEDUP
+            speedup,
+            MIN_SPEEDUP
         );
 
         println!("  ✓ Speedup validated (>= {:.2}x)", MIN_SPEEDUP);
@@ -298,13 +332,17 @@ mod tests {
         let n_candles = 10000;
 
         println!("\n=== Phase 3 Optimization Regression Test ===");
-        println!("Configuration: {} strategies × {} candles", n_strategies, n_candles);
+        println!(
+            "Configuration: {} strategies × {} candles",
+            n_strategies, n_candles
+        );
 
         // This test would compare persistent vs phase3-optimized persistent
         // For now, just validate Phase 3 is faster than traditional
 
         println!("Running traditional kernels...");
-        let (traditional_results, traditional_time) = run_traditional_batch(&device, n_strategies, n_candles);
+        let (traditional_results, traditional_time) =
+            run_traditional_batch(&device, n_strategies, n_candles);
         println!("  Traditional: {:.2} ms", traditional_time * 1000.0);
 
         // TODO: Implement Phase 3 optimized version
@@ -316,7 +354,10 @@ mod tests {
         // Validate accuracy
         println!("Validating accuracy...");
         assert_results_match(&traditional_results, &phase3_results, TOLERANCE);
-        println!("  ✓ Results match within {:.2}% tolerance", TOLERANCE * 100.0);
+        println!(
+            "  ✓ Results match within {:.2}% tolerance",
+            TOLERANCE * 100.0
+        );
 
         // Validate speedup
         let speedup = traditional_time / phase3_time;
@@ -326,7 +367,8 @@ mod tests {
         assert!(
             speedup >= MIN_SPEEDUP,
             "Phase 3 optimization regression detected! Speedup {:.2}x < {:.2}x minimum",
-            speedup, MIN_SPEEDUP
+            speedup,
+            MIN_SPEEDUP
         );
 
         println!("  ✓ Speedup validated (>= {:.2}x)", MIN_SPEEDUP);
@@ -346,21 +388,29 @@ mod tests {
         let n_candles = 10000;
 
         println!("\n=== Combined Optimizations Regression Test ===");
-        println!("Configuration: {} strategies × {} candles", n_strategies, n_candles);
+        println!(
+            "Configuration: {} strategies × {} candles",
+            n_strategies, n_candles
+        );
 
         println!("Running traditional kernels (baseline)...");
-        let (traditional_results, traditional_time) = run_traditional_batch(&device, n_strategies, n_candles);
+        let (traditional_results, traditional_time) =
+            run_traditional_batch(&device, n_strategies, n_candles);
         println!("  Baseline: {:.2} ms", traditional_time * 1000.0);
 
         // TODO: Run with both persistent + phase3 enabled
         println!("Running combined optimizations...");
-        let (combined_results, combined_time) = run_persistent_batch(&device, n_strategies, n_candles);
+        let (combined_results, combined_time) =
+            run_persistent_batch(&device, n_strategies, n_candles);
         println!("  Combined: {:.2} ms", combined_time * 1000.0);
 
         // Validate accuracy
         println!("Validating accuracy...");
         assert_results_match(&traditional_results, &combined_results, TOLERANCE);
-        println!("  ✓ Results match within {:.2}% tolerance", TOLERANCE * 100.0);
+        println!(
+            "  ✓ Results match within {:.2}% tolerance",
+            TOLERANCE * 100.0
+        );
 
         // Validate combined speedup
         let speedup = traditional_time / combined_time;
@@ -370,7 +420,8 @@ mod tests {
         assert!(
             speedup >= MIN_SPEEDUP,
             "Combined optimizations regression detected! Speedup {:.2}x < {:.2}x minimum",
-            speedup, MIN_SPEEDUP
+            speedup,
+            MIN_SPEEDUP
         );
 
         println!("  ✓ Combined speedup validated (>= {:.2}x)", MIN_SPEEDUP);
@@ -408,16 +459,23 @@ mod tests {
         // Validate sub-linear scaling
         // 10x strategies should not take 10x time
         let ratio_100_to_1000 = times[2] / times[0]; // 1000 / 100 = 10x strategies
-        println!("\nScaling ratio (100 → 1000 strategies): {:.2}x", ratio_100_to_1000);
+        println!(
+            "\nScaling ratio (100 → 1000 strategies): {:.2}x",
+            ratio_100_to_1000
+        );
 
         const MAX_SCALING_RATIO: f64 = 5.0; // Should be < 10x (ideally < 3x)
         assert!(
             ratio_100_to_1000 < MAX_SCALING_RATIO,
             "Scaling regression detected! 10x strategies took {:.2}x time (max: {:.2}x)",
-            ratio_100_to_1000, MAX_SCALING_RATIO
+            ratio_100_to_1000,
+            MAX_SCALING_RATIO
         );
 
-        println!("  ✓ Sub-linear scaling validated (< {:.2}x)", MAX_SCALING_RATIO);
+        println!(
+            "  ✓ Sub-linear scaling validated (< {:.2}x)",
+            MAX_SCALING_RATIO
+        );
         println!("\n✓ Test PASSED\n");
     }
 }

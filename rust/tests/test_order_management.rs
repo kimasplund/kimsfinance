@@ -3,8 +3,7 @@
 //! Tests all 12+ order types and complex order scenarios
 
 use kimsfinance_core::backtest::{
-    MarketSnapshot, MatchingEngine, OHLCVBar, Order, OrderSide, OrderStatus,
-    OrderType, TimeInForce,
+    MarketSnapshot, MatchingEngine, OHLCVBar, Order, OrderSide, OrderStatus, OrderType, TimeInForce,
 };
 
 fn create_test_bar(timestamp: i64, close: f64, volume: f64, low: f64, high: f64) -> OHLCVBar {

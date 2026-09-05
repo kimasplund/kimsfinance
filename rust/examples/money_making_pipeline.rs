@@ -45,14 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         lookback_months: 12,
     };
 
-    println!(
-        "  Strategy: {}",
-        discovery_params.name
-    );
-    println!(
-        "  Symbols: {}",
-        discovery_params.symbols.join(", ")
-    );
+    println!("  Strategy: {}", discovery_params.name);
+    println!("  Symbols: {}", discovery_params.symbols.join(", "));
     println!(
         "  Testing {} parameter combinations",
         discovery_params.periods_to_test.len() * discovery_params.rsi_thresholds.len()
@@ -62,7 +56,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let candidates = discover_strategy_parameters(&discovery_params)?;
     let discovery_time = t0.elapsed().as_secs_f64();
 
-    println!("  Found {} candidate strategies in {:.1}s", candidates.len(), discovery_time);
+    println!(
+        "  Found {} candidate strategies in {:.1}s",
+        candidates.len(),
+        discovery_time
+    );
     for (i, cand) in candidates.iter().take(3).enumerate() {
         println!(
             "    Rank {}: period={}, rsi={}, sharpe={:.2}, dd={:.1}%",
@@ -109,7 +107,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Validation time: {:.1}s", validation_time);
 
     if !validation.is_approved {
-        println!("\n  ❌ Strategy rejected: OOS degradation too high ({:.1}%)", validation.degradation * 100.0);
+        println!(
+            "\n  ❌ Strategy rejected: OOS degradation too high ({:.1}%)",
+            validation.degradation * 100.0
+        );
         println!("  ➜ Try different parameters or strategy logic");
         println!();
         return Ok(());
@@ -124,18 +125,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("─────────────────────────────────");
 
     let fee_structure = FeeStructure {
-        maker_fee: 0.0002,      // 0.02% (Binance spot)
-        taker_fee: 0.0004,      // 0.04% (Binance spot)
-        slippage_bps: 1.5,      // 1.5 bps average slippage
+        maker_fee: 0.0002,         // 0.02% (Binance spot)
+        taker_fee: 0.0004,         // 0.04% (Binance spot)
+        slippage_bps: 1.5,         // 1.5 bps average slippage
         funding_rate_annual: 0.12, // 12% annual (futures estimate)
-        min_trade_value: 10.0,  // $10 minimum
+        min_trade_value: 10.0,     // $10 minimum
     };
 
     println!("  Exchange Fees (Binance):");
     println!("    Maker:  {:.2}%", fee_structure.maker_fee * 100.0);
     println!("    Taker:  {:.2}%", fee_structure.taker_fee * 100.0);
-    println!("  Slippage:  {:.1} bps ({:.3}%)", fee_structure.slippage_bps, fee_structure.slippage_bps / 100.0);
-    println!("  Funding (futures): {:.1}% per annum", fee_structure.funding_rate_annual * 100.0);
+    println!(
+        "  Slippage:  {:.1} bps ({:.3}%)",
+        fee_structure.slippage_bps,
+        fee_structure.slippage_bps / 100.0
+    );
+    println!(
+        "  Funding (futures): {:.1}% per annum",
+        fee_structure.funding_rate_annual * 100.0
+    );
     println!();
 
     // Estimate fees per trade
@@ -149,12 +157,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("    Entry fee (taker): ${:.2}", entry_fee);
     println!("    Exit fee (taker):  ${:.2}", exit_fee);
     println!("    Slippage:          ${:.2}", slippage);
-    println!("    Total per RT:      ${:.2} ({:.3}%)", fee_per_round_trip, (fee_per_round_trip / avg_trade_size) * 100.0);
+    println!(
+        "    Total per RT:      ${:.2} ({:.3}%)",
+        fee_per_round_trip,
+        (fee_per_round_trip / avg_trade_size) * 100.0
+    );
     println!();
 
     // Calculate total fees for backtest
     let total_fees = fee_per_round_trip * paper_result.total_trades as f64;
-    println!("  Total Fees Over {} Trades: ${:.0}", paper_result.total_trades, total_fees);
+    println!(
+        "  Total Fees Over {} Trades: ${:.0}",
+        paper_result.total_trades, total_fees
+    );
 
     // Fee-adjusted results
     let gross_return = paper_result.final_capital - paper_config.initial_capital;
@@ -164,9 +179,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fee_drag = (total_fees / gross_return.abs().max(1.0)) * 100.0;
 
     println!("  Return Analysis:");
-    println!("    Gross Return:      ${:+.0} ({:+.1}%)", gross_return, ((paper_result.final_capital / paper_config.initial_capital) - 1.0) * 100.0);
+    println!(
+        "    Gross Return:      ${:+.0} ({:+.1}%)",
+        gross_return,
+        ((paper_result.final_capital / paper_config.initial_capital) - 1.0) * 100.0
+    );
     println!("    Total Fees:        $-{:.0}", total_fees);
-    println!("    Net Return:        ${:+.0} ({:+.1}%)", net_return, net_return_pct);
+    println!(
+        "    Net Return:        ${:+.0} ({:+.1}%)",
+        net_return, net_return_pct
+    );
     println!("    Fee Drag:          {:.1}% of gross returns", fee_drag);
     println!();
 
@@ -174,9 +196,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let breakeven_trades = ((total_fees / avg_trade_size) * 100.0).ceil() as usize;
     let breakeven_pct = (total_fees / paper_config.initial_capital) * 100.0;
     println!("  Breakeven Analysis:");
-    println!("    Need {:.1}% average return per trade to break even", breakeven_pct / paper_result.total_trades as f64);
-    println!("    Breakeven trade count: {} trades ({:.0}% of actual)", breakeven_trades, (breakeven_trades as f64 / paper_result.total_trades as f64) * 100.0);
-    println!("    Win rate needs to be >= {:.1}% to be profitable", (breakeven_trades as f64 / paper_result.total_trades as f64) * 100.0);
+    println!(
+        "    Need {:.1}% average return per trade to break even",
+        breakeven_pct / paper_result.total_trades as f64
+    );
+    println!(
+        "    Breakeven trade count: {} trades ({:.0}% of actual)",
+        breakeven_trades,
+        (breakeven_trades as f64 / paper_result.total_trades as f64) * 100.0
+    );
+    println!(
+        "    Win rate needs to be >= {:.1}% to be profitable",
+        (breakeven_trades as f64 / paper_result.total_trades as f64) * 100.0
+    );
     println!();
 
     if net_return <= 0.0 {
@@ -188,7 +220,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("  ⚠️  {:.1}% of returns consumed by fees", fee_drag);
-    println!("  ⚠️  Net Sharpe would be {:.2} (vs {:.2} gross)", paper_result.sharpe * (net_return / gross_return), paper_result.sharpe);
+    println!(
+        "  ⚠️  Net Sharpe would be {:.2} (vs {:.2} gross)",
+        paper_result.sharpe * (net_return / gross_return),
+        paper_result.sharpe
+    );
     println!();
 
     // =========================================================================
@@ -212,10 +248,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let paper_result = simulate_paper_trading(&paper_config)?;
     let paper_time = t0.elapsed().as_secs_f64();
 
-    println!(
-        "  Initial Capital: ${:.0}",
-        paper_config.initial_capital
-    );
+    println!("  Initial Capital: ${:.0}", paper_config.initial_capital);
     println!(
         "  Final Capital (net fees): ${:.0} ({:+.1}%)",
         paper_result.final_capital,
@@ -237,7 +270,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Paper trading duration: {:.1}s", paper_time);
 
     if paper_result.max_drawdown > paper_config.max_drawdown_stop {
-        println!("\n  ⚠️  Max drawdown exceeded hard stop ({:.1}%)", paper_config.max_drawdown_stop * 100.0);
+        println!(
+            "\n  ⚠️  Max drawdown exceeded hard stop ({:.1}%)",
+            paper_config.max_drawdown_stop * 100.0
+        );
         println!("  ➜ Increase position sizing flexibility or adjust risk per trade");
         println!();
         return Ok(());
@@ -287,8 +323,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     println!(
         "  Scaling Range: {:.1}x to {:.1}x",
-        risk_config.min_scaling_factor,
-        risk_config.max_scaling_factor
+        risk_config.min_scaling_factor, risk_config.max_scaling_factor
     );
     println!();
 
@@ -333,10 +368,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Parameters:   period={}, rsi={}",
         best_candidate.period, best_candidate.rsi_threshold
     );
-    println!("Expected Return (net fees): {:.1}% per month", (paper_result.final_capital / paper_config.initial_capital - 1.0) * 100.0 / 12.0);
+    println!(
+        "Expected Return (net fees): {:.1}% per month",
+        (paper_result.final_capital / paper_config.initial_capital - 1.0) * 100.0 / 12.0
+    );
     println!("Max Drawdown:    {:.1}%", paper_result.max_drawdown * 100.0);
     println!("Sharpe Ratio (net):    {:.2}", paper_result.sharpe);
-    println!("Fees Impact: ${:.0} ({:.1}% of capital)", paper_result.fees_paid, (paper_result.fees_paid / paper_config.initial_capital) * 100.0);
+    println!(
+        "Fees Impact: ${:.0} ({:.1}% of capital)",
+        paper_result.fees_paid,
+        (paper_result.fees_paid / paper_config.initial_capital) * 100.0
+    );
     println!();
     println!("NEXT STEPS:");
     println!("  1. Start with 5-10% of target capital");
@@ -344,7 +386,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  3. Compare live fees vs. backtest assumptions (usually higher)");
     println!("  4. Revalidate weekly if market regime changes");
     println!("  5. Scale up gradually if live metrics match backtests (within 10%)");
-    println!("  6. Kill switch: Close all positions if drawdown > {:.1}%", risk_config.max_portfolio_risk * 100.0);
+    println!(
+        "  6. Kill switch: Close all positions if drawdown > {:.1}%",
+        risk_config.max_portfolio_risk * 100.0
+    );
     println!();
 
     Ok(())
@@ -365,10 +410,7 @@ struct StrategyCandidate {
 
 impl StrategyCandidate {
     fn name(&self) -> String {
-        format!(
-            "Trend({})+RSI({})",
-            self.period, self.rsi_threshold
-        )
+        format!("Trend({})+RSI({})", self.period, self.rsi_threshold)
     }
 }
 
@@ -452,7 +494,9 @@ struct GoLiveReadiness {
 // Implementation (Simplified for demonstration)
 // ============================================================================
 
-fn discover_strategy_parameters(config: &DiscoveryConfig) -> Result<Vec<StrategyCandidate>, Box<dyn std::error::Error>> {
+fn discover_strategy_parameters(
+    config: &DiscoveryConfig,
+) -> Result<Vec<StrategyCandidate>, Box<dyn std::error::Error>> {
     // In real implementation: Use GPU batch backtesting to sweep parameters
     // For demo: Return a few candidates sorted by Sharpe
     let mut candidates = vec![
@@ -483,7 +527,9 @@ fn discover_strategy_parameters(config: &DiscoveryConfig) -> Result<Vec<Strategy
     Ok(candidates)
 }
 
-fn validate_walk_forward(config: &ValidationConfig) -> Result<ValidationResult, Box<dyn std::error::Error>> {
+fn validate_walk_forward(
+    config: &ValidationConfig,
+) -> Result<ValidationResult, Box<dyn std::error::Error>> {
     // In real implementation: Split data into 4 quarters, test on 3, validate on 1
     // Rotate the split and aggregate results
     let pass_count = 3;
@@ -502,7 +548,9 @@ fn validate_walk_forward(config: &ValidationConfig) -> Result<ValidationResult, 
     })
 }
 
-fn simulate_paper_trading(config: &PaperTradingConfig) -> Result<PaperTradingResult, Box<dyn std::error::Error>> {
+fn simulate_paper_trading(
+    config: &PaperTradingConfig,
+) -> Result<PaperTradingResult, Box<dyn std::error::Error>> {
     // In real implementation: Simulate trades with realistic slippage, commissions, etc.
     // Track capital, drawdown, Sharpe, recovery time
     let gross_final = config.initial_capital * 1.12; // 12% gross return
@@ -545,10 +593,7 @@ fn check_go_live_readiness(
     checks.push((
         "Out-of-sample validation pass rate >= 75%".to_string(),
         val_pass,
-        format!(
-            "{}/{}",
-            validation.pass_count, validation.total_periods
-        ),
+        format!("{}/{}", validation.pass_count, validation.total_periods),
     ));
 
     // Check 2: OOS degradation

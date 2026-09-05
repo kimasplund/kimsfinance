@@ -2,9 +2,7 @@
 //!
 //! Exposes Rust-accelerated pattern recognition to Python with NumPy integration.
 
-use crate::indicators::candlestick::{
-    CandlestickPattern, PatternConfig, recognize_patterns,
-};
+use crate::indicators::candlestick::{CandlestickPattern, PatternConfig, recognize_patterns};
 use numpy::PyReadonlyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
@@ -387,9 +385,10 @@ pub fn filter_patterns_by_type(
     for pattern_dict in patterns {
         if let Ok(ptype) = pattern_dict.get_item("type")
             && let Some(ptype_str) = ptype.and_then(|v| v.extract::<String>().ok())
-                && ptype_str == pattern_type {
-                    result_list.append(pattern_dict)?;
-                }
+            && ptype_str == pattern_type
+        {
+            result_list.append(pattern_dict)?;
+        }
     }
 
     Ok(result_list.into())
@@ -428,24 +427,27 @@ pub fn get_pattern_statistics(py: Python, patterns: Vec<Bound<PyDict>>) -> PyRes
         total += 1;
 
         if let Ok(Some(ptype)) = pattern_dict.get_item("type")
-            && let Ok(ptype_str) = ptype.extract::<String>() {
-                match ptype_str.as_str() {
-                    "bullish" => bullish += 1,
-                    "bearish" => bearish += 1,
-                    "neutral" => neutral += 1,
-                    _ => {}
-                }
+            && let Ok(ptype_str) = ptype.extract::<String>()
+        {
+            match ptype_str.as_str() {
+                "bullish" => bullish += 1,
+                "bearish" => bearish += 1,
+                "neutral" => neutral += 1,
+                _ => {}
             }
+        }
 
         if let Ok(Some(conf)) = pattern_dict.get_item("confidence")
-            && let Ok(conf_val) = conf.extract::<f64>() {
-                confidence_sum += conf_val;
-            }
+            && let Ok(conf_val) = conf.extract::<f64>()
+        {
+            confidence_sum += conf_val;
+        }
 
         if let Ok(Some(name)) = pattern_dict.get_item("pattern")
-            && let Ok(name_str) = name.extract::<String>() {
-                *pattern_counts.entry(name_str).or_insert(0) += 1;
-            }
+            && let Ok(name_str) = name.extract::<String>()
+        {
+            *pattern_counts.entry(name_str).or_insert(0) += 1;
+        }
     }
 
     let dict = PyDict::new(py);

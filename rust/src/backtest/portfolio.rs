@@ -465,14 +465,14 @@ impl PortfolioBacktest {
 
         // Backtest loop
         for (i, &timestamp) in common_timestamps.iter().enumerate() {
-
             // Build bar data for all assets
             let mut bars = HashMap::new();
             for asset in &self.assets {
                 if let Some(asset_idx) = asset.timestamps.iter().position(|&t| t == timestamp)
-                    && let Some(bar) = asset.bar(asset_idx) {
-                        bars.insert(asset.symbol.clone(), bar);
-                    }
+                    && let Some(bar) = asset.bar(asset_idx)
+                {
+                    bars.insert(asset.symbol.clone(), bar);
+                }
             }
 
             // Build indicator data for this bar

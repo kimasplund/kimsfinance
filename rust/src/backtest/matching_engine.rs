@@ -711,9 +711,10 @@ impl MatchingEngine {
                     if filled_order_ids.contains(parent_id) {
                         for &child_id in child_ids {
                             if let Some(child) = self.pending_orders.get_mut(&child_id)
-                                && child.status == OrderStatus::Created {
-                                    child.set_status(OrderStatus::Pending);
-                                }
+                                && child.status == OrderStatus::Created
+                            {
+                                child.set_status(OrderStatus::Pending);
+                            }
                         }
                     }
                 }
@@ -726,9 +727,10 @@ impl MatchingEngine {
                     if filled_order_ids.contains(entry_id) {
                         for &id in &[*stop_loss_id, *take_profit_id] {
                             if let Some(order) = self.pending_orders.get_mut(&id)
-                                && order.status == OrderStatus::Created {
-                                    order.set_status(OrderStatus::Pending);
-                                }
+                                && order.status == OrderStatus::Created
+                            {
+                                order.set_status(OrderStatus::Pending);
+                            }
                         }
                     }
                     // If either SL or TP is filled, cancel the other (OCO behavior)
@@ -797,7 +799,10 @@ mod tests {
         // Price above limit - should not fill
         let market1 = MarketSnapshot::new(1000, create_test_bar(50000.0, 100.0));
         let fills1 = engine.match_orders(&market1);
-        println!("low: {}, limit: {}, fills1: {:?}", market1.bar.low, 49900.0, fills1);
+        println!(
+            "low: {}, limit: {}, fills1: {:?}",
+            market1.bar.low, 49900.0, fills1
+        );
         assert_eq!(fills1.len(), 0);
 
         // Price below limit - should fill

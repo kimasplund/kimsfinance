@@ -582,10 +582,7 @@ impl<T> PinnedBufferPool<T> {
     /// stream.synchronize()?; // required before plain drop-release
     /// // guard drops here → buffer returns to the pool
     /// ```
-    pub fn acquire_guard(
-        pool: &Arc<Mutex<Self>>,
-        size: usize,
-    ) -> Result<PinnedGuard<T>, GpuError> {
+    pub fn acquire_guard(pool: &Arc<Mutex<Self>>, size: usize) -> Result<PinnedGuard<T>, GpuError> {
         let buffer = pool.lock().acquire(size)?;
         Ok(PinnedGuard {
             buffer: Some(buffer),
@@ -872,7 +869,11 @@ mod tests {
         lens.insert(pos, 500);
 
         // Whole list stays descending after every insert
-        assert!(lens.windows(2).all(|w| w[0] >= w[1]), "not descending: {:?}", lens);
+        assert!(
+            lens.windows(2).all(|w| w[0] >= w[1]),
+            "not descending: {:?}",
+            lens
+        );
         assert_eq!(
             lens,
             vec![10_000_000, 8_000_000, 4_000_000, 1_000_000, 1_000_000, 500]
@@ -900,7 +901,9 @@ mod tests {
     #[test]
     fn test_default_tiers_are_sane() {
         assert!(
-            DEFAULT_PINNED_TIERS.iter().all(|&(count, size)| count > 0 && size > 0),
+            DEFAULT_PINNED_TIERS
+                .iter()
+                .all(|&(count, size)| count > 0 && size > 0),
             "tiers must have non-zero counts and sizes"
         );
         assert_eq!(PINNED_TIER_SMALL, 1_000_000);
@@ -1139,7 +1142,9 @@ mod tests {
 
         // After the stream drains, the next acquire sweeps the pending list
         device.stream.synchronize().expect("Sync failed");
-        let reused = pool.acquire(1000).expect("Reacquire after event completion");
+        let reused = pool
+            .acquire(1000)
+            .expect("Reacquire after event completion");
         assert_eq!(pool.pending_count(), 0);
 
         pool.release(reused);

@@ -12,7 +12,9 @@ use kimsfinance_core::backtest::{
     ParameterRange, Signal, Strategy,
 };
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder, IndicatorSpeed, StreamManager};
+use kimsfinance_core::gpu::{
+    AsyncAllocator, GpuDevice, IndicatorGraph, IndicatorGraphBuilder, IndicatorSpeed, StreamManager,
+};
 use ndarray::Array1;
 use std::time::Instant;
 
@@ -163,21 +165,27 @@ fn test_cuda_graph_builder_lifecycle() {
     println!("\n=== Integration Test: CUDA Graph Builder Lifecycle ===");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
-    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
+    let stream_mgr =
+        Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // Test builder creation
-    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).expect("Failed to create graph builder");
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone())
+        .expect("Failed to create graph builder");
 
     println!("✓ Graph builder created");
 
     // Test capture begin
-    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Failed to begin capture");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Fast)
+        .expect("Failed to begin capture");
     println!("✓ Graph capture started");
 
     // TODO: Add kernel launches here when cudarc supports graphs
 
     // Test end capture
-    builder.end_capture_stream(IndicatorSpeed::Fast).expect("Failed to end capture");
+    builder
+        .end_capture_stream(IndicatorSpeed::Fast)
+        .expect("Failed to end capture");
     let graph = builder.build().expect("Failed to build graph");
     println!("✓ Graph captured and instantiated");
 
@@ -196,7 +204,8 @@ fn test_cuda_graph_error_handling() {
     println!("\n=== Integration Test: CUDA Graph Error Handling ===");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
-    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
+    let stream_mgr =
+        Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // Test 1: Cannot end capture before beginning
     let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
@@ -209,7 +218,9 @@ fn test_cuda_graph_error_handling() {
 
     // Test 2: Cannot begin capture twice
     let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).unwrap();
-    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("First capture should work");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Fast)
+        .expect("First capture should work");
     let result = builder.begin_capture_stream(IndicatorSpeed::Fast);
     assert!(result.is_err(), "Should fail when beginning capture twice");
     println!("✓ Error handling for double begin_capture works");
@@ -560,7 +571,8 @@ fn test_combined_cuda_features() {
     println!("Testing stream malloc + CUDA graphs + FP8 together");
 
     let device = Arc::new(GpuDevice::new().expect("GPU required"));
-    let stream_mgr = Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
+    let stream_mgr =
+        Arc::new(StreamManager::new(device.clone()).expect("Failed to create StreamManager"));
 
     // 1. Create async allocator
     let allocator = AsyncAllocator::new(device.stream().clone(), device.device_id as i32)
@@ -576,13 +588,18 @@ fn test_combined_cuda_features() {
     println!("✓ Allocated 2 buffers via async allocator");
 
     // 3. Create CUDA graph
-    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone()).expect("Failed to create graph builder");
-    builder.begin_capture_stream(IndicatorSpeed::Fast).expect("Failed to begin capture");
+    let mut builder = IndicatorGraphBuilder::new(device.clone(), stream_mgr.clone())
+        .expect("Failed to create graph builder");
+    builder
+        .begin_capture_stream(IndicatorSpeed::Fast)
+        .expect("Failed to begin capture");
 
     // TODO: Add kernel launches here when cudarc supports graphs
     // For now, we just test the infrastructure
 
-    builder.end_capture_stream(IndicatorSpeed::Fast).expect("Failed to end capture");
+    builder
+        .end_capture_stream(IndicatorSpeed::Fast)
+        .expect("Failed to end capture");
     let graph = builder.build().expect("Failed to build graph");
     println!("✓ CUDA graph created");
 

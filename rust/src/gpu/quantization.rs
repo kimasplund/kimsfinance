@@ -276,11 +276,7 @@ impl QuantizationCalibrator {
     #[inline]
     fn inv_scale(min: f32, max: f32) -> f32 {
         let range = max - min;
-        if range > 1e-9 {
-            range / 255.0
-        } else {
-            0.0
-        }
+        if range > 1e-9 { range / 255.0 } else { 0.0 }
     }
 
     /// Per-feature inverse scales `(max - min) / 255.0` for FMA dequantization.
@@ -780,12 +776,12 @@ mod tests {
             .map(|i| {
                 let t = i as f32 / (n - 1) as f32; // 0.0..=1.0 inclusive
                 vec![
-                    t,                     // order_imbalance      [0, 1]
-                    2000.0 * t - 1000.0,   // volume_delta         [-1000, 1000]
-                    100.0 * t,             // trade_intensity      [0, 100]
-                    0.01 * t - 0.005,      // price_velocity       [-0.005, 0.005]
-                    t,                     // volume_weighted_spread [0, 1]
-                    200.0 * t,             // trade_size_distribution [0, 200]
+                    t,                   // order_imbalance      [0, 1]
+                    2000.0 * t - 1000.0, // volume_delta         [-1000, 1000]
+                    100.0 * t,           // trade_intensity      [0, 100]
+                    0.01 * t - 0.005,    // price_velocity       [-0.005, 0.005]
+                    t,                   // volume_weighted_spread [0, 1]
+                    200.0 * t,           // trade_size_distribution [0, 200]
                 ]
             })
             .collect();
@@ -822,7 +818,12 @@ mod tests {
         for tick_len in 0..=13usize {
             let features = vec![vec![1.0f32; tick_len]; 3];
             let flat = flatten_and_pad_features(&features, 6);
-            assert_eq!(flat.len(), 18, "tick_len={}: wrong flattened length", tick_len);
+            assert_eq!(
+                flat.len(),
+                18,
+                "tick_len={}: wrong flattened length",
+                tick_len
+            );
 
             // Kept values preserved, padding zeroed, extras truncated
             let kept = tick_len.min(6);
@@ -916,7 +917,9 @@ mod tests {
             "all 6 quantize store sites must cast through unsigned char"
         );
         assert_eq!(
-            QUANTIZE_INT8_KERNEL_SRC.matches("= (char)quantized_f").count(),
+            QUANTIZE_INT8_KERNEL_SRC
+                .matches("= (char)quantized_f")
+                .count(),
             0,
             "no direct saturating (char) cast may remain"
         );

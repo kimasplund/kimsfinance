@@ -4,7 +4,7 @@
 //! Tests bar formation logic, threshold handling, and edge cases.
 
 #[cfg(feature = "gpu")]
-use kimsfinance_core::gpu::{execute_batch, GpuDevice, TickBarBatch, VolumeBarBatch};
+use kimsfinance_core::gpu::{GpuDevice, TickBarBatch, VolumeBarBatch, execute_batch};
 
 // ============================================================================
 // Volume Bar Tests
@@ -17,12 +17,12 @@ fn test_volume_bars_fixed_threshold() -> Result<(), Box<dyn std::error::Error>> 
 
     // Trades with known volumes, target: 50 volume per bar
     let trades = vec![
-        (0.0, 100.0, 20.0),  // Bar 1 starts
-        (1.0, 102.0, 15.0),  // Bar 1: 20 + 15 = 35
-        (2.0, 104.0, 15.0),  // Bar 1 closes: 20 + 15 + 15 = 50
-        (3.0, 103.0, 25.0),  // Bar 2 starts
-        (4.0, 105.0, 25.0),  // Bar 2 closes: 25 + 25 = 50
-        (5.0, 106.0, 10.0),  // Bar 3 starts (incomplete)
+        (0.0, 100.0, 20.0), // Bar 1 starts
+        (1.0, 102.0, 15.0), // Bar 1: 20 + 15 = 35
+        (2.0, 104.0, 15.0), // Bar 1 closes: 20 + 15 + 15 = 50
+        (3.0, 103.0, 25.0), // Bar 2 starts
+        (4.0, 105.0, 25.0), // Bar 2 closes: 25 + 25 = 50
+        (5.0, 106.0, 10.0), // Bar 3 starts (incomplete)
     ];
 
     let mut data = Vec::new();
@@ -101,8 +101,7 @@ fn test_volume_bars_large_single_trade() -> Result<(), Box<dyn std::error::Error
     assert!(bars.len() >= 5, "Should process large single trade");
 
     // Find the bar with large volume
-    let large_bar_exists = (0..bars.len() / 5)
-        .any(|i| bars[i * 5 + 4] >= 100.0);
+    let large_bar_exists = (0..bars.len() / 5).any(|i| bars[i * 5 + 4] >= 100.0);
 
     assert!(large_bar_exists, "Large volume trade should be captured");
 
@@ -116,9 +115,7 @@ fn test_volume_bars_accumulation() -> Result<(), Box<dyn std::error::Error>> {
     let device = GpuDevice::new()?;
 
     // Many small trades accumulating to threshold
-    let trades: Vec<(f64, f64, f64)> = (0..10)
-        .map(|i| (i as f64, 100.0 + i as f64, 5.0))
-        .collect();
+    let trades: Vec<(f64, f64, f64)> = (0..10).map(|i| (i as f64, 100.0 + i as f64, 5.0)).collect();
 
     let mut data = Vec::new();
     let timestamps: Vec<f64> = trades.iter().map(|t| t.0).collect();
@@ -251,10 +248,10 @@ fn test_tick_bars_volume_aggregation() -> Result<(), Box<dyn std::error::Error>>
     let trades = vec![
         (0.0, 100.0, 5.0),
         (1.0, 101.0, 10.0),
-        (2.0, 102.0, 15.0),  // Bar 1 closes (3 ticks)
+        (2.0, 102.0, 15.0), // Bar 1 closes (3 ticks)
         (3.0, 103.0, 20.0),
         (4.0, 104.0, 25.0),
-        (5.0, 105.0, 30.0),  // Bar 2 closes (3 ticks)
+        (5.0, 105.0, 30.0), // Bar 2 closes (3 ticks)
     ];
 
     let mut data = Vec::new();
@@ -290,11 +287,7 @@ fn test_tick_bars_single_tick_per_bar() -> Result<(), Box<dyn std::error::Error>
     let device = GpuDevice::new()?;
 
     // 1 tick per bar (each trade forms its own bar)
-    let trades = vec![
-        (0.0, 100.0, 10.0),
-        (1.0, 102.0, 12.0),
-        (2.0, 104.0, 14.0),
-    ];
+    let trades = vec![(0.0, 100.0, 10.0), (1.0, 102.0, 12.0), (2.0, 104.0, 14.0)];
 
     let mut data = Vec::new();
     let timestamps: Vec<f64> = trades.iter().map(|t| t.0).collect();

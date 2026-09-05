@@ -126,9 +126,14 @@ impl GpuAggregator {
             GpuError::CompilationError(format!("Failed to load PTX module: {:?}", e))
         })?;
 
-        let init_kernel = module.load_function("init_ohlcv_state_kernel").map_err(|e| {
-            GpuError::CompilationError(format!("Failed to load init_ohlcv_state_kernel: {:?}", e))
-        })?;
+        let init_kernel = module
+            .load_function("init_ohlcv_state_kernel")
+            .map_err(|e| {
+                GpuError::CompilationError(format!(
+                    "Failed to load init_ohlcv_state_kernel: {:?}",
+                    e
+                ))
+            })?;
 
         let binning_kernel = module.load_function("bin_trades_kernel").map_err(|e| {
             GpuError::CompilationError(format!("Failed to load bin_trades_kernel: {:?}", e))
@@ -653,12 +658,12 @@ mod tests {
 
         // Offsets chosen to cover same-bucket, boundary, and gap cases.
         let cases = [
-            (0_i64, 0_i64),   // first trade → index 0
-            (10, 0),          // same 100ms bucket (…123 → …133)
-            (76, 0),          // …199: last ms of bucket 0
-            (77, 1),          // …200: first ms of bucket 1
-            (250, 2),         // …373: bucket 2 (gap-free run)
-            (1077, 11),       // …1200 → dense index 11 (buckets 3-10 empty)
+            (0_i64, 0_i64), // first trade → index 0
+            (10, 0),        // same 100ms bucket (…123 → …133)
+            (76, 0),        // …199: last ms of bucket 0
+            (77, 1),        // …200: first ms of bucket 1
+            (250, 2),       // …373: bucket 2 (gap-free run)
+            (1077, 11),     // …1200 → dense index 11 (buckets 3-10 empty)
         ];
         for (offset, expected) in cases {
             let ts = first_ts + offset;
@@ -751,7 +756,10 @@ mod tests {
     #[test]
     fn test_ordered_encoding_constants_match_kernel_source() {
         // Rust constants must equal the actual encodings...
-        assert_eq!(encode_ordered_f64(f64::NEG_INFINITY), ORDERED_ENCODED_NEG_INF);
+        assert_eq!(
+            encode_ordered_f64(f64::NEG_INFINITY),
+            ORDERED_ENCODED_NEG_INF
+        );
         assert_eq!(encode_ordered_f64(f64::INFINITY), ORDERED_ENCODED_POS_INF);
         // ...and the CUDA source must initialize with the same literals
         // (layout contract between aggregation.rs and aggregation.cu).

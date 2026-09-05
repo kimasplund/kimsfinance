@@ -11,7 +11,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("=== Trade Data Support Verification ===\n");
 
     // Test with most recent trade data
-    let data_path = "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
+    let data_path =
+        "/home/kim/projects/binance-data/futures/BTCUSDT/trades/BTCUSDT-trades-2025-10-13.zip";
     let timeframe = Timeframe::minutes(5);
 
     println!("Loading trade data from: {}", data_path);

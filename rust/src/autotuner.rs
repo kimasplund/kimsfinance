@@ -87,10 +87,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "gpu")]
 use ndarray::Array1;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "gpu")]
 use crate::gpu::{GpuDevice, GpuError};

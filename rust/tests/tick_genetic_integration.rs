@@ -234,8 +234,7 @@ fn test_load_parquet_single_file() {
 #[test]
 #[ignore = "Requires actual parquet data files"]
 fn test_load_parquet_month() {
-    let month_dir =
-        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+    let month_dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
     let result = load_parquet_month(month_dir, Some(1_000_000));
 
@@ -446,8 +445,7 @@ fn test_rust_vs_python_comparison() {
 #[test]
 #[ignore = "Requires actual parquet data - expensive test"]
 fn test_full_month_optimization() {
-    let month_dir =
-        "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
+    let month_dir = "/home/kim/projects/binance-data/futures/BTCUSDT/trades_parquet/2024-01";
 
     let result = load_parquet_month(month_dir, Some(10_000_000));
 

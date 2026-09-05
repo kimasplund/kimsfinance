@@ -119,24 +119,42 @@ mod gpu_tick_aggregation_tests {
 
             // OHLC prices
             if (g.open - c.open).abs() > PRICE_TOLERANCE {
-                panic!("{} candle {}: Open mismatch: gpu={}, cpu={}", name, i, g.open, c.open);
+                panic!(
+                    "{} candle {}: Open mismatch: gpu={}, cpu={}",
+                    name, i, g.open, c.open
+                );
             }
             if (g.high - c.high).abs() > PRICE_TOLERANCE {
-                panic!("{} candle {}: High mismatch: gpu={}, cpu={}", name, i, g.high, c.high);
+                panic!(
+                    "{} candle {}: High mismatch: gpu={}, cpu={}",
+                    name, i, g.high, c.high
+                );
             }
             if (g.low - c.low).abs() > PRICE_TOLERANCE {
-                panic!("{} candle {}: Low mismatch: gpu={}, cpu={}", name, i, g.low, c.low);
+                panic!(
+                    "{} candle {}: Low mismatch: gpu={}, cpu={}",
+                    name, i, g.low, c.low
+                );
             }
             if (g.close - c.close).abs() > PRICE_TOLERANCE {
-                panic!("{} candle {}: Close mismatch: gpu={}, cpu={}", name, i, g.close, c.close);
+                panic!(
+                    "{} candle {}: Close mismatch: gpu={}, cpu={}",
+                    name, i, g.close, c.close
+                );
             }
 
             // Volume
             if (g.volume - c.volume).abs() > VOLUME_TOLERANCE {
-                panic!("{} candle {}: Volume mismatch: gpu={}, cpu={}", name, i, g.volume, c.volume);
+                panic!(
+                    "{} candle {}: Volume mismatch: gpu={}, cpu={}",
+                    name, i, g.volume, c.volume
+                );
             }
             if (g.quote_volume - c.quote_volume).abs() > VOLUME_TOLERANCE {
-                panic!("{} candle {}: Quote volume mismatch: gpu={}, cpu={}", name, i, g.quote_volume, c.quote_volume);
+                panic!(
+                    "{} candle {}: Quote volume mismatch: gpu={}, cpu={}",
+                    name, i, g.quote_volume, c.quote_volume
+                );
             }
 
             // Trade count must match exactly

@@ -164,14 +164,15 @@ impl TickAggregator {
                 ))
             })?;
 
-        let init_extrema_kernel = module
-            .load_function("init_ohlcv_extrema_kernel")
-            .map_err(|e| {
-                GpuError::CompilationError(format!(
-                    "Failed to load init_ohlcv_extrema_kernel: {:?}",
-                    e
-                ))
-            })?;
+        let init_extrema_kernel =
+            module
+                .load_function("init_ohlcv_extrema_kernel")
+                .map_err(|e| {
+                    GpuError::CompilationError(format!(
+                        "Failed to load init_ohlcv_extrema_kernel: {:?}",
+                        e
+                    ))
+                })?;
 
         let aggregate_sorted_kernel = module
             .load_function("aggregate_ohlcv_sorted_kernel")
@@ -327,10 +328,7 @@ impl TickAggregator {
                 .arg(&n_trades_i32)
                 .launch(cfg_per_trade)
                 .map_err(|e| {
-                    GpuError::ExecutionError(format!(
-                        "check_sorted_kernel launch failed: {:?}",
-                        e
-                    ))
+                    GpuError::ExecutionError(format!("check_sorted_kernel launch failed: {:?}", e))
                 })?;
         }
 

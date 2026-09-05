@@ -18,8 +18,8 @@ mod heston_load_tests {
         include!("../data/heston_test_data.rs");
     }
     use test_data::{
-        generate_btc_ohlcv, generate_options_chain, generate_strategy_params, test_heston_params,
-        MarketRegime,
+        MarketRegime, generate_btc_ohlcv, generate_options_chain, generate_strategy_params,
+        test_heston_params,
     };
 
     #[test]
@@ -47,8 +47,7 @@ mod heston_load_tests {
                 initial_capital: 100_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .heston_params(params_heston)
             .options_data(options)
@@ -58,26 +57,44 @@ mod heston_load_tests {
 
         println!("\n===== LOAD TEST RESULTS =====");
         println!("Total time: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
-        println!("Throughput: {:.2} strategies/sec", 1000.0 / elapsed.as_secs_f64());
+        println!(
+            "Throughput: {:.2} strategies/sec",
+            1000.0 / elapsed.as_secs_f64()
+        );
         println!(
             "Phase 0 (Heston): {:.2}ms",
-            results.phase_timings.get("phase0_heston_ms").unwrap_or(&0.0)
+            results
+                .phase_timings
+                .get("phase0_heston_ms")
+                .unwrap_or(&0.0)
         );
         println!(
             "Phase 1 (Indicators): {:.2}ms",
-            results.phase_timings.get("phase1_indicators_ms").unwrap_or(&0.0)
+            results
+                .phase_timings
+                .get("phase1_indicators_ms")
+                .unwrap_or(&0.0)
         );
         println!(
             "Phase 2 (Signals): {:.2}ms",
-            results.phase_timings.get("phase2_signals_ms").unwrap_or(&0.0)
+            results
+                .phase_timings
+                .get("phase2_signals_ms")
+                .unwrap_or(&0.0)
         );
         println!(
             "Phase 3 (Execution): {:.2}ms",
-            results.phase_timings.get("phase3_execution_ms").unwrap_or(&0.0)
+            results
+                .phase_timings
+                .get("phase3_execution_ms")
+                .unwrap_or(&0.0)
         );
         println!(
             "Phase 4 (Metrics): {:.2}ms",
-            results.phase_timings.get("phase4_metrics_ms").unwrap_or(&0.0)
+            results
+                .phase_timings
+                .get("phase4_metrics_ms")
+                .unwrap_or(&0.0)
         );
 
         assert_eq!(results.results.len(), 1000);
@@ -117,8 +134,7 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
-            ..Default::default()
-        
+                    ..Default::default()
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())
@@ -162,8 +178,7 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
-            ..Default::default()
-        
+                    ..Default::default()
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())
@@ -213,8 +228,7 @@ mod heston_load_tests {
                 initial_capital: 100_000.0,
                 trading_fee: 0.001,
                 slippage: 0.0005,
-            ..Default::default()
-        
+                ..Default::default()
             })
             .heston_params(params_heston)
             .options_data(options)
@@ -225,7 +239,10 @@ mod heston_load_tests {
 
         println!("\n===== EXTREME SCALE RESULTS =====");
         println!("Total time: {:.2}s", elapsed.as_secs_f64());
-        println!("Throughput: {:.2} strategies/sec", 2000.0 / elapsed.as_secs_f64());
+        println!(
+            "Throughput: {:.2} strategies/sec",
+            2000.0 / elapsed.as_secs_f64()
+        );
 
         assert_eq!(results.results.len(), 2000);
 
@@ -275,8 +292,7 @@ mod heston_load_tests {
                     initial_capital: 100_000.0,
                     trading_fee: 0.001,
                     slippage: 0.0005,
-            ..Default::default()
-        
+                    ..Default::default()
                 })
                 .heston_params(params_heston.clone())
                 .options_data(options.clone())
@@ -286,11 +302,7 @@ mod heston_load_tests {
 
             total_time += elapsed.as_secs_f64();
 
-            println!(
-                "{:?}: {:.2}ms",
-                strategy,
-                elapsed.as_secs_f64() * 1000.0
-            );
+            println!("{:?}: {:.2}ms", strategy, elapsed.as_secs_f64() * 1000.0);
 
             assert_eq!(results.results.len(), 100);
         }
