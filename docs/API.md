@@ -1613,7 +1613,7 @@ The `kimsfinance.batch` module provides high-level Python API for GPU-accelerate
 - `BacktestConfig` - Backtest configuration dataclass
 
 **Constants:**
-- `GPU_AVAILABLE` - Boolean indicating if GPU feature is compiled
+- `GPU_AVAILABLE` - True when a usable CUDA device was found; resolved lazily on first access and consistent with `get_gpu_info()["gpu_available"]`
 
 #### Usage
 

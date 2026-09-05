@@ -172,4 +172,5 @@ python_functions = "test_*"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: marks performance benchmark tests",
+    "gpu: needs a usable CUDA device (auto-skipped otherwise)",
 ]

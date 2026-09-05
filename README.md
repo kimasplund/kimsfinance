@@ -1048,7 +1048,7 @@ All indicators are available in Python, with 26 standalone Rust-accelerated indi
 - [Performance Guide](docs/PERFORMANCE.md) - Optimization techniques
 - [GPU Optimization](docs/GPU_OPTIMIZATION.md) - GPU acceleration deep dive
 - [Output Formats Guide](docs/OUTPUT_FORMATS.md) - SVG, SVGZ, WebP, PNG, JPEG comparison
-- [Migration from mplfinance](docs/MIGRATION.md) - Port existing mplfinance code
+- [Migration from mplfinance](docs/MIGRATION_GUIDE.md) - Port existing mplfinance code
 - [Backtesting Engine](rust/docs/reports/BACKTESTING_IMPLEMENTATION_COMPLETE.md) - GPU-accelerated backtesting with genetic optimization
 - [Persistent Kernels](rust/PERSISTENT_KERNELS.md) - 41x GPU batch processing speedup
 

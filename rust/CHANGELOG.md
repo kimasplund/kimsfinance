@@ -359,4 +359,4 @@ let ema = ema_hybrid(&device, &close, 20, None)?;  // Also 6.8x faster
 
 **Maintained By**: kimsfinance team
 **License**: AGPL-3.0-or-later (dual-licensed; see [LICENSING.md](../LICENSING.md) and [COMMERCIAL-LICENSE.md](../COMMERCIAL-LICENSE.md))
-**Repository**: https://github.com/kimsfinance/kimsfinance_core
+**Repository**: https://github.com/kimasplund/kimsfinance

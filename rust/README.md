@@ -167,8 +167,8 @@ For custom strategies, use CPU backtesting engine which supports unlimited flexi
 ### Build from Source (Rust)
 
 ```bash
-git clone https://github.com/kimsfinance/kimsfinance_core.git
-cd kimsfinance_core/rust
+git clone https://github.com/kimasplund/kimsfinance.git
+cd kimsfinance/rust
 
 # Build with GPU support
 cargo build --release --features gpu
@@ -853,5 +853,5 @@ AGPL-3.0-or-later - See [LICENSE](../LICENSE) for the full terms. kimsfinance is
 ---
 
 **Maintained By**: kimsfinance team
-**Repository**: https://github.com/kimsfinance/kimsfinance_core
+**Repository**: https://github.com/kimasplund/kimsfinance
 **Documentation**: https://docs.kimsfinance.io

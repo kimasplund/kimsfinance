@@ -1,8 +1,6 @@
 # Migration from mplfinance
 
-**Status**: Documentation in progress
-
-This comprehensive migration guide is currently being written and will be available soon.
+**Status**: superseded by [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md), the complete migration guide. This page keeps a short overview.
 
 ---
 

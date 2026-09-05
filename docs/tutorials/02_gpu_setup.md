@@ -230,11 +230,11 @@ conda activate kimsfinance
 
 # Install RAPIDS (cuDF + CuPy) for CUDA 13
 conda install -c rapidsai -c conda-forge -c nvidia \
-    cudf=25.02 cupy python=3.14 cuda-version=13.0
+    cudf=25.10 cupy python=3.13 cuda-version=13.0
 
 # For CUDA 12 (older hardware):
 # conda install -c rapidsai -c conda-forge -c nvidia \
-#     cudf=24.12 cupy python=3.14 cuda-version=12.0
+#     cudf=25.10 cupy python=3.13 cuda-version=12.8
 
 # Install kimsfinance
 pip install kimsfinance
@@ -1007,11 +1007,11 @@ pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12
 ```bash
 # For CUDA 13:
 conda install -c rapidsai -c conda-forge -c nvidia \
-    cudf=25.02 python=3.14 cuda-version=13.0
+    cudf=25.10 python=3.13 cuda-version=13.0
 
 # For CUDA 12 (older hardware):
 # conda install -c rapidsai -c conda-forge -c nvidia \
-#     cudf=24.12 python=3.14 cuda-version=12.0
+#     cudf=25.10 python=3.13 cuda-version=12.8
 ```
 
 **Issue: CuPy installation fails**

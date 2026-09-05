@@ -1,7 +1,7 @@
 # GPU Optimization Guide
 
 **Version**: 1.1.0
-**Last Updated**: 2025-10-27
+**Last Updated**: 2026-09-05
 **Status**: Complete
 
 ---
@@ -1196,7 +1196,7 @@ let cpu_backtest = BacktestEngine::new(capital)?;
 **Documentation**:
 - CUDA Cooperative Groups: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cooperative-groups
 - Benchmark Analysis: `rust/docs/PERSISTENT_KERNEL_BENCHMARK_ANALYSIS.md`
-- Implementation Details: `rust/docs/PERSISTENT_KERNELS.md`
+- Implementation Details: `rust/PERSISTENT_KERNELS.md`
 
 **Source Code**:
 - Implementation: `rust/src/gpu/persistent/` (`mod.rs`, `generic.rs`, `traits.rs`, `kernels/`)
@@ -2398,8 +2398,8 @@ nvidia-smi | grep "MiB"
 
 ---
 
-**Document Version**: 1.1.0
-**Last Updated**: 2025-10-27
+**Document Version**: 1.2.0
+**Last Updated**: 2026-09-05
 **Tested On**: NVIDIA RTX 3500 Ada, Ubuntu 22.04, CUDA 13.x
 **Author**: kimsfinance Team
 

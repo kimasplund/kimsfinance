@@ -248,7 +248,7 @@ blocks = ((n // 4) + threads - 1) // threads  # Process 4 elements/thread
 
 ## License
 
-MIT License - See project LICENSE file
+AGPL-3.0-or-later - see the project [LICENSE](../../../../LICENSE); commercial licensing is available, see [LICENSING.md](../../../../LICENSING.md) and [COMMERCIAL-LICENSE.md](../../../../COMMERCIAL-LICENSE.md)
 
 ---
 

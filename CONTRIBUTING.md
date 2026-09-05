@@ -127,7 +127,7 @@ pip install -e .
 pip install -e ".[dev]"
 
 # Or install individually
-pip install pytest pytest-cov black mypy ruff
+pip install -e ".[dev]"  # pytest, black, mypy, ruff, pre-commit
 ```
 
 #### Optional: GPU Support

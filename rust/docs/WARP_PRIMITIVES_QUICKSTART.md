@@ -184,7 +184,7 @@ assert(fabs(shared_result - warp_result) < 1e-10);
 - **Full documentation**: `docs/AGENT5_WARP_PRIMITIVES_REPORT.md`
 - **Implementation**: `src/gpu/kernels/warp_primitives.cuh`
 - **Usage example**: `src/gpu/kernels_backtest.cu` (lines 490-617)
-- **Benchmarks**: `benches/warp_primitive_benchmark.rs`
+- **Benchmarks**: the former `benches/warp_primitive_benchmark.rs` was removed in 0.2.x (it targeted modules that never existed); see the GPU benches under `benches/`
 
 ---
 
