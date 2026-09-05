@@ -16,6 +16,7 @@ use kimsfinance_core::backtest::{
 use ndarray::Array1;
 
 /// RSI Crossover Strategy
+#[derive(Clone)]
 struct RSIStrategy {
     rsi_period: usize,
     buy_threshold: f64,
@@ -252,6 +253,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         slippage: 0.0005,   // 0.05% slippage
         use_gpu: false,     // CPU-only for demo
         force_cpu: true,
+        execution_latency_ms: 0,
     };
 
     let engine = BacktestEngine::with_config(config.clone());
@@ -480,7 +482,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         trading_fee: 0.001,
         slippage: 0.0005,
         use_gpu: false,
-        force_cpu: true, // Force CPU-only mode
+        force_cpu: true, // Force CPU-only mode,
+        execution_latency_ms: 0,
     };
 
     let cpu_engine = BacktestEngine::with_config(cpu_config);

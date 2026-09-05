@@ -130,7 +130,7 @@ fn calculate_batch_cpu(
                 let d_period = 3;
                 let stoch = Stochastic::new(k_period, d_period).unwrap();
                 if let Ok(result) = stoch.calculate_hlc(high.view(), low.view(), close.view()) {
-                    results.push(result);
+                    results.push(result.primary);
                 }
             }
             3 => {
@@ -162,7 +162,7 @@ fn calculate_batch_cpu(
                 let period = 25 + (i / 9);
                 let aroon = Aroon::new(period).unwrap();
                 if let Ok(result) = aroon.calculate_hl(high.view(), low.view()) {
-                    results.push(result);
+                    results.push(result.primary);
                 }
             }
             7 => {

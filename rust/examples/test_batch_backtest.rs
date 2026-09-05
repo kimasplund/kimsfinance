@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         slippage: 0.0005,
         use_gpu: true,
         force_cpu: false,
+        execution_latency_ms: 0,
     };
 
     println!("Config created");

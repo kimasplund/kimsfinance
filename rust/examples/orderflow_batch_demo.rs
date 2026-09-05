@@ -17,7 +17,7 @@ use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Agent 2: Orderflow + Signals (Fused Kernel) Demo");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
 
     // Initialize GPU
     println!("\n[1/5] Initializing GPU...");
