@@ -548,7 +548,7 @@ cargo bench --features gpu --bench cpu_gpu_hybrid_benchmark -- EMA
 - [API Reference](./API.md) - Updated API documentation
 
 **Benchmarks**:
-- [Hybrid Benchmark Report](../HYBRID_BENCHMARK_REPORT.md) - Detailed performance analysis
+- [Hybrid Benchmark Report](./reports/HYBRID_BENCHMARK_REPORT.md) - Detailed performance analysis
 - Run benchmarks: `cargo bench --features gpu --bench cpu_gpu_hybrid_benchmark`
 
 **Support**:

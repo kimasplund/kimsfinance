@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- pandas is now an optional dependency (PR #17): install `kimsfinance[pandas]` to pass pandas objects. The `reporting`, `dev`, `test` and `all` extras still include it.
+- Rust core migrated to `rand` 0.9 and `rand_distr` 0.5 (PR #16).
+- Build backend now requires setuptools >= 77, which the SPDX `license` field needs.
+- Over-broad `.gitignore` rules that hid tracked source under `kimsfinance/data/`, `rust/src/data/`, `rust/docs/archive/` and `rust/Cargo.lock` are anchored; generated reports, a stray compiled binary, merge leftovers and orphaned demo outputs are no longer tracked.
+- Root-level task completion reports moved to `docs/archive/reports/`; broken documentation links and stale install instructions (CUDA 13 packages, no `[rust]` extra) corrected.
+- The `benchmark.yml` workflow, which failed to parse on every push, now runs on demand only.
+
+### Fixed
+- Indicator edge-case fixes in the Rust core with CPU/CUDA parity (PR #15).
+- `plot_with_indicators()` imported a module that does not exist and mis-read the MACD result; it now imports from `ops.indicators.moving_averages` and unpacks the MACD tuple.
+- Undefined type names in the `calculate_multiple_mas` and `render_ohlcv_charts` annotations.
+
 ## [0.2.0] - 2026-06-14
 
 ### Changed

@@ -134,7 +134,7 @@ pip install pytest pytest-cov black mypy ruff
 
 ```bash
 # For GPU-accelerated OHLCV processing
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 
 # Verify GPU support
 python -c "import cudf; import cupy; print('GPU ready!')"
@@ -268,7 +268,7 @@ We use **mypy** in strict mode:
 mypy kimsfinance/
 
 # Check specific file
-mypy kimsfinance/plotting/renderer.py
+mypy kimsfinance/plotting/pil_renderer.py
 ```
 
 ### Code Quality Checklist
@@ -319,10 +319,10 @@ pytest tests/
 pytest --cov=kimsfinance --cov-report=html tests/
 
 # Run specific test file
-pytest tests/test_renderer_ohlc.py
+pytest tests/plotting/test_renderer_ohlc.py
 
 # Run specific test function
-pytest tests/test_renderer_ohlc.py::test_render_basic_chart
+pytest tests/plotting/test_plotting.py::test_render_ohlcv_chart
 
 # Run tests matching pattern
 pytest -k "test_render"
@@ -467,7 +467,7 @@ Follow the [Code Style Guidelines](#code-style-guidelines) and add tests!
 
 ```bash
 # Make changes
-vim kimsfinance/plotting/renderer.py
+vim kimsfinance/plotting/pil_renderer.py
 
 # Format code
 black kimsfinance/ tests/
@@ -663,7 +663,7 @@ pytest --cov=kimsfinance --cov-report=html tests/
 # Then open: htmlcov/index.html
 
 # Profile performance
-python -m cProfile -s cumulative scripts/benchmark_test.py
+python -m cProfile -s cumulative benchmarks/standard_benchmark.py --quick
 
 # Check for type errors
 mypy kimsfinance/ --show-error-codes
@@ -683,9 +683,8 @@ ruff check --fix kimsfinance/
 5. Add documentation and examples
 
 **Adding a technical indicator:**
-1. Implement in `kimsfinance/ops/indicators.py`
-2. Add GPU version in `kimsfinance/ops/indicators_gpu.py` (optional)
-3. Add tests in `tests/ops/test_indicators.py`
+1. Implement in `kimsfinance/ops/indicators/<name>.py` and export it from `kimsfinance/ops/indicators/__init__.py`
+2. Add tests in `tests/ops/indicators/test_<name>.py`
 4. Add integration tests in `tests/test_all_operations.py`
 5. Update documentation
 
@@ -706,7 +705,7 @@ If working on GPU features:
 nvidia-smi
 
 # Test GPU functionality
-pytest tests/test_gpu_operations.py
+pytest tests/test_polars_gpu_engine.py tests/test_engine_selection.py
 
 # Profile GPU kernels
 /kf/profile/gpu-kernel

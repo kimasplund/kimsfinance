@@ -412,9 +412,9 @@ A: Simply copy the entire `data/yfinance/options_historical/` directory. Parquet
 
 ## Related Documentation
 
-- [Query Utilities](query_options_historical.py) - Python interface for reading data
-- [Collection Script](download_options_daily_historical.py) - Daily collector
-- [Original Options Downloader](download_options_parallel.py) - One-time snapshot collector
+- [Query Utilities](../scripts/query_options_historical.py) - Python interface for reading data
+- [Collection Script](../scripts/download_options_daily_historical.py) - Daily collector
+- [Original Options Downloader](../scripts/download_options_parallel.py) - One-time snapshot collector
 
 ## Support
 

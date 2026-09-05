@@ -59,7 +59,7 @@ f32 has a **24-bit significand (~7.2 decimal digits)** and exponent range to ~3.
 
 ## 3. Denormals and Flush-to-Zero (FTZ) — and a live finding in this build
 
-**`build.rs` compiles every kernel with `-use_fast_math`** (confirmed at `rust/build.rs:258` and in `check_output.txt`). On sm_89, `-use_fast_math` implies **`-ftz=true`** (denormals flushed to zero), plus `-prec-div=false` and `-prec-sqrt=false` (approximate division and reciprocal-sqrt) ([NVCC Compiler Driver docs](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html); [CUDA Floating-Point and IEEE 754](https://docs.nvidia.com/cuda/floating-point/index.html)).
+**`build.rs` compiles every kernel with `-use_fast_math`** (confirmed at `rust/build.rs:258` and in the captured nvcc build log, formerly tracked as `rust/check_output.txt`). On sm_89, `-use_fast_math` implies **`-ftz=true`** (denormals flushed to zero), plus `-prec-div=false` and `-prec-sqrt=false` (approximate division and reciprocal-sqrt) ([NVCC Compiler Driver docs](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html); [CUDA Floating-Point and IEEE 754](https://docs.nvidia.com/cuda/floating-point/index.html)).
 
 FTZ flushes subnormal inputs/outputs (values below ~1.2×10⁻³⁸ in f32) to ±0. The trade-offs:
 

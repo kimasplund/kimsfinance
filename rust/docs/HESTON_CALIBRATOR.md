@@ -600,7 +600,7 @@ Contributions welcome! Priority areas:
 4. **Validation**: Test vs QuantLib on real market data
 5. **Documentation**: Examples, tutorials, user guides
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
 
 ---
 

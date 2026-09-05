@@ -109,7 +109,7 @@ kimsfinance delivers **massive performance improvements** over mplfinance throug
 pip install kimsfinance
 
 # Optional: GPU support (6.4x faster OHLCV processing)
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 
 # Optional: JIT compilation (50-100% faster coordinate computation)
 pip install "kimsfinance[jit]"
@@ -1088,7 +1088,7 @@ kf.plot(df, type='line')       # Line charts
 python -c "import kimsfinance as kf; print(kf.gpu_available())"
 
 # Install GPU support (NVIDIA only)
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 
 # If no GPU, kimsfinance still works on CPU
 ```
@@ -1346,7 +1346,7 @@ img.save('live.webp', 'WEBP', quality=75, method=4)
 - [ ] **Check compatibility**: Verify no unsupported features
 - [ ] **Backup code**: Commit to version control before changes
 - [ ] **Install kimsfinance**: `pip install kimsfinance`
-- [ ] **Install GPU support (optional)**: `pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x`
+- [ ] **Install GPU support (optional)**: `pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x`
 - [ ] **Install JIT support (optional)**: `pip install "kimsfinance[jit]"`
 
 ### 10.2 During Migration

@@ -249,7 +249,7 @@ All tests pass:
 ✓ Reports              PASS
 ```
 
-Generated sample reports:
+Generated sample reports (not tracked; regenerate from the repo root with `python examples/generate_backtest_report.py` and `python examples/test_reporting_module.py`):
 - `backtest_report.pdf` (184KB)
 - `backtest_report.html` (226KB)
 - `test_report.pdf` (smaller test version)

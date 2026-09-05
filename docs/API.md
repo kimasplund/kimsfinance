@@ -42,7 +42,7 @@ pip install kimsfinance
 For 6.4x faster OHLCV processing and GPU-accelerated indicators:
 
 ```bash
-pip install --extra-index-url=https://pypi.nvidia.com cudf-cu12 cupy-cuda12x
+pip install --extra-index-url=https://pypi.nvidia.com cudf-cu13 cupy-cuda13x  # CUDA 12 GPUs: cudf-cu12 cupy-cuda12x
 ```
 
 **GPU Requirements:**

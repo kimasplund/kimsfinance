@@ -656,10 +656,10 @@ See [`docs/MIGRATION_GUIDE_v0.2.0.md`](./docs/MIGRATION_GUIDE_v0.2.0.md) for det
 - **[Python 3.14 Free-Threading](./docs/PYTHON_314_FREE_THREADING_MIGRATION.md)** - GIL-free execution guide
 
 ### Performance & Benchmarks
-- **[Benchmark Report](./HYBRID_BENCHMARK_REPORT.md)** - Detailed performance analysis
+- **[Benchmark Report](./docs/reports/HYBRID_BENCHMARK_REPORT.md)** - Detailed performance analysis
 - **[Benchmark Usage](./benches/BENCHMARK_USAGE.md)** - How to run benchmarks
 - **[Launch Overhead Results](./benches/LAUNCH_OVERHEAD_RESULTS_TEMPLATE.md)** - Persistent kernel benchmarks
-- **[Binance Backtest Results](./BINANCE_BACKTEST_RESULTS.md)** - Real-world validation
+- **[Binance Backtest Results](./docs/reports/BINANCE_BACKTEST_RESULTS.md)** - Real-world validation
 
 ### Optimization & Strategy Development
 - **[Optimization Guide](./docs/OPTIMIZATION_GUIDE.md)** - Complete guide to all three optimizers ✨
@@ -803,7 +803,7 @@ rust/
 │   └── backtest_binance_comprehensive.rs # Backtest examples ✨
 ├── Cargo.toml
 ├── CHANGELOG.md
-├── BINANCE_BACKTEST_RESULTS.md        # Real-world results ✨
+├── docs/reports/BINANCE_BACKTEST_RESULTS.md  # Real-world results ✨
 └── README.md (this file)
 ```
 
