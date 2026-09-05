@@ -259,6 +259,6 @@ jobs:
       - name: Upload baseline archive
         uses: actions/upload-artifact@v4
         with:
-          name: cuda-baseline-$(date +%Y-%m-%d)
+          name: cuda-baseline-${{ github.run_id }}
           path: benchmarks/baselines/
           retention-days: 365

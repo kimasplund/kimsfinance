@@ -21,14 +21,13 @@
 name: Continuous Benchmarking
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    env:
+      BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
     strategy:
       matrix:
         python-version: ['3.13', '3.14']
@@ -123,7 +122,7 @@ jobs:
         continue-on-error: true
 
       - name: Track benchmarks with Bencher
-        if: secrets.BENCHER_API_TOKEN != ''
+        if: env.BENCHER_API_TOKEN != ''
         uses: bencherdev/bencher@main
         with:
           bencher-api-token: ${{ secrets.BENCHER_API_TOKEN }}
