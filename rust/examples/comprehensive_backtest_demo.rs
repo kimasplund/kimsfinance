@@ -304,36 +304,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?
     };
 
+    // run_parameter_sweep_cpu is only compiled without the gpu feature, so a
+    // GPU build has no CPU sweep to fall back to: surface the error instead.
     #[cfg(feature = "gpu")]
-    let sweep_results = {
-        match engine.run_sweep(
-            &mut strategy2,
-            timestamps.as_slice().unwrap(),
-            &open,
-            &high,
-            &low,
-            &close,
-            &volume,
-            &grid,
-        ) {
-            Ok(results) => results,
-            Err(_) => {
-                // GPU failed, fallback to CPU
-                use kimsfinance_core::backtest::run_parameter_sweep_cpu;
-                run_parameter_sweep_cpu(
-                    &engine,
-                    &mut strategy2,
-                    timestamps.as_slice().unwrap(),
-                    &open,
-                    &high,
-                    &low,
-                    &close,
-                    &volume,
-                    &grid,
-                )?
-            }
-        }
-    };
+    let sweep_results = engine.run_sweep(
+        &mut strategy2,
+        timestamps.as_slice().unwrap(),
+        &open,
+        &high,
+        &low,
+        &close,
+        &volume,
+        &grid,
+    )?;
 
     println!("\n✓ Tested {} parameter combinations", sweep_results.len());
     println!("\nTop 5 Parameter Configurations:");

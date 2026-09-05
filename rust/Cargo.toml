@@ -395,6 +395,14 @@ name = "gpu_accuracy_validation"
 required-features = ["gpu"]
 
 [[test]]
+name = "greeks_gpu_test"
+required-features = ["heston"]
+
+[[test]]
+name = "income_strategies_test"
+required-features = ["heston"]
+
+[[test]]
 name = "quantization_accuracy"
 required-features = ["gpu"]
 

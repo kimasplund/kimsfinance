@@ -135,6 +135,7 @@ fn bench_traditional_baseline(c: &mut Criterion) {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 0,
             };
 
             b.iter(|| {
@@ -198,6 +199,7 @@ fn bench_persistent_kernels(c: &mut Criterion) {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 0,
             };
 
             b.iter(|| {
@@ -256,6 +258,7 @@ fn bench_phase3_optimized(c: &mut Criterion) {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 0,
             };
 
             b.iter(|| {
@@ -313,6 +316,7 @@ fn bench_combined_optimizations(c: &mut Criterion) {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 0,
             };
 
             b.iter(|| {
@@ -371,6 +375,7 @@ fn bench_scaling_validation(c: &mut Criterion) {
                 slippage: 0.0005,
                 use_gpu: true,
                 force_cpu: false,
+                execution_latency_ms: 0,
             };
 
             b.iter(|| {
