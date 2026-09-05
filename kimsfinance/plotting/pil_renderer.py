@@ -1,6 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from pathlib import Path
+from typing import Any
 from PIL import Image, ImageDraw
 
 try:

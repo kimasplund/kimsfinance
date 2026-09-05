@@ -137,7 +137,7 @@ def calculate_multiple_mas(
     sma_shift: ShiftPeriods = None,
     ema_shift: ShiftPeriods = None,
     engine: Engine = "cpu",
-) -> dict[str, list[MAResult]]:
+) -> dict[str, MovingAverageResult]:
     """
     Calculate multiple SMAs and EMAs in a single optimized pass.
 

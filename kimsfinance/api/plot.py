@@ -717,7 +717,6 @@ def plot_with_indicators(
         raise ImportError("mplfinance is required for multi-panel indicators")
 
     from ..ops.indicators import calculate_rsi, calculate_macd
-    from ..ops.moving_averages import calculate_sma, calculate_ema
     import polars as pl
 
     # Convert to Polars if needed
@@ -749,11 +748,11 @@ def plot_with_indicators(
         # Add MACD
         if "macd" in indicators:
             macd_config = indicators["macd"] if isinstance(indicators["macd"], dict) else {}
-            macd_result = calculate_macd(df_polars["close"].to_numpy(), engine=engine)
+            macd_line, signal_line, _ = calculate_macd(df_polars["close"].to_numpy(), engine=engine)
             ap1 = make_addplot(
-                macd_result.macd, panel=macd_config.get("panel", 3), color="blue", ylabel="MACD"
+                macd_line, panel=macd_config.get("panel", 3), color="blue", ylabel="MACD"
             )
-            ap2 = make_addplot(macd_result.signal, panel=macd_config.get("panel", 3), color="red")
+            ap2 = make_addplot(signal_line, panel=macd_config.get("panel", 3), color="red")
             addplots.extend([ap1, ap2])
 
     if addplots:

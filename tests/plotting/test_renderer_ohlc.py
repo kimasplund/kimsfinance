@@ -407,4 +407,4 @@ if __name__ == "__main__":
     print("Generating OHLC bars visual samples...")
     test_render_ohlc_bars_visual_sample()
     test_render_ohlc_bars_comparison_sample()
-    print("Visual samples saved to tests/fixtures/")
+    print("Visual samples saved to tests/plotting/fixtures/ (comparison samples to a temp dir)")
