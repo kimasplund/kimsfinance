@@ -446,7 +446,7 @@ impl GridSearchOptimizer {
     }
 }
 
-#[cfg(all(test, feature = "gpu"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
