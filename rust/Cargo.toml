@@ -24,7 +24,7 @@ serde_json = "1.0"
 csv = "1.4.0"
 serde = { version = "1.0.228", features = ["derive"] }
 zip = "6.0.0"
-rand = "0.9"
+rand = "0.10"
 rand_distr = "0.5"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2.0"
