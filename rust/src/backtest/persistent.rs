@@ -311,7 +311,7 @@ pub fn execute_persistent(
     drop(pool);
 
     let num_trades_vec = {
-        let slice = device.stream.memcpy_dtov(&d_num_trades).map_err(|e| {
+        let slice = device.stream.clone_dtoh(&d_num_trades).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
         })?;
         slice

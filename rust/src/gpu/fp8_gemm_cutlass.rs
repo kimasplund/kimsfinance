@@ -425,7 +425,7 @@ impl FP8GemmCutlass {
         device.synchronize()?;
 
         // Check result (copy f32 buffer to host manually)
-        let result_host: Vec<f32> = device.stream.memcpy_dtov(&test_result).map_err(|e| {
+        let result_host: Vec<f32> = device.stream.clone_dtoh(&test_result).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy test result: {:?}", e))
         })?;
 

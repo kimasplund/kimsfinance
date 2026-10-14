@@ -456,11 +456,10 @@ impl TickBacktestBatch {
         } else {
             Vec::new()
         };
-        let h_num_trades: Vec<i32> =
-            self.device.stream.memcpy_dtov(&d_num_trades).map_err(|e| {
-                GpuError::MemoryCopyError(format!("Failed to copy trade counts: {:?}", e))
-            })?;
-        let h_overflows: Vec<u32> = self.device.stream.memcpy_dtov(&d_overflows).map_err(|e| {
+        let h_num_trades: Vec<i32> = self.device.stream.clone_dtoh(&d_num_trades).map_err(|e| {
+            GpuError::MemoryCopyError(format!("Failed to copy trade counts: {:?}", e))
+        })?;
+        let h_overflows: Vec<u32> = self.device.stream.clone_dtoh(&d_overflows).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy overflow counts: {:?}", e))
         })?;
         let h_final_equity = self.device.copy_to_host(&d_final_equity)?;

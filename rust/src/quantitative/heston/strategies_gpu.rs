@@ -200,7 +200,7 @@ impl StraddleStrategyGpu {
         }
 
         // Download results
-        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals).map_err(|e| {
+        let signals_raw: Vec<i8> = self.device.stream.clone_dtoh(&d_signals).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e))
         })?;
         let total_costs = self.device.copy_to_host(&d_total_cost)?;
@@ -296,7 +296,7 @@ impl StraddleStrategyGpu {
             })?;
         }
 
-        let signals_raw: Vec<i8> = self.device.stream.memcpy_dtov(&d_signals).map_err(|e| {
+        let signals_raw: Vec<i8> = self.device.stream.clone_dtoh(&d_signals).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy signals from device: {:?}", e))
         })?;
         let total_premiums = self.device.copy_to_host(&d_total_premium)?;
@@ -471,7 +471,7 @@ impl CoveredCallStrategyGpu {
         let stock_signals_raw: Vec<i8> =
             self.device
                 .stream
-                .memcpy_dtov(&d_stock_signals)
+                .clone_dtoh(&d_stock_signals)
                 .map_err(|e| {
                     GpuError::MemoryCopyError(format!(
                         "Failed to copy stock signals from device: {:?}",
@@ -481,7 +481,7 @@ impl CoveredCallStrategyGpu {
         let call_signals_raw: Vec<i8> =
             self.device
                 .stream
-                .memcpy_dtov(&d_call_signals)
+                .clone_dtoh(&d_call_signals)
                 .map_err(|e| {
                     GpuError::MemoryCopyError(format!(
                         "Failed to copy call signals from device: {:?}",
@@ -696,19 +696,16 @@ impl IronCondorStrategyGpu {
 
         // Download results
         let put_signals_raw: Vec<i8> =
-            self.device
-                .stream
-                .memcpy_dtov(&d_put_signals)
-                .map_err(|e| {
-                    GpuError::MemoryCopyError(format!(
-                        "Failed to copy put signals from device: {:?}",
-                        e
-                    ))
-                })?;
+            self.device.stream.clone_dtoh(&d_put_signals).map_err(|e| {
+                GpuError::MemoryCopyError(format!(
+                    "Failed to copy put signals from device: {:?}",
+                    e
+                ))
+            })?;
         let call_signals_raw: Vec<i8> =
             self.device
                 .stream
-                .memcpy_dtov(&d_call_signals)
+                .clone_dtoh(&d_call_signals)
                 .map_err(|e| {
                     GpuError::MemoryCopyError(format!(
                         "Failed to copy call signals from device: {:?}",

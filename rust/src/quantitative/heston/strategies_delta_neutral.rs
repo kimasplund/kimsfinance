@@ -235,7 +235,7 @@ impl DeltaNeutralStrategyGpu {
         let option_signals_raw: Vec<i8> = self
             .device
             .stream
-            .memcpy_dtov(&d_option_signals)
+            .clone_dtoh(&d_option_signals)
             .map_err(|e| {
                 GpuError::MemoryCopyError(format!(
                     "Failed to copy option signals from device: {:?}",

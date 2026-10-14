@@ -542,7 +542,7 @@ where
             // Read from device (fallback) - use stream directly
             self.device
                 .stream
-                .memcpy_dtov(&buffer_set.d_output)
+                .clone_dtoh(&buffer_set.d_output)
                 .map_err(|e| {
                     GpuError::MemoryCopyError(format!("Failed to copy from device: {:?}", e))
                 })

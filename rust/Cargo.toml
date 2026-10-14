@@ -49,7 +49,8 @@ dashmap = "6.1"
 parking_lot = "0.12"
 sha2 = "0.11"  # For kernel cache hashing
 
-# Optional GPU support with cudarc (v0.17.3 - pinned for stability)
+# Optional GPU support with cudarc (exact pin: GPU code is not compiled in CI, so bumps
+# must be validated locally with `--features gpu` and the `--ignored` GPU tests)
 # CUDA Toolkit Compatibility:
 #   - Feature flag: cuda-13000 (CUDA 13.0 PTX compilation) ✅
 #   - Toolkit installed: CUDA 12.4 (nvcc)
@@ -64,12 +65,12 @@ sha2 = "0.11"  # For kernel cache hashing
 #   - CUDA Graphs: 30-50% launch overhead reduction (requires API integration)
 #   - Better GPU occupancy for small kernels
 #
-# Note: cudarc 0.17.3 is latest stable. CUDA 13.0 runtime features are automatically
+# Note: CUDA 13.0 runtime features are automatically
 # enabled when driver supports them. No library upgrade needed for:
 #   ✅ Math library speedups (automatic)
 #   ⚠️ Stream-ordered malloc (requires cudarc API addition)
 #   ⚠️ CUDA Graphs (requires cudarc API addition)
-cudarc = { version = "=0.17.3", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-13000"] }
+cudarc = { version = "=0.19.10", optional = true, features = ["driver", "cublas", "nvrtc", "cuda-13000"] }
 half = { version = "2.4", optional = true }  # For f16 support
 
 # Optimization libraries for Heston calibration

@@ -590,8 +590,8 @@ impl BatchTickBacktest {
         }
 
         // Allocate GPU memory and copy data
-        // Note: cudarc 0.17.3 uses memcpy_stod (sync transfer with allocation)
-        let d_trades = self.device.stream.memcpy_stod(&buffer).map_err(|e| {
+        // clone_htod: synchronous transfer with allocation
+        let d_trades = self.device.stream.clone_htod(&buffer).map_err(|e| {
             GpuError::AllocationError(format!("Failed to allocate/copy trades to GPU: {:?}", e))
         })?;
 
