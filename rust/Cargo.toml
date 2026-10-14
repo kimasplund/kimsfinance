@@ -41,7 +41,7 @@ arrow = { version = "60.0", optional = true }
 parquet = { version = "60.0", features = ["arrow"], optional = true }
 
 # Options data connectors (optional)
-ibapi = { version = "2.0", optional = true }
+ibapi = { version = "5.1", optional = true }
 time = { version = "0.3", optional = true }
 
 # Performance dependencies for backtest optimization

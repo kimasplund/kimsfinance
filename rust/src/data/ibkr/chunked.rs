@@ -39,6 +39,8 @@ use crate::data::downloaders::DownloadError;
 use std::path::PathBuf;
 
 #[cfg(feature = "data-ibkr")]
+use super::historical::bar_time;
+#[cfg(feature = "data-ibkr")]
 use ibapi::contracts::Contract;
 #[cfg(feature = "data-ibkr")]
 use ibapi::market_data::TradingHours;
@@ -335,7 +337,12 @@ impl IbkrHistoricalDownloader {
             exchange: Exchange::from("SMART"),
             currency: Currency::from("USD"),
             strike,
-            right: right.to_string(),
+            right: Some(right.parse().map_err(|_| {
+                DownloadError::InvalidFormat(format!(
+                    "Invalid option right: {} (expected \"C\" or \"P\")",
+                    right
+                ))
+            })?),
             last_trade_date_or_contract_month: expiration.to_string(),
             multiplier: "100".to_string(),
             ..Default::default()
@@ -413,8 +420,8 @@ impl IbkrHistoricalDownloader {
 
             // Get start and end dates from bars
             if let (Some(first), Some(last)) = (bars.first(), bars.last()) {
-                let start_date = first.date;
-                let end_date = last.date;
+                let start_date = bar_time(&first.date);
+                let end_date = bar_time(&last.date);
                 return Ok(vec![(bars, start_date, end_date)]);
             } else {
                 return Ok(vec![]);
@@ -443,14 +450,13 @@ impl IbkrHistoricalDownloader {
             // Request historical data for this chunk
             let result = timeout(
                 TokioDuration::from_secs(120),
-                self.client.historical_data(
-                    contract,
-                    Some(current_end),
-                    duration_enum.clone(),
-                    bar_size_enum,
-                    Some(what_enum),
-                    TradingHours::Regular,
-                ),
+                self.client
+                    .historical_data(contract, bar_size_enum)
+                    .what_to_show(what_enum)
+                    .duration(duration_enum.clone())
+                    .ending(current_end)
+                    .trading_hours(TradingHours::Regular)
+                    .fetch(),
             )
             .await
             .map_err(|_| DownloadError::Network("Timeout fetching chunk".to_string()))?
@@ -466,8 +472,8 @@ impl IbkrHistoricalDownloader {
 
             // Get start and end dates from this chunk
             if let (Some(first), Some(last)) = (chunk_bars.first(), chunk_bars.last()) {
-                let start_date = first.date;
-                let end_date = last.date;
+                let start_date = bar_time(&first.date);
+                let end_date = bar_time(&last.date);
                 all_chunks.push((chunk_bars.clone(), start_date, end_date));
 
                 // Set next end time to earliest bar in this chunk
@@ -534,14 +540,13 @@ impl IbkrHistoricalDownloader {
             // Request historical data for this chunk
             let result = timeout(
                 TokioDuration::from_secs(120),
-                self.client.historical_data(
-                    contract,
-                    Some(current_end), // Use specific end time for this chunk
-                    duration_enum.clone(),
-                    bar_size_enum,
-                    Some(what_enum),
-                    TradingHours::Regular,
-                ),
+                self.client
+                    .historical_data(contract, bar_size_enum)
+                    .what_to_show(what_enum)
+                    .duration(duration_enum.clone())
+                    .ending(current_end)
+                    .trading_hours(TradingHours::Regular)
+                    .fetch(),
             )
             .await
             .map_err(|_| DownloadError::Network("Timeout fetching chunk".to_string()))?
@@ -557,7 +562,7 @@ impl IbkrHistoricalDownloader {
 
             // Find the earliest bar in this chunk to set next end time
             if let Some(earliest_bar) = chunk_bars.first() {
-                current_end = earliest_bar.date;
+                current_end = bar_time(&earliest_bar.date);
             }
 
             all_bars.extend(chunk_bars);
@@ -573,7 +578,7 @@ impl IbkrHistoricalDownloader {
         all_bars.sort_by_key(|b| b.date);
 
         // Remove duplicates (bars at chunk boundaries)
-        all_bars.dedup_by_key(|b| b.date.unix_timestamp());
+        all_bars.dedup_by_key(|b| bar_time(&b.date).unix_timestamp());
 
         println!("\n✓ Total bars after merging: {}", all_bars.len());
 

@@ -55,9 +55,24 @@ use ibapi::contracts::Contract;
 #[cfg(feature = "data-ibkr")]
 use ibapi::market_data::TradingHours;
 #[cfg(feature = "data-ibkr")]
-use ibapi::market_data::historical::{Bar, BarSize, Duration, HistoricalData, WhatToShow};
+use ibapi::market_data::historical::{
+    Bar, BarSize, BarTimestamp, Duration, HistoricalData, WhatToShow,
+};
 #[cfg(feature = "data-ibkr")]
 use ibapi::prelude::*;
+#[cfg(feature = "data-ibkr")]
+use time::OffsetDateTime;
+
+/// Point in time of a bar. Daily and longer bars carry only a date; they map to
+/// midnight UTC, which is also how ibapi orders `BarTimestamp::Date` against
+/// intraday timestamps.
+#[cfg(feature = "data-ibkr")]
+pub(crate) fn bar_time(ts: &BarTimestamp) -> OffsetDateTime {
+    match ts {
+        BarTimestamp::Date(d) => d.midnight().assume_utc(),
+        BarTimestamp::DateTime(dt) => *dt,
+    }
+}
 
 /// Instrument type for IBKR downloads
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -300,16 +315,15 @@ impl IbkrHistoricalDownloader {
 
         // Request historical data with timeout
         // Increased timeout for large requests (e.g., years of minute data)
+        // No `.ending(..)`: the request ends at the current time.
         let result: HistoricalData = timeout(
             tokio::time::Duration::from_secs(120),
-            self.client.historical_data(
-                contract,
-                None, // end_datetime: use current time
-                Self::parse_duration(duration)?,
-                bar_size_enum,
-                Some(what_enum),
-                TradingHours::Regular, // use regular trading hours
-            ),
+            self.client
+                .historical_data(contract, bar_size_enum)
+                .what_to_show(what_enum)
+                .duration(Self::parse_duration(duration)?)
+                .trading_hours(TradingHours::Regular)
+                .fetch(),
         )
         .await
         .map_err(|_| DownloadError::Network("Timeout fetching historical data".to_string()))?
@@ -434,7 +448,7 @@ impl IbkrHistoricalDownloader {
         // Extract columns
         let timestamps: Vec<i64> = bars
             .iter()
-            .map(|b| b.date.unix_timestamp() * 1000) // Convert seconds to milliseconds
+            .map(|b| bar_time(&b.date).unix_timestamp() * 1000) // Convert seconds to milliseconds
             .collect();
         let opens: Vec<f64> = bars.iter().map(|b| b.open).collect();
         let highs: Vec<f64> = bars.iter().map(|b| b.high).collect();
@@ -478,5 +492,34 @@ impl IbkrHistoricalDownloader {
             .map_err(|e| DownloadError::InvalidFormat(e.to_string()))?;
 
         Ok(())
+    }
+}
+
+#[cfg(all(test, feature = "data-ibkr"))]
+mod tests {
+    use super::*;
+    use time::{Date, Month, UtcOffset};
+
+    #[test]
+    fn bar_time_maps_daily_bars_to_midnight_utc() {
+        let day = Date::from_calendar_date(2024, Month::March, 15).unwrap();
+        // 2024-03-15T00:00:00Z
+        assert_eq!(
+            bar_time(&BarTimestamp::Date(day)).unix_timestamp(),
+            1_710_460_800
+        );
+    }
+
+    #[test]
+    fn bar_time_passes_intraday_timestamps_through() {
+        // 2024-03-15T14:30:05-04:00 == 2024-03-15T18:30:05Z
+        let dt = OffsetDateTime::from_unix_timestamp(1_710_527_405)
+            .unwrap()
+            .to_offset(UtcOffset::from_hms(-4, 0, 0).unwrap());
+        assert_eq!(bar_time(&BarTimestamp::DateTime(dt)), dt);
+        assert_eq!(
+            bar_time(&BarTimestamp::DateTime(dt)).unix_timestamp(),
+            1_710_527_405
+        );
     }
 }
