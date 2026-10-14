@@ -113,9 +113,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `argmin = "0.10"` - L-BFGS-B optimization algorithm
 - `argmin-math = "0.5"` - ndarray support for argmin
-- `ibapi = "2.0"` (optional, feature: `data-ibkr`) - Interactive Brokers API
+- `ibapi = "5.1"` (optional, feature: `data-ibkr`) - Interactive Brokers API
 - `tokio = "1.42"` (optional, async features) - Async runtime
 - `async-trait = "0.1"` (optional, async features) - Async trait support
+
+### Dependencies Updated
+
+- **Security** (all open Dependabot alerts; `cargo audit` clean): `pyo3` 0.27 → 0.29 and
+  `numpy` 0.27 → 0.29; `arrow`/`parquet` 54 → 60 (drops the `thrift` crate); `rustls` 0.23.46;
+  `rand` 0.8.8 (transitive). The unused `deribit` crate was removed, taking vulnerable
+  `tungstenite` 0.18 / `ring` 0.16 / `rustls` 0.20 with it; the `data-deribit` feature remains.
+- `rand` 0.9 → 0.10 and `rand_distr` 0.5 → 0.6 (`Rng` → `RngExt`, `thread_rng` → `rng`).
+- `sha2` 0.10 → 0.11.
+- `ibapi` 2.0 → 5.1 (builder-based historical-data/option-chain API). The chunked options
+  downloader now rejects an option right other than `"C"`/`"P"` instead of sending it to TWS.
+- `cudarc` 0.17.3 → 0.19.10 (still an exact pin; validated with the GPU `--ignored` suite).
+- Python-visible: pyo3 0.29 words argument `TypeError`s differently
+  (`'str' object is not an instance of 'TickBacktestConfig'`).
 
 ### Feature Flags Added
 
