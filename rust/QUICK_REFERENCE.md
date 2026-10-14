@@ -216,8 +216,8 @@ strong_signal = price_up and volume_confirm
 
 - Full API docs: `rust/docs/PYTHON_BINDINGS.md`
 - Example script: `rust/examples/all_indicators_example.py`
-- Test suite: `test_rust_bindings.py`
-- Completion report: `RUST_BINDINGS_COMPLETE.md`
+- Binding check: `scripts/check_rust_bindings.py`
+- Completion report: `docs/archive/reports/RUST_BINDINGS_COMPLETE.md`
 
 ## Support
 

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/API.md` documents `calculate_vwap_anchored()`, the one exported indicator that was missing.
 
 ### Changed
+- Moved the session reports at the repository root (strategy discovery, EMA regime deployment, validated edge, Rust bindings completion) to `docs/archive/reports/`, and `test_rust_bindings.py` to `scripts/check_rust_bindings.py`.
 - pandas is now an optional dependency (PR #17): install `kimsfinance[pandas]` to pass pandas objects. The `reporting`, `dev`, `test` and `all` extras still include it.
 - Rust core migrated to `rand` 0.9 and `rand_distr` 0.5 (PR #16).
 - Build backend now requires setuptools >= 77, which the SPDX `license` field needs; `license-files` declares the dual-licensing documents.

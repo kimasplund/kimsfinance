@@ -32,6 +32,7 @@ print("=" * 60)
 successes = []
 failures = []
 
+
 def test_indicator(name, func, *args, **kwargs):
     """Test a single indicator function."""
     try:
@@ -53,6 +54,7 @@ def test_indicator(name, func, *args, **kwargs):
         print(f"✗ {name}: {type(e).__name__}: {e}")
         failures.append((name, str(e)))
         return False
+
 
 # Moving Averages (7 indicators)
 print("\n--- Moving Averages (7) ---")
@@ -88,7 +90,9 @@ print("\n--- Volume Indicators (4) ---")
 test_indicator("OBV", kimsfinance_core.calculate_obv, close, volume)
 test_indicator("VWAP", kimsfinance_core.calculate_vwap, high, low, close, volume)
 test_indicator("CMF", kimsfinance_core.calculate_cmf, high, low, close, volume)
-test_indicator("Volume Profile", kimsfinance_core.calculate_volume_profile, high, low, close, volume)
+test_indicator(
+    "Volume Profile", kimsfinance_core.calculate_volume_profile, high, low, close, volume
+)
 
 # Summary
 print("\n" + "=" * 60)

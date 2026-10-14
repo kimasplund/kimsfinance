@@ -172,7 +172,7 @@ cargo test
 
 ### Test Python bindings
 ```bash
-python test_rust_bindings.py
+python scripts/check_rust_bindings.py
 ```
 
 Expected output (covers original 24; 2 newer indicators added separately):
@@ -339,7 +339,7 @@ When adding new indicators:
    }
    ```
 3. Register in `kimsfinance_core` module
-4. Add test case to `test_rust_bindings.py`
+4. Add a check to `scripts/check_rust_bindings.py`
 5. Update this documentation
 
 ## Support
