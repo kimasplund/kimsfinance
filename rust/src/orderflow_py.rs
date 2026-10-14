@@ -82,7 +82,7 @@ use crate::gpu::device::GpuDevice;
 /// )
 /// ```
 #[cfg(feature = "gpu")]
-#[pyclass(name = "StrategyConfig")]
+#[pyclass(name = "StrategyConfig", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyStrategyConfig {
     inner: RustStrategyConfig,

@@ -47,7 +47,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// Tick backtest configuration
-#[pyclass(name = "TickBacktestConfig")]
+#[pyclass(name = "TickBacktestConfig", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyTickBacktestConfig {
     pub initial_capital: f64,

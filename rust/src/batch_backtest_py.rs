@@ -46,7 +46,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Python-facing result class for batch backtest
-#[pyclass(name = "BacktestResult")]
+#[pyclass(name = "BacktestResult", skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyBacktestResult {
     /// Strategy ID (index in parameter list)

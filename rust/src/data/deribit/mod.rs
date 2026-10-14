@@ -42,14 +42,13 @@ use async_trait::async_trait;
 
 /// Deribit options data connector
 ///
-/// **Note**: This is a stub implementation. The `deribit` crate (v0.3.3) API requires
-/// further exploration to implement the full connector. The structure and interface
-/// are in place for future implementation.
+/// **Note**: This is a stub implementation. The structure and interface are in place
+/// for future implementation.
 ///
-/// To implement:
-/// 1. Study deribit crate docs: https://docs.rs/deribit/0.3.3
-/// 2. Explore examples in deribit GitHub repo
-/// 3. Implement actual API calls based on current crate structure
+/// The `deribit` crate (v0.3.3, last released 2023) was dropped as a dependency: it was
+/// never called and pinned vulnerable `ring` 0.16 / `tungstenite` 0.18. Implement against
+/// the Deribit JSON-RPC API (https://docs.deribit.com) directly, e.g. with `reqwest` or a
+/// maintained WebSocket client.
 #[cfg(feature = "data-deribit")]
 pub struct DeribitConnector {
     // TODO: Add actual Deribit client fields once API is explored

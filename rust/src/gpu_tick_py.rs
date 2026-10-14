@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 /// Python wrapper for AggregatedCandles
-#[pyclass(name = "AggregatedCandles")]
+#[pyclass(name = "AggregatedCandles", skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyAggregatedCandles {
     inner: AggregatedCandles,

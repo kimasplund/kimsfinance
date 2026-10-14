@@ -1886,7 +1886,7 @@ fn run_backtest<'py>(
 /// ```
 #[pyfunction]
 #[cfg(feature = "data-downloaders")]
-fn load_parquet_file_py(py: Python, parquet_path: String) -> PyResult<PyObject> {
+fn load_parquet_file_py(py: Python, parquet_path: String) -> PyResult<Py<PyAny>> {
     use binance::load_parquet_file;
 
     // Load trades from Parquet (Rust implementation)
@@ -1944,7 +1944,7 @@ fn load_parquet_month_py(
     py: Python,
     month_dir: String,
     max_trades: Option<usize>,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     use binance::load_parquet_month;
 
     // Load trades from month directory (Rust implementation)
