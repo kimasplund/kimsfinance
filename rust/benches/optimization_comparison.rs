@@ -73,9 +73,9 @@ fn generate_rsi_parameters(n_strategies: usize, seed: u64) -> Vec<Vec<f64>> {
     (0..n_strategies)
         .map(|_| {
             vec![
-                rng.gen_range(10.0..20.0), // RSI period (10-20)
-                rng.gen_range(20.0..40.0), // Buy threshold (oversold)
-                rng.gen_range(60.0..80.0), // Sell threshold (overbought)
+                rng.random_range(10.0..20.0), // RSI period (10-20)
+                rng.random_range(20.0..40.0), // Buy threshold (oversold)
+                rng.random_range(60.0..80.0), // Sell threshold (overbought)
             ]
         })
         .collect()

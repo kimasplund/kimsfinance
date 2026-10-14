@@ -95,20 +95,20 @@ const ACCURACY_TEST_SIZE: usize = 256;
 
 /// Generate random matrix data (FP32)
 fn generate_matrix_f32(rows: usize, cols: usize) -> Vec<f32> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
     (0..rows * cols)
-        .map(|_| rng.gen_range(-10.0..10.0))
+        .map(|_| rng.random_range(-10.0..10.0))
         .collect()
 }
 
 /// Generate random matrix data (FP16)
 #[cfg(feature = "gpu")]
 fn generate_matrix_f16(rows: usize, cols: usize) -> Vec<half::f16> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
     (0..rows * cols)
-        .map(|_| half::f16::from_f32(rng.gen_range(-10.0..10.0)))
+        .map(|_| half::f16::from_f32(rng.random_range(-10.0..10.0)))
         .collect()
 }
 

@@ -148,7 +148,7 @@ fn generate_prices(n: usize, seed: u64) -> Vec<f64> {
 
     for _ in 0..n {
         // Random walk with mean reversion
-        let change = rng.gen_range(-1.0..1.0) * 0.02; // 2% volatility
+        let change = rng.random_range(-1.0..1.0) * 0.02; // 2% volatility
         price *= 1.0 + change;
         price = price.max(50.0).min(200.0); // Bounds
         prices.push(price);

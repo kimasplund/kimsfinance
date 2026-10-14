@@ -311,7 +311,7 @@ fn test_value_area_calculation() {
 
 #[test]
 fn test_value_area_70_percent_property() {
-    use rand::Rng;
+    use rand::RngExt;
     use rand_distr::{Distribution, Normal};
     let mut rng = rand::rng();
     let normal = Normal::new(100.0, 3.0).unwrap();
@@ -610,7 +610,7 @@ fn test_invalid_value_area_pct_negative() {
 
 #[test]
 fn test_realistic_trading_session() {
-    use rand::Rng;
+    use rand::RngExt;
     use rand_distr::{Distribution, Normal};
 
     let mut rng = rand::rng();

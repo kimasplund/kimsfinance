@@ -112,17 +112,17 @@ fn test_large_dataset_accuracy() {
     let num_ticks = 10_000;
     let mut features = Vec::with_capacity(num_ticks);
 
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     for _ in 0..num_ticks {
         features.push(vec![
-            rng.gen_range(0.0..1.0),    // order_imbalance
-            rng.gen_range(0.0..5000.0), // volume_delta
-            rng.gen_range(0.0..200.0),  // trade_intensity
-            rng.gen_range(0.0..0.01),   // price_velocity
-            rng.gen_range(0.0..1.0),    // volume_weighted_spread
-            rng.gen_range(0.0..500.0),  // trade_size_distribution
+            rng.random_range(0.0..1.0),    // order_imbalance
+            rng.random_range(0.0..5000.0), // volume_delta
+            rng.random_range(0.0..200.0),  // trade_intensity
+            rng.random_range(0.0..0.01),   // price_velocity
+            rng.random_range(0.0..1.0),    // volume_weighted_spread
+            rng.random_range(0.0..500.0),  // trade_size_distribution
         ]);
     }
 
@@ -248,17 +248,17 @@ fn test_gpu_batch_quantization() {
         let num_ticks = 10_000;
         let mut features = Vec::with_capacity(num_ticks);
 
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
+        use rand::RngExt;
+        let mut rng = rand::rng();
 
         for _ in 0..num_ticks {
             features.push(vec![
-                rng.gen_range(0.0..1.0),
-                rng.gen_range(0.0..5000.0),
-                rng.gen_range(0.0..200.0),
-                rng.gen_range(0.0..0.01),
-                rng.gen_range(0.0..1.0),
-                rng.gen_range(0.0..500.0),
+                rng.random_range(0.0..1.0),
+                rng.random_range(0.0..5000.0),
+                rng.random_range(0.0..200.0),
+                rng.random_range(0.0..0.01),
+                rng.random_range(0.0..1.0),
+                rng.random_range(0.0..500.0),
             ]);
         }
 

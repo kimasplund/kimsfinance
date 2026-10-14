@@ -45,14 +45,14 @@ mod test_data {
         let mut price = 100.0;
 
         for _ in 0..n {
-            let change = rng.gen_range(-0.02..0.02); // ±2% per candle
+            let change = rng.random_range(-0.02..0.02); // ±2% per candle
             price *= 1.0 + change;
 
-            let o = price * (1.0 + rng.gen_range(-0.005..0.005));
-            let c = price * (1.0 + rng.gen_range(-0.005..0.005));
-            let h = o.max(c) * (1.0 + rng.gen_range(0.0..0.01));
-            let l = o.min(c) * (1.0 - rng.gen_range(0.0..0.01));
-            let v = rng.gen_range(1000.0..10000.0);
+            let o = price * (1.0 + rng.random_range(-0.005..0.005));
+            let c = price * (1.0 + rng.random_range(-0.005..0.005));
+            let h = o.max(c) * (1.0 + rng.random_range(0.0..0.01));
+            let l = o.min(c) * (1.0 - rng.random_range(0.0..0.01));
+            let v = rng.random_range(1000.0..10000.0);
 
             open.push(o);
             high.push(h);
@@ -70,9 +70,9 @@ mod test_data {
         (0..n_strategies)
             .map(|_| {
                 vec![
-                    rng.gen_range(10.0..20.0), // RSI period
-                    rng.gen_range(20.0..40.0), // Buy threshold
-                    rng.gen_range(60.0..80.0), // Sell threshold
+                    rng.random_range(10.0..20.0), // RSI period
+                    rng.random_range(20.0..40.0), // Buy threshold
+                    rng.random_range(60.0..80.0), // Sell threshold
                 ]
             })
             .collect()

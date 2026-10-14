@@ -53,7 +53,7 @@ const MIN_SPEEDUP_TARGET: f64 = 5.0;
 
 /// Generate synthetic test data (fallback when real data unavailable)
 fn generate_test_trades(n: usize) -> Vec<Trade> {
-    use rand::Rng;
+    use rand::RngExt;
     let mut rng = rand::rng();
 
     let base_price = 45000.0;

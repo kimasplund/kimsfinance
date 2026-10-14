@@ -34,10 +34,10 @@ use std::time::Duration;
 /// - High volume between $98-$102 (value area)
 /// - Lower volume at extremes
 fn generate_sample_trades() -> Vec<Trade> {
-    use rand::Rng;
+    use rand::RngExt;
     use rand_distr::{Distribution, Normal};
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Normal distribution centered at $100 with std dev of $2
     let normal = Normal::new(100.0, 2.0).unwrap();
@@ -48,8 +48,8 @@ fn generate_sample_trades() -> Vec<Trade> {
     for i in 0..10_000 {
         let sampled: f64 = normal.sample(&mut rng);
         let price = sampled.clamp(90.0, 110.0); // Clamp to reasonable range
-        let quantity = rng.gen_range(0.1..5.0);
-        let is_buyer_maker = rng.gen_bool(0.5);
+        let quantity = rng.random_range(0.1..5.0);
+        let is_buyer_maker = rng.random_bool(0.5);
 
         trades.push(Trade {
             trade_id: i as u64,
