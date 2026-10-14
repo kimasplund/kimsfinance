@@ -16,8 +16,8 @@ name = "kimsfinance_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.27.1", features = ["extension-module", "abi3-py313"] }
-numpy = "0.27.0"
+pyo3 = { version = "0.29.3", features = ["extension-module", "abi3-py313"] }
+numpy = "0.29.0"
 ndarray = { version = "0.16.1", features = ["rayon"] }
 rayon = "1.11.0"
 serde_json = "1.0"
@@ -37,13 +37,12 @@ async-trait = { version = "0.1", optional = true }
 reqwest = { version = "0.12", features = ["json", "cookies"], optional = true }
 
 # Parquet file format for data storage
-arrow = { version = "54.0", optional = true }
-parquet = { version = "54.0", features = ["arrow"], optional = true }
+arrow = { version = "60.0", optional = true }
+parquet = { version = "60.0", features = ["arrow"], optional = true }
 
 # Options data connectors (optional)
 ibapi = { version = "2.0", optional = true }
 time = { version = "0.3", optional = true }
-deribit = { version = "0.3", optional = true }
 
 # Performance dependencies for backtest optimization
 dashmap = "6.1"
@@ -109,7 +108,9 @@ strict-fp = []
 
 # Options data connectors
 data-ibkr = ["ibapi", "time", "tokio", "async-trait"]
-data-deribit = ["deribit", "tokio", "async-trait"]
+# The Deribit connector is still a stub (src/data/deribit/), so it pulls in no client crate;
+# the unmaintained `deribit` 0.3 crate was dropped for its vulnerable ring 0.16/tungstenite 0.18.
+data-deribit = ["tokio", "async-trait"]
 # Arrow/Parquet tick storage (pulled in by data-downloaders; cfg(feature = "parquet") in tests)
 parquet = ["dep:parquet", "dep:arrow"]
 data-downloaders = ["tokio", "async-trait", "reqwest", "parquet"]

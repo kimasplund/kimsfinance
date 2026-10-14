@@ -716,7 +716,7 @@ fn parse_parameter_grid(param_ranges: &Bound<'_, PyDict>) -> PyResult<ParameterG
 
     for (key, value) in param_ranges.iter() {
         let param_name: String = key.extract()?;
-        let range_dict: &Bound<'_, PyDict> = value.downcast()?;
+        let range_dict: &Bound<'_, PyDict> = value.cast()?;
 
         // Check if it's a min/max/step range or discrete values
         if range_dict.contains("values")? {

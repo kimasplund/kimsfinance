@@ -114,7 +114,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `argmin = "0.10"` - L-BFGS-B optimization algorithm
 - `argmin-math = "0.5"` - ndarray support for argmin
 - `ibapi = "2.0"` (optional, feature: `data-ibkr`) - Interactive Brokers API
-- `deribit = "0.3"` (optional, feature: `data-deribit`) - Deribit API
 - `tokio = "1.42"` (optional, async features) - Async runtime
 - `async-trait = "0.1"` (optional, async features) - Async trait support
 
@@ -122,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `heston` - Enables Heston model with GPU + optimization (meta-feature)
 - `data-ibkr` - Interactive Brokers data connector
-- `data-deribit` - Deribit data connector
+- `data-deribit` - Deribit data connector (stub; no client crate yet)
 - `data-all` - All data connectors
 
 ### Performance
