@@ -258,9 +258,12 @@ impl IbkrConnector {
 
         let mut chain_stream = self
             .client
-            .option_chain(symbol, exchange, security_type, contract_id)
+            .option_chain(symbol, security_type, contract_id)
+            .exchange(exchange)
+            .subscribe()
             .await
-            .map_err(|e| DataError::ApiError(format!("Failed to request option chain: {:?}", e)))?;
+            .map_err(|e| DataError::ApiError(format!("Failed to request option chain: {:?}", e)))?
+            .filter_data();
 
         let mut chains = Vec::new();
 
@@ -291,7 +294,8 @@ impl IbkrConnector {
             .await
             .map_err(|e| {
                 DataError::ApiError(format!("Failed to subscribe to market data: {:?}", e))
-            })?;
+            })?
+            .filter_data();
 
         let mut spot_price = None;
         let timeout_duration = Duration::from_secs(5);
@@ -336,8 +340,8 @@ impl IbkrConnector {
     ) -> Result<OptionQuote, DataError> {
         // Build option contract
         let right = match option_type {
-            OptionType::Call => "C",
-            OptionType::Put => "P",
+            OptionType::Call => OptionRight::Call,
+            OptionType::Put => OptionRight::Put,
         };
 
         let contract = Contract {
@@ -346,7 +350,7 @@ impl IbkrConnector {
             exchange: Exchange::from(&chain.exchange),
             currency: Currency::from("USD"),
             strike,
-            right: right.to_string(),
+            right: Some(right),
             last_trade_date_or_contract_month: expiration.to_string(),
             multiplier: chain.multiplier.clone(),
             ..Default::default()
@@ -362,7 +366,8 @@ impl IbkrConnector {
             .await
             .map_err(|e| {
                 DataError::ApiError(format!("Failed to subscribe to option data: {:?}", e))
-            })?;
+            })?
+            .filter_data();
 
         let mut bid = None;
         let mut ask = None;

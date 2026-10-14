@@ -49,7 +49,7 @@ use std::time::Duration;
 
 fn generate_test_trades(n: usize) -> Vec<Trade> {
     use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
 
     let mut rng = StdRng::seed_from_u64(42);
     let base_price = 45000.0;
@@ -57,9 +57,9 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
 
     (0..n)
         .map(|i| {
-            let price_change = (rng.r#gen::<f64>() - 0.5) * 0.002;
+            let price_change = (rng.random::<f64>() - 0.5) * 0.002;
             let price = base_price * (1.0 + price_change);
-            let quantity = rng.gen_range(0.001..1.0);
+            let quantity = rng.random_range(0.001..1.0);
 
             Trade {
                 trade_id: i as u64,
@@ -67,7 +67,7 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
                 quantity,
                 quote_quantity: price * quantity,
                 timestamp_ms: base_timestamp + (i as i64 * 10),
-                is_buyer_maker: rng.gen_bool(0.5),
+                is_buyer_maker: rng.random_bool(0.5),
             }
         })
         .collect()
@@ -75,19 +75,19 @@ fn generate_test_trades(n: usize) -> Vec<Trade> {
 
 fn generate_parameter_sets(n: usize) -> Vec<Vec<f64>> {
     use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
 
     let mut rng = StdRng::seed_from_u64(123);
 
     (0..n)
         .map(|_| {
             vec![
-                rng.gen_range(50.0..200.0),   // window_size
-                rng.gen_range(0.5..0.7),      // imbalance_threshold
-                rng.gen_range(5.0..20.0),     // min_volume
-                rng.gen_range(0.0005..0.002), // spike_threshold
-                rng.gen_range(3.0..10.0),     // ema_period
-                rng.gen_range(0.8..1.5),      // volatility_factor
+                rng.random_range(50.0..200.0),   // window_size
+                rng.random_range(0.5..0.7),      // imbalance_threshold
+                rng.random_range(5.0..20.0),     // min_volume
+                rng.random_range(0.0005..0.002), // spike_threshold
+                rng.random_range(3.0..10.0),     // ema_period
+                rng.random_range(0.8..1.5),      // volatility_factor
             ]
         })
         .collect()

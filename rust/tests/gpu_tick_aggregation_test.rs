@@ -46,7 +46,7 @@ mod gpu_tick_aggregation_tests {
     /// Generate realistic test trades
     fn generate_test_trades(n: usize, num_candles: usize, timeframe_minutes: i64) -> Vec<Trade> {
         use rand::rngs::StdRng;
-        use rand::{Rng, SeedableRng};
+        use rand::{RngExt, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(42);
 
@@ -62,10 +62,10 @@ mod gpu_tick_aggregation_tests {
             let timestamp = base_timestamp + (candle_idx as i64 * timeframe_ms) + (i as i64 * 10);
 
             // Price variation within candle (±1%)
-            let price_variation = (rng.r#gen::<f64>() - 0.5) * 0.02;
+            let price_variation = (rng.random::<f64>() - 0.5) * 0.02;
             let price = base_price * (1.0 + price_variation);
 
-            let quantity = rng.gen_range(0.001..1.0);
+            let quantity = rng.random_range(0.001..1.0);
 
             trades.push(Trade {
                 trade_id: i as u64,
@@ -73,7 +73,7 @@ mod gpu_tick_aggregation_tests {
                 quantity,
                 quote_quantity: price * quantity,
                 timestamp_ms: timestamp,
-                is_buyer_maker: rng.gen_bool(0.5),
+                is_buyer_maker: rng.random_bool(0.5),
             });
         }
 

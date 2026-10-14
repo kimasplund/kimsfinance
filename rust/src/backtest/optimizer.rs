@@ -62,7 +62,7 @@ use crate::gpu::GpuError;
 #[cfg(not(feature = "gpu"))]
 use crate::cpu::sequential::GpuError;
 use ndarray::Array1;
-use rand::Rng;
+use rand::RngExt;
 use rand::prelude::*;
 use rayon::prelude::*;
 use std::collections::HashMap;

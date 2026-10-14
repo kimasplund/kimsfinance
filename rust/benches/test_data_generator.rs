@@ -166,18 +166,18 @@ pub fn generate_realistic_ohlcv(config: &DataGeneratorConfig) -> OHLCVData {
         };
 
         // Random walk
-        let noise = rng.gen_range(-config.volatility..config.volatility);
+        let noise = rng.random_range(-config.volatility..config.volatility);
 
         // Update current price
         let price_change = trend + cycle + noise;
         current_price *= 1.0 + price_change;
 
         // Generate OHLC for this candle
-        let candle_range = config.volatility * rng.gen_range(0.5..1.5);
-        let o = current_price + rng.gen_range(-candle_range..candle_range);
-        let c = current_price + rng.gen_range(-candle_range..candle_range);
-        let h = o.max(c) * (1.0 + rng.gen_range(0.0..candle_range * 0.5));
-        let l = o.min(c) * (1.0 - rng.gen_range(0.0..candle_range * 0.5));
+        let candle_range = config.volatility * rng.random_range(0.5..1.5);
+        let o = current_price + rng.random_range(-candle_range..candle_range);
+        let c = current_price + rng.random_range(-candle_range..candle_range);
+        let h = o.max(c) * (1.0 + rng.random_range(0.0..candle_range * 0.5));
+        let l = o.min(c) * (1.0 - rng.random_range(0.0..candle_range * 0.5));
 
         open.push(o);
         high.push(h);
@@ -186,7 +186,7 @@ pub fn generate_realistic_ohlcv(config: &DataGeneratorConfig) -> OHLCVData {
 
         // Volume: mean-reverting around base volume
         let base_volume = 5000.0;
-        let volume_noise = rng.gen_range(0.5..1.5);
+        let volume_noise = rng.random_range(0.5..1.5);
         volume.push(base_volume * volume_noise);
     }
 
@@ -214,7 +214,7 @@ pub fn generate_simple_random_walk(n_candles: usize, seed: u64) -> OHLCVData {
         timestamps.push(base_time + (i as i64 * 60));
 
         // Simple random walk
-        let change = rng.gen_range(-0.02..0.02);
+        let change = rng.random_range(-0.02..0.02);
         current_price *= 1.0 + change;
         close.push(current_price);
     }
@@ -229,17 +229,17 @@ pub fn generate_simple_random_walk(n_candles: usize, seed: u64) -> OHLCVData {
     let high: Vec<f64> = close
         .iter()
         .zip(&open)
-        .map(|(&c, &o)| c.max(o) * (1.0 + rng.gen_range(0.0..0.01)))
+        .map(|(&c, &o)| c.max(o) * (1.0 + rng.random_range(0.0..0.01)))
         .collect();
 
     let low: Vec<f64> = close
         .iter()
         .zip(&open)
-        .map(|(&c, &o)| c.min(o) * (1.0 - rng.gen_range(0.0..0.01)))
+        .map(|(&c, &o)| c.min(o) * (1.0 - rng.random_range(0.0..0.01)))
         .collect();
 
     let volume: Vec<f64> = (0..n_candles)
-        .map(|_| rng.gen_range(1000.0..10000.0))
+        .map(|_| rng.random_range(1000.0..10000.0))
         .collect();
 
     OHLCVData {

@@ -755,7 +755,7 @@ pub fn batch_backtest_genetic(
     let equity_curves_flat = device.copy_to_host(&d_equity_curves)?;
     let num_trades_host: Vec<i32> = device
         .stream
-        .memcpy_dtov(&d_num_trades)
+        .clone_dtoh(&d_num_trades)
         .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e)))?;
 
     // ====== PHASE 8: BUILD BACKTEST RESULTS ======

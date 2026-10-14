@@ -171,8 +171,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///
 /// Simulates realistic orderflow with trends, mean reversion, and noise.
 fn generate_synthetic_data(num_ticks: usize) -> OrderflowInput {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     let mut timestamps = Vec::with_capacity(num_ticks);
     let mut close_prices = Vec::with_capacity(num_ticks);
@@ -185,17 +185,17 @@ fn generate_synthetic_data(num_ticks: usize) -> OrderflowInput {
 
     for _ in 0..num_ticks {
         // Simulate price movement (random walk with trend)
-        let trend = (rng.r#gen::<f32>() - 0.5) * 2.0; // -1 to +1
-        let noise = (rng.r#gen::<f32>() - 0.5) * 10.0; // ±5
+        let trend = (rng.random::<f32>() - 0.5) * 2.0; // -1 to +1
+        let noise = (rng.random::<f32>() - 0.5) * 10.0; // ±5
         price += trend + noise;
         price = price.max(1000.0); // Floor at $1k
 
         // Simulate volume (lognormal distribution)
-        let base_volume = rng.r#gen::<f32>() * 100.0 + 10.0; // 10-110
+        let base_volume = rng.random::<f32>() * 100.0 + 10.0; // 10-110
         let total_volume = base_volume;
 
         // Simulate buy/sell split (with some imbalance)
-        let imbalance = (rng.r#gen::<f32>() - 0.5) * 0.4 + 0.5; // 0.3-0.7
+        let imbalance = (rng.random::<f32>() - 0.5) * 0.4 + 0.5; // 0.3-0.7
         let buy_vol = total_volume * imbalance;
         let sell_vol = total_volume * (1.0 - imbalance);
 

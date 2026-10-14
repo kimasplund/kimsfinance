@@ -68,8 +68,8 @@ pub fn generate_btc_ohlcv(
 
         // Add intrabar volatility for high/low
         let range = volatility * current_price * dt.sqrt();
-        let high_price = current_price.max(open_price) + range * rng.gen::<f64>();
-        let low_price = current_price.min(open_price) - range * rng.gen::<f64>();
+        let high_price = current_price.max(open_price) + range * rng.random::<f64>();
+        let low_price = current_price.min(open_price) - range * rng.random::<f64>();
 
         open.push(open_price);
         high.push(high_price);

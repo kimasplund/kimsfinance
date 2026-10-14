@@ -50,8 +50,8 @@ fn generate_realistic_data(
     Array1<f64>,
     Array1<f64>,
 ) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     let mut timestamps = Vec::with_capacity(n);
     let mut open = Vec::with_capacity(n);
@@ -64,21 +64,21 @@ fn generate_realistic_data(
     for i in 0..n {
         timestamps.push((i * 300) as i64);
 
-        let random_walk = rng.gen_range(-volatility..volatility);
+        let random_walk = rng.random_range(-volatility..volatility);
         let cyclical = ((i as f64 * 0.05).sin() * volatility * 0.5);
         price += trend + random_walk + cyclical;
         price = price.max(10.0);
 
-        let o = price + rng.gen_range(-0.5..0.5);
-        let c = price + rng.gen_range(-0.5..0.5);
-        let h = o.max(c) + rng.gen_range(0.0..1.0);
-        let l = o.min(c) - rng.gen_range(0.0..1.0);
+        let o = price + rng.random_range(-0.5..0.5);
+        let c = price + rng.random_range(-0.5..0.5);
+        let h = o.max(c) + rng.random_range(0.0..1.0);
+        let l = o.min(c) - rng.random_range(0.0..1.0);
 
         open.push(o);
         high.push(h);
         low.push(l);
         close.push(c);
-        volume.push(rng.gen_range(1000.0..10000.0));
+        volume.push(rng.random_range(1000.0..10000.0));
     }
 
     (

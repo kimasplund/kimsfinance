@@ -531,7 +531,7 @@ impl TickAggregator {
     /// Copy i64 array from host to device
     fn copy_i64_to_device(&self, data: &[i64]) -> Result<CudaSlice<i64>, GpuError> {
         let n = data.len();
-        self.device.stream.memcpy_stod(data).map_err(|e| {
+        self.device.stream.clone_htod(data).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy {} i64 to device: {:?}", n, e))
         })
     }
@@ -539,7 +539,7 @@ impl TickAggregator {
     /// Copy f32 array from host to device
     fn copy_f32_to_device(&self, data: &[f32]) -> Result<CudaSlice<f32>, GpuError> {
         let n = data.len();
-        self.device.stream.memcpy_stod(data).map_err(|e| {
+        self.device.stream.clone_htod(data).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy {} f32 to device: {:?}", n, e))
         })
     }

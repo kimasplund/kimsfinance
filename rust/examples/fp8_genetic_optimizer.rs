@@ -51,8 +51,8 @@ fn generate_synthetic_ohlcv(
     Array1<f64>,
     Array1<f64>,
 ) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     let timestamps: Vec<i64> = (0..n_candles).map(|i| i as i64 * 60).collect();
     let mut close_prices = Vec::with_capacity(n_candles);
@@ -64,20 +64,20 @@ fn generate_synthetic_ohlcv(
     let mut price = 100.0_f64;
 
     for _ in 0..n_candles {
-        let change = rng.gen_range(-2.0..2.0);
+        let change = rng.random_range(-2.0..2.0);
         price += change;
         price = price.max(50.0).min(200.0);
 
-        let volatility = rng.gen_range(0.5..2.0);
-        let open = price + rng.gen_range(-volatility..volatility);
-        let high = open.max(price) + rng.gen_range(0.0..volatility);
-        let low = open.min(price) - rng.gen_range(0.0..volatility);
+        let volatility = rng.random_range(0.5..2.0);
+        let open = price + rng.random_range(-volatility..volatility);
+        let high = open.max(price) + rng.random_range(0.0..volatility);
+        let low = open.min(price) - rng.random_range(0.0..volatility);
 
         open_prices.push(open);
         high_prices.push(high);
         low_prices.push(low);
         close_prices.push(price);
-        volumes.push(rng.gen_range(1000.0..10000.0));
+        volumes.push(rng.random_range(1000.0..10000.0));
     }
 
     (

@@ -48,7 +48,7 @@ pub fn calculate_checksum<P: AsRef<Path>>(path: P) -> io::Result<String> {
         hasher.update(&buffer[..bytes_read]);
     }
 
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(to_hex(&hasher.finalize()))
 }
 
 /// Verify file checksum matches expected value
@@ -101,7 +101,18 @@ pub fn verify_checksum<P: AsRef<Path>>(file_path: P, expected: &str) -> io::Resu
 pub fn checksum_bytes(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    format!("{:x}", hasher.finalize())
+    to_hex(&hasher.finalize())
+}
+
+/// Lowercase hex encoding of a digest (sha2 0.11 output no longer implements `LowerHex`).
+fn to_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
+            let _ = write!(s, "{b:02x}");
+            s
+        })
 }
 
 /// Verify checksums for multiple files

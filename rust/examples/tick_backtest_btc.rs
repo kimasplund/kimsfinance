@@ -91,20 +91,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 /// - Variable trade sizes
 /// - Buyer/seller maker randomization
 fn generate_synthetic_trades(n: usize) -> Vec<Trade> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     let mut trades = Vec::with_capacity(n);
     let mut price: f64 = 50_000.0; // Starting BTC price
 
     for i in 0..n {
         // Random walk: +/- 0.1%
-        let change = rng.gen_range(-0.001..0.001);
+        let change = rng.random_range(-0.001..0.001);
         price *= 1.0 + change;
         price = price.max(1.0); // Ensure positive
 
-        let quantity = rng.gen_range(0.01..1.0);
-        let is_buyer_maker = rng.gen_bool(0.5);
+        let quantity = rng.random_range(0.01..1.0);
+        let is_buyer_maker = rng.random_bool(0.5);
 
         trades.push(Trade {
             trade_id: i as u64,

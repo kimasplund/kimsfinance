@@ -60,7 +60,7 @@
 
 use super::device::GpuError;
 use cudarc::driver::sys;
-use cudarc::driver::sys::CUmemAllocationHandleType_enum::CU_MEM_HANDLE_TYPE_NONE;
+use cudarc::driver::sys::CUmemAllocationHandleType;
 use cudarc::driver::sys::CUmemAllocationType_enum::CU_MEM_ALLOCATION_TYPE_PINNED;
 use cudarc::driver::sys::CUmemLocationType_enum::CU_MEM_LOCATION_TYPE_DEVICE;
 use cudarc::driver::sys::CUmemPool_attribute_enum::CU_MEMPOOL_ATTR_RELEASE_THRESHOLD;
@@ -253,7 +253,7 @@ impl AsyncAllocator {
             // Configure memory pool properties
             let mut pool_props: sys::CUmemPoolProps = std::mem::zeroed();
             pool_props.allocType = CU_MEM_ALLOCATION_TYPE_PINNED; // Regular device memory
-            pool_props.handleTypes = CU_MEM_HANDLE_TYPE_NONE; // No IPC handles
+            pool_props.handleTypes = CUmemAllocationHandleType::CU_MEM_HANDLE_TYPE_NONE; // No IPC handles
             pool_props.location.type_ = CU_MEM_LOCATION_TYPE_DEVICE;
             pool_props.location.id = device_id;
 

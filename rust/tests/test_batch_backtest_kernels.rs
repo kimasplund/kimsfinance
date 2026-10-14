@@ -352,7 +352,7 @@ mod batch_backtest_tests {
 
         // Copy results back
         let equity_curves = device.copy_to_host(&d_equity_curves).unwrap();
-        let num_trades = device.stream().memcpy_dtov(&d_num_trades).unwrap();
+        let num_trades = device.stream().clone_dtoh(&d_num_trades).unwrap();
 
         // Validate results
         for strategy_idx in 0..n_strategies {
@@ -575,7 +575,7 @@ mod batch_backtest_tests {
         device.stream().synchronize().unwrap();
 
         // Validate
-        let num_trades = device.stream().memcpy_dtov(&d_num_trades).unwrap();
+        let num_trades = device.stream().clone_dtoh(&d_num_trades).unwrap();
         let equity_curves = device.copy_to_host(&d_equity_curves).unwrap();
 
         for strategy_idx in 0..n_strategies {

@@ -616,7 +616,7 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_f32(&self, buffer: &CudaSlice<f32>) -> Result<Vec<f32>, GpuError> {
-        self.stream.memcpy_dtov(buffer).map_err(|e| {
+        self.stream.clone_dtoh(buffer).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy f32 from device: {:?}", e))
         })
     }
@@ -654,7 +654,7 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_i8(&self, buffer: &CudaSlice<i8>) -> Result<Vec<i8>, GpuError> {
-        self.stream.memcpy_dtov(buffer).map_err(|e| {
+        self.stream.clone_dtoh(buffer).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy i8 from device: {:?}", e))
         })
     }
@@ -665,7 +665,7 @@ impl GpuDevice {
     ///
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host_u8(&self, buffer: &CudaSlice<u8>) -> Result<Vec<u8>, GpuError> {
-        self.stream.memcpy_dtov(buffer).map_err(|e| {
+        self.stream.clone_dtoh(buffer).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy u8 from device: {:?}", e))
         })
     }
@@ -677,7 +677,7 @@ impl GpuDevice {
     /// * `buffer` - GPU buffer to copy from
     pub fn copy_to_host(&self, buffer: &CudaSlice<f64>) -> Result<Vec<f64>, GpuError> {
         self.stream
-            .memcpy_dtov(buffer)
+            .clone_dtoh(buffer)
             .map_err(|e| GpuError::MemoryCopyError(format!("Failed to copy from device: {:?}", e)))
     }
 

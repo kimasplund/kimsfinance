@@ -421,10 +421,10 @@ impl GpuAggregator {
         // the candle arrays are small relative to the trade inputs, and the
         // dense slot count can exceed the pinned pool's standard buffer size
         // for sparse data, so the pinned path is not usable here.
-        let high_bits: Vec<u64> = self.device.stream.memcpy_dtov(&d_high_bits).map_err(|e| {
+        let high_bits: Vec<u64> = self.device.stream.clone_dtoh(&d_high_bits).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy high bits from device: {:?}", e))
         })?;
-        let low_bits: Vec<u64> = self.device.stream.memcpy_dtov(&d_low_bits).map_err(|e| {
+        let low_bits: Vec<u64> = self.device.stream.clone_dtoh(&d_low_bits).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy low bits from device: {:?}", e))
         })?;
         let open = self.device.copy_to_host(&d_open)?;
@@ -463,7 +463,7 @@ impl GpuAggregator {
 /// Helper method to copy i32 data from device to host
 impl GpuDevice {
     pub fn copy_to_host_i32(&self, buffer: &CudaSlice<i32>) -> Result<Vec<i32>, GpuError> {
-        self.stream.memcpy_dtov(buffer).map_err(|e| {
+        self.stream.clone_dtoh(buffer).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy i32 from device: {:?}", e))
         })
     }

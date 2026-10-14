@@ -76,10 +76,10 @@ const MIN_SPEEDUP: f64 = 1.5;
 
 /// Generate random matrix data on host
 fn generate_matrix(rows: usize, cols: usize) -> Vec<f32> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
     (0..rows * cols)
-        .map(|_| rng.gen_range(-10.0..10.0))
+        .map(|_| rng.random_range(-10.0..10.0))
         .collect()
 }
 

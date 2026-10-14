@@ -54,8 +54,8 @@ use std::time::Duration;
 /// - Quantity: 0.001 - 1.0 BTC per trade
 /// - Timestamps: 1ms intervals (1000 ticks/sec)
 fn generate_tick_data(n: usize) -> Vec<Trade> {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
+    use rand::RngExt;
+    let mut rng = rand::rng();
 
     let base_price = 45000.0;
     let mut current_price = base_price;
@@ -64,10 +64,10 @@ fn generate_tick_data(n: usize) -> Vec<Trade> {
     (0..n)
         .map(|i| {
             // Random walk: ±0.01% per tick
-            let change = rng.gen_range(-0.0001..0.0001);
+            let change = rng.random_range(-0.0001..0.0001);
             current_price *= 1.0 + change;
 
-            let quantity = rng.gen_range(0.001..1.0);
+            let quantity = rng.random_range(0.001..1.0);
             let quote_quantity = current_price * quantity;
 
             Trade {
@@ -76,7 +76,7 @@ fn generate_tick_data(n: usize) -> Vec<Trade> {
                 quantity,
                 quote_quantity,
                 timestamp_ms: base_timestamp + (i as i64),
-                is_buyer_maker: rng.gen_bool(0.5),
+                is_buyer_maker: rng.random_bool(0.5),
             }
         })
         .collect()

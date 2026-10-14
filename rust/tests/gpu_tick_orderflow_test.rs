@@ -41,7 +41,7 @@ mod gpu_tick_orderflow_tests {
 
     fn generate_test_trades(n: usize) -> Vec<Trade> {
         use rand::rngs::StdRng;
-        use rand::{Rng, SeedableRng};
+        use rand::{RngExt, SeedableRng};
 
         let mut rng = StdRng::seed_from_u64(42);
         let base_price = 45000.0;
@@ -49,9 +49,9 @@ mod gpu_tick_orderflow_tests {
 
         (0..n)
             .map(|i| {
-                let price_change = (rng.r#gen::<f64>() - 0.5) * 0.002;
+                let price_change = (rng.random::<f64>() - 0.5) * 0.002;
                 let price = base_price * (1.0 + price_change);
-                let quantity = rng.gen_range(0.001..1.0);
+                let quantity = rng.random_range(0.001..1.0);
 
                 Trade {
                     trade_id: i as u64,
@@ -59,7 +59,7 @@ mod gpu_tick_orderflow_tests {
                     quantity,
                     quote_quantity: price * quantity,
                     timestamp_ms: base_timestamp + (i as i64),
-                    is_buyer_maker: rng.gen_bool(0.5),
+                    is_buyer_maker: rng.random_bool(0.5),
                 }
             })
             .collect()

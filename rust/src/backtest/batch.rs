@@ -1109,7 +1109,7 @@ impl BatchBacktestSweep {
         pool.release(pinned_equity);
         drop(pool);
 
-        let num_trades_vec = self.device.stream.memcpy_dtov(&num_trades).map_err(|e| {
+        let num_trades_vec = self.device.stream.clone_dtoh(&num_trades).map_err(|e| {
             GpuError::MemoryCopyError(format!("Failed to copy num_trades: {:?}", e))
         })?;
 

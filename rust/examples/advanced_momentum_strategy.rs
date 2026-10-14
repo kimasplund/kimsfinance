@@ -301,12 +301,12 @@ fn generate_synthetic_trades(
     use arrow::record_batch::RecordBatch;
     use parquet::arrow::ArrowWriter;
     use parquet::file::properties::WriterProperties;
-    use rand::Rng;
+    use rand::RngExt;
 
     println!("Generating {} synthetic trades...", num_trades);
     let start = Instant::now();
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Generate realistic BTC price walk
     let mut price: f64 = 50000.0;
@@ -322,21 +322,21 @@ fn generate_synthetic_trades(
         // Price walk with trend and mean reversion
         let trend = if i % 10000 < 5000 { 0.0001 } else { -0.0001 };
         let volatility = 0.0002;
-        let change = trend + rng.gen_range(-volatility..volatility);
+        let change = trend + rng.random_range(-volatility..volatility);
         price *= 1.0 + change;
         price = price.max(45000.0).min(55000.0); // Keep in range
 
         // Realistic quantities (0.001 to 1.0 BTC)
-        let qty = rng.gen_range(0.001..1.0);
+        let qty = rng.random_range(0.001..1.0);
 
         // Time: ~2ms per trade (realistic for BTC)
         let time = base_time + (i as i64 * 2);
 
         // 50% buy, 50% sell with slight imbalance in trending periods
         let is_buy = if i % 10000 < 5000 {
-            rng.gen_bool(0.55) // Slight buy pressure during uptrend
+            rng.random_bool(0.55) // Slight buy pressure during uptrend
         } else {
-            rng.gen_bool(0.45) // Slight sell pressure during downtrend
+            rng.random_bool(0.45) // Slight sell pressure during downtrend
         };
 
         prices.push(price);
