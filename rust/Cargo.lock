@@ -126,8 +126,8 @@ checksum = "ba6958a87117ff5e1d0d7716856a4303752518012ec4a67a68446b6631a1a54d"
 dependencies = [
  "anyhow",
  "cfg-if",
- "ndarray",
- "ndarray-linalg",
+ "ndarray 0.16.1",
+ "ndarray-linalg 0.17.0",
  "num-complex",
  "num-integer",
  "num-traits",
@@ -1805,8 +1805,8 @@ dependencies = [
  "dashmap",
  "half",
  "ibapi",
- "ndarray",
- "ndarray-linalg",
+ "ndarray 0.16.1",
+ "ndarray-linalg 0.18.1",
  "num-complex",
  "numpy",
  "parking_lot",
@@ -1839,15 +1839,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "lapack-sys"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "314b879030845b68571809a6978e52d3b67ac5fba07e77b1b317b484092e2fb5"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "lax"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1048f58cdc36e726e1c5ef81ec7ac9b1be2fce6b705786514b5a4f8c63487867"
 dependencies = [
  "cauchy",
+ "katexit",
+ "lapack-sys 0.14.0",
+ "num-traits",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "lax"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5043cf8e975964af8a16080388fc629632630a56916bedc4631b9dc6f8048d28"
+dependencies = [
+ "cauchy",
  "intel-mkl-src",
  "katexit",
- "lapack-sys",
+ "lapack-sys 0.15.0",
  "num-traits",
  "thiserror 2.0.21",
 ]
@@ -2090,6 +2112,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "ndarray"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520080814a7a6b4a6e9070823bb24b4531daac8c4627e08ba5de8c5ef2f2752d"
+dependencies = [
+ "approx",
+ "cblas-sys",
+ "libc",
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "portable-atomic",
+ "portable-atomic-util",
+ "rawpointer",
+]
+
+[[package]]
 name = "ndarray-linalg"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2097,8 +2137,24 @@ checksum = "820b7fdcc3f1fd48c31f4c85bdefe93ef2d0e8b69ff955c4d499ea6db2f19d44"
 dependencies = [
  "cauchy",
  "katexit",
- "lax",
- "ndarray",
+ "lax 0.17.0",
+ "ndarray 0.16.1",
+ "num-complex",
+ "num-traits",
+ "rand 0.8.8",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "ndarray-linalg"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb0783188ff249ab498417e0477f7fade3b312d1d287314ca76de570d9a83ee0"
+dependencies = [
+ "cauchy",
+ "katexit",
+ "lax 0.18.1",
+ "ndarray 0.17.2",
  "num-complex",
  "num-traits",
  "rand 0.8.8",
@@ -2167,7 +2223,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a5b15d63a5ff39e378daed0e1340d3a5964703ea9712eb09a0dc66fade996f4"
 dependencies = [
  "libc",
- "ndarray",
+ "ndarray 0.16.1",
  "num-complex",
  "num-integer",
  "num-traits",
