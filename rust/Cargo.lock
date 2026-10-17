@@ -126,7 +126,7 @@ checksum = "ba6958a87117ff5e1d0d7716856a4303752518012ec4a67a68446b6631a1a54d"
 dependencies = [
  "anyhow",
  "cfg-if",
- "ndarray",
+ "ndarray 0.16.1",
  "ndarray-linalg",
  "num-complex",
  "num-integer",
@@ -1805,7 +1805,7 @@ dependencies = [
  "dashmap",
  "half",
  "ibapi",
- "ndarray",
+ "ndarray 0.17.2",
  "ndarray-linalg",
  "num-complex",
  "numpy",
@@ -2086,6 +2086,21 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "rawpointer",
+]
+
+[[package]]
+name = "ndarray"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520080814a7a6b4a6e9070823bb24b4531daac8c4627e08ba5de8c5ef2f2752d"
+dependencies = [
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "portable-atomic",
+ "portable-atomic-util",
+ "rawpointer",
  "rayon",
 ]
 
@@ -2098,7 +2113,7 @@ dependencies = [
  "cauchy",
  "katexit",
  "lax",
- "ndarray",
+ "ndarray 0.16.1",
  "num-complex",
  "num-traits",
  "rand 0.8.8",
@@ -2167,7 +2182,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a5b15d63a5ff39e378daed0e1340d3a5964703ea9712eb09a0dc66fade996f4"
 dependencies = [
  "libc",
- "ndarray",
+ "ndarray 0.17.2",
  "num-complex",
  "num-integer",
  "num-traits",
